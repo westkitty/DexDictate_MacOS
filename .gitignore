@@ -1,0 +1,10 @@
+.build/
+.DS_Store
+*.xcodeproj
+*.xcworkspace
+xcuserdata/
+DerivedData/
+Logs/
+Tests/
+tmp/
+*.app
