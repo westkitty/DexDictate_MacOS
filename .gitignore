@@ -8,3 +8,36 @@ Logs/
 Tests/
 tmp/
 *.app
+
+# Xcode & SwiftPM
+*.dSYM
+*.dSYM.zip
+*.dSYM.tar.gz
+.swiftpm/
+Package.resolved
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+
+# OS junk
+Thumbs.db
+
+# Dependency/cache folders
+node_modules/
+venv/
+.venv/
+dist/
+build/
+target/
+coverage/
+
+# Secrets & env files
+.env
+.env.*
+secrets.json
+*.p12
+*.pem
+*.key
+*.cer

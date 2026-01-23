@@ -1,37 +1,52 @@
-# DexDictate MacOS
+<p align="center">
+	<img src="Sources/DexDictate/Resources/Assets.xcassets/dexdictatebanner.webp" alt="DexDictate banner" width="100%" />
+</p>
 
-<img src="Sources/DexDictate/Resources/Assets.xcassets/dog_background.imageset/dog_background.png" width="200" align="right" />
+# DexDictate macOS
 
-**Native, Offline, Private Dictation for macOS.**
+**Native, offline dictation for macOS.**
 
-DexDictate is a lightweight menu bar application that provides reliable Push-to-Talk dictation using Apple's native `SFSpeechRecognizer` framework.
+DexDictate is a lightweight menu bar app that provides push-to-talk dictation using Apple’s native `SFSpeechRecognizer` framework.
 
-**Repository:** [westkitty/DexDictate_MacOS](https://github.com/westkitty/DexDictate_MacOS)
+## Overview
 
-## Features
-- **Native Engine**: Uses Apple's on-device Speech framework (Offline capable, Zero dependencies).
-- **Push-to-Talk**: Hold Middle Mouse to speak, Release to paste.
-- **Glassmorphism UI**: Beautiful, modern SwiftUI interface with `.ultraThinMaterial`.
-- **Privacy First**: Explicit Permission controls for Microphone and Accessibility.
-- **Debug Console**: Built-in diagnostics for instant troubleshooting.
+<img src="Sources/DexDictate/Resources/Assets.xcassets/AppIcon.appiconset/icon.png" width="140" align="right" />
+
+- Menu bar app with a glassmorphism-style SwiftUI interface.
+- Push-to-talk by holding the **Middle Mouse** button (or toggle mode).
+- On-device speech recognition with no external dependencies.
+- Status feed and quick settings panel in the main window.
 
 ## Requirements
-- macOS 14.0 (Sonoma) +
+- macOS 14.0 (Sonoma)+
 - Microphone
+- Apple Silicon (arm64) (build script targets arm64)
 
-## Installation
-Currently distributed as source.
+## Quick Start
 1. Clone the repo.
-2. Run `./build.sh` (Auto-signs with entitlements).
-3. App installs to `~/Applications/DexDictate_MacOS.app`.
+2. Run `./build.sh`.
+3. Launch the app from `~/Applications/DexDictate_V2.app`.
+4. Grant **Microphone**, **Speech Recognition**, **Accessibility**, and **Input Monitoring** permissions when prompted.
 
 ## Usage
-1. Launch App.
-2. Grant **Accessibility** & **Speech** permissions (Restart App after granting Accessibility).
-3. **Hold Middle Mouse Button** to dictate.
-4. Release to insert text.
+1. Click **Start Dictation**.
+2. **Hold Middle Mouse Button** to dictate (or switch to toggle mode in Settings).
+3. Release to transcribe and (optionally) auto‑paste.
+
+## Permissions
+DexDictate requires:
+- **Microphone** for audio capture.
+- **Speech Recognition** for transcription.
+- **Accessibility** and **Input Monitoring** for global mouse button detection and paste automation.
+
+## Scripts
+- `build.sh` builds, codesigns, and installs the app into `~/Applications`.
+- `reset_tcc_permissions.sh` resets macOS privacy permissions for the bundle ID.
+
+## Project Layout
+- `Sources/DexDictate/` Swift source for the menu bar app.
+- `Sources/DexDictate/Resources/Assets.xcassets/` app icons and artwork.
 
 ## Troubleshooting
-If dictation fails, check the **Debug Console** at the bottom of the app menu.
-- `Input Tap Active`: System is working.
-- `CRITICAL FAILURE`: Accessibility permission is blocked. Run `tccutil reset Accessibility com.westkitty.dexdictate.macos` and restart.
+- If the app cannot detect mouse input, run `./reset_tcc_permissions.sh`, rebuild, and re‑grant permissions.
+- If transcription does not start, ensure **Speech Recognition** permission is granted and try restarting the app.
