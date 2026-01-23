@@ -4,7 +4,7 @@ import AVFoundation
 import AudioToolbox
 
 @MainActor
-class TranscriptionEngine: ObservableObject {
+final class TranscriptionEngine: ObservableObject {
     @Published var state: EngineState = .stopped
     @Published var statusText = "Idle"
     @Published var debugLog: String = "Initializing..."
@@ -58,6 +58,14 @@ class TranscriptionEngine: ObservableObject {
         statusText = "Idle"
     }
 
+    func toggleListening() {
+        if state == .listening {
+            stopListening()
+        } else {
+            startListening()
+        }
+    }
+
     func handleTrigger(down: Bool) {
         if down { startListening() } else { stopListening() }
     }
@@ -66,7 +74,9 @@ class TranscriptionEngine: ObservableObject {
         guard state == .ready, !audioEngine.isRunning else { return }
         state = .listening
         statusText = "Listening..."
-        AudioServicesPlaySystemSound(1057) // Tink
+        if Settings.shared.playStartSound {
+            AudioServicesPlaySystemSound(1057) // Tink
+        }
         
         do {
             try startRecording()
@@ -84,7 +94,9 @@ class TranscriptionEngine: ObservableObject {
         
         audioEngine.stop()
         recognitionRequest?.endAudio()
-        AudioServicesPlaySystemSound(1052) // Pop
+        if Settings.shared.playStopSound {
+            AudioServicesPlaySystemSound(1052) // Pop
+        }
     }
     
     private func startRecording() throws {
@@ -117,7 +129,10 @@ class TranscriptionEngine: ObservableObject {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(transcription, forType: .string)
                     // PASTE
-                    self.pasteText()
+                    // PASTE
+                    if Settings.shared.autoPaste {
+                        self.pasteText()
+                    }
                 }
             }
             

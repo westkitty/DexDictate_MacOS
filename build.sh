@@ -1,13 +1,13 @@
 #!/bin/bash
 set -e
-APP_NAME="DexDictate_MacOS"
+APP_NAME="DexDictate_V2"
 BUILD_DIR="./.build"
 INSTALL_DIR="$HOME/Applications"
 
 echo "🔨 Building DexDictate_MacOS..."
 swift build -c release --arch arm64 --disable-sandbox
 
-BINARY="$BUILD_DIR/arm64-apple-macosx/release/$APP_NAME"
+BINARY="$BUILD_DIR/arm64-apple-macosx/release/DexDictate_MacOS"
 BUNDLE="$BUILD_DIR/$APP_NAME.app"
 
 mkdir -p "$BUNDLE/Contents/MacOS" "$BUNDLE/Contents/Resources"
@@ -24,6 +24,7 @@ cat <<PLIST > "$BUNDLE/Contents/Info.plist"
 <dict>
     <key>CFBundleExecutable</key><string>$APP_NAME</string>
     <key>CFBundleIdentifier</key><string>com.westkitty.dexdictate.macos</string>
+    <key>CFBundleVersion</key><string>1.0.0</string>
     <key>LSUIElement</key><true/>
     <key>NSMicrophoneUsageDescription</key><string>This app needs microphone access to transcribe your speech.</string>
     <key>NSSpeechRecognitionUsageDescription</key><string>This app uses speech recognition to convert your voice to text.</string>
@@ -35,9 +36,7 @@ PLIST
 # Sign with entitlements (Required for EventTap)
 # Note: Entitlements path must match where we created it in Step 5
 ENTITLEMENTS="Sources/DexDictate/DexDictate.entitlements"
-# Sign the inner executable first (Critical for Ad-Hoc Entitlements)
-codesign --force --sign - --entitlements "$ENTITLEMENTS" "$BUNDLE/Contents/MacOS/$APP_NAME"
-# Then sign the whole bundle deeply
+# Sign the bundle with --deep to cover all contents atomically
 codesign --force --deep --sign - --entitlements "$ENTITLEMENTS" "$BUNDLE"
 
 rm -rf "$INSTALL_DIR/$APP_NAME.app"
