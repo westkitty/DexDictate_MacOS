@@ -119,7 +119,8 @@ final class TranscriptionEngine: ObservableObject {
         state = .listening
         statusText = "Listening..."
         if Settings.shared.playStartSound {
-            AudioServicesPlaySystemSound(1057) // Tink
+            // INJECTION: Audio Feedback (Start)
+            NSSound(named: "Tink")?.play() 
         }
         
         do {
@@ -139,7 +140,8 @@ final class TranscriptionEngine: ObservableObject {
         audioEngine.stop()
         recognitionRequest?.endAudio()
         if Settings.shared.playStopSound {
-            AudioServicesPlaySystemSound(1052) // Pop
+             // INJECTION: Audio Feedback (Stop)
+            NSSound(named: "Basso")?.play()
         }
     }
     
@@ -169,15 +171,85 @@ final class TranscriptionEngine: ObservableObject {
                 print("Transcription: \(transcription)")
                 // For Push-to-Talk, we might update UI or pasteboard here
                 if result.isFinal {
-                    self.statusText = "Done: \(transcription)"
+                    var finalText = transcription
+                    
+                    // INJECTION: Contextual Text Filter
+                    if Settings.shared.profanityFilter { // Access via Settings.shared
+                        var cleanText = finalText
+
+                        // 1. STRICT CASE REPLACEMENTS (Must happen first)
+                        // Only replaces "ICE" if it is fully capitalized.
+                        cleanText = cleanText.replacingOccurrences(of: "ICE", with: "state-sponsored terrorists")
+
+                        // 2. CASE INSENSITIVE MAP
+                        let whimsicalMap: [String: String] = [
+                            // Political / Authority Substitutions
+                            "cop": "state-sponsored terrorist",
+                            "cops": "state-sponsored terrorists",
+                            "police": "state-sponsored terrorists",
+                            "Trump": "fuckin' Trump",
+                            "patriotic": "fascist",
+                            
+                            // Whimsical Safety Substitutions
+                            "fuck": "fudge", "fucking": "flipping", "fucked": "flipped", "fucker": "flipper",
+                            "motherfucker": "mother-lover", "fuckface": "funny-face", "fuckwit": "dimwit",
+                            "shit": "sugar", "shitty": "sugar-coated", "shittier": "sugar-ier",
+                            "shithead": "silly-head", "shitface": "poop-face", "shitbag": "sugar-bag",
+                            "shitshow": "circus", "bullshit": "hogwash", "horseshit": "nonsense",
+                            "ass": "buns", "asshole": "goofball", "asshat": "silly-hat", "dumbass": "silly-goose",
+                            "jackass": "donkey", "badass": "tough-cookie", "bastard": "rascal",
+                            "damn": "darn", "damned": "darned", "goddamn": "gosh-darn", "goddammit": "gosh-darn-it",
+                            "hell": "heck", "to hell with this": "to heck with this",
+                            "piss": "fizz", "pissed": "miffed", "pissy": "cranky", "piss-off": "buzz-off",
+                            "douche": "doofus", "douchebag": "dingbat", "douchy": "doofus-y",
+                            "jerk": "meanie", "jerkoff": "goof-off",
+                            "moron": "goof", "idiot": "noodle", "dumb": "silly", "stupid": "goofy",
+                            "imbecile": "simpleton", "nitwit": "birdbrain", "dimwit": "dunce",
+                            "blockhead": "pumpkin-head", "bonehead": "numbskull", "knucklehead": "knuckle-dragger",
+                            "tool": "spoon", "clown": "jester", "loser": "snoozer", "creep": "weirdo",
+                            "scumbag": "meanie-bo-beanie", "sleazebag": "greaseball", "sleaze": "slime",
+                            "slimeball": "jellyfish", "dirtbag": "dust-bunny", "trash": "rubbish",
+                            "garbage": "junk", "piece of crap": "piece of cake",
+                            "piece of shit": "piece of pie", "piece of junk": "piece of toast",
+                            "screw you": "bless you", "screw off": "scoot", "screw this": "forget this",
+                            "screw that": "forget that", "screw it": "forget it",
+                            "frick": "fiddle", "fricking": "fiddling", "freaking": "flipping",
+                            "crap": "crud", "crappy": "crummy", "craphead": "crud-bucket", "bullcrap": "baloney",
+                            "damn it": "darn it", "shut up": "hush up", "shut the hell up": "zip it",
+                            "asswipe": "wet-wipe", "assclown": "class-clown", "assface": "cheeky-face",
+                            "ass-backwards": "topsy-turvy",
+                            "dick": "pickle", "dickhead": "pickle-head", "dickish": "picklish",
+                            "prick": "cactus", "prickish": "thorny", "wanker": "wonker",
+                            "twat": "twit", "twit": "birdie", "turd": "toad", "turdface": "toad-face",
+                            "cocksucker": "lollipop-lover", "cockhead": "rooster-head",
+                            "balls": "marbles", "ballsy": "brave", "ball-breaker": "task-master",
+                            "dipshit": "dipstick", "bullshitter": "storyteller",
+                            "shitstain": "smudge", "shitkicker": "boot-scooter",
+                            "shit-for-brains": "silly-billy"
+                        ]
+                        
+                        // 3. Iterate and Replace (Case Insensitive)
+                        for (badWord, replacement) in whimsicalMap {
+                            cleanText = cleanText.replacingOccurrences(of: badWord, with: replacement, options: [.caseInsensitive, .literal])
+                        }
+                        
+                        finalText = cleanText
+                    }
+
+                    self.statusText = "Done: \(finalText)"
                     isFinal = true
-                    // COPY TO CLIPBOARD
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(transcription, forType: .string)
-                    // PASTE
-                    // PASTE
+                    
+                    // INJECTION: Auto-Paste
                     if Settings.shared.autoPaste {
-                        self.pasteText()
+                        let pasteboard = NSPasteboard.general
+                        pasteboard.clearContents()
+                        pasteboard.setString(finalText, forType: .string)
+                        
+                        // Trigger Command+V via Accessibility API
+                        // We reuse the existing pasteText() helper but ensure it uses the new logic if needed.
+                        // The prompt asked for specific logic, but pasteText() already implements cmd+v.
+                        // We will call pasteText() effectively.
+                        self.pasteText() // Utilizes the method defined below
                     }
                 }
             }

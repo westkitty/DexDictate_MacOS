@@ -66,11 +66,12 @@ struct AntiGravityMainView: View {
                 // Top Right: Gear Icon
                 HStack {
                     Spacer()
-                    Button(action: { /* Open full settings window if needed */ }) {
-                        Image(systemName: "gearshape.fill")
-                            .font(.system(size: 18))
-                            .foregroundStyle(.white.opacity(0.6))
-                    }
+                    // INJECTION: REMOVE GREEN GEAR
+                    // Button(action: { /* Open full settings window if needed */ }) {
+                    //    Image(systemName: "gearshape.fill")
+                    //        .font(.system(size: 18))
+                    //        .foregroundStyle(.white.opacity(0.6))
+                    // }
                     .buttonStyle(.plain)
                 }
                 .padding(.horizontal)
