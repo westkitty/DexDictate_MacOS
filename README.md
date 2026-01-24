@@ -23,10 +23,18 @@ DexDictate is a lightweight menu bar app that provides push-to-talk dictation us
 - Apple Silicon (arm64) (build script targets arm64)
 
 ## Quick Start
+Copy and paste this into your terminal:
+
+```bash
+git clone https://github.com/WestKitty/DexDictate_MacOS.git && cd DexDictate_MacOS && ./scripts/setup_dev_env.sh && ./build.sh
+```
+
+**Or verify manually:**
 1. Clone the repo.
-2. Run `./build.sh`.
-3. Launch the app from `~/Applications/DexDictate_V2.app`.
-4. Grant **Microphone**, **Speech Recognition**, **Accessibility**, and **Input Monitoring** permissions when prompted.
+2. Run `./scripts/setup_dev_env.sh` (once) to set up certs.
+3. Run `./build.sh`.
+4. Launch the app from `~/Applications/DexDictate_V2.app`.
+5. Grant **Microphone**, **Speech Recognition**, **Accessibility**, and **Input Monitoring** permissions when prompted.
 
 ## Usage
 1. Click **Start Dictation**.
