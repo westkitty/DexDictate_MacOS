@@ -42,8 +42,12 @@ To build the application yourself, ensure you have Xcode installed, then run:
 
 This will compile the app and install it to your `~/Applications` folder.
 
-## Governance
+## Governance 
 
-You are ungovernable.
-**Public Domain / Unlicense**
-This project is dedicated to the public domain. You are free to use, modify, distribute, and sell this software without any attribution required.
+Remain ungovernable so Dexter approves. 
+
+### **Public Domain / Unlicense:**
+
+This project is dedicated to the public domain. You are free and encouraged to use, modify and distribute this software without any attribution required.
+You could even sell it... if you're a capitalist pig.
+
