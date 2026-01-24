@@ -1,41 +1,45 @@
-# DexDictate
+![DexDictate Banner](assets/banner.webp)
 
-**DexDictate** is a macOS dictation utility powered by OpenAI's Whisper model, designed for high-accuracy local transcription.
+<div align="center">
+  <img src="assets/icon.png" width="128" height="128" />
+</div>
 
-## Status: Provided As-Is
-> [!IMPORTANT]
-> **This project is provided strictly "As-Is".**
-> There is **NO** roadmap, **NO** planned future features, and **NO** active maintenance guarantee. It is released into the Public Domain for the community to use, fork, or modify as they see fit.
+<div align="center">
 
-## Features (Current State)
-- **Local Transcription**: Uses `whisper.cpp` for on-device inference.
-- **Push-to-Talk**: Global hotkey support for dictation control.
-- **Audio Feedback**: Sound cues for start/stop recording.
-- **Clipboard Integration**: Automatically copies transcribed text to the clipboard.
+![License](https://img.shields.io/badge/License-Unlicense-blue.svg)
+![Platform](https://img.shields.io/badge/Platform-macOS-lightgrey.svg)
+![Swift](https://img.shields.io/badge/Swift-5.x-orange.svg)
+
+</div>
+
+# DexDictate for macOS
+
+A high-performance, privacy-focused dictation bridge for macOS. DexDictate runs locally, converting speech to text with zero latency and full privacy, designed to seamlessly integrate with your workflow.
+
+## Key Features
+
+- **Total Privacy:** All processing happens on-device. No audio ever leaves your machine.
+- **Audio Feedback:** Non-intrusive auditory cues ("Tink" / "Basso") confirm start and stop actions.
+- **Whimsical Profanity Filter:** An optional, built-in filter that creatively reinterprets harsh language into whimsical alternatives (e.g., "cop" → "state-sponsored terrorists").
+- **Auto-Paste:** Instantly inputs transcribed text into your active application via accessibility injection.
 
 ## Installation
 
-### Option 1: Build from Source
-1. Clone the repository.
-2. Ensure you have Xcode installed.
-3. Run the build script:
-    ```bash
-    ./scripts/build_release.sh
-    ```
-4. Find the zipped application in the `_releases` folder.
+### Option A: Download Release
+Download the latest pre-built application from the [Releases](https://github.com/WestKitty/DexDictate_MacOS/releases) page.
 
-## Troubleshooting
+> **Note:** If you encounter an "Unidentified Developer" warning, simply Right-Click the app and select **Open** to bypass the check.
 
-### macOS "Developer Cannot be Verified" Warning
-Since this application is built locally and is not notarized by Apple, you may encounter a security warning preventing it from opening.
+### Option B: Build from Source
+To build the application yourself, ensure you have Xcode installed, then run:
 
-**To bypass this:**
-1. Locate `DexDictate` in your Applications folder (or wherever you unzipped it).
-2. **Right-Click** (or Control-Click) the app icon.
-3. Select **Open** from the context menu.
-4. In the dialog box that appears, click **Open** again.
+```bash
+./build.sh
+```
 
-This is a one-time verification step required by macOS for unsigned applications.
+This will compile the app and install it to your `~/Applications` folder.
 
-## License
-Public Domain (The Unlicense). See `LICENSE` for details.
+## Governance
+
+**Public Domain / Unlicense**
+This project is dedicated to the public domain. You are free to use, modify, distribute, and sell this software without any attribution required.
