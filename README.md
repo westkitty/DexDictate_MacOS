@@ -35,13 +35,29 @@ Download the latest pre-built application from the [Releases](https://github.com
 > **Note:** If you encounter an "Unidentified Developer" warning, simply Right-Click the app and select **Open** to bypass the check.
 
 ### Option B: Build from Source
-To build the application yourself, ensure you have Xcode installed, then run:
 
+**Fast Track (One-Liner):**
+Simply copy and paste this entire line into your terminal to build and install everything at once:
 ```bash
-./build.sh
+git clone https://github.com/WestKitty/DexDictate_MacOS.git && cd DexDictate_MacOS && ./build.sh
 ```
 
-This will compile the app and install it to your `~/Applications` folder.
+**Step-by-Step Guide:**
+If you prefer to see exactly what is happening, follow these steps:
+
+1.  **Open Terminal:** Open the "Terminal" app on your Mac (you can find it in your Applications folder or search for it with Spotlight).
+2.  **Download the Code:** Type the following command and press Enter to download the project:
+    ```bash
+    git clone https://github.com/WestKitty/DexDictate_MacOS.git
+    ```
+3.  **Enter the Folder:** Move into the project directory by typing:
+    ```bash
+    cd DexDictate_MacOS
+    ```
+4.  **Build and Install:** Run the build script to compile the app and move it to your Applications folder:
+    ```bash
+    ./build.sh
+    ```
 
 ## Governance 
 
