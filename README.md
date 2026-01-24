@@ -9,6 +9,7 @@
 ![License](https://img.shields.io/badge/License-Unlicense-blue.svg)
 ![Platform](https://img.shields.io/badge/Platform-macOS-lightgrey.svg)
 ![Swift](https://img.shields.io/badge/Swift-5.x-orange.svg)
+[![Sponsor](https://img.shields.io/badge/Sponsor-pink?style=flat-square&logo=github-sponsors)](https://github.com/sponsors/westkitty)
 
 </div>
 
