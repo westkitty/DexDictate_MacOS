@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key><string>{{EXECUTABLE_NAME}}</string>
+    <key>CFBundleIdentifier</key><string>com.westkitty.dexdictate.macos</string>
+    <key>CFBundleName</key><string>{{APP_NAME}}</string>
+    <key>CFBundleIconFile</key><string>AppIcon</string>
+    <key>CFBundlePackageType</key><string>APPL</string>
+    <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+    <key>CFBundleVersion</key><string>{{VERSION}}</string>
+    <key>CFBundleShortVersionString</key><string>{{VERSION}}</string>
+    <key>LSUIElement</key><true/>
+    <key>LSMinimumSystemVersion</key><string>14.0</string>
+    <key>NSMicrophoneUsageDescription</key><string>This app needs microphone access to transcribe your speech.</string>
+    <key>NSSpeechRecognitionUsageDescription</key><string>This app uses speech recognition to convert your voice to text.</string>
+    <key>NSAccessibilityUsageDescription</key><string>This app needs accessibility access to monitor global keyboard/mouse events.</string>
+</dict>
+</plist>

@@ -41,3 +41,4 @@ secrets.json
 *.pem
 *.key
 *.cer
+HANDOFF_CONTEXT.md

@@ -6,12 +6,7 @@ import Speech
 struct DexDictateApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var engine = TranscriptionEngine()
-    
-    // Permission State
-    @State private var axTrusted = AXIsProcessTrusted()
-    @State private var speechAuth = SFSpeechRecognizer.authorizationStatus()
-    
-    // Settings (Shared)
+    @StateObject private var permissionManager = PermissionManager()
     @ObservedObject var settings = Settings.shared
     
     init() { 
@@ -20,13 +15,22 @@ struct DexDictateApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            AntiGravityMainView(engine: engine, axTrusted: $axTrusted, speechAuth: $speechAuth, settings: settings)
+            AntiGravityMainView(
+                engine: engine,
+                permissionManager: permissionManager,
+                settings: settings
+            )
+            .onAppear {
+                permissionManager.startMonitoring(engine: engine)
+                engine.setPermissionManager(permissionManager)
+            }
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: engine.state == .listening ? "waveform.circle.fill" : "mic.fill")
                     .foregroundStyle(engine.state == .listening ? .red : .primary)
                 if engine.state == .listening {
-                    Text("Listening")
+                    Text("Recording")
+                        .foregroundStyle(.red)
                 } else {
                     Text("DexDictate")
                 }
@@ -39,8 +43,7 @@ struct DexDictateApp: App {
 // MARK: - Main View
 struct AntiGravityMainView: View {
     @ObservedObject var engine: TranscriptionEngine
-    @Binding var axTrusted: Bool
-    @Binding var speechAuth: SFSpeechRecognizerAuthorizationStatus
+    @ObservedObject var permissionManager: PermissionManager
     @ObservedObject var settings: Settings
     
     var body: some View {
@@ -72,6 +75,26 @@ struct AntiGravityMainView: View {
                 }
                 .padding(.horizontal)
                 
+                // Permission Status Banner
+                if !permissionManager.allPermissionsGranted {
+                    HStack {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.yellow)
+                        Text(permissionManager.permissionsSummary)
+                            .font(.caption)
+                            .lineLimit(1)
+                        Spacer()
+                        Button("Open Settings") {
+                            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
+                        }
+                        .font(.caption2)
+                    }
+                    .padding(8)
+                    .background(Color.orange.opacity(0.3))
+                    .cornerRadius(8)
+                    .padding(.horizontal)
+                }
+
                 // Upper Middle: Status Feed
                 VStack(spacing: 5) {
                     Text("Status Feed")
@@ -188,9 +211,6 @@ struct AntiGravityMainView: View {
             .padding(.vertical, 10)
         }
         .frame(width: 320, height: 480)
-        .onReceive(Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()) { _ in
-            if !axTrusted { axTrusted = AXIsProcessTrusted() }
-        }
     }
 }
 

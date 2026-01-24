@@ -14,14 +14,18 @@ final class TranscriptionEngine: ObservableObject {
     private var recognitionTask: SFSpeechRecognitionTask?
     private let audioEngine = AVAudioEngine()
     private var inputMonitor: InputMonitor?
+    private var stopTask: Task<Void, Error>?
+    private weak var permissionManager: PermissionManager?
+    private var currentSessionId = UUID()
 
-    enum EngineState { case stopped, initializing, ready, listening, transcribing }
+    enum EngineState { case stopped, initializing, ready, listening, transcribing, error }
 
     var statusIcon: String {
         switch state {
         case .listening: return "waveform.circle.fill"
         case .transcribing: return "hourglass"
         case .ready: return "waveform.circle"
+        case .error: return "exclamationmark.triangle.fill"
         default: return "circle"
     }
     }
@@ -57,6 +61,22 @@ final class TranscriptionEngine: ObservableObject {
         state = .stopped
         statusText = "Idle"
     }
+    
+    func setPermissionManager(_ manager: PermissionManager) {
+        self.permissionManager = manager
+    }
+    
+    func retryInputMonitor() {
+        print("🔄 Retry Input Monitor requested")
+        inputMonitor?.stop()
+        inputMonitor = nil
+        
+        inputMonitor = InputMonitor(engine: self)
+        inputMonitor?.start()
+        
+        // If successful (or at least we tried), we might want to update status if we were in error state
+        // InputMonitor.start() will update 'debugLog' if it works or fails
+    }
 
     func toggleListening() {
         if state == .listening {
@@ -67,7 +87,31 @@ final class TranscriptionEngine: ObservableObject {
     }
 
     func handleTrigger(down: Bool) {
-        if down { startListening() } else { stopListening() }
+        if down {
+            // Cancel pending stop
+            stopTask?.cancel()
+            stopTask = nil
+            currentSessionId = UUID()  // NEW SESSION - invalidate old timers
+
+            // Start if not listening
+            if state != .listening {
+                startListening()
+            }
+        } else {
+            scheduleStop()
+        }
+    }
+    
+    private func scheduleStop() {
+        stopTask?.cancel()
+        let sessionId = currentSessionId  // Capture current session
+
+        stopTask = Task {
+            try? await Task.sleep(nanoseconds: 750 * 1_000_000)  // 750ms debounce
+            if !Task.isCancelled && sessionId == currentSessionId {
+                stopListening()
+            }
+        }
     }
 
     private func startListening() {
@@ -114,6 +158,8 @@ final class TranscriptionEngine: ObservableObject {
         }
         
         let inputNode = audioEngine.inputNode
+        // Diagnostics: Log Input Hardware Details - Verify Node exists
+        print("Audio Hardware: Input Node Active (Bus: \(inputNode.numberOfInputs))")
         
         recognitionTask = speechRecognizer?.recognitionTask(with: recognitionRequest) { result, error in
             var isFinal = false

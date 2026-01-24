@@ -9,6 +9,21 @@ final class InputMonitor {
     
     func start() {
         guard eventTap == nil else { return }
+        
+        // 1. Check Accessibility Trust explicitly
+        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+        let isTrusted = AXIsProcessTrustedWithOptions(options)
+        
+        if !isTrusted {
+            print("WARNING: Accessibility permissions not granted yet.")
+            Task { @MainActor in
+                self.engine?.statusText = "Waiting for Permissions..."
+                self.engine?.debugLog = "Please Grant Accessibility in Settings"
+            }
+            // We don't return here immediately; AXIsProcessTrustedWithOptions calls the prompt.
+            // But tapCreate will likely fail until granted.
+        }
+
         // Listen for OtherMouse (Middle/Extra buttons)
         let mask = (1 << CGEventType.otherMouseDown.rawValue) | (1 << CGEventType.otherMouseUp.rawValue)
         
@@ -44,9 +59,18 @@ final class InputMonitor {
         ) else {
             print("CRITICAL: Failed to create Event Tap")
             Task { @MainActor in
-                self.engine?.debugLog = "CRITICAL: Input Permission FAILED"
-                self.engine?.statusText = "Check Accessibility Settings"
-                self.engine?.state = .stopped
+                self.engine?.debugLog = "Event Tap Failed - Check System Settings > Privacy & Security > Accessibility"
+                self.engine?.statusText = "Grant Accessibility Permission"
+                self.engine?.state = .error
+            }
+
+            // Automatic retry after 5 seconds if permission granted
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) { [weak self] in
+                guard let self = self else { return }
+                if AXIsProcessTrusted() && self.eventTap == nil {
+                    print("🔄 Retrying event tap creation...")
+                    self.start()
+                }
             }
             return
         }
