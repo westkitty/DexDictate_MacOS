@@ -42,3 +42,4 @@ secrets.json
 *.key
 *.cer
 HANDOFF_CONTEXT.md
+_releases/

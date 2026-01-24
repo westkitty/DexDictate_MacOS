@@ -6,6 +6,7 @@
     <key>CFBundleIdentifier</key><string>com.westkitty.dexdictate.macos</string>
     <key>CFBundleName</key><string>{{APP_NAME}}</string>
     <key>CFBundleIconFile</key><string>AppIcon</string>
+    <key>CFBundleIconName</key><string>AppIcon</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
     <key>CFBundleVersion</key><string>{{VERSION}}</string>

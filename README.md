@@ -1,60 +1,41 @@
-<p align="center">
-	<img src="Sources/DexDictate/Resources/Assets.xcassets/dexdictatebanner.webp" alt="DexDictate banner" width="100%" />
-</p>
+# DexDictate
 
-# DexDictate macOS
+**DexDictate** is a macOS dictation utility powered by OpenAI's Whisper model, designed for high-accuracy local transcription.
 
-**Native, offline dictation for macOS.**
+## Status: Provided As-Is
+> [!IMPORTANT]
+> **This project is provided strictly "As-Is".**
+> There is **NO** roadmap, **NO** planned future features, and **NO** active maintenance guarantee. It is released into the Public Domain for the community to use, fork, or modify as they see fit.
 
-DexDictate is a lightweight menu bar app that provides push-to-talk dictation using Apple’s native `SFSpeechRecognizer` framework.
+## Features (Current State)
+- **Local Transcription**: Uses `whisper.cpp` for on-device inference.
+- **Push-to-Talk**: Global hotkey support for dictation control.
+- **Audio Feedback**: Sound cues for start/stop recording.
+- **Clipboard Integration**: Automatically copies transcribed text to the clipboard.
 
-## Overview
+## Installation
 
-<img src="Sources/DexDictate/Resources/Assets.xcassets/AppIcon.appiconset/icon.png" width="140" align="right" />
-
-- Menu bar app with a glassmorphism-style SwiftUI interface.
-- Push-to-talk by holding the **Middle Mouse** button (or toggle mode).
-- On-device speech recognition with no external dependencies.
-- Status feed and quick settings panel in the main window.
-
-## Requirements
-- macOS 14.0 (Sonoma)+
-- Microphone
-- Apple Silicon (arm64) (build script targets arm64)
-
-## Quick Start
-Copy and paste this into your terminal:
-
-```bash
-git clone https://github.com/WestKitty/DexDictate_MacOS.git && cd DexDictate_MacOS && ./scripts/setup_dev_env.sh && ./build.sh
-```
-
-**Or verify manually:**
-1. Clone the repo.
-2. Run `./scripts/setup_dev_env.sh` (once) to set up certs.
-3. Run `./build.sh`.
-4. Launch the app from `~/Applications/DexDictate_V2.app`.
-5. Grant **Microphone**, **Speech Recognition**, **Accessibility**, and **Input Monitoring** permissions when prompted.
-
-## Usage
-1. Click **Start Dictation**.
-2. **Hold Middle Mouse Button** to dictate (or switch to toggle mode in Settings).
-3. Release to transcribe and (optionally) auto‑paste.
-
-## Permissions
-DexDictate requires:
-- **Microphone** for audio capture.
-- **Speech Recognition** for transcription.
-- **Accessibility** and **Input Monitoring** for global mouse button detection and paste automation.
-
-## Scripts
-- `build.sh` builds, codesigns, and installs the app into `~/Applications`.
-- `reset_tcc_permissions.sh` resets macOS privacy permissions for the bundle ID.
-
-## Project Layout
-- `Sources/DexDictate/` Swift source for the menu bar app.
-- `Sources/DexDictate/Resources/Assets.xcassets/` app icons and artwork.
+### Option 1: Build from Source
+1. Clone the repository.
+2. Ensure you have Xcode installed.
+3. Run the build script:
+    ```bash
+    ./scripts/build_release.sh
+    ```
+4. Find the zipped application in the `_releases` folder.
 
 ## Troubleshooting
-- If the app cannot detect mouse input, run `./reset_tcc_permissions.sh`, rebuild, and re‑grant permissions.
-- If transcription does not start, ensure **Speech Recognition** permission is granted and try restarting the app.
+
+### macOS "Developer Cannot be Verified" Warning
+Since this application is built locally and is not notarized by Apple, you may encounter a security warning preventing it from opening.
+
+**To bypass this:**
+1. Locate `DexDictate` in your Applications folder (or wherever you unzipped it).
+2. **Right-Click** (or Control-Click) the app icon.
+3. Select **Open** from the context menu.
+4. In the dialog box that appears, click **Open** again.
+
+This is a one-time verification step required by macOS for unsigned applications.
+
+## License
+Public Domain (The Unlicense). See `LICENSE` for details.
