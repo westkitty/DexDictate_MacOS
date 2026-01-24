@@ -45,6 +45,7 @@ struct AntiGravityMainView: View {
     @ObservedObject var engine: TranscriptionEngine
     @ObservedObject var permissionManager: PermissionManager
     @ObservedObject var settings: Settings
+    @State private var expandedHistory: Bool = false
     
     var body: some View {
         ZStack {
@@ -96,18 +97,57 @@ struct AntiGravityMainView: View {
                     .padding(.horizontal)
                 }
 
-                // Upper Middle: Status Feed
+                // Upper Middle: Expandable History Feed
                 VStack(spacing: 5) {
-                    Text("Status Feed")
-                        .font(.headline)
-                        .foregroundStyle(.white.opacity(0.9))
-                    
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(engine.statusText)
-                        Text(engine.debugLog).font(.caption2).foregroundStyle(.white.opacity(0.5))
+                    HStack {
+                        Text("Transcription History")
+                            .font(.headline)
+                            .foregroundStyle(.white.opacity(0.9))
+                        Spacer()
+                        Button(action: { withAnimation { expandedHistory.toggle() } }) {
+                            Image(systemName: expandedHistory ? "chevron.up" : "chevron.down")
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.6))
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .font(.system(.caption, design: .monospaced))
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 6) {
+                            if engine.history.isEmpty {
+                                Text(engine.statusText)
+                                    .font(.caption)
+                                    .foregroundStyle(.white.opacity(0.5))
+                                    .padding(4)
+                            } else {
+                                ForEach(Array(engine.history.enumerated()), id: \.offset) { index, text in
+                                    HStack(alignment: .top) {
+                                        Text(text)
+                                            .font(.caption)
+                                            .foregroundStyle(.white.opacity(0.9))
+                                            .fixedSize(horizontal: false, vertical: true)
+                                        Spacer()
+                                        Button(action: {
+                                            NSPasteboard.general.clearContents()
+                                            NSPasteboard.general.setString(text, forType: .string)
+                                        }) {
+                                            Image(systemName: "doc.on.doc")
+                                                .font(.caption2)
+                                                .foregroundStyle(.white.opacity(0.5))
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                    .padding(6)
+                                    .background(Color.white.opacity(0.05))
+                                    .cornerRadius(6)
+                                }
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .frame(height: expandedHistory ? 300 : 100) // Expansion Logic
                     .padding(8)
                     .background(.ultraThinMaterial)
                     .cornerRadius(8)
@@ -152,14 +192,7 @@ struct AntiGravityMainView: View {
                         .buttonStyle(.plain)
                     }
 
-                    // Input Button (Visual Only for now)
-                    HStack {
-                        Text("Input: \(Settings.shared.inputButton.rawValue)")
-                            .font(.caption).bold()
-                            .foregroundStyle(.white.opacity(0.8))
-                        Spacer()
-                    }
-                    .padding(.horizontal, 4)
+                    // Input Status Text Removed (Replaced by Quick Settings)
                     
                     // Quit Button (Restored)
                     Button(action: { NSApplication.shared.terminate(nil) }) {
@@ -179,19 +212,71 @@ struct AntiGravityMainView: View {
                 // Lower Section: Settings Toggles (Reduced Prominence)
                 DisclosureGroup("Quick Settings") {
                     VStack(spacing: 8) {
-                        HStack {
-                            VStack(alignment: .leading) {
-                                Text("Feedback").font(.caption).bold().foregroundStyle(.white.opacity(0.7))
-                                Toggle("Play Start", isOn: $settings.playStartSound)
-                                Toggle("Play Stop", isOn: $settings.playStopSound)
+                            // INJECTION: Sound Picker UI
+                            VStack(alignment: .leading, spacing: 12) {
+                                // 1. Feedback Section
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Feedback (Sound Effects)").font(.caption).bold().foregroundStyle(.white.opacity(0.7))
+                                    
+                                    HStack {
+                                        Text("Play Start:")
+                                            .font(.caption)
+                                            .foregroundStyle(.white.opacity(0.8))
+                                        Spacer()
+                                        Picker("", selection: $settings.selectedStartSound) {
+                                            ForEach(Settings.SystemSound.allCases) { sound in
+                                                Text(sound.rawValue).tag(sound)
+                                            }
+                                        }
+                                        .labelsHidden()
+                                        .frame(width: 120)
+                                        .fixedSize()
+                                        .onChange(of: settings.selectedStartSound) { newValue in
+                                            engine.playSound(newValue)
+                                        }
+                                    }
+                                    
+                                    HStack {
+                                        Text("Play Stop:")
+                                            .font(.caption)
+                                            .foregroundStyle(.white.opacity(0.8))
+                                        Spacer()
+                                        Picker("", selection: $settings.selectedStopSound) {
+                                            ForEach(Settings.SystemSound.allCases) { sound in
+                                                Text(sound.rawValue).tag(sound)
+                                            }
+                                        }
+                                        .labelsHidden()
+                                        .frame(width: 120)
+                                        .fixedSize()
+                                        .onChange(of: settings.selectedStopSound) { newValue in
+                                            engine.playSound(newValue)
+                                        }
+                                    }
+                                }
+                                
+                                Divider().background(Color.white.opacity(0.3))
+                                
+                                // 2. Output Section (Stacked Below)
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("Output").font(.caption).bold().foregroundStyle(.white.opacity(0.7))
+                                    
+                                    Toggle("Auto-Paste", isOn: $settings.autoPaste)
+                                    Text("Automatically pastes text into the active app.")
+                                        .font(.caption2)
+                                        .foregroundStyle(.white.opacity(0.5))
+                                        .fixedSize(horizontal: false, vertical: true)
+                                        .padding(.leading, 20) // Indent to align with toggle text
+                                        .padding(.bottom, 2)
+                                        
+                                    Toggle("Filter Profanity", isOn: $settings.profanityFilter)
+                                }
+                                
+                                Divider().background(Color.white.opacity(0.3))
+                                
+                                // 3. Input Configuration
+                                ShortcutRecorder(shortcut: $settings.userShortcut)
                             }
-                            Spacer()
-                            VStack(alignment: .leading) {
-                                Text("Output").font(.caption).bold().foregroundStyle(.white.opacity(0.7))
-                                Toggle("Auto-Paste", isOn: $settings.autoPaste)
-                                Toggle("Filter Profanity", isOn: $settings.profanityFilter)
-                            }
-                        }
                     }
                     .padding(10)
                     .background(Color.black.opacity(0.3))
@@ -200,18 +285,35 @@ struct AntiGravityMainView: View {
                 .accentColor(.white)
                 .padding(.horizontal)
 
-                
                 Spacer()
                 
                 // Footer
-                VStack(spacing: 2) {
-                    Text("About").font(.caption2).foregroundStyle(.white.opacity(0.5))
-                    Text("DexDictate macOS v1.0").font(.caption2).foregroundStyle(.white.opacity(0.3))
+                VStack(spacing: 6) {
+                    Button(action: { settings.restoreDefaults() }) {
+                        Text("Restore Defaults")
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.5))
+                    }
+                    .buttonStyle(.plain)
+                    
+                    Button(action: { NSWorkspace.shared.open(URL(string: "https://github.com/WestKitty/DexDictate_MacOS")!) }) {
+                        Text("About")
+                            .font(.caption2)
+                            .underline()
+                            .foregroundStyle(.white.opacity(0.7))
+                    }
+                    .buttonStyle(.plain)
+                    
+                    Text("DexDictate macOS v1.0")
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.3))
+                        .fixedSize()
+                        .padding(.bottom, 10)
                 }
             }
             .padding(.vertical, 10)
         }
-        .frame(width: 320, height: 480)
+        .frame(width: 320, height: 540)
     }
 }
 

@@ -24,8 +24,12 @@ final class InputMonitor {
             // But tapCreate will likely fail until granted.
         }
 
-        // Listen for OtherMouse (Middle/Extra buttons)
-        let mask = (1 << CGEventType.otherMouseDown.rawValue) | (1 << CGEventType.otherMouseUp.rawValue)
+        // Monitor for both Mouse (Other) and Keyboard events to support custom shortcuts
+        let mask = (1 << CGEventType.otherMouseDown.rawValue) | 
+                   (1 << CGEventType.otherMouseUp.rawValue) | 
+                   (1 << CGEventType.keyDown.rawValue) | 
+                   (1 << CGEventType.keyUp.rawValue) |
+                   (1 << CGEventType.flagsChanged.rawValue)
         
         guard let tap = CGEvent.tapCreate(
             tap: .cgSessionEventTap,
@@ -37,9 +41,46 @@ final class InputMonitor {
                 guard let refcon = refcon else { return Unmanaged.passUnretained(event) }
                 let monitor = Unmanaged<InputMonitor>.fromOpaque(refcon).takeUnretainedValue()
                 
-                // Middle Mouse is Button 2
-                if event.getIntegerValueField(.mouseEventButtonNumber) == 2 {
-                    let isDown = (type == .otherMouseDown)
+                let shortcut = Settings.shared.userShortcut
+                var match = false
+                var isDown = false
+                
+                // 1. Mouse Trigger
+                if let requiredButton = shortcut.mouseButton {
+                    // Only check mouse events
+                    if type == .otherMouseDown || type == .otherMouseUp {
+                        let btnNum = event.getIntegerValueField(.mouseEventButtonNumber)
+                        if btnNum == requiredButton {
+                            // Check modifiers (strict match optional, but allow loose for now)
+                            let flags = event.flags
+                            // If modifiers required, check them
+                            if shortcut.modifiers != 0 && (flags.rawValue & shortcut.modifiers) != shortcut.modifiers {
+                                // Modifier mismatch
+                                return Unmanaged.passUnretained(event)
+                            }
+                            
+                            match = true
+                            isDown = (type == .otherMouseDown)
+                        }
+                    }
+                }
+                
+                // 2. Keyboard Trigger
+                else if let requiredKey = shortcut.keyCode {
+                    if type == .keyDown || type == .keyUp {
+                        let key = event.getIntegerValueField(.keyboardEventKeycode)
+                        if key == Int64(requiredKey) {
+                             // Check modifiers
+                             let flags = event.flags
+                             if (flags.rawValue & shortcut.modifiers) == shortcut.modifiers {
+                                 match = true
+                                 isDown = (type == .keyDown)
+                             }
+                        }
+                    }
+                }
+
+                if match {
                     let mode = Settings.shared.triggerMode
                     
                     if mode == .holdToTalk {
@@ -53,6 +94,7 @@ final class InputMonitor {
                         return nil // Consume event
                     }
                 }
+                
                 return Unmanaged.passUnretained(event)
             },
             userInfo: UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())

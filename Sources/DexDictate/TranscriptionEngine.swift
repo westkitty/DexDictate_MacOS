@@ -20,6 +20,9 @@ final class TranscriptionEngine: ObservableObject {
 
     enum EngineState { case stopped, initializing, ready, listening, transcribing, error }
 
+    // HISTORY EXPANSION: Storage
+    @Published var history: [String] = []
+
     var statusIcon: String {
         switch state {
         case .listening: return "waveform.circle.fill"
@@ -51,7 +54,7 @@ final class TranscriptionEngine: ObservableObject {
         inputMonitor = InputMonitor(engine: self)
         inputMonitor?.start()
         state = .ready
-        statusText = "Ready! (Middle Mouse)"
+        statusText = "Ready" // Fixed "Initializing" freeze
     }
 
     func stopSystem() {
@@ -120,7 +123,8 @@ final class TranscriptionEngine: ObservableObject {
         statusText = "Listening..."
         if Settings.shared.playStartSound {
             // INJECTION: Audio Feedback (Start)
-            NSSound(named: "Tink")?.play() 
+            // NSSound(named: "Tink")?.play() 
+            playSound(Settings.shared.selectedStartSound)
         }
         
         do {
@@ -141,7 +145,8 @@ final class TranscriptionEngine: ObservableObject {
         recognitionRequest?.endAudio()
         if Settings.shared.playStopSound {
              // INJECTION: Audio Feedback (Stop)
-            NSSound(named: "Basso")?.play()
+            // NSSound(named: "Basso")?.play()
+            playSound(Settings.shared.selectedStopSound)
         }
     }
     
@@ -228,12 +233,27 @@ final class TranscriptionEngine: ObservableObject {
                             "shit-for-brains": "silly-billy"
                         ]
                         
-                        // 3. Iterate and Replace (Case Insensitive)
+                        // 3. Iterate and Replace (Regex Word Boundary)
                         for (badWord, replacement) in whimsicalMap {
-                            cleanText = cleanText.replacingOccurrences(of: badWord, with: replacement, options: [.caseInsensitive, .literal])
+                            // Use Regex to match whole words only, case insensitive
+                            // Pattern: \bWORD\b
+                            // We escape it for Swift string: \\b
+                            let pattern = "\\b\(NSRegularExpression.escapedPattern(for: badWord))\\b"
+                            
+                            if let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) {
+                                let range = NSRange(location: 0, length: cleanText.utf16.count)
+                                cleanText = regex.stringByReplacingMatches(in: cleanText, options: [], range: range, withTemplate: replacement)
+                            }
                         }
                         
                         finalText = cleanText
+                    }
+
+                    // HISTORY EXPANSION: Add to history
+                    if !finalText.isEmpty {
+                        self.history.insert(finalText, at: 0)
+                        // Keep history manageable
+                        if self.history.count > 50 { self.history.removeLast() }
                     }
 
                     self.statusText = "Done: \(finalText)"
@@ -290,5 +310,13 @@ final class TranscriptionEngine: ObservableObject {
         vDown?.post(tap: .cghidEventTap)
         vUp?.post(tap: .cghidEventTap)
         cmdUp?.post(tap: .cghidEventTap)
+        cmdUp?.post(tap: .cghidEventTap)
+    }
+    
+    // INJECTION: Sound Selection Logic
+    func playSound(_ sound: Settings.SystemSound) {
+        if sound == .none { return }
+        
+        NSSound(named: sound.rawValue)?.play()
     }
 }
