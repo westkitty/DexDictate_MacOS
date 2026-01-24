@@ -44,5 +44,6 @@ This will compile the app and install it to your `~/Applications` folder.
 
 ## Governance
 
+You are ungovernable.
 **Public Domain / Unlicense**
 This project is dedicated to the public domain. You are free to use, modify, distribute, and sell this software without any attribution required.
