@@ -20,7 +20,7 @@ A high-performance, privacy-focused dictation bridge for macOS. DexDictate runs 
 
 - **Total Privacy:** All processing happens on-device. No audio ever leaves your machine.
 - **Audio Feedback:** Non-intrusive auditory cues ("Tink" / "Basso") confirm start and stop actions.
-- **Whimsical Profanity Filter:** An optional, built-in filter that creatively reinterprets harsh language into whimsical alternatives (e.g., "cop" → "state-sponsored terrorists").
+- **Whimsical Profanity Filter:** An optional, built-in filter that creatively reinterprets harsh language into whimsical alternatives.
 - **Auto-Paste:** Instantly inputs transcribed text into your active application via accessibility injection.
 
 ## Installation
