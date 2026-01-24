@@ -19,9 +19,12 @@ A high-performance, privacy-focused dictation bridge for macOS. DexDictate runs 
 ## Key Features
 
 - **Total Privacy:** All processing happens on-device. No audio ever leaves your machine.
-- **Audio Feedback:** Non-intrusive auditory cues ("Tink" / "Basso") confirm start and stop actions.
-- **Whimsical Profanity Filter:** An optional, built-in filter that creatively reinterprets harsh language into whimsical alternatives.
-- **Auto-Paste:** Instantly inputs transcribed text into your active application via accessibility injection.
+- **Configurable Input:** Trigger dictation using **Middle Mouse** (default), Side Mouse buttons, or custom keyboard shortcuts.
+- **Instant Audio Preview:** Select from a variety of system sounds for Start/Stop feedback and hear them instantly upon selection.
+- **Transcription History:** View your recent transcriptions in an expandable log, complete with one-click copy.
+- **Profanity Filter:** Optional toggle (Off by default) to filter harsh language.
+- **Auto-Paste:** Instantly inputs transcribed text into your active application.
+- **Quick Settings:** Easily toggle settings, restore defaults, and link to this repository directly from the app.
 
 ## Installation
 
