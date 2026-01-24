@@ -69,3 +69,9 @@ Remain ungovernable so Dexter approves.
 This project is dedicated to the public domain. You are free and encouraged to use, modify and distribute this software without any attribution required.
 You could even sell it... if you're a capitalist pig.
 
+---
+
+## Why Dexter?
+
+*Dexter is a small, tricolor Phalène dog with floppy ears and a perpetually unimpressed expression... ungovernable, sharp-nosed and convinced he’s the quality bar. Alert, picky, dependable and devoted to doing things exactly his way: if he’s staring at you, assume you’ve made a mistake. If he approves, it means it works.*
+
