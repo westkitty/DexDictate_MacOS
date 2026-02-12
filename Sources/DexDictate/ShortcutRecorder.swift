@@ -1,11 +1,20 @@
 import SwiftUI
 import Carbon
 
+/// An inline SwiftUI control for recording a custom keyboard or mouse shortcut.
+///
+/// Tapping the button enters *recording mode*. A local `NSEvent` monitor intercepts the
+/// next key or mouse press and commits it as the new shortcut. `flagsChanged` events
+/// (modifier-only presses) are ignored — a full key or click is required.
 struct ShortcutRecorder: View {
+
+    /// The shortcut being configured. Written when a new key/button is captured.
     @Binding var shortcut: Settings.UserShortcut
     @State private var isRecording = false
+
+    /// Retained handle for the `NSEvent` local monitor; `nil` when not recording.
     @State private var monitor: Any?
-    
+
     var body: some View {
         HStack {
             Text("Input:")
@@ -28,6 +37,7 @@ struct ShortcutRecorder: View {
         }
     }
     
+    /// Installs a local `NSEvent` monitor and enters recording mode.
     private func startRecording() {
         guard !isRecording else { return }
         isRecording = true
@@ -76,6 +86,7 @@ struct ShortcutRecorder: View {
         }
     }
     
+    /// Removes the `NSEvent` monitor and exits recording mode.
     private func stopRecording() {
         if let monitor = monitor {
             NSEvent.removeMonitor(monitor)
@@ -84,6 +95,10 @@ struct ShortcutRecorder: View {
         isRecording = false
     }
     
+    /// Builds a human-readable label for a keyboard event (e.g. "Cmd+Shift+K").
+    ///
+    /// Falls back to the raw key code string when `charactersIgnoringModifiers` is
+    /// unavailable (e.g. for function keys that produce no printable character).
     private func keyString(for event: NSEvent) -> String {
         var str = ""
         let flags = event.modifierFlags

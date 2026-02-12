@@ -3,26 +3,77 @@ import Speech
 import AVFoundation
 import AudioToolbox
 
+/// The central coordinator for the speech-recognition pipeline.
+///
+/// `TranscriptionEngine` owns the `AVAudioEngine` and `SFSpeechRecognizer`, manages the
+/// `InputMonitor` that intercepts the user's trigger shortcut, and delegates post-processing
+/// to `ProfanityFilter`, `ClipboardManager`, and `SoundPlayer`.
+///
+/// All mutations run on the main actor so `@Published` properties drive SwiftUI views
+/// without extra dispatch.
 @MainActor
 final class TranscriptionEngine: ObservableObject {
+
+    /// Current lifecycle phase of the engine. Views observe this to enable/disable controls.
     @Published var state: EngineState = .stopped
+
+    /// Short human-readable description of the current state, shown in the history feed
+    /// when no transcriptions exist yet.
     @Published var statusText = "Idle"
-    @Published var debugLog: String = "Initializing..."
-    
+
+    /// Live partial transcription shown while listening/transcribing.
+    @Published var liveTranscript = ""
+
+    /// Normalized microphone input level (0.0-1.0) for visual feedback.
+    @Published var inputLevel: Double = 0
+
+    /// Ordered collection of completed transcription results for the current session.
+    @Published var history = TranscriptionHistory()
+
+    /// On-device English speech recognizer. `requiresOnDeviceRecognition` is enforced on
+    /// every request so audio never leaves the device.
     private let speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
+
+    /// Live audio buffer fed incrementally to the recognizer while recording.
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
+
+    /// The active recognition task; cancelled and replaced at the start of each recording.
     private var recognitionTask: SFSpeechRecognitionTask?
+
+    /// Shared audio engine. Started when recording begins; stopped after each result or error.
     private let audioEngine = AVAudioEngine()
+
+    /// Global input monitor that intercepts the configured trigger shortcut system-wide.
     private var inputMonitor: InputMonitor?
+
+    /// Pending task that stops listening after the hold-to-talk debounce window (750 ms).
     private var stopTask: Task<Void, Error>?
+
+    /// Weak reference to the permission manager so the engine can retry after accessibility
+    /// access is granted without creating a retain cycle.
     private weak var permissionManager: PermissionManager?
+
+    /// UUID regenerated on every trigger press. Used to discard stale `scheduleStop` tasks
+    /// that were queued before the most recent press began.
     private var currentSessionId = UUID()
 
-    enum EngineState { case stopped, initializing, ready, listening, transcribing, error }
+    /// Lifecycle phases of the transcription engine.
+    enum EngineState {
+        /// Not started or explicitly stopped.
+        case stopped
+        /// `startSystem()` was called; waiting for speech authorization.
+        case initializing
+        /// Input monitor is active, waiting for the trigger shortcut.
+        case ready
+        /// Trigger held/toggled on; microphone is recording.
+        case listening
+        /// Audio capture ended; waiting for the final recognition result.
+        case transcribing
+        /// A non-recoverable error occurred (e.g. event tap could not be installed).
+        case error
+    }
 
-    // HISTORY EXPANSION: Storage
-    @Published var history: [String] = []
-
+    /// SF Symbol name reflecting the current state, used in the menu bar icon.
     var statusIcon: String {
         switch state {
         case .listening: return "waveform.circle.fill"
@@ -30,18 +81,24 @@ final class TranscriptionEngine: ObservableObject {
         case .ready: return "waveform.circle"
         case .error: return "exclamationmark.triangle.fill"
         default: return "circle"
-    }
+        }
     }
 
+    // MARK: - System Lifecycle
+
+    /// Requests speech recognition authorization and, on success, starts the input monitor.
+    ///
+    /// Transitions the engine through `.initializing` → `.ready`, or back to `.stopped`
+    /// if permission is denied. Call this when the user taps **Start Dictation**.
     func startSystem() async {
         state = .initializing
         statusText = "Requesting Access..."
-        
+
         SFSpeechRecognizer.requestAuthorization { authStatus in
             Task { @MainActor in
                 switch authStatus {
                 case .authorized:
-                    self.setupAudioEngine()
+                    self.setupInputMonitor()
                 default:
                     self.statusText = "Speech Permission Denied"
                     self.state = .stopped
@@ -49,38 +106,41 @@ final class TranscriptionEngine: ObservableObject {
             }
         }
     }
-    
-    private func setupAudioEngine() {
-        inputMonitor = InputMonitor(engine: self)
-        inputMonitor?.start()
-        state = .ready
-        statusText = "Ready" // Fixed "Initializing" freeze
-    }
 
+    /// Tears down the input monitor and audio engine, returning the engine to `.stopped`.
+    ///
+    /// Safe to call from any engine state; idempotent if already stopped.
     func stopSystem() {
         inputMonitor?.stop()
         audioEngine.stop()
         audioEngine.inputNode.removeTap(onBus: 0)
         state = .stopped
         statusText = "Idle"
+        liveTranscript = ""
+        inputLevel = 0
     }
-    
+
+    /// Wires up the permission manager so it can call ``retryInputMonitor()`` after
+    /// accessibility access is granted.
+    ///
+    /// - Parameter manager: Stored as a weak reference to avoid a retain cycle.
     func setPermissionManager(_ manager: PermissionManager) {
         self.permissionManager = manager
     }
-    
+
+    /// Tears down and recreates the input monitor.
+    ///
+    /// Called by `PermissionManager` when it detects that accessibility access was just
+    /// granted, allowing the event tap to be installed without a full app restart.
     func retryInputMonitor() {
-        print("🔄 Retry Input Monitor requested")
         inputMonitor?.stop()
         inputMonitor = nil
-        
-        inputMonitor = InputMonitor(engine: self)
-        inputMonitor?.start()
-        
-        // If successful (or at least we tried), we might want to update status if we were in error state
-        // InputMonitor.start() will update 'debugLog' if it works or fails
+        setupInputMonitor()
     }
 
+    // MARK: - Trigger Handling
+
+    /// Toggles between recording and idle. This is the handler for *Click to Toggle* mode.
     func toggleListening() {
         if state == .listening {
             stopListening()
@@ -89,14 +149,19 @@ final class TranscriptionEngine: ObservableObject {
         }
     }
 
+    /// Responds to a trigger press or release. This is the handler for *Hold to Talk* mode.
+    ///
+    /// On press (`down: true`) any pending debounced stop is cancelled and recording begins.
+    /// On release (`down: false`) a 750 ms debounce window is started; recording stops only
+    /// if no new press arrives within that window.
+    ///
+    /// - Parameter down: `true` on key/button press, `false` on release.
     func handleTrigger(down: Bool) {
         if down {
-            // Cancel pending stop
             stopTask?.cancel()
             stopTask = nil
-            currentSessionId = UUID()  // NEW SESSION - invalidate old timers
+            currentSessionId = UUID()
 
-            // Start if not listening
             if state != .listening {
                 startListening()
             }
@@ -104,13 +169,24 @@ final class TranscriptionEngine: ObservableObject {
             scheduleStop()
         }
     }
-    
+
+    // MARK: - Private
+
+    private func setupInputMonitor() {
+        inputMonitor = InputMonitor(engine: self)
+        inputMonitor?.start()
+        state = .ready
+        statusText = "Ready"
+    }
+
+    /// Schedules `stopListening()` after 750 ms. If the trigger is pressed again before
+    /// the delay elapses the task is cancelled via `currentSessionId` comparison.
     private func scheduleStop() {
         stopTask?.cancel()
-        let sessionId = currentSessionId  // Capture current session
+        let sessionId = currentSessionId
 
         stopTask = Task {
-            try? await Task.sleep(nanoseconds: 750 * 1_000_000)  // 750ms debounce
+            try? await Task.sleep(nanoseconds: 750 * 1_000_000)
             if !Task.isCancelled && sessionId == currentSessionId {
                 stopListening()
             }
@@ -121,12 +197,13 @@ final class TranscriptionEngine: ObservableObject {
         guard state == .ready, !audioEngine.isRunning else { return }
         state = .listening
         statusText = "Listening..."
+        liveTranscript = ""
+        inputLevel = 0
+
         if Settings.shared.playStartSound {
-            // INJECTION: Audio Feedback (Start)
-            // NSSound(named: "Tink")?.play() 
-            playSound(Settings.shared.selectedStartSound)
+            SoundPlayer.play(Settings.shared.selectedStartSound)
         }
-        
+
         do {
             try startRecording()
         } catch {
@@ -140,183 +217,142 @@ final class TranscriptionEngine: ObservableObject {
         guard state == .listening else { return }
         state = .transcribing
         statusText = "Transcribing..."
-        
+        inputLevel = 0
+
         audioEngine.stop()
         recognitionRequest?.endAudio()
+
         if Settings.shared.playStopSound {
-             // INJECTION: Audio Feedback (Stop)
-            // NSSound(named: "Basso")?.play()
-            playSound(Settings.shared.selectedStopSound)
+            SoundPlayer.play(Settings.shared.selectedStopSound)
         }
     }
-    
+
+    /// Configures and starts an `AVAudioEngine` tap that feeds PCM buffers into a new
+    /// `SFSpeechAudioBufferRecognitionRequest`.
+    ///
+    /// The recognition callback applies optional profanity filtering, appends the result to
+    /// `history`, and triggers auto-paste when the result is final.
+    ///
+    /// - Throws: Any error propagated from `AVAudioEngine.start()`.
     private func startRecording() throws {
-        // Cancel previous task if any
+        applySelectedInputDevice()
+
         recognitionTask?.cancel()
         recognitionTask = nil
-        
+
         recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
-        guard let recognitionRequest = recognitionRequest else { fatalError("Unable to create request") }
-        recognitionRequest.shouldReportPartialResults = false // We want final result on release
-        
-        // Keep speech recognition data on device
-        if #available(macOS 10.15, *) {
+        guard let recognitionRequest = recognitionRequest else {
+            state = .error
+            statusText = "Failed to create recognition request"
+            return
+        }
+        recognitionRequest.shouldReportPartialResults = true
+        if speechRecognizer?.supportsOnDeviceRecognition == true {
             recognitionRequest.requiresOnDeviceRecognition = true
         }
-        
+
         let inputNode = audioEngine.inputNode
-        // Diagnostics: Log Input Hardware Details - Verify Node exists
-        print("Audio Hardware: Input Node Active (Bus: \(inputNode.numberOfInputs))")
-        
-        recognitionTask = speechRecognizer?.recognitionTask(with: recognitionRequest) { result, error in
-            var isFinal = false
-            
-            if let result = result {
-                let transcription = result.bestTranscription.formattedString
-                print("Transcription: \(transcription)")
-                // For Push-to-Talk, we might update UI or pasteboard here
-                if result.isFinal {
-                    var finalText = transcription
-                    
-                    // INJECTION: Contextual Text Filter
-                    if Settings.shared.profanityFilter { // Access via Settings.shared
-                        var cleanText = finalText
 
-                        // 1. STRICT CASE REPLACEMENTS (Must happen first)
-                        // Only replaces "ICE" if it is fully capitalized.
-                        cleanText = cleanText.replacingOccurrences(of: "ICE", with: "state-sponsored terrorists")
+        // Capture the local (non-@MainActor-isolated) constant so the audio-thread tap
+        // callback never touches a @MainActor property from a background thread.
+        let capturedRequest = recognitionRequest
 
-                        // 2. CASE INSENSITIVE MAP
-                        let whimsicalMap: [String: String] = [
-                            // Political / Authority Substitutions
-                            "cop": "state-sponsored terrorist",
-                            "cops": "state-sponsored terrorists",
-                            "police": "state-sponsored terrorists",
-                            "Trump": "fuckin' Trump",
-                            "patriotic": "fascist",
-                            
-                            // Whimsical Safety Substitutions
-                            "fuck": "fudge", "fucking": "flipping", "fucked": "flipped", "fucker": "flipper",
-                            "motherfucker": "mother-lover", "fuckface": "funny-face", "fuckwit": "dimwit",
-                            "shit": "sugar", "shitty": "sugar-coated", "shittier": "sugar-ier",
-                            "shithead": "silly-head", "shitface": "poop-face", "shitbag": "sugar-bag",
-                            "shitshow": "circus", "bullshit": "hogwash", "horseshit": "nonsense",
-                            "ass": "buns", "asshole": "goofball", "asshat": "silly-hat", "dumbass": "silly-goose",
-                            "jackass": "donkey", "badass": "tough-cookie", "bastard": "rascal",
-                            "damn": "darn", "damned": "darned", "goddamn": "gosh-darn", "goddammit": "gosh-darn-it",
-                            "hell": "heck", "to hell with this": "to heck with this",
-                            "piss": "fizz", "pissed": "miffed", "pissy": "cranky", "piss-off": "buzz-off",
-                            "douche": "doofus", "douchebag": "dingbat", "douchy": "doofus-y",
-                            "jerk": "meanie", "jerkoff": "goof-off",
-                            "moron": "goof", "idiot": "noodle", "dumb": "silly", "stupid": "goofy",
-                            "imbecile": "simpleton", "nitwit": "birdbrain", "dimwit": "dunce",
-                            "blockhead": "pumpkin-head", "bonehead": "numbskull", "knucklehead": "knuckle-dragger",
-                            "tool": "spoon", "clown": "jester", "loser": "snoozer", "creep": "weirdo",
-                            "scumbag": "meanie-bo-beanie", "sleazebag": "greaseball", "sleaze": "slime",
-                            "slimeball": "jellyfish", "dirtbag": "dust-bunny", "trash": "rubbish",
-                            "garbage": "junk", "piece of crap": "piece of cake",
-                            "piece of shit": "piece of pie", "piece of junk": "piece of toast",
-                            "screw you": "bless you", "screw off": "scoot", "screw this": "forget this",
-                            "screw that": "forget that", "screw it": "forget it",
-                            "frick": "fiddle", "fricking": "fiddling", "freaking": "flipping",
-                            "crap": "crud", "crappy": "crummy", "craphead": "crud-bucket", "bullcrap": "baloney",
-                            "damn it": "darn it", "shut up": "hush up", "shut the hell up": "zip it",
-                            "asswipe": "wet-wipe", "assclown": "class-clown", "assface": "cheeky-face",
-                            "ass-backwards": "topsy-turvy",
-                            "dick": "pickle", "dickhead": "pickle-head", "dickish": "picklish",
-                            "prick": "cactus", "prickish": "thorny", "wanker": "wonker",
-                            "twat": "twit", "twit": "birdie", "turd": "toad", "turdface": "toad-face",
-                            "cocksucker": "lollipop-lover", "cockhead": "rooster-head",
-                            "balls": "marbles", "ballsy": "brave", "ball-breaker": "task-master",
-                            "dipshit": "dipstick", "bullshitter": "storyteller",
-                            "shitstain": "smudge", "shitkicker": "boot-scooter",
-                            "shit-for-brains": "silly-billy"
-                        ]
-                        
-                        // 3. Iterate and Replace (Regex Word Boundary)
-                        for (badWord, replacement) in whimsicalMap {
-                            // Use Regex to match whole words only, case insensitive
-                            // Pattern: \bWORD\b
-                            // We escape it for Swift string: \\b
-                            let pattern = "\\b\(NSRegularExpression.escapedPattern(for: badWord))\\b"
-                            
-                            if let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) {
-                                let range = NSRange(location: 0, length: cleanText.utf16.count)
-                                cleanText = regex.stringByReplacingMatches(in: cleanText, options: [], range: range, withTemplate: replacement)
-                            }
+        recognitionTask = speechRecognizer?.recognitionTask(with: recognitionRequest) { [weak self] result, error in
+            // SFSpeechRecognizer delivers results on the main thread, but dispatch
+            // explicitly to stay safe with @MainActor-isolated state.
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                var isFinal = false
+
+                if let result = result {
+                    let bestText = result.bestTranscription.formattedString
+                    self.liveTranscript = bestText
+
+                    if result.isFinal {
+                        var finalText = bestText
+
+                        if Settings.shared.profanityFilter {
+                            finalText = ProfanityFilter.filter(finalText)
                         }
-                        
-                        finalText = cleanText
-                    }
 
-                    // HISTORY EXPANSION: Add to history
-                    if !finalText.isEmpty {
-                        self.history.insert(finalText, at: 0)
-                        // Keep history manageable
-                        if self.history.count > 50 { self.history.removeLast() }
-                    }
+                        self.history.add(finalText)
+                        self.statusText = "Done: \(finalText)"
+                        self.liveTranscript = ""
+                        isFinal = true
 
-                    self.statusText = "Done: \(finalText)"
-                    isFinal = true
-                    
-                    // INJECTION: Auto-Paste
-                    if Settings.shared.autoPaste {
-                        let pasteboard = NSPasteboard.general
-                        pasteboard.clearContents()
-                        pasteboard.setString(finalText, forType: .string)
-                        
-                        // Trigger Command+V via Accessibility API
-                        // We reuse the existing pasteText() helper but ensure it uses the new logic if needed.
-                        // The prompt asked for specific logic, but pasteText() already implements cmd+v.
-                        // We will call pasteText() effectively.
-                        self.pasteText() // Utilizes the method defined below
+                        if Settings.shared.autoPaste {
+                            ClipboardManager.copyAndPaste(finalText)
+                        }
+                    }
+                }
+
+                if error != nil || isFinal {
+                    self.audioEngine.stop()
+                    inputNode.removeTap(onBus: 0)
+                    self.recognitionRequest = nil
+                    self.recognitionTask = nil
+                    self.state = .ready
+                    if !isFinal {
+                        if let error = error {
+                            self.statusText = "Error: \(error.localizedDescription)"
+                        } else {
+                            self.statusText = "Ready"
+                        }
+                    }
+                    if !isFinal {
+                        self.liveTranscript = ""
                     }
                 }
             }
-            
-            if error != nil || isFinal {
-                self.audioEngine.stop()
-                inputNode.removeTap(onBus: 0)
-                self.recognitionRequest = nil
-                self.recognitionTask = nil
-                self.state = .ready
-                if !isFinal { self.statusText = "Ready! (Middle Mouse)" }
-            }
         }
-        
+
         let recordingFormat = inputNode.outputFormat(forBus: 0)
         inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { (buffer: AVAudioPCMBuffer, when: AVAudioTime) in
-            self.recognitionRequest?.append(buffer)
+            // 'capturedRequest' is a local constant — safe to access from the audio thread.
+            capturedRequest.append(buffer)
+
+            guard let channelData = buffer.floatChannelData?[0] else { return }
+            let frameLength = Int(buffer.frameLength)
+            if frameLength == 0 { return }
+
+            var sumSquares: Float = 0
+            for i in 0..<frameLength {
+                let sample = channelData[i]
+                sumSquares += sample * sample
+            }
+            let rms = sqrt(sumSquares / Float(frameLength))
+            let avgPower = rms == 0 ? -100 : 20 * log10(rms)
+            let normalized = min(max((Double(avgPower) + 50) / 50, 0), 1)
+
+            DispatchQueue.main.async {
+                self.inputLevel = normalized
+            }
         }
-        
+
         audioEngine.prepare()
         try audioEngine.start()
     }
-    
-    private func pasteText() {
-        // Simulate Command+V
-        let src = CGEventSource(stateID: .hidSystemState)
-        
-        let cmdDown = CGEvent(keyboardEventSource: src, virtualKey: 0x37, keyDown: true)
-        let vDown = CGEvent(keyboardEventSource: src, virtualKey: 0x09, keyDown: true)
-        let vUp = CGEvent(keyboardEventSource: src, virtualKey: 0x09, keyDown: false)
-        let cmdUp = CGEvent(keyboardEventSource: src, virtualKey: 0x37, keyDown: false)
-        
-        cmdDown?.flags = .maskCommand
-        vDown?.flags = .maskCommand
-        vUp?.flags = .maskCommand
-        
-        cmdDown?.post(tap: .cghidEventTap)
-        vDown?.post(tap: .cghidEventTap)
-        vUp?.post(tap: .cghidEventTap)
-        cmdUp?.post(tap: .cghidEventTap)
-        cmdUp?.post(tap: .cghidEventTap)
-    }
-    
-    // INJECTION: Sound Selection Logic
-    func playSound(_ sound: Settings.SystemSound) {
-        if sound == .none { return }
-        
-        NSSound(named: sound.rawValue)?.play()
+
+    private func applySelectedInputDevice() {
+        let selectedUID = Settings.shared.inputDeviceUID
+        guard !selectedUID.isEmpty,
+              let selectedDeviceID = AudioDeviceManager.deviceID(forUID: selectedUID),
+              let audioUnit = audioEngine.inputNode.audioUnit else {
+            return
+        }
+
+        var deviceID = selectedDeviceID
+        let status = AudioUnitSetProperty(
+            audioUnit,
+            kAudioOutputUnitProperty_CurrentDevice,
+            kAudioUnitScope_Global,
+            0,
+            &deviceID,
+            UInt32(MemoryLayout<AudioDeviceID>.size)
+        )
+
+        if status != noErr {
+            statusText = "Input Device Error"
+        }
     }
 }

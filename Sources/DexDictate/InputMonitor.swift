@@ -1,12 +1,31 @@
 import Cocoa
 
+/// Installs a system-wide Quartz event tap to intercept the user's configured trigger shortcut.
+///
+/// `InputMonitor` listens for keyboard and mouse events matching `Settings.shared.userShortcut`
+/// and dispatches `handleTrigger(down:)` or `toggleListening()` on the engine accordingly.
+///
+/// The tap runs on the current run loop and must be created on the main thread.  When the
+/// event tap fails (e.g. accessibility is not yet authorised), the monitor schedules a 5-second
+/// automatic retry rather than entering an error state permanently.
+///
+/// - Important: Requires the `com.apple.security.device.input-monitoring` entitlement and
+///   user approval under **System Settings › Privacy & Security › Accessibility**.
 final class InputMonitor {
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
+
+    /// Weak reference to the engine; held weakly to prevent a retain cycle since the engine
+    /// owns the monitor.
     private weak var engine: TranscriptionEngine?
-    
+
     init(engine: TranscriptionEngine) { self.engine = engine }
-    
+
+    /// Installs the Quartz event tap and registers it with the current run loop.
+    ///
+    /// If accessibility access has not been granted the method still prompts the user and
+    /// schedules an automatic retry after 5 seconds. Calling `start()` while the tap is
+    /// already active is a no-op.
     func start() {
         guard eventTap == nil else { return }
         
@@ -18,7 +37,6 @@ final class InputMonitor {
             print("WARNING: Accessibility permissions not granted yet.")
             Task { @MainActor in
                 self.engine?.statusText = "Waiting for Permissions..."
-                self.engine?.debugLog = "Please Grant Accessibility in Settings"
             }
             // We don't return here immediately; AXIsProcessTrustedWithOptions calls the prompt.
             // But tapCreate will likely fail until granted.
@@ -101,7 +119,6 @@ final class InputMonitor {
         ) else {
             print("CRITICAL: Failed to create Event Tap")
             Task { @MainActor in
-                self.engine?.debugLog = "Event Tap Failed - Check System Settings > Privacy & Security > Accessibility"
                 self.engine?.statusText = "Grant Accessibility Permission"
                 self.engine?.state = .error
             }
@@ -123,6 +140,9 @@ final class InputMonitor {
         CGEvent.tapEnable(tap: eventTap!, enable: true)
     }
     
+    /// Disables the event tap and removes its run loop source.
+    ///
+    /// Calling `stop()` when the tap is not active is a no-op.
     func stop() {
         guard let runLoopSource = runLoopSource, let eventTap = eventTap else { return }
         CFRunLoopRemoveSource(CFRunLoopGetCurrent(), runLoopSource, .commonModes)

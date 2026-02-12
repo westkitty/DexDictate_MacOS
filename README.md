@@ -21,12 +21,13 @@ A high-performance, privacy-focused dictation bridge for macOS. DexDictate runs 
 ## Key Features
 
 - **Total Privacy:** All processing happens on-device. No audio ever leaves your machine.
-- **Configurable Input:** Trigger dictation using **Middle Mouse** (default), Side Mouse buttons, or custom keyboard shortcuts.
+- **Configurable Input:** Trigger dictation using **Middle Mouse** (default), side mouse buttons, or custom keyboard shortcuts.
+- **Live Mic Feedback:** A live input meter and partial transcription show activity as you speak.
 - **Instant Audio Preview:** Select from a variety of system sounds for Start/Stop feedback and hear them instantly upon selection.
 - **Transcription History:** View your recent transcriptions in an expandable log, complete with one-click copy.
 - **Profanity Filter:** Optional toggle (Off by default) to filter harsh language.
 - **Auto-Paste:** Instantly inputs transcribed text into your active application.
-- **Quick Settings:** Easily toggle settings, restore defaults, and link to this repository directly from the app.
+- **Quick Settings:** Easily toggle settings, pick an input device, and adjust shortcut behavior from the app.
 
 ## Installation
 
@@ -58,6 +59,32 @@ If you prefer to see exactly what is happening, follow these steps:
 4.  **Build and Install:** Run the build script to compile the app and move it to your Applications folder:
     ```bash
     ./build.sh
+
+## First Run and Permissions
+
+DexDictate needs a few macOS privacy permissions to work correctly:
+
+- **Microphone** for audio input.
+- **Speech Recognition** for on-device transcription.
+- **Accessibility** to install the system-wide event tap.
+- **Input Monitoring** to receive global shortcut events.
+
+When the app opens, it will prompt for missing permissions. You can also open System Settings and verify:
+
+- System Settings -> Privacy & Security -> Microphone
+- System Settings -> Privacy & Security -> Speech Recognition
+- System Settings -> Privacy & Security -> Accessibility
+- System Settings -> Privacy & Security -> Input Monitoring
+
+## Troubleshooting
+
+If dictation does not start with your shortcut:
+
+1. Open the app and confirm **Input Monitoring** is allowed.
+2. Use the **Start Listening** button to verify mic input is working.
+3. Check the live mic meter and partial transcription for activity.
+
+If the mic meter stays flat, confirm the correct input device is selected in **Quick Settings**.
     ```
 
 ## Governance 
