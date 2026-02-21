@@ -96,10 +96,22 @@ public class WhisperService: ObservableObject {
     /// - `suppress_non_speech_tokens = true` — reduces non-speech hallucinations and wasted decode.
     private static func makeFastParams() -> WhisperParams {
         let params = WhisperParams(strategy: .greedy)
-        // Single decode pass — biggest single speed win (~50% faster decoding).
-        params.greedy.best_of = 1
-        // Phase Vocoder speed-up: halves audio context frames (~30-40% faster encoding).
-        params.speed_up = true
+        
+        switch ExperimentFlags.whisperDecodeProfile {
+        case .accuracy:
+            params.greedy.best_of = 2
+            params.speed_up = false
+            params.temperature_inc = 0.2
+        case .balanced:
+            params.greedy.best_of = 1
+            params.speed_up = false
+            params.temperature_inc = 0.0
+        case .speed:
+            params.greedy.best_of = 1
+            params.speed_up = true
+            params.temperature_inc = 0.0
+        }
+
         // For tiny/base models, whisper.cpp's default cap of 4 threads is often lower latency.
         params.n_threads = Int32(max(1, min(4, ProcessInfo.processInfo.activeProcessorCount)))
         // Dictation does not need timestamps; keep timestamp features disabled.
@@ -107,8 +119,6 @@ public class WhisperService: ObservableObject {
         params.token_timestamps = false
         // Disable carry-over prompt/context between calls for independent short utterances.
         params.no_context = true
-        // Avoid expensive retry passes when confidence thresholds fail.
-        params.temperature_inc = 0.0
         // Prevent pathological long decodes on noisy input.
         params.max_tokens = 128
         // Helps suppress non-speech artifacts in dictation-style input.
