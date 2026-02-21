@@ -31,7 +31,6 @@ public struct Safety {
     /// - NSLog output appears in Console.app when filtering by process "DexDictate"
     /// - Also appended to ~/Library/Application Support/DexDictate/debug.log
     public static func log(_ message: String) {
-        #if DEBUG
         NSLog("[DexDictate] %@", message)
         if let dir = appSupportURL {
             let logURL = dir.appendingPathComponent("debug.log")
@@ -48,7 +47,6 @@ public struct Safety {
                 }
             }
         }
-        #endif
     }
 
     /// Opens Console.app to help the user inspect system logs during troubleshooting.

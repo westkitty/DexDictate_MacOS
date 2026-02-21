@@ -39,6 +39,20 @@ public final class TranscriptionEngine: ObservableObject {
     private var recognitionTask: Task<Void, Error>?
     private var cancellables = Set<AnyCancellable>()
 
+    // MARK: - Metrics
+    private struct MetricsSession {
+        var t_trigger_up: Date?
+        var t_audio_stop: Date?
+        var t_resample_done: Date?
+        var t_whisper_submit: Date?
+        var t_whisper_done: Date?
+        
+        var raw_samples: Int = 0
+        var trim_samples: Int = 0
+        var resample_samples: Int = 0
+    }
+    private var currentMetrics = MetricsSession()
+
     public enum EngineState {
         case stopped, initializing, ready, listening, transcribing, error
     }
@@ -134,11 +148,15 @@ public final class TranscriptionEngine: ObservableObject {
             stopTask?.cancel()
             stopTask = nil
             currentSessionId = UUID()
+            
+            // reset metrics
+            currentMetrics = MetricsSession()
 
             if state != .listening {
                 startListening()
             }
         } else {
+            currentMetrics.t_trigger_up = Date()
             scheduleStop()
         }
     }
@@ -166,7 +184,7 @@ public final class TranscriptionEngine: ObservableObject {
 
     private func scheduleStop() {
         // Keep a short tail to avoid clipping final phonemes while minimizing perceived latency.
-        let stopDelayMs: UInt64 = 250
+        let stopDelayMs: UInt64 = ExperimentFlags.stopTailDelayMs
         Safety.log("scheduleStop() — scheduling stop after \(stopDelayMs)ms")
         stopTask?.cancel()
         let sessionId = currentSessionId
@@ -266,22 +284,40 @@ public final class TranscriptionEngine: ObservableObject {
         recognitionTask = nil
 
         let (rawSamples, sourceSampleRate) = audioService.stopAndCollect()
+        currentMetrics.t_audio_stop = Date()
+        currentMetrics.raw_samples = rawSamples.count
+        
         Safety.log("stopListening() — collected \(rawSamples.count) samples @ \(sourceSampleRate) Hz")
 
         if AppSettings.shared.playStopSound {
             SoundPlayer.play(AppSettings.shared.selectedStopSound)
         }
 
+        var samplesToProcess = rawSamples
+        if ExperimentFlags.enableSilenceTrim {
+            samplesToProcess = trimSilenceFast(samplesToProcess)
+        }
+        currentMetrics.trim_samples = samplesToProcess.count
+        
+        // Immediate UI feedback to user that dictation was captured and is processing.
+        self.liveTranscript = NSLocalizedString("Processing...", comment: "Status: Processing audio")
+
         // 2. Resample to 16 kHz (Whisper's required sample rate) and submit once.
-        let whisperSamples = resampleToWhisper(rawSamples, fromRate: sourceSampleRate)
+        let whisperSamples = resampleToWhisper(samplesToProcess, fromRate: sourceSampleRate)
+        currentMetrics.t_resample_done = Date()
+        currentMetrics.resample_samples = whisperSamples.count
+        
         Safety.log("Submitting \(whisperSamples.count) samples @ 16000 Hz to Whisper")
 
         // Wire up result handler before calling transcribe.
         whisperService.ontranscriptionComplete = { [weak self] text in
             Task { @MainActor in
+                self?.currentMetrics.t_whisper_done = Date()
                 self?.handleWhisperResult(text)
             }
         }
+        
+        currentMetrics.t_whisper_submit = Date()
         whisperService.transcribe(audioFrames: whisperSamples)
     }
 
@@ -297,11 +333,56 @@ public final class TranscriptionEngine: ObservableObject {
         }
     }
 
-    /// Linear interpolation resample: converts mono float PCM from `fromRate` to 16000 Hz.
-    /// Whisper.cpp requires exactly 16000 Hz input; no internal resampling is performed.
+    /// Resamples to 16 kHz (Whisper's required sample rate).
     private func resampleToWhisper(_ samples: [Float], fromRate: Double) -> [Float] {
         let targetRate: Double = 16000
         guard fromRate != targetRate, !samples.isEmpty else { return samples }
+        
+        if ExperimentFlags.resampleMethod == .avAudioConverter {
+            let frameCount = AVAudioFrameCount(samples.count)
+            guard let formatIn = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: fromRate, channels: 1, interleaved: false),
+                  let formatOut = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: targetRate, channels: 1, interleaved: false),
+                  let converter = AVAudioConverter(from: formatIn, to: formatOut) else {
+                return resampleToWhisperLinear(samples, fromRate: fromRate, targetRate: targetRate)
+            }
+            converter.sampleRateConverterQuality = AVAudioQuality.high.rawValue
+
+            guard let bufferIn = AVAudioPCMBuffer(pcmFormat: formatIn, frameCapacity: frameCount) else { return samples }
+            bufferIn.frameLength = frameCount
+            if let data = bufferIn.floatChannelData?[0] {
+                data.initialize(from: samples, count: samples.count)
+            }
+            
+            let targetFrameCount = AVAudioFrameCount(Double(samples.count) * targetRate / fromRate) + 4096
+            guard let bufferOut = AVAudioPCMBuffer(pcmFormat: formatOut, frameCapacity: targetFrameCount) else { return samples }
+            
+            var provided = false
+            var error: NSError?
+            let status = converter.convert(to: bufferOut, error: &error) { packetCount, outStatus in
+                if provided {
+                    outStatus.pointee = .endOfStream
+                    return nil
+                }
+                provided = true
+                outStatus.pointee = .haveData
+                return bufferIn
+            }
+            
+            if status == .error {
+                Safety.log("AVAudioConverter error: \(error?.localizedDescription ?? "unknown")")
+                return resampleToWhisperLinear(samples, fromRate: fromRate, targetRate: targetRate)
+            }
+            
+            if let outData = bufferOut.floatChannelData?[0] {
+                return Array(UnsafeBufferPointer(start: outData, count: Int(bufferOut.frameLength)))
+            }
+            return resampleToWhisperLinear(samples, fromRate: fromRate, targetRate: targetRate)
+        } else {
+            return resampleToWhisperLinear(samples, fromRate: fromRate, targetRate: targetRate)
+        }
+    }
+
+    private func resampleToWhisperLinear(_ samples: [Float], fromRate: Double, targetRate: Double) -> [Float] {
         let ratio = fromRate / targetRate
         let outputCount = Int(Double(samples.count) / ratio)
         var output = [Float](repeating: 0, count: outputCount)
@@ -322,6 +403,7 @@ public final class TranscriptionEngine: ObservableObject {
         // stuck at .transcribing and block the next trigger press.
         defer {
             state = .ready
+            emitMetricsCSV()
         }
 
         // 0. Process Commands
@@ -382,5 +464,42 @@ public final class TranscriptionEngine: ObservableObject {
         if AppSettings.shared.autoPaste {
              ClipboardManager.copyAndPaste(finalText)
         }
+    }
+
+    private func trimSilenceFast(_ samples: [Float]) -> [Float] {
+        let frameSize = 1600
+        let threshold: Float = 0.005
+        guard samples.count > frameSize * 2 else { return samples }
+        var startIdx = 0
+        var endIdx = samples.count
+        for i in stride(from: 0, to: samples.count - frameSize, by: frameSize) {
+            var sum: Float = 0
+            for j in 0..<frameSize { sum += samples[i+j] * samples[i+j] }
+            if sqrt(sum / Float(frameSize)) > threshold {
+                startIdx = max(0, i - frameSize)
+                break
+            }
+        }
+        for i in stride(from: samples.count - frameSize, through: 0, by: -frameSize) {
+            var sum: Float = 0
+            for j in 0..<frameSize { sum += samples[i+j] * samples[i+j] }
+            if sqrt(sum / Float(frameSize)) > threshold {
+                endIdx = min(samples.count, i + (frameSize * 2))
+                break
+            }
+        }
+        if startIdx >= endIdx { return samples }
+        return Array(samples[startIdx..<endIdx])
+    }
+
+    private func emitMetricsCSV() {
+        guard let t_up = currentMetrics.t_trigger_up,
+              let t_aud = currentMetrics.t_audio_stop,
+              let t_res = currentMetrics.t_resample_done,
+              let t_sub = currentMetrics.t_whisper_submit,
+              let t_done = currentMetrics.t_whisper_done else { return }
+        let ms = { (d1: Date, d2: Date) -> Int in Int(d2.timeIntervalSince(d1) * 1000) }
+        let csv = "\(Date().timeIntervalSince1970),\(currentMetrics.raw_samples),\(currentMetrics.trim_samples),\(currentMetrics.resample_samples),\(ms(t_up, t_aud)),\(ms(t_aud, t_res)),\(ms(t_sub, t_done)),\(ms(t_up, t_done))"
+        Safety.log("METRIC_CSV: \(csv)")
     }
 }
