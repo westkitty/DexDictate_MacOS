@@ -2,6 +2,78 @@ import Foundation
 import AVFoundation
 
 public struct AudioResampler {
+
+    // MARK: - Energy-Based Silence Trimmer
+
+    /// Trims leading and trailing silence from a PCM buffer using RMS energy detection.
+    ///
+    /// The algorithm:
+    /// 1. Divides the buffer into overlapping 100 ms analysis *frames*.
+    /// 2. Computes RMS energy for each frame.
+    /// 3. Walks inward from each end; the first frame whose RMS exceeds `threshold`
+    ///    marks the speech boundary.
+    /// 4. Clamps with a ±`padMs` guard to avoid clipping onset/offset consonants.
+    ///
+    /// - Parameters:
+    ///   - samples:   PCM samples at `sampleRate`.
+    ///   - sampleRate: Rate of the incoming samples (native device rate).
+    ///   - threshold:  RMS threshold below which a frame is considered silent (0.0–1.0).
+    ///   - padMs:      Extra milliseconds to keep beyond the detected boundaries.
+    /// - Returns: The trimmed sub-array, or the original if speech fills the whole buffer
+    ///            or if the buffer is too short to analyse.
+    public static func trimSilenceFast(
+        _ samples: [Float],
+        sampleRate: Double = 44100,
+        threshold: Float = 0.005,
+        padMs: Int = 80
+    ) -> [Float] {
+        let frameSizeSamples = Int(sampleRate * 0.1)   // 100 ms per frame
+        let padSamples       = Int(sampleRate * Double(padMs) / 1000.0)
+        let minSamples       = frameSizeSamples * 3    // don't bother trimming tiny clips
+
+        guard samples.count > minSamples else { return samples }
+
+        // --- forward scan: find first active frame ---
+        var speechStart = 0
+        var foundStart  = false
+        var i = 0
+        while i + frameSizeSamples <= samples.count {
+            let rms = rmsEnergy(samples, from: i, count: frameSizeSamples)
+            if rms > threshold {
+                speechStart = max(0, i - padSamples)
+                foundStart  = true
+                break
+            }
+            i += frameSizeSamples
+        }
+        guard foundStart else { return samples }  // all silence → return original
+
+        // --- backward scan: find last active frame ---
+        var speechEnd = samples.count
+        var j = samples.count - frameSizeSamples
+        while j >= speechStart {
+            let rms = rmsEnergy(samples, from: j, count: frameSizeSamples)
+            if rms > threshold {
+                speechEnd = min(samples.count, j + frameSizeSamples + padSamples)
+                break
+            }
+            j -= frameSizeSamples
+        }
+
+        guard speechStart < speechEnd else { return samples }
+        return Array(samples[speechStart..<speechEnd])
+    }
+
+    // MARK: - Private helpers
+
+    @inline(__always)
+    private static func rmsEnergy(_ buf: [Float], from: Int, count: Int) -> Float {
+        var sum: Float = 0
+        for k in from..<(from + count) { sum += buf[k] * buf[k] }
+        return (sum / Float(count)).squareRoot()
+    }
+
+
     /// Resamples to 16 kHz (Whisper's required sample rate).
     public static func resampleToWhisper(_ samples: [Float], fromRate: Double) -> [Float] {
         let targetRate: Double = 16000

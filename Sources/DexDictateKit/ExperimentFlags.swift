@@ -2,7 +2,7 @@ import Foundation
 
 public struct ExperimentFlags {
     /// Silence trim heuristic. If true, trims trailing silence via RMS energy threshold before passing to Whisper.
-    public static var enableSilenceTrim = false
+    public static var enableSilenceTrim = true
     
     /// Amount of tail delay (ms) applied after trigger release before stopping audio engine.
     /// Current head is 250ms. Older builds used 750ms.

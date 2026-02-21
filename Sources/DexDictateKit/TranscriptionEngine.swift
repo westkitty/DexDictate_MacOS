@@ -295,7 +295,11 @@ public final class TranscriptionEngine: ObservableObject {
 
         var samplesToProcess = rawSamples
         if ExperimentFlags.enableSilenceTrim {
-            samplesToProcess = trimSilenceFast(samplesToProcess)
+            samplesToProcess = AudioResampler.trimSilenceFast(samplesToProcess, sampleRate: sourceSampleRate)
+            if samplesToProcess.count != rawSamples.count {
+                let pct = Int((1.0 - Double(samplesToProcess.count) / Double(rawSamples.count)) * 100)
+                Safety.log("Silence trim: \(rawSamples.count) → \(samplesToProcess.count) samples (\(pct)% removed)")
+            }
         }
         currentMetrics.trim_samples = samplesToProcess.count
         
