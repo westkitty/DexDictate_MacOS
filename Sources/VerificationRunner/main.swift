@@ -279,7 +279,7 @@ private func runAllPaths() {
 }
 
 @MainActor
-private func runBenchmark(path: String) async {
+private func runBenchmark(path: String, modelName: String) async {
     let url = URL(fileURLWithPath: path)
     guard FileManager.default.fileExists(atPath: url.path) else {
         print("BENCHMARK_FAIL: Audio file not found at \(path)")
@@ -322,8 +322,8 @@ private func runBenchmark(path: String) async {
     print("DEBUG_AUDIO: frameCount=\(frameCount), frameLength=\(buffer.frameLength), native=\(nativeSamples.count), whisper=\(whisperSamples.count)")
     
     let whisper = WhisperService()
-    guard let modelURL = Safety.resourceBundle.url(forResource: "tiny.en", withExtension: "bin") else {
-        print("BENCHMARK_FAIL: Could not locate tiny.en.bin")
+    guard let modelURL = Safety.resourceBundle.url(forResource: modelName, withExtension: "bin") else {
+        print("BENCHMARK_FAIL: Could not locate \(modelName).bin")
         exit(1)
     }
     whisper.loadModel(url: modelURL)
@@ -346,7 +346,12 @@ private func runBenchmark(path: String) async {
 Task { @MainActor in
     let args = ProcessInfo.processInfo.arguments
     if let idx = args.firstIndex(of: "--benchmark"), idx + 1 < args.count {
-        await runBenchmark(path: args[idx + 1])
+        let path = args[idx + 1]
+        var modelName = "tiny.en"
+        if let modelIdx = args.firstIndex(of: "--model"), modelIdx + 1 < args.count {
+            modelName = args[modelIdx + 1]
+        }
+        await runBenchmark(path: path, modelName: modelName)
     } else {
         runAllPaths()
     }
