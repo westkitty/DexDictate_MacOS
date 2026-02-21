@@ -43,3 +43,4 @@ secrets.json
 *.cer
 HANDOFF_CONTEXT.md
 _releases/
+Sources/DexDictateKit/Resources/base.en.bin
