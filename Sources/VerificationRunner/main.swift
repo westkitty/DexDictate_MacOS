@@ -1,4 +1,5 @@
 import Foundation
+import AVFoundation
 import DexDictateKit
 
 private struct Metrics {
@@ -277,8 +278,78 @@ private func runAllPaths() {
     }
 }
 
+@MainActor
+private func runBenchmark(path: String) async {
+    let url = URL(fileURLWithPath: path)
+    guard FileManager.default.fileExists(atPath: url.path) else {
+        print("BENCHMARK_FAIL: Audio file not found at \(path)")
+        exit(1)
+    }
+    
+    // Load audio
+    // Load audio
+    guard let file = try? AVAudioFile(forReading: url) else {
+        print("BENCHMARK_FAIL: Could not open audio file at \(path)")
+        exit(1)
+    }
+    
+    let frameCount = AVAudioFrameCount(file.length)
+    guard let format = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: file.fileFormat.sampleRate, channels: 1, interleaved: false),
+          let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount) else {
+        print("BENCHMARK_FAIL: Could not instantiate PCM buffer")
+        exit(1)
+    }
+    
+    // In Swift AVFoundation, you must set frameLength to the capacity you wish to read
+    // before calling read(into:), otherwise it reads 0 frames.
+    buffer.frameLength = frameCount
+    
+    do {
+        try file.read(into: buffer)
+    } catch {
+        print("BENCHMARK_FAIL: Read error")
+        exit(1)
+    }
+    
+    guard let floatData = buffer.floatChannelData?[0] else {
+        print("BENCHMARK_FAIL: No float channel data")
+        exit(1)
+    }
+    
+    let nativeSamples = Array(UnsafeBufferPointer(start: floatData, count: Int(buffer.frameLength)))
+    let whisperSamples = AudioResampler.resampleToWhisper(nativeSamples, fromRate: file.fileFormat.sampleRate)
+    
+    print("DEBUG_AUDIO: frameCount=\(frameCount), frameLength=\(buffer.frameLength), native=\(nativeSamples.count), whisper=\(whisperSamples.count)")
+    
+    let whisper = WhisperService()
+    guard let modelURL = Safety.resourceBundle.url(forResource: "tiny.en", withExtension: "bin") else {
+        print("BENCHMARK_FAIL: Could not locate tiny.en.bin")
+        exit(1)
+    }
+    whisper.loadModel(url: modelURL)
+    
+    let start = Date()
+    
+    await withCheckedContinuation { continuation in
+        whisper.ontranscriptionComplete = { text in
+            let end = Date()
+            let ms = Int(end.timeIntervalSince(start) * 1000)
+            print("BENCHMARK_RESULT:\(text.trimmingCharacters(in: .whitespacesAndNewlines))")
+            print("BENCHMARK_LATENCY_MS:\(ms)")
+            continuation.resume()
+        }
+        whisper.transcribe(audioFrames: whisperSamples)
+    }
+    exit(0)
+}
+
 Task { @MainActor in
-    runAllPaths()
+    let args = ProcessInfo.processInfo.arguments
+    if let idx = args.firstIndex(of: "--benchmark"), idx + 1 < args.count {
+        await runBenchmark(path: args[idx + 1])
+    } else {
+        runAllPaths()
+    }
 }
 
 dispatchMain()
