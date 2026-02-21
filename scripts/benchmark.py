@@ -47,12 +47,16 @@ def compute_wer(reference, hypothesis):
     return float(errors) / len(ref_words)
 
 def main():
-    if len(sys.argv) != 3:
-        print("Usage: ./scripts/benchmark.py <audio_directory> <transcripts_json>")
-        sys.exit(1)
-        
-    audio_dir = sys.argv[1]
-    transcripts_file = sys.argv[2]
+    import argparse
+    parser = argparse.ArgumentParser(description="Run WER benchmark sweep")
+    parser.add_argument("audio_dir", help="Directory containing .wav files")
+    parser.add_argument("transcripts_json", help="JSON file mapping filenames to expected transcripts")
+    parser.add_argument("--model", type=str, default="tiny.en", help="Model name to use (e.g., base.en)")
+    args = parser.parse_args()
+    
+    audio_dir = args.audio_dir
+    transcripts_file = args.transcripts_json
+    model_name = args.model
     
     with open(transcripts_file, 'r') as f:
         transcripts = json.load(f)
@@ -73,7 +77,7 @@ def main():
         # Run VerificationRunner
         try:
             result = subprocess.run(
-                ["./scripts/benchmark.sh", file_path],
+                ["./scripts/benchmark.sh", file_path, model_name],
                 capture_output=True,
                 text=True,
                 check=False
