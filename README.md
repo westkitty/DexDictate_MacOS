@@ -63,20 +63,19 @@ If you prefer to see exactly what is happening, follow these steps:
 4.  **Build and Install:** Run the build script to compile the app and move it to your Applications folder:
     ```bash
     ./build.sh
+    ```
 
 ## First Run and Permissions
 
 DexDictate needs a few macOS privacy permissions to work correctly:
 
 - **Microphone** for audio input.
-- **Speech Recognition** for on-device transcription.
 - **Accessibility** to install the system-wide event tap.
 - **Input Monitoring** to receive global shortcut events.
 
 When the app opens, it will prompt for missing permissions. You can also open System Settings and verify:
 
 - System Settings -> Privacy & Security -> Microphone
-- System Settings -> Privacy & Security -> Speech Recognition
 - System Settings -> Privacy & Security -> Accessibility
 - System Settings -> Privacy & Security -> Input Monitoring
 
@@ -89,7 +88,6 @@ If dictation does not start with your shortcut:
 3. Check the live mic meter and partial transcription for activity.
 
 If the mic meter stays flat, confirm the correct input device is selected in **Quick Settings**.
-    ```
 
 ## Governance 
 
