@@ -3,7 +3,7 @@ set -e
 
 # Configuration
 RELEASE_DIR="_releases"
-APP_NAME="DexDictate_V2"
+APP_NAME="DexDictate"
 BUILD_OUTPUT=".build/$APP_NAME.app"
 ZIP_NAME="DexDictate_MacOS.zip"
 DMG_NAME="DexDictate_MacOS.dmg"

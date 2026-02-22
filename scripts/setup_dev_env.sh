@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 echo "🔧 Setting up DexDictate development environment..."
 
@@ -17,10 +17,10 @@ if ! xcode-select -p &>/dev/null; then
     exit 1
 fi
 
-# Create certificate
+# Optional development certificate for stable identity-based signing.
+# build.sh will still work with ad-hoc signing when this cert is absent.
 if [ -f scripts/create_signing_cert.sh ]; then
-    chmod +x scripts/create_signing_cert.sh
-    ./scripts/create_signing_cert.sh
+    echo "ℹ️  Optional: run ./scripts/create_signing_cert.sh if you want named certificate signing."
 fi
 
 echo "✅ Development environment ready"

@@ -42,6 +42,10 @@ Download the latest pre-built application from the [Releases](https://github.com
 
 ### Option B: Build from Source
 
+**Prerequisites:**
+- macOS 14+
+- Xcode 15+ (or Xcode Command Line Tools)
+
 **Fast Track (One-Liner):**
 Simply copy and paste this entire line into your terminal to build and install everything at once:
 ```bash
@@ -60,20 +64,25 @@ If you prefer to see exactly what is happening, follow these steps:
     ```bash
     cd DexDictate_MacOS
     ```
-4.  **Build and Install:** Run the build script to compile the app and move it to your Applications folder:
+4.  **Build and Install:** Run the build script to compile and install into `~/Applications`:
     ```bash
     ./build.sh
     ```
 
+To install into `/Applications` instead:
+```bash
+INSTALL_DIR=/Applications ./build.sh
+```
+
 ## First Run and Permissions
 
-DexDictate needs a few macOS privacy permissions to work correctly:
+DexDictate needs these macOS privacy permissions:
 
 - **Microphone** for audio input.
 - **Accessibility** to install the system-wide event tap.
 - **Input Monitoring** to receive global shortcut events.
 
-When the app opens, it will prompt for missing permissions. You can also open System Settings and verify:
+When the app opens, it prompts for missing permissions. You can also verify in:
 
 - System Settings -> Privacy & Security -> Microphone
 - System Settings -> Privacy & Security -> Accessibility
@@ -110,7 +119,6 @@ You could even sell it... if you're a capitalist pig.
 
 DexDictate is built with a modern, modular architecture:
 
-- **DexDictateKit:** Core logic library handling Audio (`AudioRecorderService`), Speech (`SpeechRecognitionService`), and Input (`InputMonitor`).
+- **DexDictateKit:** Core logic library handling Audio (`AudioRecorderService`), local Whisper transcription (`WhisperService`), and Input (`InputMonitor`).
 - **DexDictate App:** Lightweight SwiftUI frontend responsible for Views, Window management, and the Menu Bar interface.
 - **Robustness:** Features like `AudioDeviceScanner` and `InputMonitor` are designed to handle system events (hardware changes, privacy revocations) gracefully without crashing.
-
