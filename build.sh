@@ -51,21 +51,21 @@ sed -e "s/{{APP_NAME}}/$APP_NAME/g" \
 
 echo "APPL????" > "$BUNDLE/Contents/PkgInfo"
 
-SIGN_ID="-"
-CODESIGN_EXTRA_ARGS=()
 if security find-identity -v -p codesigning | grep -q "$CERT_NAME"; then
-    SIGN_ID="$CERT_NAME"
-    CODESIGN_EXTRA_ARGS+=(--options runtime --timestamp=none)
     echo -e "${BLUE}🔐 Signing with '$CERT_NAME'...${NC}"
+    codesign --force --deep \
+        --sign "$CERT_NAME" \
+        --entitlements "$ENTITLEMENTS" \
+        --options runtime \
+        --timestamp=none \
+        "$BUNDLE"
 else
     echo -e "${YELLOW}⚠️  '$CERT_NAME' not found. Using ad-hoc signing (-).${NC}"
+    codesign --force --deep \
+        --sign - \
+        --entitlements "$ENTITLEMENTS" \
+        "$BUNDLE"
 fi
-
-codesign --force --deep \
-    --sign "$SIGN_ID" \
-    --entitlements "$ENTITLEMENTS" \
-    "${CODESIGN_EXTRA_ARGS[@]}" \
-    "$BUNDLE"
 
 CDHASH="$(codesign -dvv "$BUNDLE" 2>&1 | awk -F= '/CDHash=/{print $2; exit}')"
 if [ -n "$CDHASH" ]; then
