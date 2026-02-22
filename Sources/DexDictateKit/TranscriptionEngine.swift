@@ -408,32 +408,6 @@ public final class TranscriptionEngine: ObservableObject {
         }
     }
 
-    private func trimSilenceFast(_ samples: [Float]) -> [Float] {
-        let frameSize = 1600
-        let threshold: Float = 0.005
-        guard samples.count > frameSize * 2 else { return samples }
-        var startIdx = 0
-        var endIdx = samples.count
-        for i in stride(from: 0, to: samples.count - frameSize, by: frameSize) {
-            var sum: Float = 0
-            for j in 0..<frameSize { sum += samples[i+j] * samples[i+j] }
-            if sqrt(sum / Float(frameSize)) > threshold {
-                startIdx = max(0, i - frameSize)
-                break
-            }
-        }
-        for i in stride(from: samples.count - frameSize, through: 0, by: -frameSize) {
-            var sum: Float = 0
-            for j in 0..<frameSize { sum += samples[i+j] * samples[i+j] }
-            if sqrt(sum / Float(frameSize)) > threshold {
-                endIdx = min(samples.count, i + (frameSize * 2))
-                break
-            }
-        }
-        if startIdx >= endIdx { return samples }
-        return Array(samples[startIdx..<endIdx])
-    }
-
     private func emitMetricsCSV() {
         guard let t_up = currentMetrics.t_trigger_up,
               let t_aud = currentMetrics.t_audio_stop,

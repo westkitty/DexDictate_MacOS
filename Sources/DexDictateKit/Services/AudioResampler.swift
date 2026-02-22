@@ -24,16 +24,27 @@ public struct AudioResampler {
     public static func trimSilenceFast(
         _ samples: [Float],
         sampleRate: Double = 44100,
-        threshold: Float = 0.005,
+        snrFactor: Float = 4.0,     // active speech must be ≥ 4× the noise floor
         padMs: Int = 80
     ) -> [Float] {
         let frameSizeSamples = Int(sampleRate * 0.1)   // 100 ms per frame
         let padSamples       = Int(sampleRate * Double(padMs) / 1000.0)
-        let minSamples       = frameSizeSamples * 3    // don't bother trimming tiny clips
+        let noiseFrames      = 5                       // frames used to estimate noise floor
+        let minSamples       = frameSizeSamples * (noiseFrames + 2)
 
         guard samples.count > minSamples else { return samples }
 
-        // --- forward scan: find first active frame ---
+        // --- 1. Estimate noise floor from the first N frames ---
+        var noiseRMS: Float = 0
+        for n in 0..<noiseFrames {
+            noiseRMS += rmsEnergy(samples, from: n * frameSizeSamples, count: frameSizeSamples)
+        }
+        noiseRMS /= Float(noiseFrames)
+        let threshold = noiseRMS * snrFactor
+
+        Safety.log("Silence trimmer — noise floor RMS: \(String(format: "%.5f", noiseRMS)), threshold: \(String(format: "%.5f", threshold))")
+
+        // --- 2. Forward scan: find first frame above threshold ---
         var speechStart = 0
         var foundStart  = false
         var i = 0
@@ -46,9 +57,9 @@ public struct AudioResampler {
             }
             i += frameSizeSamples
         }
-        guard foundStart else { return samples }  // all silence → return original
+        guard foundStart else { return samples }   // all silence → return original
 
-        // --- backward scan: find last active frame ---
+        // --- 3. Backward scan: find last frame above threshold ---
         var speechEnd = samples.count
         var j = samples.count - frameSizeSamples
         while j >= speechStart {
