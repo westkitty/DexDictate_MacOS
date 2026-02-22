@@ -43,4 +43,8 @@ secrets.json
 *.cer
 HANDOFF_CONTEXT.md
 _releases/
+# base.en.bin is the ggml-base.en Whisper model (141MB), too large for GitHub.
+# Download with:
+#   curl -L -o Sources/DexDictateKit/Resources/base.en.bin \
+#     https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin
 Sources/DexDictateKit/Resources/base.en.bin
