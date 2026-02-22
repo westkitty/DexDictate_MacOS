@@ -2,14 +2,14 @@
 set -e
 
 # Configuration
-APP_NAME="DexDictate_V2"
+APP_NAME="DexDictate"
 CERT_NAME="DexDictate Development"
 BUNDLE_ID="com.westkitty.dexdictate.macos"
 BUILD_DIR="./.build"
-INSTALL_DIR="$HOME/Applications"
+INSTALL_DIR="/Applications"
 SOURCES_DIR="Sources"
 TEMPLATE_DIR="templates"
-RESOURCES_DIR="Sources/DexDictate/Resources"
+RESOURCES_DIR="Sources/DexDictateKit/Resources"
 ENTITLEMENTS="Sources/DexDictate/DexDictate.entitlements"
 VERSION_FILE="VERSION"
 
@@ -66,6 +66,13 @@ if [ "$NEEDS_COMPILE" = true ] || [ ! -f "$BUNDLE/Contents/MacOS/$APP_NAME" ]; t
     cp "$BINARY" "$BUNDLE/Contents/MacOS/$APP_NAME"
 fi
 
+# Copy SPM resource bundle (models, profanity list, etc.)
+SPM_BUNDLE="$BUILD_DIR/arm64-apple-macosx/release/DexDictate_MacOS_DexDictateKit.bundle"
+if [ -d "$SPM_BUNDLE" ]; then
+    echo "📦 Copying resource bundle..."
+    cp -R "$SPM_BUNDLE" "$BUNDLE/Contents/Resources/"
+fi
+
 # 4. Info.plist Generation (Cache check)
 VERSION=$(cat "$VERSION_FILE")
 PLIST_DEST="$BUNDLE/Contents/Info.plist"
@@ -111,14 +118,19 @@ else
 fi
 
 if [ "$CompileAssets" = true ]; then
-    echo -e "${BLUE}🎨 Compiling Assets...${NC}"
-    /Applications/Xcode.app/Contents/Developer/usr/bin/actool \
-        "$ASSETS_SRC" \
-        --compile "$BUNDLE/Contents/Resources" \
-        --platform macosx \
-        --minimum-deployment-target 14.0 \
-        --app-icon AppIcon \
-        --output-partial-info-plist /tmp/assetcatalog_generated_info.plist > /dev/null
+    ACTOOL=$(xcrun --find actool 2>/dev/null || true)
+    if [ -n "$ACTOOL" ]; then
+        echo -e "${BLUE}🎨 Compiling Assets...${NC}"
+        "$ACTOOL" \
+            "$ASSETS_SRC" \
+            --compile "$BUNDLE/Contents/Resources" \
+            --platform macosx \
+            --minimum-deployment-target 14.0 \
+            --app-icon AppIcon \
+            --output-partial-info-plist /tmp/assetcatalog_generated_info.plist > /dev/null
+    else
+        echo -e "${YELLOW}⚠️  actool requires full Xcode — skipping asset compilation (app icon will be missing).${NC}"
+    fi
 fi
 
 # 6. PkgInfo
