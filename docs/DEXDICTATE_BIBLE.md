@@ -1968,3 +1968,102 @@ Rationale:
   - manual visual QA across theme modes and reduced-transparency mode has not been executed
   - remaining Phase 4, Phase 5, and Phase 6 items are still open
 - Next step: Continue with remaining safety workflow items or the final release-hardening automation.
+
+### 18.42 Pre-Implementation Note P-0010
+
+- Entry ID: P-0010
+- Timestamp: 2026-03-10 America/Detroit
+- Improvement ID(s): R03, R04, R08, R09, R10
+- Goal: Finish the remaining low-risk visual polish items without touching brand assets or workflow semantics.
+- Why now: These changes are still safely separable from the unresolved destructive-command, secure-context, audio-recovery, and launch-at-login work.
+- Dependency context: Continues the Phase 5 surface pass already underway.
+- Files likely to change:
+  - `Sources/DexDictate/HistoryView.swift`
+  - `Sources/DexDictate/HistoryWindow.swift`
+  - `Sources/DexDictate/ControlsView.swift`
+  - shared UI token/style files under `Sources/DexDictate`
+  - Bible
+- Risk assessment: Medium-low. The main risk is visual regression in the compact popover.
+- Invariant check:
+  - preserve watermark/logo identity
+  - preserve popover size
+  - do not move core controls out of the menu-bar-first shell
+  - do not change product behavior
+- What was attempted: Pending.
+- What succeeded: Pending.
+- What failed: Pending.
+- What was rolled back: Pending.
+- Tests run: Pending.
+- Metrics captured: Pending.
+- Regressions checked: Pending.
+- Remaining risks: Pending.
+- Next step: Add state accents, improved empty history treatment, detached-history alignment, shared hover/focus states, and reduced-transparency fallbacks.
+
+### 18.43 Roadmap Status Addendum 2026-03-10T17:42 America/Detroit
+
+- R03: complete
+- R04: complete
+- R08: complete
+- R09: complete
+- R10: complete
+
+Rationale:
+
+- State-colored accent borders are now present on key history/control surfaces.
+- Empty history presentation is now intentional instead of a bare placeholder.
+- Detached history visually matches the main product language more closely.
+- Hover/focus chrome exists for key icon actions.
+- Reduced-transparency fallbacks were added for changed history surfaces.
+
+### 18.44 Ledger Entry B-0012
+
+- Entry ID: B-0012
+- Timestamp: 2026-03-10 America/Detroit
+- Improvement ID(s): R03, R04, R08, R09, R10
+- Goal: Finish the remaining low-risk surface polish while preserving DexDictate’s identity.
+- Why now: This completed the rest of the contained Phase 5 visual work.
+- Dependency context: Follows the earlier compact-surface hierarchy pass from B-0011.
+- Files likely or actually changed:
+  - `Sources/DexDictate/ChromeButton.swift`
+  - `Sources/DexDictate/ControlsView.swift`
+  - `Sources/DexDictate/HistoryView.swift`
+  - `Sources/DexDictate/HistoryWindow.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Medium-low. Most risk was in compact-layout regressions and type-check complexity in SwiftUI.
+- Invariant check:
+  - brand assets preserved
+  - watermark/logo treatment preserved
+  - menu-bar-first structure preserved
+  - no behavior changes introduced
+- What was attempted:
+  - added shared hover chrome for icon buttons
+  - added state-colored border accents
+  - improved empty history presentation
+  - aligned detached history with the main product background/watermark language
+  - added reduced-transparency fallback backgrounds to changed history surfaces
+- What succeeded:
+  - compact history surfaces are clearer and less visually generic
+  - detached history now feels like the same product
+  - hover states are clearer on icon affordances
+  - reduced-transparency path exists for the changed history views
+  - build, tests, and invariant runner all passed
+- What failed:
+  - an intermediate build failed due mixed background style types
+  - a concurrent build also reported a temporary type-check issue while files were mid-edit
+- What was rolled back:
+  - nothing was rolled back; the background style types were normalized and the build was rerun cleanly
+- Tests run:
+  - `swift test`
+  - `swift build`
+  - `swift run VerificationRunner`
+- Metrics captured:
+  - no new quantitative metric
+  - qualitative improvement: detached history alignment, empty-state clarity, and hover/focus affordance coverage improved
+- Regressions checked:
+  - clean rerun of build/tests after fixing intermediate SwiftUI compile issues
+  - invariant runner still passes
+  - no branding or workflow regressions introduced
+- Remaining risks:
+  - manual visual QA across all theme modes and reduced-transparency settings still has not been executed
+  - remaining non-visual roadmap items are still open
+- Next step: move back to the harder operational and workflow tail: protocol seams/tests, destructive-command safety, secure-context handling, audio recovery, launch-at-login truthfulness, release automation, and modularization.

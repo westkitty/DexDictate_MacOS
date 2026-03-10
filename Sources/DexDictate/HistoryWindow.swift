@@ -57,6 +57,7 @@ struct TextDocument: FileDocument {
 }
 
 struct FullHistoryView: View {
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @ObservedObject var history: TranscriptionHistory
     @State private var isExporting = false
     @State private var document: TextDocument?
@@ -72,6 +73,24 @@ struct FullHistoryView: View {
     }
     
     var body: some View {
+        ZStack {
+            if let url = Safety.resourceBundle.url(forResource: "Assets.xcassets/AppIcon.appiconset/icon", withExtension: "png"),
+               let nsImage = NSImage(contentsOf: url) {
+                Image(nsImage: nsImage)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 220, height: 220)
+                    .opacity(0.08)
+                    .allowsHitTesting(false)
+            }
+
+            Text("DEXDICTATE")
+                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .tracking(3)
+                .foregroundStyle(Color.white.opacity(0.08))
+                .rotationEffect(.degrees(-15))
+                .allowsHitTesting(false)
+
         VStack(spacing: 0) {
             // Header
             VStack(spacing: 12) {
@@ -80,25 +99,21 @@ struct FullHistoryView: View {
                         .font(.headline)
                     Spacer()
 
-                    Button(action: {
+                    ChromeIconButton(systemName: "square.and.arrow.up", accessibilityText: "Export history") {
                         let content = filteredItems.map { item in
                             let timestamp = item.createdAt.formatted(date: .abbreviated, time: .shortened)
                             return "[\(timestamp)]\n\(item.text)"
                         }.joined(separator: "\n\n")
                         document = TextDocument(text: content)
                         isExporting = true
-                    }) {
-                        Image(systemName: "square.and.arrow.up")
                     }
                     .help(NSLocalizedString("Export History", comment: ""))
                     .disabled(filteredItems.isEmpty)
-                    .accessibilityLabel("Export history")
 
-                    Button(action: history.clear) {
-                        Image(systemName: "trash")
+                    ChromeIconButton(systemName: "trash", accessibilityText: "Clear history") {
+                        history.clear()
                     }
                     .help(NSLocalizedString("Clear History", comment: ""))
-                    .accessibilityLabel("Clear history")
                 }
 
                 HStack(spacing: 10) {
@@ -113,7 +128,7 @@ struct FullHistoryView: View {
                 }
             }
             .padding()
-            .background(Color(nsColor: .windowBackgroundColor))
+            .background(Color.black.opacity(reduceTransparency ? 0.94 : 0.78))
             
             Divider()
             
@@ -134,6 +149,18 @@ struct FullHistoryView: View {
                 }
             }
         }
+        }
+        .background(
+            reduceTransparency
+            ? AnyShapeStyle(Color.black.opacity(0.94))
+            : AnyShapeStyle(
+                LinearGradient(
+                    colors: [Color.black.opacity(0.88), Color(red: 0.11, green: 0.12, blue: 0.16)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+        )
         .frame(minWidth: 300, minHeight: 300)
         .fileExporter(
             isPresented: $isExporting,
@@ -153,7 +180,7 @@ struct FullHistoryView: View {
 
 struct HistoryItemRow: View {
     let item: HistoryItem
-    
+
     var body: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 4) {
@@ -167,16 +194,10 @@ struct HistoryItemRow: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer()
-            Button(action: {
+            ChromeIconButton(systemName: "doc.on.doc", accessibilityText: "Copy history item") {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(item.text, forType: .string)
-            }) {
-                Image(systemName: "doc.on.doc")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Copy history item")
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)

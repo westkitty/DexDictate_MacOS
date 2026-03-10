@@ -7,6 +7,7 @@ import DexDictateKit
 /// copy-to-clipboard button. The list height toggles between 100 pt (collapsed) and
 /// 300 pt (expanded) with animation.
 struct HistoryView: View {
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @ObservedObject var history: TranscriptionHistory
     /// Shown as a placeholder when `history` is empty.
     let statusText: String
@@ -43,26 +44,20 @@ struct HistoryView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 6))
                 }
                 Spacer()
-                Button(action: {
-                     onDetach?()
-                }) {
-                    Image(systemName: "arrow.up.left.and.arrow.down.right")
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.6))
-                        .contentShape(Rectangle())
+                ChromeIconButton(
+                    systemName: "arrow.up.left.and.arrow.down.right",
+                    accessibilityText: "Open detached history window"
+                ) {
+                    onDetach?()
                 }
-                .buttonStyle(.plain)
                 .help("Detach History")
-                .accessibilityLabel("Open detached history window")
                 
-                Button(action: { withAnimation { expanded.toggle() } }) {
-                    Image(systemName: expanded ? "chevron.up" : "chevron.down")
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.6))
-                        .contentShape(Rectangle())
+                ChromeIconButton(
+                    systemName: expanded ? "chevron.up" : "chevron.down",
+                    accessibilityText: expanded ? "Collapse history" : "Expand history"
+                ) {
+                    withAnimation { expanded.toggle() }
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel(expanded ? "Collapse history" : "Expand history")
             }
 
             ScrollView {
@@ -87,10 +82,22 @@ struct HistoryView: View {
                         }
                     }
                     if history.isEmpty {
-                        Text(statusText)
-                            .font(.caption)
-                            .foregroundStyle(.white.opacity(0.5))
-                            .padding(4)
+                        VStack(alignment: .leading, spacing: 8) {
+                            Image(systemName: "tray")
+                                .font(.title3)
+                                .foregroundStyle(.white.opacity(0.55))
+                            Text("No transcription history yet")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.white.opacity(0.82))
+                            Text(statusText)
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.5))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.white.opacity(0.04))
+                        .clipShape(RoundedRectangle(cornerRadius: SurfaceTokens.cornerRadius))
                     } else {
                         ForEach(history.items) { item in
                             HStack(alignment: .top) {
@@ -105,16 +112,13 @@ struct HistoryView: View {
                                         .fixedSize(horizontal: false, vertical: true)
                                 }
                                 Spacer()
-                                Button(action: {
+                                ChromeIconButton(
+                                    systemName: "doc.on.doc",
+                                    accessibilityText: "Copy history item"
+                                ) {
                                     NSPasteboard.general.clearContents()
                                     NSPasteboard.general.setString(item.text, forType: .string)
-                                }) {
-                                    Image(systemName: "doc.on.doc")
-                                        .font(.caption2)
-                                        .foregroundStyle(.white.opacity(0.5))
                                 }
-                                .buttonStyle(.plain)
-                                .accessibilityLabel("Copy history item")
                             }
                             .padding(6)
                             .background(Color.white.opacity(0.05))
@@ -127,10 +131,22 @@ struct HistoryView: View {
             }
             .frame(height: expanded ? 300 : 100)
             .padding(8)
-            .background(.ultraThinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.2), lineWidth: 1))
+            .background(
+                reduceTransparency
+                ? AnyShapeStyle(Color.black.opacity(0.82))
+                : AnyShapeStyle(.ultraThinMaterial)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: SurfaceTokens.cornerRadius))
+            .overlay(
+                RoundedRectangle(cornerRadius: SurfaceTokens.cornerRadius)
+                    .stroke(historyAccentColor.opacity(0.42), lineWidth: 1)
+            )
         }
         .padding(.horizontal)
+    }
+
+    private var historyAccentColor: Color {
+        if isListening { return .red }
+        return history.isEmpty ? .white : .green
     }
 }
