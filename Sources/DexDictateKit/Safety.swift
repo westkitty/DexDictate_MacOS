@@ -9,11 +9,13 @@ public struct Safety {
     public static let resourceBundle: Bundle = Bundle.module
 
     /// URL to ~/Library/Application Support/DexDictate/
-    private static var appSupportURL: URL? {
+    static var appSupportURL: URL? {
         let fm = FileManager.default
         return try? fm.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
             .appendingPathComponent("DexDictate")
     }
+
+    private static let diagnosticsQueue = DispatchQueue(label: "com.dexdictate.diagnostics", qos: .utility)
 
     /// Creates `~/Library/Application Support/DexDictate/` if it does not already exist.
     ///
@@ -25,32 +27,38 @@ public struct Safety {
         }
     }
 
-    /// Writes a diagnostic message to NSLog (appears in Console.app) and to a log file.
+    /// Writes a diagnostic message to NSLog (appears in Console.app) and to local log files.
     ///
-    /// In release builds this is a no-op. In debug builds:
-    /// - NSLog output appears in Console.app when filtering by process "DexDictate"
-    /// - Also appended to ~/Library/Application Support/DexDictate/debug.log
-    public static func log(_ message: String) {
+    /// Logging stays local-only. Structured records are retained in bounded JSONL form.
+    public static func log(_ message: String, category: DiagnosticCategory = .general) {
         NSLog("[DexDictate] %@", message)
-        if let dir = appSupportURL {
-            let logURL = dir.appendingPathComponent("debug.log")
-            let line = "\(Date()): \(message)\n"
-            if let data = line.data(using: .utf8) {
-                if FileManager.default.fileExists(atPath: logURL.path) {
-                    if let handle = try? FileHandle(forWritingTo: logURL) {
-                        handle.seekToEndOfFile()
-                        handle.write(data)
-                        try? handle.close()
-                    }
-                } else {
-                    try? data.write(to: logURL, options: .atomic)
-                }
-            }
+        guard let dir = appSupportURL else { return }
+
+        diagnosticsQueue.async {
+            let record = DiagnosticRecord(timestamp: Date(), category: category, message: message)
+            DiagnosticsStore(directoryURL: dir).append(record)
+            appendLegacyLogLine(message, in: dir)
         }
     }
 
     /// Opens Console.app to help the user inspect system logs during troubleshooting.
     public static func openLogs() {
         NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Applications/Utilities/Console.app"))
+    }
+
+    private static func appendLegacyLogLine(_ message: String, in directory: URL) {
+        let logURL = directory.appendingPathComponent("debug.log")
+        let line = "\(Date()): \(message)\n"
+        guard let data = line.data(using: .utf8) else { return }
+
+        if FileManager.default.fileExists(atPath: logURL.path) {
+            if let handle = try? FileHandle(forWritingTo: logURL) {
+                handle.seekToEndOfFile()
+                handle.write(data)
+                try? handle.close()
+            }
+        } else {
+            try? data.write(to: logURL, options: .atomic)
+        }
     }
 }

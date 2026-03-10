@@ -9,6 +9,7 @@ public class AppSettings: ObservableObject {
     public static let shared = AppSettings()
     
     public init() {
+        SettingsMigrationCoordinator(store: UserDefaults.standard).migrateIfNeeded()
         // Load stored appearance
         if let stored = UserDefaults.standard.string(forKey: "appearanceTheme_stored"),
            let theme = AppearanceTheme(rawValue: stored) {

@@ -40,10 +40,10 @@ final class InputMonitor {
         // AXIsProcessTrustedWithOptions(prompt:true) here causes the system dialog
         // to pop every time the menu bar is opened, which is wrong.
         let isTrusted = AXIsProcessTrusted()
-        Safety.log("InputMonitor.start() — AXIsProcessTrusted=\(isTrusted)")
+        Safety.log("InputMonitor.start() — AXIsProcessTrusted=\(isTrusted)", category: .input)
 
         if !isTrusted {
-            Safety.log("WARNING: Accessibility not granted — event tap will likely fail. Grant in System Settings > Privacy > Accessibility.")
+            Safety.log("WARNING: Accessibility not granted — event tap will likely fail. Grant in System Settings > Privacy > Accessibility.", category: .permissions)
             Task { @MainActor in
                 self.engine?.statusText = "Waiting for Accessibility Permission..."
             }
@@ -68,7 +68,7 @@ final class InputMonitor {
 
                 // Handle Tap Disabled events to re-enable
                 if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
-                    Safety.log("Event Tap disabled by system (\(type == .tapDisabledByTimeout ? "Timeout" : "User Input")) — re-enabling")
+                    Safety.log("Event Tap disabled by system (\(type == .tapDisabledByTimeout ? "Timeout" : "User Input")) — re-enabling", category: .input)
                     if let tap = monitor.eventTap {
                         CGEvent.tapEnable(tap: tap, enable: true)
                     }
@@ -110,7 +110,7 @@ final class InputMonitor {
 
                 if match {
                     let mode = AppSettings.shared.triggerMode
-                    Safety.log("Trigger matched — mode=\(mode) isDown=\(isDown)")
+                    Safety.log("Trigger matched — mode=\(mode) isDown=\(isDown)", category: .input)
 
                     if mode == .holdToTalk {
                         Task { @MainActor in monitor.engine?.handleTrigger(down: isDown) }
@@ -127,7 +127,7 @@ final class InputMonitor {
             },
             userInfo: UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())
         ) else {
-            Safety.log("CRITICAL: CGEvent.tapCreate failed — accessibility permission required")
+            Safety.log("CRITICAL: CGEvent.tapCreate failed — accessibility permission required", category: .permissions)
             Task { @MainActor in
                 self.engine?.handleInputMonitorFailure()
             }
@@ -138,7 +138,7 @@ final class InputMonitor {
             let work = DispatchWorkItem { [weak self] in
                 guard let self = self else { return }
                 if AXIsProcessTrusted() && self.eventTap == nil {
-                    Safety.log("Retrying event tap creation...")
+                    Safety.log("Retrying event tap creation...", category: .input)
                     self.start()
                 }
             }
@@ -147,7 +147,7 @@ final class InputMonitor {
             return
         }
 
-        Safety.log("Event tap created successfully")
+        Safety.log("Event tap created successfully", category: .input)
         eventTap = tap
         runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
         CFRunLoopAddSource(CFRunLoopGetCurrent(), runLoopSource, .commonModes)

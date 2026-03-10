@@ -87,14 +87,14 @@ public final class TranscriptionEngine: ObservableObject {
         // but this prevents double-initialisation if startSystem() is ever called from
         // another code path while the engine is already running.
         guard applyLifecycle(.startSystemRequested, context: "startSystem") else {
-            Safety.log("startSystem() skipped — already running (state=\(state))")
+            Safety.log("startSystem() skipped — already running (state=\(state))", category: .lifecycle)
             return
         }
-        Safety.log("startSystem() called — setting up input monitor")
+        Safety.log("startSystem() called — setting up input monitor", category: .lifecycle)
         statusText = NSLocalizedString("Requesting Access...", comment: "Status: Requesting permissions")
         // DexDictate uses Whisper (local CoreML) exclusively — no Apple Speech Recognition.
         setupInputMonitor()
-        Safety.log("startSystem() complete — state=\(state)")
+        Safety.log("startSystem() complete — state=\(state)", category: .lifecycle)
     }
 
     public func stopSystem() {
@@ -235,7 +235,7 @@ public final class TranscriptionEngine: ObservableObject {
         }
 
         guard applyLifecycle(.listeningStarted, context: "startListening") else {
-            Safety.log("startListening() BLOCKED — lifecycle rejected listening start from \(state)")
+            Safety.log("startListening() BLOCKED — lifecycle rejected listening start from \(state)", category: .lifecycle)
             return
         }
         statusText = NSLocalizedString("Listening...", comment: "Status: Listening")
@@ -281,7 +281,7 @@ public final class TranscriptionEngine: ObservableObject {
             return
         }
         guard applyLifecycle(.transcriptionStarted, context: "stopListening") else {
-            Safety.log("stopListening() BLOCKED — lifecycle rejected transcription start from \(state)")
+            Safety.log("stopListening() BLOCKED — lifecycle rejected transcription start from \(state)", category: .lifecycle)
             return
         }
         statusText = NSLocalizedString("Transcribing...", comment: "Status: Transcribing")
@@ -432,12 +432,12 @@ public final class TranscriptionEngine: ObservableObject {
     @discardableResult
     private func applyLifecycle(_ event: EngineLifecycleEvent, context: String) -> Bool {
         guard let transition = lifecycle.apply(event) else {
-            Safety.log("Lifecycle rejected event \(event.rawValue) from state \(state.rawValue) (\(context))")
+            Safety.log("Lifecycle rejected event \(event.rawValue) from state \(state.rawValue) (\(context))", category: .lifecycle)
             return false
         }
 
         state = transition.to
-        Safety.log("Lifecycle transition \(transition.from.rawValue) --\(event.rawValue)--> \(transition.to.rawValue) (\(context))")
+        Safety.log("Lifecycle transition \(transition.from.rawValue) --\(event.rawValue)--> \(transition.to.rawValue) (\(context))", category: .lifecycle)
         return true
     }
 }
