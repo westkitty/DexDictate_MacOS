@@ -38,6 +38,7 @@ public final class TranscriptionEngine: ObservableObject {
     
     private var recognitionTask: Task<Void, Error>?
     private var cancellables = Set<AnyCancellable>()
+    private var lifecycle = EngineLifecycleStateMachine()
 
     // MARK: - Metrics
     private struct MetricsSession {
@@ -52,10 +53,6 @@ public final class TranscriptionEngine: ObservableObject {
         var resample_samples: Int = 0
     }
     private var currentMetrics = MetricsSession()
-
-    public enum EngineState {
-        case stopped, initializing, ready, listening, transcribing, error
-    }
 
     /// SF Symbol name reflecting current state.
     public var statusIcon: String {
@@ -89,12 +86,11 @@ public final class TranscriptionEngine: ObservableObject {
         // Belt-and-suspenders guard: .onAppear already checks engine.state == .stopped,
         // but this prevents double-initialisation if startSystem() is ever called from
         // another code path while the engine is already running.
-        guard state == .stopped else {
+        guard applyLifecycle(.startSystemRequested, context: "startSystem") else {
             Safety.log("startSystem() skipped — already running (state=\(state))")
             return
         }
         Safety.log("startSystem() called — setting up input monitor")
-        state = .initializing
         statusText = NSLocalizedString("Requesting Access...", comment: "Status: Requesting permissions")
         // DexDictate uses Whisper (local CoreML) exclusively — no Apple Speech Recognition.
         setupInputMonitor()
@@ -104,7 +100,7 @@ public final class TranscriptionEngine: ObservableObject {
     public func stopSystem() {
         inputMonitor?.stop()
         audioService.stopRecording()
-        state = .stopped
+        _ = applyLifecycle(.systemStopped, context: "stopSystem")
         statusText = NSLocalizedString("Idle", comment: "Status: Idle")
         liveTranscript = ""
         inputLevel = 0
@@ -131,6 +127,14 @@ public final class TranscriptionEngine: ObservableObject {
         inputMonitor?.stop()
         inputMonitor = nil
         setupInputMonitor()
+    }
+
+    func handleInputMonitorFailure() {
+        guard applyLifecycle(.inputMonitorFailed, context: "input monitor failure") else {
+            return
+        }
+
+        statusText = "Grant Accessibility Permission"
     }
 
     // MARK: - Trigger Handling
@@ -176,7 +180,7 @@ public final class TranscriptionEngine: ObservableObject {
         // returns, so the ordering would be: .ready set here → .error set by Task).
         // Instead, check the tap synchronously via isEventTapActive.
         if inputMonitor?.isEventTapActive == true {
-            state = .ready
+            _ = applyLifecycle(.inputMonitorActivated, context: "input monitor active")
             statusText = NSLocalizedString("Ready", comment: "Status: Ready")
         }
         // If tap failed, state stays .initializing until the InputMonitor Task sets .error.
@@ -230,7 +234,10 @@ public final class TranscriptionEngine: ObservableObject {
             return
         }
 
-        state = .listening
+        guard applyLifecycle(.listeningStarted, context: "startListening") else {
+            Safety.log("startListening() BLOCKED — lifecycle rejected listening start from \(state)")
+            return
+        }
         statusText = NSLocalizedString("Listening...", comment: "Status: Listening")
         liveTranscript = ""
         inputLevel = 0
@@ -254,7 +261,7 @@ public final class TranscriptionEngine: ObservableObject {
                 } else {
                     self.statusText = error.localizedDescription
                 }
-                self.state = .ready
+                _ = self.applyLifecycle(.audioCaptureFailed, context: "audio start failure")
             } else {
                 Safety.log("Audio engine started successfully — accumulating audio until trigger release")
             }
@@ -273,7 +280,10 @@ public final class TranscriptionEngine: ObservableObject {
             Safety.log("stopListening() BLOCKED — state=\(state), expected .listening")
             return
         }
-        state = .transcribing
+        guard applyLifecycle(.transcriptionStarted, context: "stopListening") else {
+            Safety.log("stopListening() BLOCKED — lifecycle rejected transcription start from \(state)")
+            return
+        }
         statusText = NSLocalizedString("Transcribing...", comment: "Status: Transcribing")
         inputLevel = 0
 
@@ -330,7 +340,7 @@ public final class TranscriptionEngine: ObservableObject {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         Safety.log("handleWhisperResult — \(trimmed.isEmpty ? "empty" : "\(trimmed.count) chars")")
         if trimmed.isEmpty {
-            state = .ready
+            _ = applyLifecycle(.transcriptionCompleted, context: "empty whisper result")
             statusText = NSLocalizedString("Ready", comment: "Status: Ready to dictate")
         } else {
             finalizeTranscription(trimmed)
@@ -344,7 +354,7 @@ public final class TranscriptionEngine: ObservableObject {
         // Without this, early returns (e.g. command-only utterances) can leave state
         // stuck at .transcribing and block the next trigger press.
         defer {
-            state = .ready
+            _ = applyLifecycle(.transcriptionCompleted, context: "finalizeTranscription")
             emitMetricsCSV()
         }
 
@@ -417,5 +427,17 @@ public final class TranscriptionEngine: ObservableObject {
         let ms = { (d1: Date, d2: Date) -> Int in Int(d2.timeIntervalSince(d1) * 1000) }
         let csv = "\(Date().timeIntervalSince1970),\(currentMetrics.raw_samples),\(currentMetrics.trim_samples),\(currentMetrics.resample_samples),\(ms(t_up, t_aud)),\(ms(t_aud, t_res)),\(ms(t_sub, t_done)),\(ms(t_up, t_done))"
         Safety.log("METRIC_CSV: \(csv)")
+    }
+
+    @discardableResult
+    private func applyLifecycle(_ event: EngineLifecycleEvent, context: String) -> Bool {
+        guard let transition = lifecycle.apply(event) else {
+            Safety.log("Lifecycle rejected event \(event.rawValue) from state \(state.rawValue) (\(context))")
+            return false
+        }
+
+        state = transition.to
+        Safety.log("Lifecycle transition \(transition.from.rawValue) --\(event.rawValue)--> \(transition.to.rawValue) (\(context))")
+        return true
     }
 }

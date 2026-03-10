@@ -129,8 +129,7 @@ final class InputMonitor {
         ) else {
             Safety.log("CRITICAL: CGEvent.tapCreate failed — accessibility permission required")
             Task { @MainActor in
-                self.engine?.statusText = "Grant Accessibility Permission"
-                self.engine?.state = .error
+                self.engine?.handleInputMonitorFailure()
             }
 
             // Automatic retry after 5 seconds if permission granted.

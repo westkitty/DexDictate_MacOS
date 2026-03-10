@@ -1141,3 +1141,100 @@ Repository-derived and baseline-confirmed notes:
   - several permission request sites remain spread across layers
   - no formal state machine or migration framework yet
 - Next step: Start Phase 1 with explicit engine state modeling and testability seams while preserving existing permission behavior.
+
+### 18.15 Pre-Implementation Note P-0001
+
+- Entry ID: P-0001
+- Timestamp: 2026-03-10 America/Detroit
+- Improvement ID(s): R21, R23
+- Goal: Introduce an explicit, testable engine lifecycle state machine and cover it with focused transition tests.
+- Why now: The baseline confirmed the engine’s lifecycle rules are currently implicit, spread across methods, and only lightly guarded by comments.
+- Dependency context: Safe first Phase 1 slice. It reduces risk for later logging, error mapping, and dependency-injection work without altering permission order.
+- Files likely to change:
+  - `Sources/DexDictateKit/TranscriptionEngine.swift`
+  - new lifecycle/state file in `Sources/DexDictateKit`
+  - `Tests/DexDictateTests/*`
+  - possibly `Sources/VerificationRunner/main.swift` if invariant coverage gains value
+- Risk assessment: Medium-low. Internal lifecycle refactor can accidentally block a valid transition or permit an invalid one. Permission prompting and event tap creation must remain externally unchanged.
+- Invariant check:
+  - preserve current state labels and externally visible state values
+  - preserve menu-open startup order
+  - preserve dictation start microphone authorization guard
+  - preserve event-tap-driven readiness gate
+  - preserve local-only behavior and output semantics
+- What was attempted: Pending.
+- What succeeded: Pending.
+- What failed: Pending.
+- What was rolled back: Pending.
+- Tests run: Pending.
+- Metrics captured: Pending.
+- Regressions checked: Pending.
+- Remaining risks: Pending.
+- Next step: Implement a pure transition model, route `TranscriptionEngine` transitions through it, and add unit tests for allowed and blocked transitions.
+
+### 18.16 Roadmap Status Addendum 2026-03-10T16:19 America/Detroit
+
+- R21: complete
+- R23: in_progress
+
+Rationale:
+
+- R21 is satisfied for the engine lifecycle slice by introducing an explicit transition model and routing engine state changes through it.
+- R23 remains in progress because state-transition tests were added, but broader layered coverage is still missing.
+
+### 18.17 Ledger Entry B-0003
+
+- Entry ID: B-0003
+- Timestamp: 2026-03-10 America/Detroit
+- Improvement ID(s): R21, R23
+- Goal: Make engine lifecycle transitions explicit and directly testable without changing the user-visible permission or dictation flow.
+- Why now: This is the safest first engineering hardening slice and reduces ambiguity for later work.
+- Dependency context: Built on the baseline established in B-0001 and B-0002.
+- Files likely or actually changed:
+  - `Sources/DexDictateKit/EngineLifecycle.swift`
+  - `Sources/DexDictateKit/TranscriptionEngine.swift`
+  - `Sources/DexDictateKit/InputMonitor.swift`
+  - `Tests/DexDictateTests/EngineLifecycleStateMachineTests.swift`
+  - `Sources/VerificationRunner/main.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Medium-low. This changed internal state handling but intentionally preserved external state names, status text flow, and permission ordering.
+- Invariant check:
+  - permission request sites and order unchanged
+  - event tap still gates readiness
+  - microphone authorization guard still blocks dictation start when unauthorized
+  - local-only Whisper pipeline unchanged
+  - menu-bar-first model unchanged
+  - brand assets unchanged
+- What was attempted:
+  - introduced a pure `EngineLifecycleStateMachine`
+  - routed `TranscriptionEngine` state mutations through lifecycle events
+  - replaced direct input-monitor error mutation with engine-managed lifecycle handling
+  - added transition unit tests
+  - updated `VerificationRunner` to assert the explicit lifecycle model rather than a brittle source substring from the old implementation
+- What succeeded:
+  - explicit lifecycle transitions now exist in one place
+  - invalid transitions are rejected and logged
+  - lifecycle tests cover happy path, recovery path, audio-start failure path, invalid transitions, and universal stop behavior
+  - full build, full test suite, and `VerificationRunner` all pass after the update
+- What failed:
+  - the first post-change `VerificationRunner` run failed because it still expected the previous `state = .ready` source string
+- What was rolled back:
+  - nothing was rolled back; the invariant was updated to reflect the stronger lifecycle implementation
+- Tests run:
+  - `swift test --filter EngineLifecycleStateMachineTests`
+  - `swift build`
+  - `swift test`
+  - `swift run VerificationRunner`
+- Metrics captured:
+  - automated test count increased from 3 to 8
+  - `VerificationRunner` checks increased from 42 to 43
+- Regressions checked:
+  - no new networking APIs introduced
+  - no permission-order changes introduced
+  - no brand-asset changes introduced
+  - no changes to core trigger -> transcribe -> output workflow logic
+- Remaining risks:
+  - service creation and singleton access are still concrete and tightly coupled
+  - lifecycle status text remains distributed across methods rather than fully state-derived
+  - no UI/manual smoke pass was executed for this internal refactor slice
+- Next step: Implement protocol-backed seams around selected engine dependencies and permission-safe diagnostics to support deeper tests and later UX work.
