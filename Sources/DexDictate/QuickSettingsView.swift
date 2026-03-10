@@ -101,6 +101,24 @@ struct QuickSettingsView: View {
                         Text(NSLocalizedString("Output", comment: ""))
                             .font(.caption).bold().foregroundStyle(.white.opacity(0.7))
 
+                        Toggle(
+                            NSLocalizedString("Safe Mode", comment: ""),
+                            isOn: Binding(
+                                get: { settings.safeModeEnabled },
+                                set: { enabled in
+                                    if enabled {
+                                        settings.enableSafeMode()
+                                    } else {
+                                        settings.disableSafeMode()
+                                    }
+                                }
+                            )
+                        )
+                        Text(NSLocalizedString("Turns off auto-paste, sound cues, and toggle-style triggering until you turn it back off.", comment: ""))
+                            .font(.caption2).foregroundStyle(.white.opacity(0.5))
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.leading, 20).padding(.bottom, 2)
+
                         Toggle(NSLocalizedString("Auto-Paste", comment: ""), isOn: $settings.autoPaste)
                         Text(NSLocalizedString("Automatically pastes text into the active app.", comment: ""))
                             .font(.caption2).foregroundStyle(.white.opacity(0.5))
