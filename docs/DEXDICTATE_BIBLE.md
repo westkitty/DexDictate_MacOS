@@ -1786,3 +1786,89 @@ Rationale:
   - result feedback UI has not been manually exercised in a live dictation session
   - safe mode, destructive-command safeguards, and secure-context handling still remain
 - Next step: Continue Phase 4 with safe mode, destructive-command safety, or secure-context output handling.
+
+### 18.36 Pre-Implementation Note P-0008
+
+- Entry ID: P-0008
+- Timestamp: 2026-03-10 America/Detroit
+- Improvement ID(s): R15
+- Goal: Add a reversible safe-mode preset that applies lower-risk defaults without changing the app’s core model.
+- Why now: This is a contained settings/UI improvement and safer to land before destructive-command or secure-context behavior changes.
+- Dependency context: Builds on settings schema work and recent result-feedback clarity.
+- Files likely to change:
+  - `Sources/DexDictateKit/AppSettings.swift`
+  - new safe-mode helper file(s)
+  - `Sources/DexDictate/QuickSettingsView.swift`
+  - tests and Bible
+- Risk assessment: Medium. A reversible preset must not lose the user’s prior settings when toggled off.
+- Invariant check:
+  - preserve menu-bar-first workflow
+  - preserve local-only behavior
+  - do not change permission flow
+  - do not change command semantics
+- What was attempted: Pending.
+- What succeeded: Pending.
+- What failed: Pending.
+- What was rolled back: Pending.
+- Tests run: Pending.
+- Metrics captured: Pending.
+- Regressions checked: Pending.
+- Remaining risks: Pending.
+- Next step: Implement a stored snapshot-based safe mode preset, expose it in Quick Settings, and test the preset/restore logic separately from UI.
+
+### 18.37 Roadmap Status Addendum 2026-03-10T17:32 America/Detroit
+
+- R15: complete
+
+Rationale:
+
+- Safe mode now exists as a reversible preset backed by a stored snapshot and surfaced in Quick Settings.
+
+### 18.38 Ledger Entry B-0010
+
+- Entry ID: B-0010
+- Timestamp: 2026-03-10 America/Detroit
+- Improvement ID(s): R15
+- Goal: Provide a reversible safer preset without changing the app’s core dictation model.
+- Why now: This is a contained settings feature and lower risk than destructive-command or secure-context changes.
+- Dependency context: Builds on the settings migration groundwork from B-0004.
+- Files likely or actually changed:
+  - `Sources/DexDictateKit/SafeModePreset.swift`
+  - `Sources/DexDictateKit/AppSettings.swift`
+  - `Sources/DexDictate/QuickSettingsView.swift`
+  - `Tests/DexDictateTests/SafeModePresetTests.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Medium. Safe mode had to be reversible without losing user preferences.
+- Invariant check:
+  - no permission changes
+  - no network changes
+  - no change to core dictation pipeline
+  - menu-bar-first model preserved
+- What was attempted:
+  - added a snapshot-backed safe-mode preference model
+  - stored the prior settings before applying safer defaults
+  - exposed safe mode in Quick Settings with descriptive copy
+  - added a focused preset test
+- What succeeded:
+  - safe mode now disables auto-paste, toggle-style triggering, and sound cues until turned back off
+  - prior values are stored so the preset is reversible
+  - build, tests, and invariant runner all passed
+- What failed:
+  - first implementation tried to serialize non-Codable app enums directly, which failed at compile time
+- What was rolled back:
+  - nothing was rolled back; the snapshot format was changed to raw strings instead
+- Tests run:
+  - `swift test`
+  - `swift build`
+  - `swift run VerificationRunner`
+- Metrics captured:
+  - automated test count increased from 16 to 17
+  - safe-mode preset tests added: 1
+- Regressions checked:
+  - no behavior changes outside the settings preset path
+  - invariant runner still passes
+  - no permission or branding regressions introduced
+- Remaining risks:
+  - safe mode has not been manually toggled in a live UI session yet
+  - destructive-command undo/confirm and secure-context output handling still remain
+- Next step: continue Phase 4 with destructive-command safeguards or secure-context copy-only handling.

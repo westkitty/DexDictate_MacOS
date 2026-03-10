@@ -59,6 +59,10 @@ public class AppSettings: ObservableObject {
     /// Reserved for a future append-mode feature; not currently implemented.
     @AppStorage("appendMode") public var appendMode: Bool = false
 
+    /// Applies a reversible lower-risk preset for dictation behavior.
+    @AppStorage("safeModeEnabled") public var safeModeEnabled: Bool = false
+    @AppStorage("safeModeSnapshotData") public var safeModeSnapshotData: Data = Data()
+
     // MARK: - System
 
     /// Whether the app registers itself as a login item via `ServiceManagement`.
@@ -261,9 +265,53 @@ public class AppSettings: ObservableObject {
         autoPaste = true
         profanityFilter = false
         appendMode = false
+        safeModeEnabled = false
+        safeModeSnapshotData = Data()
         
         launchAtLogin = false
         
         userShortcutData = (try? JSONEncoder().encode(UserShortcut.defaultMiddleMouse)) ?? Data()
+    }
+
+    public func enableSafeMode() {
+        guard !safeModeEnabled else { return }
+
+        let snapshot = SafeModePreferences(
+            triggerModeRawValue: triggerMode.rawValue,
+            autoPaste: autoPaste,
+            playStartSound: playStartSound,
+            playStopSound: playStopSound,
+            selectedStartSoundRawValue: selectedStartSound.rawValue,
+            selectedStopSoundRawValue: selectedStopSound.rawValue
+        )
+
+        safeModeSnapshotData = (try? JSONEncoder().encode(snapshot)) ?? Data()
+
+        var safePreferences = snapshot
+        safePreferences.applySafeMode()
+        applySafeModePreferences(safePreferences)
+        safeModeEnabled = true
+    }
+
+    public func disableSafeMode() {
+        defer {
+            safeModeEnabled = false
+            safeModeSnapshotData = Data()
+        }
+
+        guard let snapshot = try? JSONDecoder().decode(SafeModePreferences.self, from: safeModeSnapshotData) else {
+            return
+        }
+
+        applySafeModePreferences(snapshot)
+    }
+
+    private func applySafeModePreferences(_ preferences: SafeModePreferences) {
+        triggerMode = preferences.triggerMode
+        autoPaste = preferences.autoPaste
+        playStartSound = preferences.playStartSound
+        playStopSound = preferences.playStopSound
+        selectedStartSound = preferences.selectedStartSound
+        selectedStopSound = preferences.selectedStopSound
     }
 }
