@@ -53,6 +53,7 @@ struct HistoryView: View {
                 }
                 .buttonStyle(.plain)
                 .help("Detach History")
+                .accessibilityLabel("Open detached history window")
                 
                 Button(action: { withAnimation { expanded.toggle() } }) {
                     Image(systemName: expanded ? "chevron.up" : "chevron.down")
@@ -61,6 +62,7 @@ struct HistoryView: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(expanded ? "Collapse history" : "Expand history")
             }
 
             ScrollView {
@@ -92,10 +94,16 @@ struct HistoryView: View {
                     } else {
                         ForEach(history.items) { item in
                             HStack(alignment: .top) {
-                                Text(item.text)
-                                    .font(.caption)
-                                    .foregroundStyle(.white.opacity(0.9))
-                                    .fixedSize(horizontal: false, vertical: true)
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(item.createdAt.formatted(date: .omitted, time: .shortened))
+                                        .font(.caption2)
+                                        .foregroundStyle(.white.opacity(0.45))
+
+                                    Text(item.text)
+                                        .font(.caption)
+                                        .foregroundStyle(.white.opacity(0.9))
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
                                 Spacer()
                                 Button(action: {
                                     NSPasteboard.general.clearContents()
@@ -106,10 +114,12 @@ struct HistoryView: View {
                                         .foregroundStyle(.white.opacity(0.5))
                                 }
                                 .buttonStyle(.plain)
+                                .accessibilityLabel("Copy history item")
                             }
                             .padding(6)
                             .background(Color.white.opacity(0.05))
                             .clipShape(RoundedRectangle(cornerRadius: 6))
+                            .accessibilityElement(children: .combine)
                         }
                     }
                 }

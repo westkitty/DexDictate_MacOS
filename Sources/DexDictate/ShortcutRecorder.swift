@@ -35,6 +35,7 @@ struct ShortcutRecorder: View {
                     .foregroundStyle(.white)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(isRecording ? "Recording shortcut" : "Shortcut recorder")
         }
         .onDisappear { stopRecording() }
     }

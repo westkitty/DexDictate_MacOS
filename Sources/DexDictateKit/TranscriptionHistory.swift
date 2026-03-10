@@ -7,9 +7,11 @@ import Foundation
 public struct HistoryItem: Identifiable {
     public let id = UUID()
     public let text: String
+    public let createdAt: Date
     
-    public init(text: String) {
+    public init(text: String, createdAt: Date = Date()) {
         self.text = text
+        self.createdAt = createdAt
     }
 }
 

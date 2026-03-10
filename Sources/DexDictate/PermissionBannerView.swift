@@ -23,6 +23,7 @@ struct PermissionBannerView: View {
                     }
                 }
                 .font(.caption2)
+                .accessibilityLabel("Open privacy settings")
             }
             .padding(8)
             .background(Color.orange.opacity(0.3))

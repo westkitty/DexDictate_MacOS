@@ -45,6 +45,7 @@ struct ControlsView: View {
                     .shadow(color: .green.opacity(0.3), radius: 5)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Start dictation system")
             } else {
                 // ── Running: status + shortcut hint + stop button ─────────────
 
@@ -76,6 +77,7 @@ struct ControlsView: View {
                     .shadow(color: .red.opacity(0.3), radius: 5)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Turn off dictation system")
             }
 
             // ── Always visible: Quit ──────────────────────────────────────────
@@ -90,6 +92,7 @@ struct ControlsView: View {
                     .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.2), lineWidth: 1))
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Quit DexDictate")
         }
         .padding(.horizontal)
     }
