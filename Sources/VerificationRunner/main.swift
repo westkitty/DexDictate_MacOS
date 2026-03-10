@@ -251,7 +251,9 @@ private func runWonderPath() {
     check(path, hudUI.contains("Text(\"DEX\")"), "floating HUD includes visible watermark text")
 
     let engineSource = readSource("Sources/DexDictateKit/TranscriptionEngine.swift")
-    check(path, engineSource.contains("defer {\n            state = .ready"), "transcription state machine has ready-state defer guard")
+    let lifecycleSource = readSource("Sources/DexDictateKit/EngineLifecycle.swift")
+    check(path, lifecycleSource.contains("case (.transcribing, .transcriptionCompleted):"), "explicit lifecycle maps transcription completion back to ready")
+    check(path, engineSource.contains("defer {\n            _ = applyLifecycle(.transcriptionCompleted"), "transcription completion still returns the engine to ready through the lifecycle model")
 }
 
 @MainActor
