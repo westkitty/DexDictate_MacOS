@@ -1342,3 +1342,93 @@ Rationale:
   - diagnostics records are structured, but high-level event coverage is still incomplete
   - manual smoke checks were not executed for this internal slice
 - Next step: Continue Phase 1 with broader dependency seams and a release-grade benchmark workflow, then move into operational hardening.
+
+### 18.21 Pre-Implementation Note P-0003
+
+- Entry ID: P-0003
+- Timestamp: 2026-03-10 America/Detroit
+- Improvement ID(s): R24
+- Goal: Upgrade the existing benchmark path into a reusable release-grade latency regression workflow with machine-readable output and optional budget enforcement.
+- Why now: The baseline benchmark passed, but it measured debug-path latency and was too easy to misinterpret.
+- Dependency context: Safe Phase 1 work that does not touch product runtime behavior.
+- Files likely to change:
+  - `scripts/benchmark.sh`
+  - possibly new benchmark helper script(s)
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Low. Script-only change, but parsing mistakes could generate misleading metrics.
+- Invariant check:
+  - no product runtime logic changes
+  - no permission flow changes
+  - no networking
+  - no brand/UI changes
+- What was attempted: Pending.
+- What succeeded: Pending.
+- What failed: Pending.
+- What was rolled back: Pending.
+- Tests run: Pending.
+- Metrics captured: Pending.
+- Regressions checked: Pending.
+- Remaining risks: Pending.
+- Next step: Add a release-mode benchmark workflow with iteration support, median reporting, artifact output, and optional regression budget enforcement.
+
+### 18.22 Roadmap Status Addendum 2026-03-10T16:26 America/Detroit
+
+- R24: complete
+
+Rationale:
+
+- The benchmark workflow now supports release builds, repeated iterations, machine-readable artifacts, and optional regression-budget enforcement.
+
+### 18.23 Ledger Entry B-0005
+
+- Entry ID: B-0005
+- Timestamp: 2026-03-10 America/Detroit
+- Improvement ID(s): R24
+- Goal: Turn the baseline benchmark path into a reproducible latency regression workflow suitable for future gating.
+- Why now: Phase 1 needs a trustworthy latency workflow before larger operational and UI changes land.
+- Dependency context: Built on the already-existing `VerificationRunner --benchmark` mode.
+- Files likely or actually changed:
+  - `scripts/benchmark.sh`
+  - `scripts/benchmark_regression.sh`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Low. Tooling-only change.
+- Invariant check:
+  - no runtime product logic changed
+  - no permission changes
+  - no network behavior introduced
+  - no UI or brand changes
+- What was attempted:
+  - replaced the old single-run debug-biased benchmark script with an argument-driven workflow
+  - defaulted the benchmark build mode to release
+  - added iteration support, median/mean/min/max reporting, and JSON artifact output
+  - added optional latency-budget enforcement via `--baseline-ms` and `--budget-pct`
+  - added a convenience wrapper `scripts/benchmark_regression.sh`
+- What succeeded:
+  - release benchmark workflow executed successfully on sample audio
+  - JSON artifacts now land in `artifacts/benchmarks/`
+  - latest artifact alias is maintained at `artifacts/benchmarks/latest.json`
+- What failed:
+  - no benchmark-script execution failure occurred
+- What was rolled back:
+  - nothing
+- Tests run:
+  - `./scripts/benchmark_regression.sh sample_corpus/sample.wav`
+  - `swift build`
+  - `swift test`
+  - `swift run VerificationRunner`
+- Metrics captured:
+  - release benchmark iterations: 5
+  - median latency: 453 milliseconds
+  - mean latency: 461.20 milliseconds
+  - min latency: 417 milliseconds
+  - max latency: 497 milliseconds
+  - artifact path: `artifacts/benchmarks/benchmark-20260310T202608Z.json`
+- Regressions checked:
+  - package builds still pass
+  - test suite still passes
+  - `VerificationRunner` invariant suite still passes
+  - no product-behavior invariants changed
+- Remaining risks:
+  - current workflow still pays model-load cost on each iteration because each run launches a fresh process
+  - there is not yet a persisted blessed baseline file or CI gate for latency budgets
+- Next step: continue Phase 1 or Phase 2 with either broader protocol seams or operational hardening, depending on the next safest dependency cut.

@@ -30,6 +30,7 @@ dist/
 build/
 target/
 coverage/
+artifacts/
 
 # Secrets & env files
 .env
