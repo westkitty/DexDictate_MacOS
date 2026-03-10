@@ -13,22 +13,45 @@ struct QuickSettingsView: View {
         VStack(spacing: 0) {
             // Clickable header — the entire row toggles expansion (not just the chevron).
             Button(action: { withAnimation { isExpanded.toggle() } }) {
-                HStack {
-                    Text(NSLocalizedString("Quick Settings", comment: ""))
-                        .foregroundStyle(.white)
+                HStack(alignment: .center, spacing: 10) {
+                    Image(systemName: "slider.horizontal.3")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.cyan)
+                        .frame(width: 24, height: 24)
+                        .background(Color.cyan.opacity(0.16))
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(NSLocalizedString("Quick Settings", comment: ""))
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                        Text(isExpanded ? "Tuning and device controls are open." : "Show tuning, device, and output controls.")
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.55))
+                    }
+
                     Spacer()
+
                     Image(systemName: "chevron.right")
                         .foregroundStyle(.white.opacity(0.6))
                         .rotationEffect(.degrees(isExpanded ? 90 : 0))
                         .animation(.easeInOut(duration: 0.2), value: isExpanded)
                 }
+                .padding(SurfaceTokens.cardPadding)
+                .background(Color.white.opacity(0.05))
+                .overlay(
+                    RoundedRectangle(cornerRadius: SurfaceTokens.cornerRadius)
+                        .stroke(Color.white.opacity(isExpanded ? 0.18 : 0.08), lineWidth: 1)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: SurfaceTokens.cornerRadius))
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(isExpanded ? "Collapse quick settings" : "Expand quick settings")
 
         if isExpanded {
             VStack(spacing: 8) {
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: SurfaceTokens.sectionSpacing) {
                     
                     // MARK: - Feedback Section (Sound Effects)
                     VStack(alignment: .leading, spacing: 8) {
@@ -188,9 +211,9 @@ struct QuickSettingsView: View {
                     ShortcutRecorder(shortcut: $settings.userShortcut)
                 }
             }
-            .padding(10)
+            .padding(SurfaceTokens.cardPadding)
             .background(Color.black.opacity(0.3))
-            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .clipShape(RoundedRectangle(cornerRadius: SurfaceTokens.cornerRadius))
         } // end if isExpanded
         } // end VStack
         .padding(.horizontal)

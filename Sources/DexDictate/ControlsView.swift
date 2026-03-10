@@ -58,9 +58,24 @@ struct ControlsView: View {
                     .multilineTextAlignment(.center)
 
                 // Remind user which shortcut triggers dictation
-                Text("\(NSLocalizedString("Trigger:", comment: "")) \(AppSettings.shared.userShortcut.displayString)")
-                    .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.6))
+                VStack(spacing: 6) {
+                    Text("Trigger")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.55))
+                        .textCase(.uppercase)
+                        .tracking(0.8)
+
+                    Text(AppSettings.shared.userShortcut.displayString)
+                        .font(.system(.caption, design: .monospaced).weight(.semibold))
+                        .padding(.horizontal, SurfaceTokens.capsuleHorizontal)
+                        .padding(.vertical, SurfaceTokens.capsuleVertical)
+                        .background(Color.white.opacity(0.08))
+                        .overlay(
+                            Capsule().stroke(Color.white.opacity(0.16), lineWidth: 1)
+                        )
+                        .clipShape(Capsule())
+                        .foregroundStyle(.white.opacity(0.9))
+                }
 
                 if engine.resultFeedback != .idle {
                     HStack(spacing: 6) {

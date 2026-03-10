@@ -1872,3 +1872,99 @@ Rationale:
   - safe mode has not been manually toggled in a live UI session yet
   - destructive-command undo/confirm and secure-context output handling still remain
 - Next step: continue Phase 4 with destructive-command safeguards or secure-context copy-only handling.
+
+### 18.39 Pre-Implementation Note P-0009
+
+- Entry ID: P-0009
+- Timestamp: 2026-03-10 America/Detroit
+- Improvement ID(s): R01, R02, R05, R06, R07
+- Goal: Improve surface hierarchy and compact readability without touching brand assets or changing the product’s visual identity.
+- Why now: This is a contained visual pass that can land safely after the foundational and onboarding work already completed.
+- Dependency context: Chosen as a low-risk Phase 5 batch focused on compact-surface readability.
+- Files likely to change:
+  - new UI token file(s) under `Sources/DexDictate`
+  - `Sources/DexDictate/ControlsView.swift`
+  - `Sources/DexDictate/PermissionBannerView.swift`
+  - `Sources/DexDictate/QuickSettingsView.swift`
+  - possibly `Sources/DexDictate/HistoryView.swift`
+  - Bible
+- Risk assessment: Medium-low. The goal is layout clarity and affordance, not rebranding or feature movement.
+- Invariant check:
+  - preserve watermark/icon/title treatment
+  - keep compact popover footprint
+  - do not remove or replace brand assets
+  - do not change feature semantics
+- What was attempted: Pending.
+- What succeeded: Pending.
+- What failed: Pending.
+- What was rolled back: Pending.
+- Tests run: Pending.
+- Metrics captured: Pending.
+- Regressions checked: Pending.
+- Remaining risks: Pending.
+- Next step: Add reusable spacing tokens and apply them to the trigger display, permission banner, and quick settings hierarchy.
+
+### 18.40 Roadmap Status Addendum 2026-03-10T17:33 America/Detroit
+
+- R01: complete
+- R02: complete
+- R05: complete
+- R06: complete
+- R07: complete
+
+Rationale:
+
+- Reusable compact-surface spacing tokens are now present.
+- Section hierarchy and affordance improved in the quick settings and controls areas.
+- Trigger display is now a monospaced pill.
+- Permission banner now supports multiline status text cleanly.
+
+### 18.41 Ledger Entry B-0011
+
+- Entry ID: B-0011
+- Timestamp: 2026-03-10 America/Detroit
+- Improvement ID(s): R01, R02, R05, R06, R07
+- Goal: Improve compact-surface readability and affordance without touching brand identity or feature behavior.
+- Why now: This was the cleanest remaining visual polish batch that stayed within low-risk layout changes.
+- Dependency context: Follows the earlier accessibility and history improvements.
+- Files likely or actually changed:
+  - `Sources/DexDictate/SurfaceTokens.swift`
+  - `Sources/DexDictate/ControlsView.swift`
+  - `Sources/DexDictate/PermissionBannerView.swift`
+  - `Sources/DexDictate/QuickSettingsView.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Medium-low. Layout and typography changed, but no feature logic changed.
+- Invariant check:
+  - brand assets preserved
+  - watermark and title treatment preserved
+  - popover footprint preserved
+  - no product logic changes
+- What was attempted:
+  - added reusable compact-surface spacing tokens
+  - restyled the trigger display as a monospaced capsule
+  - improved permission banner hierarchy and multiline behavior
+  - improved quick settings header affordance and grouping
+- What succeeded:
+  - trigger display is stronger and easier to parse
+  - permission status text can wrap without collapsing into a single-line truncation mess
+  - quick settings read more like a distinct section rather than an anonymous chevron row
+  - build, tests, and invariant runner all passed
+- What failed:
+  - no build or verification gate failed in this slice
+- What was rolled back:
+  - nothing
+- Tests run:
+  - `swift test`
+  - `swift build`
+  - `swift run VerificationRunner`
+- Metrics captured:
+  - no new quantitative metric
+  - qualitative improvement: clearer section hierarchy and improved overflow handling in the permission banner
+- Regressions checked:
+  - no behavior changes
+  - invariant runner still passes
+  - no branding changes introduced
+- Remaining risks:
+  - manual visual QA across theme modes and reduced-transparency mode has not been executed
+  - remaining Phase 4, Phase 5, and Phase 6 items are still open
+- Next step: Continue with remaining safety workflow items or the final release-hardening automation.
