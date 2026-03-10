@@ -126,6 +126,13 @@ struct ControlsView: View {
             .buttonStyle(.plain)
             .accessibilityLabel("Quit DexDictate")
         }
+        .padding(SurfaceTokens.cardPadding)
+        .background(Color.white.opacity(0.05))
+        .overlay(
+            RoundedRectangle(cornerRadius: SurfaceTokens.cornerRadius)
+                .stroke(statusColor.opacity(0.35), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: SurfaceTokens.cornerRadius))
         .padding(.horizontal)
     }
 
