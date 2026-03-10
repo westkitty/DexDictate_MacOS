@@ -54,12 +54,16 @@ public class PermissionManager: ObservableObject {
     /// Starts the 2-second polling loop and stores a reference to the engine for recovery.
     ///
     /// - Parameter engine: The engine to retry when accessibility is newly granted.
-    public func startMonitoring(engine: TranscriptionEngine) {
-        self.engine = engine
-        // Poll every 2 seconds
+    public func startMonitoring() {
+        timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
             self?.checkPermissions()
         }
+    }
+
+    public func startMonitoring(engine: TranscriptionEngine) {
+        self.engine = engine
+        startMonitoring()
     }
     
     public func stopMonitoring() {

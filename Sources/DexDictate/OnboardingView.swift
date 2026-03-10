@@ -85,6 +85,7 @@ struct WelcomePage: View {
 struct PermissionsPage: View {
     // Track whether the user has clicked the grant button (so we can show Input Monitoring steps)
     @State private var accessibilityRequested = false
+    @StateObject private var permissionManager = PermissionManager()
 
     var body: some View {
         ScrollView {
@@ -97,6 +98,8 @@ struct PermissionsPage: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
+
+                LivePermissionChecklist(permissionManager: permissionManager)
 
                 // ── Step 1: Accessibility ─────────────────────────────────────
                 PermissionStep(
@@ -166,6 +169,93 @@ struct PermissionsPage: View {
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 16)
+        }
+        .onAppear {
+            permissionManager.refreshPermissions()
+            permissionManager.startMonitoring()
+        }
+        .onDisappear {
+            permissionManager.stopMonitoring()
+        }
+    }
+}
+
+private struct LivePermissionChecklist: View {
+    @ObservedObject var permissionManager: PermissionManager
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Live Checklist")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                Spacer()
+                PermissionSummaryBadge(allGranted: permissionManager.allPermissionsGranted)
+            }
+
+            PermissionStatusRow(
+                title: NSLocalizedString("Accessibility", comment: ""),
+                detail: NSLocalizedString("Needed for the event tap trust path and output control.", comment: ""),
+                isGranted: permissionManager.accessibilityGranted
+            )
+
+            PermissionStatusRow(
+                title: NSLocalizedString("Input Monitoring", comment: ""),
+                detail: NSLocalizedString("Needed to receive your global trigger events.", comment: ""),
+                isGranted: permissionManager.inputMonitoringGranted
+            )
+
+            PermissionStatusRow(
+                title: NSLocalizedString("Microphone", comment: ""),
+                detail: NSLocalizedString("Checked separately and prompted when dictation actually needs audio access.", comment: ""),
+                isGranted: permissionManager.microphoneGranted
+            )
+        }
+        .padding(14)
+        .background(Color.white.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+}
+
+private struct PermissionSummaryBadge: View {
+    let allGranted: Bool
+
+    var body: some View {
+        Text(allGranted ? "Ready" : "In Progress")
+            .font(.caption.weight(.semibold))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(allGranted ? Color.green.opacity(0.22) : Color.orange.opacity(0.22))
+            .foregroundStyle(allGranted ? Color.green : Color.orange)
+            .clipShape(Capsule())
+    }
+}
+
+private struct PermissionStatusRow: View {
+    let title: String
+    let detail: String
+    let isGranted: Bool
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: isGranted ? "checkmark.circle.fill" : "circle.dotted")
+                .foregroundStyle(isGranted ? Color.green : Color.orange)
+                .font(.title3)
+
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 8) {
+                    Text(title)
+                        .font(.subheadline).bold()
+                    Text(isGranted ? "Granted" : "Waiting")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(isGranted ? Color.green : Color.orange)
+                }
+
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 }

@@ -1432,3 +1432,86 @@ Rationale:
   - current workflow still pays model-load cost on each iteration because each run launches a fresh process
   - there is not yet a persisted blessed baseline file or CI gate for latency budgets
 - Next step: continue Phase 1 or Phase 2 with either broader protocol seams or operational hardening, depending on the next safest dependency cut.
+
+### 18.24 Pre-Implementation Note P-0004
+
+- Entry ID: P-0004
+- Timestamp: 2026-03-10 America/Detroit
+- Improvement ID(s): R11
+- Goal: Add a live onboarding permission checklist that reflects real system state without changing permission order, plus a safe fix for duplicate permission polling timers.
+- Why now: This is the clearest Phase 3 entry point and addresses a known UX weakness without touching the fragile event-tap trust chain.
+- Dependency context: Depends on the baseline permission inventory and benefits from the earlier diagnostics work.
+- Files likely to change:
+  - `Sources/DexDictateKit/PermissionManager.swift`
+  - `Sources/DexDictate/OnboardingView.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Medium-low. The checklist must remain observational. It must not introduce new prompt spam or reorder permission requests.
+- Invariant check:
+  - preserve Accessibility/Input Monitoring prompting behavior
+  - preserve separate microphone request behavior
+  - preserve event-tap readiness dependency in the engine
+  - do not request microphone from the onboarding checklist
+- What was attempted: Pending.
+- What succeeded: Pending.
+- What failed: Pending.
+- What was rolled back: Pending.
+- Tests run: Pending.
+- Metrics captured: Pending.
+- Regressions checked: Pending.
+- Remaining risks: Pending.
+- Next step: Add polling-only monitoring support to `PermissionManager`, use it in onboarding, and surface live grant status for all three required permissions.
+
+### 18.25 Roadmap Status Addendum 2026-03-10T17:22 America/Detroit
+
+- R11: complete
+
+Rationale:
+
+- Onboarding now includes a live permission checklist driven by real `PermissionManager` state, without altering prompt order or microphone request timing.
+
+### 18.26 Ledger Entry B-0006
+
+- Entry ID: B-0006
+- Timestamp: 2026-03-10 America/Detroit
+- Improvement ID(s): R11
+- Goal: Make onboarding reflect real permission state while preserving the existing trust chain.
+- Why now: Phase 3 begins with clarity improvements that do not disturb the underlying permission architecture.
+- Dependency context: Built on the existing `PermissionManager` and baseline permission inventory.
+- Files likely or actually changed:
+  - `Sources/DexDictateKit/PermissionManager.swift`
+  - `Sources/DexDictate/OnboardingView.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Medium-low. The checklist is read-only with respect to microphone prompting and uses the existing polling source of truth.
+- Invariant check:
+  - Accessibility and Input Monitoring prompts remain user-initiated from existing buttons/menu-open flow
+  - microphone is still requested separately by existing runtime paths
+  - event-tap readiness logic was not changed
+  - no networking introduced
+- What was attempted:
+  - added polling-only `PermissionManager.startMonitoring()` support without an engine dependency
+  - invalidated any existing timer before starting a new one to avoid timer stacking
+  - added a live onboarding checklist showing Accessibility, Input Monitoring, and Microphone status
+- What succeeded:
+  - onboarding now shows real-time permission state for the three required permissions
+  - permission polling can now be reused safely outside the engine-attached path
+  - the previous timer-duplication risk in repeated menu opens was reduced by invalidating any existing timer before creating a new one
+- What failed:
+  - no automated or runtime gate failed for this slice
+- What was rolled back:
+  - nothing
+- Tests run:
+  - `swift build`
+  - `swift test`
+  - `swift run VerificationRunner`
+- Metrics captured:
+  - no new quantitative metric
+  - qualitative improvement: onboarding now distinguishes granted vs waiting states per permission instead of using only static instructions
+- Regressions checked:
+  - test suite still passes
+  - invariant runner still passes
+  - no permission-order changes were introduced
+- Remaining risks:
+  - no first-run trigger test yet
+  - no first-run microphone activity test yet
+  - manual interactive QA of the onboarding window was not executed in this entry
+- Next step: Continue Phase 3 with first-run trigger/microphone validation or distinct error mapping.
