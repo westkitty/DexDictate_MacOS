@@ -1238,3 +1238,107 @@ Rationale:
   - lifecycle status text remains distributed across methods rather than fully state-derived
   - no UI/manual smoke pass was executed for this internal refactor slice
 - Next step: Implement protocol-backed seams around selected engine dependencies and permission-safe diagnostics to support deeper tests and later UX work.
+
+### 18.18 Pre-Implementation Note P-0002
+
+- Entry ID: P-0002
+- Timestamp: 2026-03-10 America/Detroit
+- Improvement ID(s): R22, R25, R27
+- Goal: Add protocol-backed seams around settings persistence, introduce structured bounded diagnostics, and version the settings schema with explicit migrations.
+- Why now: Baseline and first refactor slice exposed weak persistence discipline and unstructured local logging. These can be improved with low user-facing risk.
+- Dependency context: Builds on the explicit lifecycle work from B-0003 and should make later testing and error mapping safer.
+- Files likely to change:
+  - `Sources/DexDictateKit/AppSettings.swift`
+  - new settings migration file(s)
+  - `Sources/DexDictateKit/Safety.swift`
+  - new diagnostics file(s)
+  - tests under `Tests/DexDictateTests`
+- Risk assessment: Medium-low. Migration logic can accidentally clobber user settings if written carelessly. Diagnostics changes must remain local-only and avoid logging transcript contents.
+- Invariant check:
+  - do not change permission prompt order
+  - do not introduce networking
+  - preserve existing stored setting meanings wherever possible
+  - keep diagnostics local and privacy-safe
+  - preserve menu-bar-first and local Whisper behavior
+- What was attempted: Pending.
+- What succeeded: Pending.
+- What failed: Pending.
+- What was rolled back: Pending.
+- Tests run: Pending.
+- Metrics captured: Pending.
+- Regressions checked: Pending.
+- Remaining risks: Pending.
+- Next step: Implement a store protocol plus migration coordinator, wire schema versioning into `AppSettings`, add structured diagnostics retention, and cover both with tests.
+
+### 18.19 Roadmap Status Addendum 2026-03-10T16:23 America/Detroit
+
+- R22: in_progress
+- R25: complete
+- R27: complete
+
+Rationale:
+
+- R22 is in progress because a real protocol-backed seam now exists around settings persistence, but major runtime services are still concrete.
+- R25 is satisfied for the current scope by introducing structured local diagnostics with categories and bounded retention.
+- R27 is satisfied by introducing explicit schema versioning and migration normalization for legacy or invalid settings payloads.
+
+### 18.20 Ledger Entry B-0004
+
+- Entry ID: B-0004
+- Timestamp: 2026-03-10 America/Detroit
+- Improvement ID(s): R22, R25, R27
+- Goal: Harden settings persistence and diagnostics without changing user-facing permission flow or transcription behavior.
+- Why now: These are low-risk internal improvements that directly support safer future UX and test work.
+- Dependency context: Follows explicit engine lifecycle work from B-0003.
+- Files likely or actually changed:
+  - `Sources/DexDictateKit/Diagnostics.swift`
+  - `Sources/DexDictateKit/SettingsMigration.swift`
+  - `Sources/DexDictateKit/AppSettings.swift`
+  - `Sources/DexDictateKit/Safety.swift`
+  - `Sources/DexDictateKit/TranscriptionEngine.swift`
+  - `Sources/DexDictateKit/InputMonitor.swift`
+  - `Tests/DexDictateTests/DiagnosticsStoreTests.swift`
+  - `Tests/DexDictateTests/SettingsMigrationTests.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Medium-low. Migration bugs could damage persisted settings, but the changes were isolated and test-covered.
+- Invariant check:
+  - no permission prompt order changes
+  - no networking introduced
+  - no brand changes
+  - menu-bar-first model preserved
+  - local Whisper pipeline preserved
+- What was attempted:
+  - added a `SettingsStore` protocol seam with `UserDefaults` conformance
+  - added `SettingsMigrationCoordinator` with schema versioning
+  - normalized legacy HUD visibility, invalid appearance theme values, invalid engine values, and corrupt shortcut payloads
+  - introduced structured local diagnostics records with categories and bounded JSONL retention
+  - kept the existing plain-text debug log for compatibility
+  - tagged selected lifecycle and input logs with structured categories
+- What succeeded:
+  - settings migrations now run during `AppSettings` initialization
+  - diagnostics now write bounded structured records locally
+  - tests cover migration behavior and diagnostics pruning
+  - build, full test suite, and `VerificationRunner` all pass
+- What failed:
+  - first compile attempt failed because `Safety.log` exposed an internal `DiagnosticCategory` type through a public signature
+- What was rolled back:
+  - nothing was rolled back; the type visibility was corrected
+- Tests run:
+  - `swift test`
+  - `swift run VerificationRunner`
+  - `swift build`
+- Metrics captured:
+  - automated test count increased from 8 to 11
+  - migration tests added: 2
+  - diagnostics retention tests added: 1
+  - `VerificationRunner` remained at 43 passing checks
+- Regressions checked:
+  - no new network APIs introduced
+  - no changes to permission-order logic
+  - no changes to trigger -> transcribe -> output core path
+  - no brand asset changes
+- Remaining risks:
+  - broader dependency seams for audio, transcription, permissions, and output remain undone
+  - diagnostics records are structured, but high-level event coverage is still incomplete
+  - manual smoke checks were not executed for this internal slice
+- Next step: Continue Phase 1 with broader dependency seams and a release-grade benchmark workflow, then move into operational hardening.
