@@ -1515,3 +1515,94 @@ Rationale:
   - no first-run microphone activity test yet
   - manual interactive QA of the onboarding window was not executed in this entry
 - Next step: Continue Phase 3 with first-run trigger/microphone validation or distinct error mapping.
+
+### 18.27 Pre-Implementation Note P-0005
+
+- Entry ID: P-0005
+- Timestamp: 2026-03-10 America/Detroit
+- Improvement ID(s): R12, R13, R14
+- Goal: Add truthful first-run trigger and microphone validation helpers with distinct user-facing status mapping.
+- Why now: The live checklist exposes current permission state, but the onboarding flow still cannot confirm that trigger capture or microphone capture actually work.
+- Dependency context: Builds directly on the new live checklist and the existing event-tap and audio services.
+- Files likely to change:
+  - new onboarding validation helpers in `Sources/DexDictateKit`
+  - `Sources/DexDictate/OnboardingView.swift`
+  - tests and/or invariant coverage
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Medium. Validation helpers must remain observational and isolated from the main engine so they do not interfere with normal permission flow or leave taps/recording active.
+- Invariant check:
+  - do not reorder or broaden permission prompts
+  - do not touch the main engine trust chain
+  - keep microphone validation local-only
+  - ensure trigger validation uses the real event-tap prerequisite path, not a fake UI-only check
+- What was attempted: Pending.
+- What succeeded: Pending.
+- What failed: Pending.
+- What was rolled back: Pending.
+- Tests run: Pending.
+- Metrics captured: Pending.
+- Regressions checked: Pending.
+- Remaining risks: Pending.
+- Next step: Implement isolated trigger and microphone probes, surface their results in onboarding, and add tests for the distinct status mapping.
+
+### 18.28 Roadmap Status Addendum 2026-03-10T17:25 America/Detroit
+
+- R12: complete
+- R13: complete
+- R14: in_progress
+
+Rationale:
+
+- R12 is satisfied by the trigger-readiness probe using the real event-tap prerequisite path.
+- R13 is satisfied by the local microphone validation harness that checks actual input activity.
+- R14 is in progress because distinct user-facing error/status mapping now exists in onboarding validation flows, but broader runtime surfaces still need the same treatment.
+
+### 18.29 Ledger Entry B-0007
+
+- Entry ID: B-0007
+- Timestamp: 2026-03-10 America/Detroit
+- Improvement ID(s): R12, R13, R14
+- Goal: Validate trigger readiness and microphone activity during onboarding with distinct, truthful user-facing outcomes.
+- Why now: This follows naturally after the live checklist and closes the gap between “permission granted” and “feature actually works.”
+- Dependency context: Built on `PermissionManager`, the event-tap trust path, and `AudioRecorderService`.
+- Files likely or actually changed:
+  - `Sources/DexDictateKit/OnboardingValidation.swift`
+  - `Sources/DexDictate/OnboardingView.swift`
+  - `Tests/DexDictateTests/OnboardingValidationTests.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Medium. The validation helpers create temporary taps or short audio captures and must not interfere with the main engine.
+- Invariant check:
+  - no new prompts were introduced by the trigger probe
+  - microphone validation still respects separate microphone authorization
+  - main engine permission order and readiness logic unchanged
+  - no networking introduced
+- What was attempted:
+  - added `TriggerValidationProbe` that checks real event-tap readiness
+  - added `MicrophoneValidationHarness` that performs a short local capture test and observes live input level
+  - added onboarding UI for both validation paths
+  - added distinct status messaging for the main validation outcomes
+- What succeeded:
+  - onboarding can now verify actual trigger readiness instead of just showing static instructions
+  - onboarding can now verify microphone activity instead of only showing permission state
+  - user-facing validation states are clearly distinguished for missing permissions, missing devices, no input detected, and recorder startup failure
+  - full build, test suite, and invariant runner all passed
+- What failed:
+  - no build or verification gate failed in this slice
+- What was rolled back:
+  - nothing
+- Tests run:
+  - `swift test`
+  - `swift build`
+  - `swift run VerificationRunner`
+- Metrics captured:
+  - automated test count increased from 11 to 13
+  - onboarding validation mapping tests added: 2
+- Regressions checked:
+  - no permission-order changes
+  - no changes to main engine workflow
+  - no changes to branding assets
+  - no networking introduced
+- Remaining risks:
+  - onboarding validation has not yet been manually exercised in a live macOS permission session
+  - runtime error mapping outside onboarding still needs broader cleanup
+- Next step: move to Phase 4 safety and accessibility improvements, or continue broadening error mapping if that proves the safer dependency cut.

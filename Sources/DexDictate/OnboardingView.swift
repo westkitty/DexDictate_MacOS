@@ -86,6 +86,8 @@ struct PermissionsPage: View {
     // Track whether the user has clicked the grant button (so we can show Input Monitoring steps)
     @State private var accessibilityRequested = false
     @StateObject private var permissionManager = PermissionManager()
+    @StateObject private var microphoneHarness = MicrophoneValidationHarness()
+    @State private var triggerValidationState: TriggerValidationState = .idle
 
     var body: some View {
         ScrollView {
@@ -100,6 +102,16 @@ struct PermissionsPage: View {
                     .frame(maxWidth: .infinity, alignment: .center)
 
                 LivePermissionChecklist(permissionManager: permissionManager)
+                OnboardingValidationPanel(
+                    triggerValidationState: triggerValidationState,
+                    microphoneHarness: microphoneHarness,
+                    onRunTriggerTest: {
+                        triggerValidationState = TriggerValidationProbe.runCheck()
+                    },
+                    onRunMicrophoneTest: {
+                        microphoneHarness.runTest()
+                    }
+                )
 
                 // ── Step 1: Accessibility ─────────────────────────────────────
                 PermissionStep(
@@ -257,6 +269,93 @@ private struct PermissionStatusRow: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+    }
+}
+
+private struct OnboardingValidationPanel: View {
+    let triggerValidationState: TriggerValidationState
+    @ObservedObject var microphoneHarness: MicrophoneValidationHarness
+    let onRunTriggerTest: () -> Void
+    let onRunMicrophoneTest: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Validation")
+                .font(.headline)
+                .foregroundStyle(.white)
+
+            ValidationCard(
+                title: "Trigger Test",
+                headline: triggerValidationState.headline,
+                detail: triggerValidationState.detail,
+                accentColor: triggerValidationState.isSuccess ? .green : .orange
+            ) {
+                Button("Test Trigger Readiness", action: onRunTriggerTest)
+                    .buttonStyle(.borderedProminent)
+            }
+
+            ValidationCard(
+                title: "Microphone Test",
+                headline: microphoneHarness.state.headline,
+                detail: microphoneHarness.state.detail,
+                accentColor: microphoneHarness.state.isSuccess ? .green : .orange
+            ) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Button(
+                        microphoneHarness.state == .running
+                        ? "Testing Microphone..."
+                        : "Test Microphone"
+                    ) {
+                        onRunMicrophoneTest()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(microphoneHarness.state == .running)
+
+                    ProgressView(value: min(max(microphoneHarness.inputLevel, 0), 1))
+                        .progressViewStyle(.linear)
+                        .tint(microphoneHarness.state.isSuccess ? .green : .blue)
+                }
+            }
+        }
+        .padding(14)
+        .background(Color.white.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+}
+
+private struct ValidationCard<Action: View>: View {
+    let title: String
+    let headline: String
+    let detail: String
+    let accentColor: Color
+    @ViewBuilder let action: () -> Action
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(title)
+                    .font(.subheadline).bold()
+                    .foregroundStyle(.white)
+                Spacer()
+                Circle()
+                    .fill(accentColor)
+                    .frame(width: 8, height: 8)
+            }
+
+            Text(headline)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white)
+
+            Text(detail)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            action()
+        }
+        .padding(12)
+        .background(Color.black.opacity(0.18))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 }
 
