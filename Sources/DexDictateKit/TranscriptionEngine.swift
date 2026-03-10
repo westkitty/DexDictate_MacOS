@@ -21,6 +21,7 @@ public final class TranscriptionEngine: ObservableObject {
 
     /// Transcription history.
     @Published public var history = TranscriptionHistory()
+    @Published public var resultFeedback: TranscriptionFeedback = .idle
 
     private let audioService = AudioRecorderService()
     private let whisperService = WhisperService()
@@ -104,6 +105,7 @@ public final class TranscriptionEngine: ObservableObject {
         statusText = NSLocalizedString("Idle", comment: "Status: Idle")
         liveTranscript = ""
         inputLevel = 0
+        resultFeedback = .idle
     }
     
     /// True once the Whisper model has been successfully loaded into memory.
@@ -157,6 +159,7 @@ public final class TranscriptionEngine: ObservableObject {
             currentMetrics = MetricsSession()
 
             if state != .listening {
+                resultFeedback = .idle
                 startListening()
             }
         } else {
@@ -342,6 +345,7 @@ public final class TranscriptionEngine: ObservableObject {
         if trimmed.isEmpty {
             _ = applyLifecycle(.transcriptionCompleted, context: "empty whisper result")
             statusText = NSLocalizedString("Ready", comment: "Status: Ready to dictate")
+            resultFeedback = .noSpeechDetected
         } else {
             finalizeTranscription(trimmed)
         }
@@ -385,10 +389,12 @@ public final class TranscriptionEngine: ObservableObject {
             if input == "scratch that" {
                 history.removeMostRecent()
                 statusText = NSLocalizedString("Scratch that", comment: "")
+                resultFeedback = .deletedPreviousHistory
                 return // Nothing to add
             } else {
                 // We had some text that we scratched. Do not add anything.
                 statusText = NSLocalizedString("Scratched", comment: "")
+                resultFeedback = .discardedCurrentUtterance
                 return
             }
         }
@@ -397,16 +403,19 @@ public final class TranscriptionEngine: ObservableObject {
         if finalText.isEmpty {
             statusText = NSLocalizedString("Ready", comment: "Status: Ready to dictate")
             liveTranscript = ""
+            resultFeedback = .noSpeechDetected
             return
         }
 
         // 1. Apply Custom Vocabulary
+        let preProcessingText = finalText
         finalText = vocabularyManager.apply(to: finalText)
         
         // 2. Apply Profanity Filter
         if AppSettings.shared.profanityFilter {
              finalText = ProfanityFilter.filter(finalText)
         }
+        let wasModified = finalText != preProcessingText
         
         history.add(finalText)
         let doneFormat = NSLocalizedString("Done: %@", comment: "Status: Transcription complete")
@@ -415,6 +424,9 @@ public final class TranscriptionEngine: ObservableObject {
         
         if AppSettings.shared.autoPaste {
              ClipboardManager.copyAndPaste(finalText)
+             resultFeedback = .pastedToActiveApp(modified: wasModified)
+        } else {
+             resultFeedback = .savedToHistory(modified: wasModified)
         }
     }
 

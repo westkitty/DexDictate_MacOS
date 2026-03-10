@@ -1699,3 +1699,90 @@ Rationale:
   - search/filter behavior was not manually exercised in the detached macOS window
   - broader keyboard navigation coverage beyond labels is still incomplete
 - Next step: Continue Phase 4 with safer workflow improvements such as result feedback, safe mode, or secure-context handling.
+
+### 18.33 Pre-Implementation Note P-0007
+
+- Entry ID: P-0007
+- Timestamp: 2026-03-10 America/Detroit
+- Improvement ID(s): R14, R20
+- Goal: Make post-transcription outcomes explicit and visible, and broaden distinct user-facing state mapping beyond onboarding.
+- Why now: This is a safer local reorder than changing destructive-command behavior or secure-context output behavior first.
+- Dependency context: Builds on the explicit lifecycle model and recent onboarding validation state mapping.
+- Files likely to change:
+  - `Sources/DexDictateKit/TranscriptionEngine.swift`
+  - new feedback/result model file(s) in `Sources/DexDictateKit`
+  - UI surfaces that show status feedback
+  - tests and Bible
+- Risk assessment: Medium-low. This should not alter transcription/output behavior; it should only expose clearer state to the user.
+- Invariant check:
+  - preserve trigger -> capture -> transcribe -> output workflow
+  - preserve permission order
+  - preserve local-only behavior
+  - do not change command semantics yet
+- What was attempted: Pending.
+- What succeeded: Pending.
+- What failed: Pending.
+- What was rolled back: Pending.
+- Tests run: Pending.
+- Metrics captured: Pending.
+- Regressions checked: Pending.
+- Remaining risks: Pending.
+- Next step: Add explicit transcription feedback states, set them in the engine for the main outcome branches, and show them in the compact UI without bloating the layout.
+
+### 18.34 Roadmap Status Addendum 2026-03-10T17:29 America/Detroit
+
+- R14: complete
+- R20: complete
+
+Rationale:
+
+- R14 is now satisfied by distinct user-facing state mapping across onboarding validation and post-transcription outcomes.
+- R20 is satisfied by explicit result feedback states surfaced in the main controls area.
+
+### 18.35 Ledger Entry B-0009
+
+- Entry ID: B-0009
+- Timestamp: 2026-03-10 America/Detroit
+- Improvement ID(s): R14, R20
+- Goal: Expose clear user-facing result states for the main transcription outcomes without changing the underlying output behavior.
+- Why now: This is a safe behavior-preserving UI/state improvement that strengthens workflow clarity before riskier Phase 4 tasks.
+- Dependency context: Builds on prior onboarding validation state mapping and the explicit engine lifecycle model.
+- Files likely or actually changed:
+  - `Sources/DexDictateKit/TranscriptionFeedback.swift`
+  - `Sources/DexDictateKit/TranscriptionEngine.swift`
+  - `Sources/DexDictate/ControlsView.swift`
+  - `Tests/DexDictateTests/TranscriptionFeedbackTests.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Medium-low. Outcome reporting changed, but output semantics did not.
+- Invariant check:
+  - no permission changes
+  - no command behavior changes
+  - no network behavior introduced
+  - trigger -> transcribe -> output pipeline preserved
+- What was attempted:
+  - added explicit `TranscriptionFeedback` states with titles, details, symbols, and tone
+  - set feedback states in the engine for empty-result, scratch-that, save-only, and auto-paste outcome branches
+  - surfaced the feedback state in the compact controls UI as a small capsule
+- What succeeded:
+  - users now get explicit feedback about what happened after dictation
+  - onboarding and runtime state language are now more structured and distinct
+  - build, tests, and invariant runner all passed
+- What failed:
+  - no build or verification gate failed in this slice
+- What was rolled back:
+  - nothing
+- Tests run:
+  - `swift test`
+  - `swift build`
+  - `swift run VerificationRunner`
+- Metrics captured:
+  - automated test count increased from 14 to 16
+  - transcription feedback tests added: 2
+- Regressions checked:
+  - no changes to output mechanics beyond user-visible reporting
+  - invariant runner still passes
+  - no permission or branding regressions introduced
+- Remaining risks:
+  - result feedback UI has not been manually exercised in a live dictation session
+  - safe mode, destructive-command safeguards, and secure-context handling still remain
+- Next step: Continue Phase 4 with safe mode, destructive-command safety, or secure-context output handling.
