@@ -1606,3 +1606,96 @@ Rationale:
   - onboarding validation has not yet been manually exercised in a live macOS permission session
   - runtime error mapping outside onboarding still needs broader cleanup
 - Next step: move to Phase 4 safety and accessibility improvements, or continue broadening error mapping if that proves the safer dependency cut.
+
+### 18.30 Pre-Implementation Note P-0006
+
+- Entry ID: P-0006
+- Timestamp: 2026-03-10 America/Detroit
+- Improvement ID(s): R17, R19
+- Goal: Improve keyboard/VoiceOver accessibility on changed controls and make detached history more useful with search and timestamps.
+- Why now: This is a safe local reordering inside Phase 4. It avoids risky output or command-behavior changes while delivering immediate usability improvements.
+- Dependency context: Reordered ahead of R15, R16, and R18 because these changes are lower risk and do not alter destructive behavior or output semantics.
+- Files likely to change:
+  - `Sources/DexDictateKit/TranscriptionHistory.swift`
+  - `Sources/DexDictate/HistoryView.swift`
+  - `Sources/DexDictate/HistoryWindow.swift`
+  - selected SwiftUI control surfaces for accessibility labels
+  - tests and Bible
+- Risk assessment: Medium-low. History timestamp changes affect the in-memory model, but not persistence, and accessibility labels are additive.
+- Invariant check:
+  - preserve menu-bar-first flow
+  - preserve history cap and ordering semantics
+  - preserve local-only behavior
+  - do not alter transcription/output logic
+- What was attempted: Pending.
+- What succeeded: Pending.
+- What failed: Pending.
+- What was rolled back: Pending.
+- Tests run: Pending.
+- Metrics captured: Pending.
+- Regressions checked: Pending.
+- Remaining risks: Pending.
+- Next step: Add timestamps to history items, add detached history filtering, and add accessibility labels to the main changed controls.
+
+### 18.31 Roadmap Status Addendum 2026-03-10T17:27 America/Detroit
+
+- R17: complete
+- R19: complete
+
+Rationale:
+
+- R17 is satisfied for the changed surfaces by adding explicit accessibility labels and combined accessibility elements on key controls.
+- R19 is satisfied by detached-history search/filter support plus timestamps in both inline and detached history presentations.
+
+### 18.32 Ledger Entry B-0008
+
+- Entry ID: B-0008
+- Timestamp: 2026-03-10 America/Detroit
+- Improvement ID(s): R17, R19
+- Goal: Improve accessibility on active controls and make history materially more useful without bloating the compact popover.
+- Why now: Low-risk Phase 4 slice chosen ahead of more behavior-sensitive work.
+- Dependency context: Intentional local reorder inside Phase 4 to prioritize low-risk UI/accessibility improvements.
+- Files likely or actually changed:
+  - `Sources/DexDictateKit/TranscriptionHistory.swift`
+  - `Sources/DexDictate/HistoryView.swift`
+  - `Sources/DexDictate/HistoryWindow.swift`
+  - `Sources/DexDictate/ControlsView.swift`
+  - `Sources/DexDictate/PermissionBannerView.swift`
+  - `Sources/DexDictate/ShortcutRecorder.swift`
+  - `Tests/DexDictateTests/TranscriptionHistoryTests.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Medium-low. History model changed to add timestamps, but ordering, cap, and in-memory-only semantics were preserved.
+- Invariant check:
+  - history remains session-local and capped
+  - no transcription/output logic changed
+  - menu-bar-first model preserved
+  - no networking introduced
+- What was attempted:
+  - added timestamps to `HistoryItem`
+  - added detached-history filtering via inline search field
+  - surfaced timestamps in inline and detached history views
+  - added accessibility labels to changed buttons and combined row semantics
+- What succeeded:
+  - detached history can now be filtered by text
+  - exported history now includes timestamps
+  - inline history rows show when entries were created
+  - VoiceOver labels exist for key history, control, banner, and shortcut-recorder actions
+- What failed:
+  - no build or verification gate failed in this slice
+- What was rolled back:
+  - nothing
+- Tests run:
+  - `swift test`
+  - `swift build`
+  - `swift run VerificationRunner`
+- Metrics captured:
+  - automated test count increased from 13 to 14
+  - history timestamp test added: 1
+- Regressions checked:
+  - history cap and ordering tests still pass
+  - invariant runner still passes
+  - no permission changes introduced
+- Remaining risks:
+  - search/filter behavior was not manually exercised in the detached macOS window
+  - broader keyboard navigation coverage beyond labels is still incomplete
+- Next step: Continue Phase 4 with safer workflow improvements such as result feedback, safe mode, or secure-context handling.

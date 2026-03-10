@@ -60,29 +60,57 @@ struct FullHistoryView: View {
     @ObservedObject var history: TranscriptionHistory
     @State private var isExporting = false
     @State private var document: TextDocument?
+    @State private var searchText = ""
+
+    private var filteredItems: [HistoryItem] {
+        guard !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return history.items
+        }
+
+        let query = searchText.localizedLowercase
+        return history.items.filter { $0.text.localizedLowercase.contains(query) }
+    }
     
     var body: some View {
         VStack(spacing: 0) {
             // Header
-            HStack {
-                Text(NSLocalizedString("History", comment: ""))
-                    .font(.headline)
-                Spacer()
-                
-                Button(action: {
-                    let content = history.items.map { $0.text }.joined(separator: "\n\n")
-                    document = TextDocument(text: content)
-                    isExporting = true
-                }) {
-                    Image(systemName: "square.and.arrow.up")
+            VStack(spacing: 12) {
+                HStack {
+                    Text(NSLocalizedString("History", comment: ""))
+                        .font(.headline)
+                    Spacer()
+
+                    Button(action: {
+                        let content = filteredItems.map { item in
+                            let timestamp = item.createdAt.formatted(date: .abbreviated, time: .shortened)
+                            return "[\(timestamp)]\n\(item.text)"
+                        }.joined(separator: "\n\n")
+                        document = TextDocument(text: content)
+                        isExporting = true
+                    }) {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                    .help(NSLocalizedString("Export History", comment: ""))
+                    .disabled(filteredItems.isEmpty)
+                    .accessibilityLabel("Export history")
+
+                    Button(action: history.clear) {
+                        Image(systemName: "trash")
+                    }
+                    .help(NSLocalizedString("Clear History", comment: ""))
+                    .accessibilityLabel("Clear history")
                 }
-                .help(NSLocalizedString("Export History", comment: ""))
-                .disabled(history.isEmpty)
-                
-                Button(action: history.clear) {
-                    Image(systemName: "trash")
+
+                HStack(spacing: 10) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(.secondary)
+                    TextField("Search history", text: $searchText)
+                        .textFieldStyle(.roundedBorder)
+                        .accessibilityLabel("Search history")
+                    Text("\(filteredItems.count)")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
                 }
-                .help(NSLocalizedString("Clear History", comment: ""))
             }
             .padding()
             .background(Color(nsColor: .windowBackgroundColor))
@@ -95,8 +123,12 @@ struct FullHistoryView: View {
                     Text(NSLocalizedString("No transcription history.", comment: ""))
                         .foregroundStyle(.secondary)
                         .padding()
+                } else if filteredItems.isEmpty {
+                    Text(NSLocalizedString("No history matches your search.", comment: ""))
+                        .foregroundStyle(.secondary)
+                        .padding()
                 } else {
-                    ForEach(history.items) { item in
+                    ForEach(filteredItems) { item in
                         HistoryItemRow(item: item)
                     }
                 }
@@ -124,10 +156,16 @@ struct HistoryItemRow: View {
     
     var body: some View {
         HStack(alignment: .top) {
-            Text(item.text)
-                .font(.body)
-                .textSelection(.enabled)
-                .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.createdAt.formatted(date: .abbreviated, time: .shortened))
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+
+                Text(item.text)
+                    .font(.body)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             Spacer()
             Button(action: {
                 NSPasteboard.general.clearContents()
@@ -138,7 +176,9 @@ struct HistoryItemRow: View {
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Copy history item")
         }
         .padding(.vertical, 4)
+        .accessibilityElement(children: .combine)
     }
 }
