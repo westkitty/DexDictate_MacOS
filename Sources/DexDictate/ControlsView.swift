@@ -62,6 +62,23 @@ struct ControlsView: View {
                     .font(.caption2)
                     .foregroundStyle(.white.opacity(0.6))
 
+                if engine.resultFeedback != .idle {
+                    HStack(spacing: 6) {
+                        Image(systemName: engine.resultFeedback.symbolName)
+                            .font(.caption)
+                        Text(engine.resultFeedback.title)
+                            .font(.caption2.weight(.medium))
+                            .lineLimit(1)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(feedbackBackgroundColor)
+                    .foregroundStyle(feedbackForegroundColor)
+                    .clipShape(Capsule())
+                    .help(engine.resultFeedback.detail)
+                    .accessibilityLabel(engine.resultFeedback.title)
+                }
+
                 // Stop the whole dictation system (returns to .stopped)
                 Button(action: stopDictation) {
                     HStack {
@@ -95,6 +112,28 @@ struct ControlsView: View {
             .accessibilityLabel("Quit DexDictate")
         }
         .padding(.horizontal)
+    }
+
+    private var feedbackBackgroundColor: Color {
+        switch engine.resultFeedback.tone {
+        case .neutral:
+            return Color.white.opacity(0.12)
+        case .success:
+            return Color.green.opacity(0.18)
+        case .warning:
+            return Color.orange.opacity(0.18)
+        }
+    }
+
+    private var feedbackForegroundColor: Color {
+        switch engine.resultFeedback.tone {
+        case .neutral:
+            return .white.opacity(0.8)
+        case .success:
+            return .green
+        case .warning:
+            return .orange
+        }
     }
 
     // MARK: - Helper Methods
