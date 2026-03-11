@@ -2196,3 +2196,101 @@ Rationale:
   - notarization and stapling are still external/manual; this work validates readiness and integrity evidence, not full notarization automation
   - the current signing identity is a local development certificate, so Gatekeeper rejection remains expected until a distribution signing/notarization path is used
 - Next step: move to the remaining behavior-heavy items: dependency seams/tests, destructive-command safety, secure-context handling, audio route recovery, launch-at-login truthfulness, and modularization.
+
+### 18.49 Pre-Implementation Note P-0012
+
+- Entry ID: P-0012
+- Timestamp: 2026-03-10 America/Detroit
+- Improvement ID(s): R28
+- Goal: Make launch-at-login truthful by wiring the stored setting to `ServiceManagement` with visible status and recovery guidance.
+- Why now: The repository still carries a persisted `launchAtLogin` flag and documentation noting that it is not implemented. That is an avoidable trust gap.
+- Dependency context: Safe Phase 2 work. This can also introduce a narrow protocol seam around the underlying platform service.
+- Files likely to change:
+  - new launch-at-login service/controller files in `Sources/DexDictateKit`
+  - `Sources/DexDictate/QuickSettingsView.swift`
+  - `Sources/DexDictate/DexDictateApp.swift`
+  - tests for the new controller/service seam
+  - Bible
+- Risk assessment: Medium-low. The main risk is surfacing incorrect state or creating a toggle that behaves differently in unsigned/ad-hoc/local builds.
+- Invariant check:
+  - no permission flow changes
+  - no microphone/input-monitoring logic changes
+  - no networking
+  - menu-bar-first flow preserved
+- What was attempted: Pending.
+- What succeeded: Pending.
+- What failed: Pending.
+- What was rolled back: Pending.
+- Tests run: Pending.
+- Metrics captured: Pending.
+- Regressions checked: Pending.
+- Remaining risks: Pending.
+- Next step: Add a thin `SMAppService` wrapper, expose a truthful status model, and surface a minimal UI/status path only if the runtime reports meaningful support.
+
+### 18.50 Roadmap Status Addendum A-0009
+
+- Timestamp: 2026-03-10 America/Detroit
+- Scope: `R28`
+- Status update:
+  - `R28` is now complete.
+- Evidence:
+  - `LaunchAtLogin.swift` adds a thin `ServiceManagement` wrapper plus a controller with explicit statuses for enabled, disabled, requires approval, and unavailable.
+  - `QuickSettingsView` now surfaces a real launch-at-login toggle, status text, and recovery link to Login Items when macOS approval is required.
+  - `LaunchAtLoginControllerTests` exercises success, failure, and approval-required states using a mock service seam.
+- Notes:
+  - This slice also adds one narrow protocol-backed seam toward `R22`, but it is not enough to mark `R22` complete.
+  - No live registration/unregistration smoke test was performed against the user’s actual login items during this turn; the implementation was verified through automated tests and API-level status inspection to avoid mutating the workstation unnecessarily.
+
+### 18.51 Ledger Entry B-0015
+
+- Entry ID: B-0015
+- Timestamp: 2026-03-10 America/Detroit
+- Improvement ID(s): R28
+- Goal: Replace the stale persisted launch-at-login placeholder with a truthful, platform-backed implementation and status surface.
+- Why now: The repo explicitly documented that launch-at-login was stored but not implemented. That gap was small, visible, and fixable.
+- Dependency context: Phase 2 operational hardening. Also introduces a narrow protocol seam around a platform service.
+- Files likely or actually changed:
+  - `Sources/DexDictateKit/LaunchAtLogin.swift`
+  - `Sources/DexDictateKit/AppSettings.swift`
+  - `Sources/DexDictate/QuickSettingsView.swift`
+  - `Tests/DexDictateTests/LaunchAtLoginControllerTests.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Medium-low. Risk concentrated in incorrect state messaging and in keeping local tests isolated from the real login-items configuration.
+- Invariant check:
+  - no permission ordering changes
+  - no input-monitoring/event-tap changes
+  - no microphone flow changes
+  - no networking introduced
+  - menu-bar-first interaction preserved
+- What was attempted:
+  - wrapped `SMAppService.mainApp` behind a small service protocol and controller
+  - surfaced launch-at-login state in quick settings with explicit approval/unavailable messaging
+  - added a recovery affordance to open Login Items settings
+  - added mock-backed controller tests
+- What succeeded:
+  - launch-at-login is now backed by `ServiceManagement` instead of a dead stored flag
+  - UI now reports real status instead of implying support silently
+  - approval-required and unavailable states have distinct user-facing messaging
+  - automated tests passed for success, failure, and approval-required controller paths
+- What failed:
+  - an initial attempt to disable launch-at-login directly from `AppSettings.restoreDefaults()` failed because it called a main-actor controller from a synchronous nonisolated context
+- What was rolled back:
+  - the synchronous `restoreDefaults()` side effect was removed; the app now syncs the stored preference from the controller/UI path instead
+- Tests run:
+  - `swift test`
+  - `swift build`
+  - `swift run VerificationRunner`
+  - `swift -e 'import ServiceManagement; print(SMAppService.mainApp.status)'`
+- Metrics captured:
+  - `swift test`: 20 tests passed
+  - `swift run VerificationRunner`: 43 checks passed
+  - controller coverage added for 3 launch-at-login state paths
+- Regressions checked:
+  - no networking or privacy regressions
+  - no permission flow regressions
+  - no branding or menu-bar structural regressions
+  - quick settings still compiles and the invariant runner still passes
+- Remaining risks:
+  - no end-to-end login-cycle test was run against the real workstation account in this turn
+  - `restoreDefaults()` clears the stored mirror value, but the real system status is re-synced from the controller when the quick settings surface appears
+- Next step: continue into the remaining behavior-heavy work: broader dependency seams/tests, destructive-command safety, secure-context handling, audio route recovery, and modularization.

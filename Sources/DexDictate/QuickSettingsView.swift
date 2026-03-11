@@ -8,6 +8,7 @@ struct QuickSettingsView: View {
     @ObservedObject var scanner: AudioDeviceScanner
     @ObservedObject var vocabularyManager: VocabularyManager
     @State private var isExpanded = false
+    @StateObject private var launchAtLoginController = LaunchAtLoginController()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -149,8 +150,43 @@ struct QuickSettingsView: View {
                             .padding(.leading, 20).padding(.bottom, 2)
 
                         Toggle(NSLocalizedString("Filter Profanity", comment: ""), isOn: $settings.profanityFilter)
-                        
+
                         Toggle(NSLocalizedString("Show Floating HUD", comment: ""), isOn: $settings.showFloatingHUD)
+                    }
+
+                    Divider().background(Color.white.opacity(0.3))
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(NSLocalizedString("System", comment: ""))
+                            .font(.caption).bold().foregroundStyle(.white.opacity(0.7))
+
+                        Toggle(
+                            NSLocalizedString("Launch at Login", comment: ""),
+                            isOn: Binding(
+                                get: { launchAtLoginController.isEnabled },
+                                set: { newValue in
+                                    launchAtLoginController.setEnabled(newValue)
+                                    launchAtLoginController.syncStoredPreference(into: settings)
+                                }
+                            )
+                        )
+                        .disabled(launchAtLoginController.isUnavailable)
+
+                        Text(launchAtLoginController.statusMessage)
+                            .font(.caption2)
+                            .foregroundStyle(launchAtLoginController.lastError == nil ? .white.opacity(0.5) : .red.opacity(0.85))
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.leading, 20)
+                            .padding(.bottom, launchAtLoginController.needsSystemApproval ? 2 : 0)
+
+                        if launchAtLoginController.needsSystemApproval {
+                            Button("Open Login Items Settings") {
+                                launchAtLoginController.openSystemSettings()
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                            .padding(.leading, 20)
+                        }
                     }
 
                     Divider().background(Color.white.opacity(0.3))
@@ -217,6 +253,10 @@ struct QuickSettingsView: View {
         } // end if isExpanded
         } // end VStack
         .padding(.horizontal)
+        .onAppear {
+            launchAtLoginController.refresh()
+            launchAtLoginController.syncStoredPreference(into: settings)
+        }
     }
     
     // Retain the vocabulary window so we can reuse it instead of creating duplicates.
