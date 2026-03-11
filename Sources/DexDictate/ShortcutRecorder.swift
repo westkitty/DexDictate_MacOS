@@ -69,13 +69,15 @@ struct ShortcutRecorder: View {
                 )
             } else if event.type == .otherMouseDown || event.type == .leftMouseDown || event.type == .rightMouseDown {
                 var btnString = String(format: NSLocalizedString("Mouse %ld", comment: ""), event.buttonNumber)
+                if event.buttonNumber == 0 { btnString = NSLocalizedString("Left Mouse", comment: "") }
+                if event.buttonNumber == 1 { btnString = NSLocalizedString("Right Mouse", comment: "") }
                 if event.buttonNumber == 2 { btnString = NSLocalizedString("Middle Mouse", comment: "") }
-                
+
                 newShortcut = AppSettings.UserShortcut(
                     keyCode: nil,
                     mouseButton: event.buttonNumber,
                     modifiers: UInt64(event.modifierFlags.rawValue),
-                    displayString: btnString
+                    displayString: self.modifierPrefix(for: event.modifierFlags) + btnString
                 )
             }
             
@@ -103,18 +105,22 @@ struct ShortcutRecorder: View {
     /// Falls back to the raw key code string when `charactersIgnoringModifiers` is
     /// unavailable (e.g. for function keys that produce no printable character).
     private func keyString(for event: NSEvent) -> String {
-        var str = ""
-        let flags = event.modifierFlags
-        if flags.contains(.command) { str += "Cmd+" }
-        if flags.contains(.control) { str += "Ctrl+" }
-        if flags.contains(.option) { str += "Opt+" }
-        if flags.contains(.shift) { str += "Shift+" }
+        var str = modifierPrefix(for: event.modifierFlags)
         
         if let chars = event.charactersIgnoringModifiers?.uppercased() {
              str += chars
         } else {
              str += "\(event.keyCode)"
         }
+        return str
+    }
+
+    private func modifierPrefix(for flags: NSEvent.ModifierFlags) -> String {
+        var str = ""
+        if flags.contains(.command) { str += "Cmd+" }
+        if flags.contains(.control) { str += "Ctrl+" }
+        if flags.contains(.option) { str += "Opt+" }
+        if flags.contains(.shift) { str += "Shift+" }
         return str
     }
 }

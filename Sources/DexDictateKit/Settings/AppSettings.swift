@@ -257,8 +257,8 @@ public class AppSettings: ObservableObject {
         silenceTimeout = 0.0
         inputDeviceUID = ""
         
-        playStartSound = true
-        playStopSound = true
+        playStartSound = false
+        playStopSound = false
         showVisualHUD = false
         
         selectedStartSound = .none
@@ -271,7 +271,12 @@ public class AppSettings: ObservableObject {
         safeModeEnabled = false
         safeModeSnapshotData = Data()
         
+        _ = SystemLaunchAtLoginService.unregisterIfPossible()
         launchAtLogin = false
+        selectedEngine = .whisper
+        selectedTheme = .custom
+        appearanceTheme = .system
+        appearanceThemeStored = AppearanceTheme.system.rawValue
         
         userShortcutData = (try? JSONEncoder().encode(UserShortcut.defaultMiddleMouse)) ?? Data()
     }

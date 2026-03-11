@@ -2601,3 +2601,93 @@ Rationale:
   - no live unplug/replug manual smoke test was performed against actual hardware in this turn
   - running recordings still recover conservatively on the next start rather than attempting an in-flight Core Audio device transplant
 - Next step: roadmap implementation is complete; stage, commit, push, and preserve the final verified state.
+
+### 18.61 Pre-Implementation Note P-0016
+
+- Entry ID: P-0016
+- Timestamp: 2026-03-11 America/Detroit
+- Improvement ID(s): post-roadmap bug sweep
+- Goal: Perform a pre-test bug sweep across the finished repository, fix credible defects, and define a fuller manual validation matrix.
+- Why now: User requested a detailed pre-test reliability pass before hands-on testing.
+- Dependency context: Post-roadmap hardening; no new feature work intended.
+- Files likely to change:
+  - settings/reset paths
+  - quick settings surface state refresh
+  - shortcut display logic
+  - secure-context inspection safety
+  - new regression tests
+  - Bible
+- Risk assessment: Medium-low. Main risk is fixing real polish/consistency bugs without destabilizing the finished roadmap state.
+- Invariant check:
+  - permission order unchanged
+  - no networking introduced
+  - no brand changes
+  - no workflow model changes
+- What was attempted: Pending.
+- What succeeded: Pending.
+- What failed: Pending.
+- What was rolled back: Pending.
+- Tests run: Pending.
+- Metrics captured: Pending.
+- Regressions checked: Pending.
+- Remaining risks: Pending.
+- Next step: run broad automated gates, statically inspect the highest-risk areas, patch credible issues, and rerun packaging validation.
+
+### 18.62 Ledger Entry B-0019
+
+- Entry ID: B-0019
+- Timestamp: 2026-03-11 America/Detroit
+- Improvement ID(s): post-roadmap bug sweep
+- Goal: Remove pre-test defects that could mislead manual QA or cause avoidable runtime surprises.
+- Why now: This was a focused bug-sweep pass after the full roadmap landed.
+- Dependency context: Post-roadmap hardening only.
+- Files likely or actually changed:
+  - `Sources/DexDictateKit/Settings/AppSettings.swift`
+  - `Sources/DexDictateKit/Settings/LaunchAtLogin.swift`
+  - `Sources/DexDictate/QuickSettingsView.swift`
+  - `Sources/DexDictate/ShortcutRecorder.swift`
+  - `Sources/DexDictateKit/Output/SecureInputContext.swift`
+  - `Tests/DexDictateTests/AppSettingsRestoreDefaultsTests.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Medium-low. Mostly consistency, safety, and UI state fixes.
+- Invariant check:
+  - no permission-chain changes
+  - no network behavior introduced
+  - no changes to offline Whisper use
+  - no brand changes
+- What was attempted:
+  - audited settings/default-reset behavior
+  - audited secure-context inspection safety
+  - audited shortcut capture/display consistency
+  - reran build/tests/verification/release-validation after fixes
+- What succeeded:
+  - fixed `restoreDefaults()` so it now restores the declared silent defaults instead of erroneously enabling start/stop sounds
+  - `restoreDefaults()` now attempts to unregister the real launch-at-login item instead of only clearing the stored mirror flag
+  - reset now also normalizes theme-related settings back to their declared defaults
+  - quick settings now refreshes launch-at-login state after stored changes and refreshes scanner state when the input device selection changes
+  - mouse shortcut display strings now preserve modifier prefixes and label left/right/middle mouse explicitly
+  - secure-context inspection now verifies the Accessibility payload type before casting, avoiding a potential crash on unexpected values
+  - added regression coverage for the reset/defaults contract
+- What failed:
+  - no substantive failures after the bug fixes; the automated reruns passed
+- What was rolled back:
+  - nothing
+- Tests run:
+  - `swift test`
+  - `swift run VerificationRunner`
+  - `./scripts/build_release.sh`
+  - `./scripts/validate_release.sh .build/DexDictate.app`
+- Metrics captured:
+  - `swift test`: 29 tests passed
+  - `swift run VerificationRunner`: 51 checks passed
+  - release validation: pass with 1 expected warning (`spctl` rejection on local non-notarized development build)
+  - validation report: `_releases/validation/release-validation-20260311-034516.txt`
+- Regressions checked:
+  - build/package/release validation still succeed
+  - output secure-context fallback still compiles and verifies
+  - settings and launch-at-login code paths still pass their existing tests
+- Remaining risks:
+  - no live manual hardware matrix has been executed yet
+  - secure-context detection remains heuristic by design
+  - Gatekeeper still warns on the local development-signed build until notarized distribution signing is used
+- Next step: commit the bug-sweep fixes and hand off a concrete manual test matrix before exploratory testing begins.

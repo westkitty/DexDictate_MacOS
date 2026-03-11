@@ -270,6 +270,13 @@ struct QuickSettingsView: View {
             launchAtLoginController.refresh()
             launchAtLoginController.syncStoredPreference(into: settings)
         }
+        .onChange(of: settings.launchAtLogin) { _, _ in
+            launchAtLoginController.refresh()
+            launchAtLoginController.syncStoredPreference(into: settings)
+        }
+        .onChange(of: settings.inputDeviceUID) { _, _ in
+            scanner.refreshDevices()
+        }
     }
     
     // Retain the vocabulary window so we can reuse it instead of creating duplicates.

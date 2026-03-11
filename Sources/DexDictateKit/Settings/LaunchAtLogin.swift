@@ -70,6 +70,20 @@ public struct SystemLaunchAtLoginService: LaunchAtLoginServicing {
     public func openSystemSettings() {
         SMAppService.openSystemSettingsLoginItems()
     }
+
+    @discardableResult
+    public static func unregisterIfPossible() -> Bool {
+        let service = SystemLaunchAtLoginService()
+        guard service.status != .unavailable else { return false }
+
+        do {
+            try service.unregister()
+            return true
+        } catch {
+            Safety.log("Launch-at-login unregister during defaults reset failed: \(error.localizedDescription)", category: .settings)
+            return false
+        }
+    }
 }
 
 @MainActor
