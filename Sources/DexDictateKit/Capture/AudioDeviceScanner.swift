@@ -9,6 +9,7 @@ import Combine
 public class AudioDeviceScanner: ObservableObject {
     
     @Published public private(set) var availableDevices: [AudioInputDevice] = []
+    @Published public private(set) var recoveryNotice: String?
     
     private var listenerBlock: AudioObjectPropertyListenerBlock?
     
@@ -24,7 +25,24 @@ public class AudioDeviceScanner: ObservableObject {
     /// Forces a refresh of the device list.
     public func refreshDevices() {
         Task { @MainActor in
-            self.availableDevices = AudioDeviceManager.inputDevices()
+            let devices = AudioDeviceManager.inputDevices()
+            let decision = AudioInputSelectionPolicy.resolve(
+                preferredUID: AppSettings.shared.inputDeviceUID,
+                availableDevices: devices
+            )
+
+            self.availableDevices = devices
+
+            if AppSettings.shared.inputDeviceUID != decision.normalizedUID {
+                AppSettings.shared.inputDeviceUID = decision.normalizedUID
+            }
+
+            if let recoveryNotice = decision.recoveryNotice {
+                self.recoveryNotice = recoveryNotice
+                Safety.log(recoveryNotice, category: .audio)
+            } else {
+                self.recoveryNotice = nil
+            }
         }
     }
     

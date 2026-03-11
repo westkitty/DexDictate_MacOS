@@ -2499,3 +2499,105 @@ Rationale:
   - secure-context detection is heuristic and may miss uncommon secure controls or over-warn on unusually labeled fields
   - no manual live smoke test against real secure text fields was performed during this turn
 - Next step: finish `R26` audio route-change recovery/default failover and `R30` clearer subdomain modularization.
+
+### 18.58 Pre-Implementation Note P-0015
+
+- Entry ID: P-0015
+- Timestamp: 2026-03-11 America/Detroit
+- Improvement ID(s): R26, R30
+- Goal: Normalize missing-device recovery to system default and finish a low-risk physical subdomain reorganization inside `DexDictateKit`.
+- Why now: Only the runtime audio failover gap and the structural cleanup remain.
+- Dependency context: The new output seam is already in place, so the last work can focus on capture recovery and file layout.
+- Files likely to change:
+  - audio-device management/scanner files
+  - `AudioRecorderService`
+  - `QuickSettingsView`
+  - new capture policy tests
+  - physical file locations inside `Sources/DexDictateKit`
+  - Bible
+- Risk assessment: Medium-low. Main risk is stale file-path assumptions in verification/documentation after the move.
+- Invariant check:
+  - permission chain untouched
+  - no network changes
+  - no brand/UI identity changes beyond small recovery text
+- What was attempted: Pending.
+- What succeeded: Pending.
+- What failed: Pending.
+- What was rolled back: Pending.
+- Tests run: Pending.
+- Metrics captured: Pending.
+- Regressions checked: Pending.
+- Remaining risks: Pending.
+- Next step: Add a pure input-selection fallback policy, surface recovery messaging, then reorganize DexDictateKit files into clearer capture/permissions/settings/diagnostics/output groupings.
+
+### 18.59 Roadmap Status Addendum A-0012
+
+- Timestamp: 2026-03-11 America/Detroit
+- Scope: `R26`, `R30`
+- Status update:
+  - `R26` is now complete.
+  - `R30` is now complete.
+- Evidence:
+  - missing preferred microphones now normalize back to system default through a pure selection policy and scanner-driven recovery
+  - the UI surfaces a clear recovery notice when the chosen microphone disappears
+  - `DexDictateKit` is now physically grouped into clearer `Capture`, `Permissions`, `Settings`, `Diagnostics`, and `Output` subdomains
+  - automated tests and `VerificationRunner` cover the fallback policy and the new structure markers
+- Notes:
+  - route-change handling remains deliberately conservative: the app falls back clearly and safely rather than trying to hot-swap a running engine session through opaque Core Audio state.
+
+### 18.60 Ledger Entry B-0018
+
+- Entry ID: B-0018
+- Timestamp: 2026-03-11 America/Detroit
+- Improvement ID(s): R26, R30
+- Goal: Recover safely when a selected microphone disappears and reduce DexDictateKit top-level sprawl through clearer subdomain grouping.
+- Why now: These were the final remaining roadmap items after the output and testability work landed.
+- Dependency context: Final batch after R18/R22/R23. The subdomain move followed the logic changes so the reorg stayed low-risk.
+- Files likely or actually changed:
+  - `Sources/DexDictateKit/Capture/AudioInputSelectionPolicy.swift`
+  - `Sources/DexDictateKit/Capture/AudioDeviceManager.swift`
+  - `Sources/DexDictateKit/Capture/AudioDeviceScanner.swift`
+  - `Sources/DexDictateKit/Services/AudioRecorderService.swift`
+  - `Sources/DexDictate/QuickSettingsView.swift`
+  - `Tests/DexDictateTests/AudioInputSelectionPolicyTests.swift`
+  - `Sources/VerificationRunner/main.swift`
+  - moved `DexDictateKit` files into `Capture`, `Permissions`, `Settings`, `Diagnostics`, and `Output`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Medium-low. Main risks were stale path assumptions after the move and overpromising live hot-swap behavior.
+- Invariant check:
+  - permission execution order unchanged
+  - menu-bar-first workflow preserved
+  - no network behavior introduced
+  - local-only transcription preserved
+- What was attempted:
+  - added a pure audio input selection policy that falls back to system default when the preferred device disappears
+  - updated `AudioDeviceScanner` to normalize the stored setting and publish a recovery notice
+  - updated `AudioRecorderService` to log explicit default-device fallback when the chosen UID no longer resolves
+  - surfaced the recovery notice in quick settings
+  - moved the obvious `DexDictateKit` files into clearer subdomain folders
+  - updated invariant checks to assert the new policy and structure markers
+- What succeeded:
+  - missing-device selection now recovers to system default instead of silently leaving a dead UID in settings
+  - the user now gets a clear message when the selected microphone disappears
+  - the package still builds cleanly after the physical file move
+  - new selection-policy tests passed
+  - verification runner passed after path updates
+- What failed:
+  - the first verification rerun failed because it still pointed at the old top-level `AppSettings.swift` path after the reorganization
+- What was rolled back:
+  - nothing functionally; the verification runner path was corrected and rerun
+- Tests run:
+  - `swift test`
+  - `swift build && swift run VerificationRunner`
+- Metrics captured:
+  - `swift test`: 28 tests passed
+  - `swift run VerificationRunner`: 51 checks passed
+  - new automated coverage: 3 audio-input selection policy tests
+- Regressions checked:
+  - package builds after the physical file move
+  - no permission or network regressions introduced
+  - quick settings still compiles with recovery messaging present
+- Remaining risks:
+  - no live unplug/replug manual smoke test was performed against actual hardware in this turn
+  - running recordings still recover conservatively on the next start rather than attempting an in-flight Core Audio device transplant
+- Next step: roadmap implementation is complete; stage, commit, push, and preserve the final verified state.
