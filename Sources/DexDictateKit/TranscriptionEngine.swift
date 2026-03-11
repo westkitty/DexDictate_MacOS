@@ -22,6 +22,7 @@ public final class TranscriptionEngine: ObservableObject {
     /// Transcription history.
     @Published public var history = TranscriptionHistory()
     @Published public var resultFeedback: TranscriptionFeedback = .idle
+    public var canUndoLastHistoryRemoval: Bool { history.canRestoreLastRemovedItem }
 
     private let audioService = AudioRecorderService()
     private let whisperService = WhisperService()
@@ -387,9 +388,13 @@ public final class TranscriptionEngine: ObservableObject {
             // If the user said ONLY "scratch that", remove from history.
             let input = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
             if input == "scratch that" {
-                history.removeMostRecent()
-                statusText = NSLocalizedString("Scratch that", comment: "")
-                resultFeedback = .deletedPreviousHistory
+                if history.removeMostRecent() != nil {
+                    statusText = NSLocalizedString("Scratch that", comment: "")
+                    resultFeedback = .deletedPreviousHistory
+                } else {
+                    statusText = NSLocalizedString("Nothing to remove", comment: "")
+                    resultFeedback = .nothingToDelete
+                }
                 return // Nothing to add
             } else {
                 // We had some text that we scratched. Do not add anything.
@@ -428,6 +433,17 @@ public final class TranscriptionEngine: ObservableObject {
         } else {
              resultFeedback = .savedToHistory(modified: wasModified)
         }
+    }
+
+    public func undoLastHistoryRemoval() {
+        guard history.restoreMostRecentRemoval() else {
+            statusText = NSLocalizedString("Nothing to restore", comment: "")
+            resultFeedback = .nothingToDelete
+            return
+        }
+
+        statusText = NSLocalizedString("Restored previous entry", comment: "")
+        resultFeedback = .restoredPreviousHistory
     }
 
     private func emitMetricsCSV() {

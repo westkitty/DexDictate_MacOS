@@ -2294,3 +2294,101 @@ Rationale:
   - no end-to-end login-cycle test was run against the real workstation account in this turn
   - `restoreDefaults()` clears the stored mirror value, but the real system status is re-synced from the controller when the quick settings surface appears
 - Next step: continue into the remaining behavior-heavy work: broader dependency seams/tests, destructive-command safety, secure-context handling, audio route recovery, and modularization.
+
+### 18.52 Pre-Implementation Note P-0013
+
+- Entry ID: P-0013
+- Timestamp: 2026-03-10 America/Detroit
+- Improvement ID(s): R16
+- Goal: Reduce accidental destructive loss from the `scratch that` voice command by adding a lightweight undo path.
+- Why now: The current implementation removes the most recent history entry immediately with no recovery affordance, which is unnecessarily sharp-edged.
+- Dependency context: Safe workflow improvement localized to history, feedback, and controls.
+- Files likely to change:
+  - `Sources/DexDictateKit/TranscriptionHistory.swift`
+  - `Sources/DexDictateKit/TranscriptionFeedback.swift`
+  - `Sources/DexDictateKit/TranscriptionEngine.swift`
+  - `Sources/DexDictate/ControlsView.swift`
+  - history/feedback tests and possibly `VerificationRunner`
+  - Bible
+- Risk assessment: Medium-low. Main risk is accidentally changing the existing command semantics instead of only making deletion reversible.
+- Invariant check:
+  - command recognition must remain `scratch that`
+  - permission order unchanged
+  - menu-bar workflow unchanged
+  - local-only behavior unchanged
+- What was attempted: Pending.
+- What succeeded: Pending.
+- What failed: Pending.
+- What was rolled back: Pending.
+- Tests run: Pending.
+- Metrics captured: Pending.
+- Regressions checked: Pending.
+- Remaining risks: Pending.
+- Next step: Add a single-step undo path for history deletion, preserve current command parsing, and verify that no other dictation outcomes drift.
+
+### 18.53 Roadmap Status Addendum A-0010
+
+- Timestamp: 2026-03-10 America/Detroit
+- Scope: `R16`
+- Status update:
+  - `R16` is now complete.
+- Evidence:
+  - `scratch that` history deletion now leaves an undo path instead of being irreversible.
+  - `ControlsView` surfaces an `Undo removal` affordance only when a prior history entry was actually removed.
+  - history/feedback tests and `VerificationRunner` now cover the reversible-delete path.
+- Notes:
+  - Command parsing itself was intentionally left unchanged; this slice only changes recovery behavior after the existing command is recognized.
+
+### 18.54 Ledger Entry B-0016
+
+- Entry ID: B-0016
+- Timestamp: 2026-03-10 America/Detroit
+- Improvement ID(s): R16
+- Goal: Make the destructive `scratch that` outcome reversible without adding noisy modal confirmation UI.
+- Why now: This was a contained safety improvement in the post-processing/history path and did not require touching permissions or capture behavior.
+- Dependency context: Safe workflow improvement layered on top of the existing command model.
+- Files likely or actually changed:
+  - `Sources/DexDictateKit/TranscriptionHistory.swift`
+  - `Sources/DexDictateKit/TranscriptionFeedback.swift`
+  - `Sources/DexDictateKit/TranscriptionEngine.swift`
+  - `Sources/DexDictate/ControlsView.swift`
+  - `Tests/DexDictateTests/TranscriptionHistoryTests.swift`
+  - `Tests/DexDictateTests/TranscriptionFeedbackTests.swift`
+  - `Sources/VerificationRunner/main.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Medium-low. The main risk was accidentally altering command semantics instead of only making deletion recoverable.
+- Invariant check:
+  - `scratch that` command recognition preserved
+  - permission flow unchanged
+  - menu-bar workflow unchanged
+  - local-only transcription/output preserved
+- What was attempted:
+  - added history tracking for the last removed entry
+  - added restore support for the most recent removal
+  - added distinct feedback for “nothing to remove” and “previous entry restored”
+  - surfaced an inline undo affordance in the controls area
+  - added tests and verification coverage for the reversible-delete path
+- What succeeded:
+  - deleting the previous history entry is now reversible
+  - the UI only shows the undo affordance when there is something real to restore
+  - the engine now distinguishes between successful deletion and an empty-history no-op
+  - tests and invariant checks passed after the change
+- What failed:
+  - an initial wide patch attempt failed because file contexts had drifted, so the edit was reapplied in smaller targeted chunks
+- What was rolled back:
+  - nothing was rolled back functionally; only the patch application strategy changed
+- Tests run:
+  - `swift test`
+  - `swift build && swift run VerificationRunner`
+- Metrics captured:
+  - `swift test`: 21 tests passed
+  - `swift run VerificationRunner`: 46 checks passed
+  - new verification coverage: reversible history deletion state and restore path
+- Regressions checked:
+  - command processor behavior still recognizes `scratch that`
+  - no permission or network regressions introduced
+  - no branding or menu-bar structural regressions introduced
+- Remaining risks:
+  - the undo affordance currently targets history restoration only; it does not attempt to reverse pasted text already inserted into third-party apps
+  - no manual visual QA of the compact controls surface was performed in this turn
+- Next step: continue into the remaining hard tail: `R18`, `R22`, `R23`, `R26`, and `R30`.

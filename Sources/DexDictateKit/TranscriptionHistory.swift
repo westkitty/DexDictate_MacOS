@@ -24,10 +24,12 @@ public final class TranscriptionHistory: ObservableObject {
 
     /// The list of history items, most-recent first. Read-only outside this class.
     @Published public private(set) var items: [HistoryItem] = []
+    @Published public private(set) var lastRemovedItem: HistoryItem?
 
     private let maxItems = 50
 
     public var isEmpty: Bool { items.isEmpty }
+    public var canRestoreLastRemovedItem: Bool { lastRemovedItem != nil }
 
     public init() {}
 
@@ -44,11 +46,25 @@ public final class TranscriptionHistory: ObservableObject {
 
     public func clear() {
         items.removeAll(keepingCapacity: false)
+        lastRemovedItem = nil
     }
     
-    public func removeMostRecent() {
-        if !items.isEmpty {
-            items.removeFirst()
+    @discardableResult
+    public func removeMostRecent() -> HistoryItem? {
+        guard !items.isEmpty else { return nil }
+        let removed = items.removeFirst()
+        lastRemovedItem = removed
+        return removed
+    }
+
+    @discardableResult
+    public func restoreMostRecentRemoval() -> Bool {
+        guard let lastRemovedItem else { return false }
+        items.insert(lastRemovedItem, at: 0)
+        if items.count > maxItems {
+            items.removeLast()
         }
+        self.lastRemovedItem = nil
+        return true
     }
 }

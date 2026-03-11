@@ -83,6 +83,10 @@ private func runGreenPath() {
     history.add("First")
     history.add("Second")
     checkEqual(path, history.items.first?.text ?? "", "Second", "history keeps most-recent first")
+    _ = history.removeMostRecent()
+    check(path, history.canRestoreLastRemovedItem, "history retains undo state after deletion")
+    check(path, history.restoreMostRecentRemoval(), "history undo restores the removed entry")
+    checkEqual(path, history.items.first?.text ?? "", "Second", "history undo restores newest entry in place")
 }
 
 @MainActor

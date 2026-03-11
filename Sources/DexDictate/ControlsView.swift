@@ -78,20 +78,31 @@ struct ControlsView: View {
                 }
 
                 if engine.resultFeedback != .idle {
-                    HStack(spacing: 6) {
-                        Image(systemName: engine.resultFeedback.symbolName)
-                            .font(.caption)
-                        Text(engine.resultFeedback.title)
-                            .font(.caption2.weight(.medium))
-                            .lineLimit(1)
+                    VStack(spacing: 6) {
+                        HStack(spacing: 6) {
+                            Image(systemName: engine.resultFeedback.symbolName)
+                                .font(.caption)
+                            Text(engine.resultFeedback.title)
+                                .font(.caption2.weight(.medium))
+                                .lineLimit(1)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 5)
+                        .background(feedbackBackgroundColor)
+                        .foregroundStyle(feedbackForegroundColor)
+                        .clipShape(Capsule())
+                        .help(engine.resultFeedback.detail)
+                        .accessibilityLabel(engine.resultFeedback.title)
+
+                        if engine.resultFeedback == .deletedPreviousHistory && engine.canUndoLastHistoryRemoval {
+                            Button("Undo removal") {
+                                undoLastHistoryRemoval()
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                            .accessibilityLabel("Restore the most recently removed history entry")
+                        }
                     }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
-                    .background(feedbackBackgroundColor)
-                    .foregroundStyle(feedbackForegroundColor)
-                    .clipShape(Capsule())
-                    .help(engine.resultFeedback.detail)
-                    .accessibilityLabel(engine.resultFeedback.title)
                 }
 
                 // Stop the whole dictation system (returns to .stopped)
@@ -178,5 +189,9 @@ struct ControlsView: View {
 
     private func quitApp() {
         NSApplication.shared.terminate(nil)
+    }
+
+    private func undoLastHistoryRemoval() {
+        engine.undoLastHistoryRemoval()
     }
 }

@@ -9,7 +9,9 @@ public enum TranscriptionFeedbackTone: Equatable {
 public enum TranscriptionFeedback: Equatable {
     case idle
     case noSpeechDetected
+    case nothingToDelete
     case deletedPreviousHistory
+    case restoredPreviousHistory
     case discardedCurrentUtterance
     case savedToHistory(modified: Bool)
     case pastedToActiveApp(modified: Bool)
@@ -20,8 +22,12 @@ public enum TranscriptionFeedback: Equatable {
             return ""
         case .noSpeechDetected:
             return "No speech detected"
+        case .nothingToDelete:
+            return "Nothing to remove"
         case .deletedPreviousHistory:
             return "Previous entry removed"
+        case .restoredPreviousHistory:
+            return "Previous entry restored"
         case .discardedCurrentUtterance:
             return "Current utterance discarded"
         case .savedToHistory(let modified):
@@ -37,8 +43,12 @@ public enum TranscriptionFeedback: Equatable {
             return ""
         case .noSpeechDetected:
             return "DexDictate finished listening, but Whisper returned no usable text."
+        case .nothingToDelete:
+            return "The destructive voice command was heard, but there was no history entry available to remove."
         case .deletedPreviousHistory:
             return "The last history entry was removed because the utterance was only \"scratch that\"."
+        case .restoredPreviousHistory:
+            return "The most recently removed history entry was restored."
         case .discardedCurrentUtterance:
             return "The current spoken segment was discarded by the voice command."
         case .savedToHistory(let modified):
@@ -58,8 +68,12 @@ public enum TranscriptionFeedback: Equatable {
             return "circle"
         case .noSpeechDetected:
             return "waveform.badge.xmark"
+        case .nothingToDelete:
+            return "exclamationmark.arrow.trianglehead.counterclockwise"
         case .deletedPreviousHistory, .discardedCurrentUtterance:
             return "arrow.uturn.backward.circle"
+        case .restoredPreviousHistory:
+            return "arrow.uturn.backward.circle.fill"
         case .savedToHistory:
             return "tray.and.arrow.down"
         case .pastedToActiveApp:
@@ -71,9 +85,9 @@ public enum TranscriptionFeedback: Equatable {
         switch self {
         case .idle:
             return .neutral
-        case .noSpeechDetected, .deletedPreviousHistory, .discardedCurrentUtterance:
+        case .noSpeechDetected, .nothingToDelete, .deletedPreviousHistory, .discardedCurrentUtterance:
             return .warning
-        case .savedToHistory, .pastedToActiveApp:
+        case .restoredPreviousHistory, .savedToHistory, .pastedToActiveApp:
             return .success
         }
     }
