@@ -2691,3 +2691,17 @@ Rationale:
   - secure-context detection remains heuristic by design
   - Gatekeeper still warns on the local development-signed build until notarized distribution signing is used
 - Next step: commit the bug-sweep fixes and hand off a concrete manual test matrix before exploratory testing begins.
+
+### 18.63 Addendum A-0013
+
+- Timestamp: 2026-03-11 America/Detroit
+- Scope: post-roadmap bug sweep follow-up
+- Additional findings/fixes:
+  - `Safety.log` was still writing test-only mock failures into the real user diagnostics file during XCTest runs. This was fixed by suppressing file-based diagnostics writes when `XCTestConfigurationFilePath` is present.
+  - Quick live QA confirmed that the DexDictate process launches, the menu-bar item appears as `DexDictate`, and the event tap initializes to `ready` according to local diagnostics.
+  - UI scripting could see the menu-bar item, but the MenuBarExtra popover did not expose a normal window surface to automation on this workstation, so the popover body could not be fully traversed through `System Events`.
+- Additional evidence:
+  - with the app process terminated, `swift test` left the diagnostics file modification timestamp unchanged (`before=1773217789`, `after=1773217789`)
+  - local diagnostics tail showed clean launch-to-ready transitions after app launch
+- Residual note:
+  - live popover interaction, permission prompt handling, and secure-field behavior still need real hands-on validation in front of the running app; those are now the main remaining unknowns rather than code-level defects found in the sweep.
