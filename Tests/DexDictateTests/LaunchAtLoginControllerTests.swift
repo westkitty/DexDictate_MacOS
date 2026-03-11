@@ -32,10 +32,25 @@ final class LaunchAtLoginControllerTests: XCTestCase {
 
         XCTAssertTrue(controller.isEnabled)
         XCTAssertTrue(controller.needsSystemApproval)
+        XCTAssertTrue(controller.canAttemptRegistration)
         XCTAssertEqual(
             controller.statusMessage,
             "macOS still needs approval in Login Items before launch at login becomes active."
         )
+    }
+
+    func testUnavailableStatusStillAllowsRegistrationAttempt() {
+        let service = MockLaunchAtLoginService(status: .unavailable)
+        let controller = LaunchAtLoginController(service: service)
+
+        XCTAssertTrue(controller.canAttemptRegistration)
+        XCTAssertFalse(controller.isEnabled)
+
+        controller.setEnabled(true)
+
+        XCTAssertEqual(service.registerCallCount, 1)
+        XCTAssertEqual(controller.status, .enabled)
+        XCTAssertNil(controller.lastError)
     }
 }
 

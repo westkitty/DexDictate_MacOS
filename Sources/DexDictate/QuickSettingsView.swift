@@ -176,7 +176,7 @@ struct QuickSettingsView: View {
                                 }
                             )
                         )
-                        .disabled(launchAtLoginController.isUnavailable)
+                        .disabled(!launchAtLoginController.canAttemptRegistration)
 
                         Text(launchAtLoginController.statusMessage)
                             .font(.caption2)

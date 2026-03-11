@@ -25,7 +25,7 @@ public enum LaunchAtLoginStatus: Equatable {
         case .requiresApproval:
             return "macOS still needs approval in Login Items before launch at login becomes active."
         case .unavailable:
-            return "Launch at login is unavailable in this build."
+            return "DexDictate could not verify launch-at-login readiness yet. You can still try enabling it."
         }
     }
 }
@@ -53,7 +53,9 @@ public struct SystemLaunchAtLoginService: LaunchAtLoginServicing {
         case .requiresApproval:
             return .requiresApproval
         case .notFound:
-            return .unavailable
+            // Treat "not found" as a disabled-but-registrable state. In practice this can
+            // occur before the app has been registered in login items for the first time.
+            return .disabled
         @unknown default:
             return .unavailable
         }
@@ -112,6 +114,10 @@ public final class LaunchAtLoginController: ObservableObject {
 
     public var isUnavailable: Bool {
         status == .unavailable
+    }
+
+    public var canAttemptRegistration: Bool {
+        true
     }
 
     public func refresh() {
