@@ -35,14 +35,14 @@ struct FloatingHUDView: View {
                 Image(nsImage: nsImage)
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 80, height: 80)
-                    .opacity(0.20)
+                    .frame(width: watermarkSize, height: watermarkSize)
+                    .opacity(watermarkOpacity)
                     .ignoresSafeArea()
             }
             Text("DEX")
                 .font(.system(size: 22, weight: .black, design: .rounded))
                 .tracking(2)
-                .foregroundStyle(Color.white.opacity(0.14))
+                .foregroundStyle(Color.white.opacity(watermarkTextOpacity))
                 .rotationEffect(.degrees(-14))
                 .allowsHitTesting(false)
 
@@ -78,12 +78,23 @@ struct FloatingHUDView: View {
                 }
             }
             .padding(12)
-            .background(.ultraThinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .overlay(
+            .background {
                 RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
-            )
+                    .fill(.ultraThinMaterial)
+                    .opacity(chromeOpacity)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color.black.opacity(readabilityScrimOpacity))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(statusColor.opacity(statusTintOpacity))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(Color.white.opacity(borderOpacity), lineWidth: 1)
+                    )
+            }
         }
     }
     
@@ -96,6 +107,51 @@ struct FloatingHUDView: View {
         case .initializing: return .blue
         case .stopped: return .gray
         }
+    }
+
+    private var isActiveState: Bool {
+        engine.state == .listening || engine.state == .transcribing
+    }
+
+    private var watermarkSize: CGFloat {
+        isActiveState ? 92 : 88
+    }
+
+    private var watermarkOpacity: Double {
+        isActiveState ? 0.44 : 0.34
+    }
+
+    private var watermarkTextOpacity: Double {
+        isActiveState ? 0.28 : 0.22
+    }
+
+    private var chromeOpacity: Double {
+        isActiveState ? 0.18 : 0.12
+    }
+
+    private var readabilityScrimOpacity: Double {
+        isActiveState ? 0.12 : 0.08
+    }
+
+    private var statusTintOpacity: Double {
+        switch engine.state {
+        case .listening:
+            return 0.08
+        case .transcribing:
+            return 0.06
+        case .ready:
+            return 0.04
+        case .error:
+            return 0.07
+        case .initializing:
+            return 0.05
+        case .stopped:
+            return 0.03
+        }
+    }
+
+    private var borderOpacity: Double {
+        isActiveState ? 0.18 : 0.12
     }
 }
 

@@ -2705,3 +2705,94 @@ Rationale:
   - local diagnostics tail showed clean launch-to-ready transitions after app launch
 - Residual note:
   - live popover interaction, permission prompt handling, and secure-field behavior still need real hands-on validation in front of the running app; those are now the main remaining unknowns rather than code-level defects found in the sweep.
+
+### 18.64 Pre-Implementation Note P-0017
+
+- Entry ID: P-0017
+- Timestamp: 2026-03-11 America/Detroit
+- Improvement ID(s): follow-up polish and launch-at-login correction
+- Goal: Make the floating HUD chrome more transparent so the project watermark remains visible in idle/listening states, and remove the misleading launch-at-login "unavailable" experience.
+- Why now: User requested clearer HUD transparency and explicitly asked why launch at login was being presented as unavailable in a build where it should be offered.
+- Dependency context: Post-roadmap follow-up on previously completed `R05`, `R10`, and `R28` work.
+- Files likely to change:
+  - `Sources/DexDictate/FloatingHUD.swift`
+  - `Sources/DexDictateKit/Settings/LaunchAtLogin.swift`
+  - `Sources/DexDictate/QuickSettingsView.swift`
+  - `Tests/DexDictateTests/LaunchAtLoginControllerTests.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Low. This is UI chrome tuning plus a narrow correction to launch-at-login availability semantics.
+- Invariant check:
+  - permission order unchanged
+  - brand assets preserved; only chrome transparency is changing
+  - no networking introduced
+  - menu-bar-first workflow preserved
+- What was attempted: Pending.
+- What succeeded: Pending.
+- What failed: Pending.
+- What was rolled back: Pending.
+- Tests run: Pending.
+- Metrics captured: Pending.
+- Regressions checked: Pending.
+- Remaining risks: Pending.
+- Next step: patch the HUD material/watermark balance, verify the launch-at-login state path, rerun build/tests/verification, and document the actual root cause.
+
+### 18.65 Ledger Entry B-0020
+
+- Entry ID: B-0020
+- Timestamp: 2026-03-11 America/Detroit
+- Improvement ID(s): follow-up polish and launch-at-login correction
+- Goal: Increase floating HUD transparency without removing brand identity, and ensure launch-at-login remains actionable in normal fresh-build states.
+- Why now: The HUD watermark was too obscured by the foreground chrome, and the user-facing launch-at-login text implied the build was unsupported even though local `ServiceManagement` registration worked.
+- Dependency context: Follow-up to prior HUD polish and launch-at-login implementation work.
+- Files likely or actually changed:
+  - `Sources/DexDictate/FloatingHUD.swift`
+  - `Sources/DexDictateKit/Settings/LaunchAtLogin.swift`
+  - `Sources/DexDictate/QuickSettingsView.swift`
+  - `Tests/DexDictateTests/LaunchAtLoginControllerTests.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Low.
+- Invariant check:
+  - no permission-chain changes
+  - no network behavior introduced
+  - brand assets preserved
+  - no workflow model changes
+- What was attempted:
+  - inspected the installed bundle and the live `SMAppService.mainApp.status`
+  - ran an out-of-process registration probe to determine whether launch-at-login was actually unsupported or merely being reported pessimistically
+  - reduced HUD chrome opacity and increased watermark prominence without changing icon/text assets
+  - removed the UI path that disabled launch-at-login purely because the status looked unknown
+  - added regression coverage for an initially unavailable-but-registrable state
+- What succeeded:
+  - direct local probe showed `SMAppService.mainApp.status == .notFound` and `register()` succeeded on this machine, proving the old unavailable framing was too strict
+  - quick settings now keeps launch-at-login actionable even if readiness cannot be verified yet; actual registration errors are still surfaced if `ServiceManagement` throws
+  - the unavailable explanatory copy now reflects uncertainty instead of falsely claiming the build cannot support launch at login
+  - the floating HUD now uses lighter foreground chrome, a slightly larger watermark, and stronger watermark opacity so the project logo remains visible through idle/listening surfaces
+  - the new launch-at-login regression test passed
+- What failed:
+  - nothing functionally; one intermediate HUD patch used invalid material opacity syntax and was corrected before gate execution
+- What was rolled back:
+  - the invalid material-opacity expression in `FloatingHUD.swift`
+- Tests run:
+  - `swift build`
+  - `swift test`
+  - `swift run VerificationRunner`
+- Metrics captured:
+  - `swift build`: pass
+  - `swift test`: 30 tests passed
+  - `swift run VerificationRunner`: 51 checks passed
+  - live local probe: `SMAppService.mainApp.status` reported `.notFound` before registration and `register()` succeeded
+- Regressions checked:
+  - launch-at-login controller tests still pass
+  - quick settings compiles with the updated launch-at-login affordance
+  - floating HUD changes do not disturb verification checks for watermark presence
+- Remaining risks:
+  - actual HUD legibility still depends on background content behind the panel and should be confirmed by eye during live use
+  - a development-signed build can still surface real `ServiceManagement` errors on some machines if macOS rejects the bundle identity; those will now appear as explicit runtime errors rather than a blanket unavailable state
+- Next step: reinstall the app bundle from the fresh clone so the user tests the corrected build, then commit the change.
+
+### 18.66 Addendum A-0014
+
+- Timestamp: 2026-03-11 America/Detroit
+- Scope: launch-at-login correction follow-up
+- Additional note:
+  - the out-of-process `SMAppService.mainApp.register()` probe used to confirm that registration succeeds was immediately reversed with `unregister()` afterward so the workstation returned to its prior manual-start state before handoff.
