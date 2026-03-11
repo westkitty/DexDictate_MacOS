@@ -3,6 +3,8 @@ import AppKit
 
 /// Filesystem and diagnostic utilities called at app startup.
 public struct Safety {
+    private static let isRunningUnderTests =
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
 
     /// The bundle containing DexDictateKit's bundled resources (images, JSON, models).
     /// Use this instead of `Bundle.main` when accessing resources declared in this library target.
@@ -32,7 +34,7 @@ public struct Safety {
     /// Logging stays local-only. Structured records are retained in bounded JSONL form.
     public static func log(_ message: String, category: DiagnosticCategory = .general) {
         NSLog("[DexDictate] %@", message)
-        guard let dir = appSupportURL else { return }
+        guard !isRunningUnderTests, let dir = appSupportURL else { return }
 
         diagnosticsQueue.async {
             let record = DiagnosticRecord(timestamp: Date(), category: category, message: message)
