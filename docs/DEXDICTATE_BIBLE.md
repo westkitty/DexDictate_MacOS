@@ -2931,3 +2931,22 @@ Rationale:
 - Regressions checked: Pending.
 - Remaining risks: Pending.
 - Next step: build, validate, publish, then append the final release URLs and artifact facts.
+
+### 18.71 Addendum A-0015
+
+- Timestamp: 2026-03-11 America/Detroit
+- Scope: `v1.0.1` release publication
+- Final outcome:
+  - created and pushed tag `v1.0.1` from commit `0ef0f01`
+  - published GitHub release: [DexDictate macOS v1.0.1](https://github.com/westkitty/DexDictate_MacOS/releases/tag/v1.0.1)
+  - attached assets:
+    - `DexDictate_MacOS.dmg`
+    - `DexDictate_MacOS.zip`
+    - `release-validation-20260311-062752.txt`
+  - recorded GitHub-reported digests:
+    - DMG `sha256:b02edffd8e0ce8fba5b46777a6546f86325cfc1f289abda72fa27821ab7ef8da`
+    - ZIP `sha256:592fea5e9ab4694e10c8342e1d878071a0c7d21316c9cfd74b4ec4721bb3d7a4`
+- Operational note:
+  - `gh release create` succeeded cleanly once the tag existed first; the earlier upload attempts through draft/untagged flows were noisy and partially failed, but the final published release ended in the correct state with all intended artifacts attached.
+- Residual note:
+  - Gatekeeper/notarization remains an external signing pipeline concern. The published artifacts are validated local builds with the expected local development-signing warning documented in the release notes and validation report.
