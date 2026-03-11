@@ -2872,3 +2872,62 @@ Rationale:
 - Remaining risks:
   - release notarization remains an external distribution concern, not something guaranteed by a local source build
 - Next step: stage, commit, and push the clarified repository state.
+
+### 18.69 Pre-Implementation Note P-0019
+
+- Entry ID: P-0019
+- Timestamp: 2026-03-11 America/Detroit
+- Improvement ID(s): release artifact publication
+- Goal: Publish a properly built DMG for the current repository state to GitHub Releases instead of leaving the latest release on an older tag with only a ZIP artifact.
+- Why now: User explicitly requested a DMG on GitHub.
+- Dependency context: Follows the repository installability pass and uses the existing release-validation tooling from `R29`.
+- Files likely to change:
+  - `VERSION`
+  - `README.md`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Low-to-medium. Source risk is minimal; release-publishing risk is versioning discipline and artifact correctness.
+- Invariant check:
+  - no permission-order changes
+  - no runtime behavior changes expected from the version bump itself
+  - no network behavior introduced in product code
+  - release artifact must match the tagged commit
+- What was attempted: Pending.
+- What succeeded: Pending.
+- What failed: Pending.
+- What was rolled back: Pending.
+- Tests run: Pending.
+- Metrics captured: Pending.
+- Regressions checked: Pending.
+- Remaining risks: Pending.
+- Next step: bump the patch version, build and validate release artifacts, create a new GitHub release, and attach the DMG/ZIP outputs.
+
+### 18.70 Ledger Entry B-0022
+
+- Entry ID: B-0022
+- Timestamp: 2026-03-11 America/Detroit
+- Improvement ID(s): release artifact publication
+- Goal: Cut a new patch release with a validated DMG on GitHub for the current repository state.
+- Why now: The existing `v1.0.0` GitHub release targeted an older state and only carried a ZIP artifact.
+- Dependency context: Uses the existing `build_release.sh` and `validate_release.sh` release path.
+- Files likely or actually changed:
+  - `VERSION`
+  - `README.md`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Low-to-medium.
+- Invariant check:
+  - no permission or privacy changes
+  - no app-flow changes
+  - no brand changes
+  - release artifact must be built from the tagged commit that is published
+- What was attempted:
+  - bumped the app version from `1.0.0` to `1.0.1`
+  - clarified in the README that GitHub releases should include both `.dmg` and `.zip` artifacts
+  - prepared a new GitHub release flow for the current `main` state
+- What succeeded: Pending.
+- What failed: Pending.
+- What was rolled back: Pending.
+- Tests run: Pending.
+- Metrics captured: Pending.
+- Regressions checked: Pending.
+- Remaining risks: Pending.
+- Next step: build, validate, publish, then append the final release URLs and artifact facts.
