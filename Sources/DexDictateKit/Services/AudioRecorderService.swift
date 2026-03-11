@@ -139,9 +139,14 @@ final class AudioRecorderService: ObservableObject {
 
     private func applyInputDevice(uid: String) throws {
         // Called on audioQueue.
-        guard !uid.isEmpty,
-              let deviceID = AudioDeviceManager.deviceID(forUID: uid),
-              let audioUnit = engine.inputNode.audioUnit else { return }
+        guard !uid.isEmpty else { return }
+
+        guard let deviceID = AudioDeviceManager.deviceID(forUID: uid) else {
+            Safety.log("Preferred input device is unavailable. Falling back to the system default input device.", category: .audio)
+            return
+        }
+
+        guard let audioUnit = engine.inputNode.audioUnit else { return }
         var id = deviceID
         let status = AudioUnitSetProperty(
             audioUnit,

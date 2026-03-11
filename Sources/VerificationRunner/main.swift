@@ -258,11 +258,16 @@ private func runWonderPath() {
 
     let engineSource = readSource("Sources/DexDictateKit/TranscriptionEngine.swift")
     let lifecycleSource = readSource("Sources/DexDictateKit/EngineLifecycle.swift")
-    let settingsSource = readSource("Sources/DexDictateKit/AppSettings.swift")
+    let settingsSource = readSource("Sources/DexDictateKit/Settings/AppSettings.swift")
+    let capturePolicySource = readSource("Sources/DexDictateKit/Capture/AudioInputSelectionPolicy.swift")
+    let outputCoordinatorSource = readSource("Sources/DexDictateKit/Output/OutputCoordinator.swift")
+    let permissionsSource = readSource("Sources/DexDictateKit/Permissions/PermissionManager.swift")
     check(path, lifecycleSource.contains("case (.transcribing, .transcriptionCompleted):"), "explicit lifecycle maps transcription completion back to ready")
     check(path, engineSource.contains("defer {\n            _ = applyLifecycle(.transcriptionCompleted"), "transcription completion still returns the engine to ready through the lifecycle model")
     check(path, engineSource.contains("outputCoordinator.deliver("), "engine routes output through explicit output coordination")
     check(path, settingsSource.contains("copyOnlyInSensitiveFields"), "settings expose secure-context copy-only control")
+    check(path, capturePolicySource.contains("System Default"), "audio device failover preserves system-default fallback")
+    check(path, !capturePolicySource.isEmpty && !outputCoordinatorSource.isEmpty && !permissionsSource.isEmpty, "DexDictateKit is split into capture, output, and permissions subdomains")
 }
 
 @MainActor

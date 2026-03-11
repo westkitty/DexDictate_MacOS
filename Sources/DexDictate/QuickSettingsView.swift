@@ -235,6 +235,13 @@ struct QuickSettingsView: View {
                         Text(NSLocalizedString("Applies the next time dictation starts.", comment: ""))
                             .font(.caption2).foregroundStyle(.white.opacity(0.5))
                             .fixedSize(horizontal: false, vertical: true)
+
+                        if let recoveryNotice = scanner.recoveryNotice {
+                            Text(recoveryNotice)
+                                .font(.caption2)
+                                .foregroundStyle(.orange.opacity(0.9))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                             
                         Divider().background(Color.white.opacity(0.3))
                         
