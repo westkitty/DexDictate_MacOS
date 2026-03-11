@@ -1,5 +1,8 @@
 #!/bin/bash
-set -e
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
 
 # Configuration
 RELEASE_DIR="_releases"
@@ -36,5 +39,7 @@ ln -s /Applications "$STAGING_DIR/Applications"
 rm -f "$RELEASE_DIR/$DMG_NAME"
 hdiutil create -volname "DexDictate" -srcfolder "$STAGING_DIR" -ov -format UDZO "$RELEASE_DIR/$DMG_NAME" >/dev/null
 rm -rf "$STAGING_DIR"
+
+./scripts/validate_release.sh "$BUILD_OUTPUT"
 
 echo "✅ Build Complete. Upload '$ZIP_NAME' or '$DMG_NAME' to GitHub Releases."
