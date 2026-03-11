@@ -2796,3 +2796,79 @@ Rationale:
 - Scope: launch-at-login correction follow-up
 - Additional note:
   - the out-of-process `SMAppService.mainApp.register()` probe used to confirm that registration succeeds was immediately reversed with `unregister()` afterward so the workstation returned to its prior manual-start state before handoff.
+
+### 18.67 Pre-Implementation Note P-0018
+
+- Entry ID: P-0018
+- Timestamp: 2026-03-11 America/Detroit
+- Improvement ID(s): repository installability and handoff clarity
+- Goal: Ensure the GitHub repository clearly contains everything required to build, install, run, and validate DexDictate from a cold clone.
+- Why now: User requested a final pass to make the repository self-sufficient and obvious for installation and testing.
+- Dependency context: Post-roadmap documentation and distribution clarity pass.
+- Files likely to change:
+  - `README.md`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Low. Documentation-only unless a real install-flow defect appears during verification.
+- Invariant check:
+  - no permission-order changes
+  - no product behavior changes
+  - no brand asset changes
+  - no network behavior introduced
+- What was attempted: Pending.
+- What succeeded: Pending.
+- What failed: Pending.
+- What was rolled back: Pending.
+- Tests run: Pending.
+- Metrics captured: Pending.
+- Regressions checked: Pending.
+- Remaining risks: Pending.
+- Next step: verify the repository contents against the build/install flow, rewrite the README install path so it is obvious, rerun install/verification commands, and commit the resulting state.
+
+### 18.68 Ledger Entry B-0021
+
+- Entry ID: B-0021
+- Timestamp: 2026-03-11 America/Detroit
+- Improvement ID(s): repository installability and handoff clarity
+- Goal: Make the GitHub repository unambiguous for fresh-clone installation and confirm the installed build is current.
+- Why now: The repository already contained the required assets and scripts, but the top-level documentation still led with product description instead of a concrete install/run path.
+- Dependency context: Documentation and verification follow-up only.
+- Files likely or actually changed:
+  - `README.md`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Low.
+- Invariant check:
+  - no permission changes
+  - no launch/runtime logic changes
+  - no network behavior introduced
+  - no brand changes
+- What was attempted:
+  - audited the repository contents for the build/install essentials: package manifest, pinned dependency resolution, bundled Whisper model, resources, install scripts, and release-validation scripts
+  - rewrote the README top-level flow so a cold-clone user sees the exact source-build/install/run path immediately
+  - documented the verification commands, output paths, release build path, and launch-at-login approval note in the README
+  - rebuilt and reinstalled the app from this checkout into `/Applications` to keep the installed build aligned with the pushed repository state
+- What succeeded:
+  - confirmed the repository already includes the resources needed to build and run from source, including `tiny.en.bin`, app assets, `build.sh`, `install.sh`, and release-validation scripts
+  - README now exposes a direct four-line quick start for clone -> build -> install -> launch
+  - README now calls out `swift build`, `swift test`, and `swift run VerificationRunner` as the canonical verification commands
+  - `/Applications/DexDictate.app` was rebuilt from the current checkout after the documentation pass so the installed copy matches the repository handoff state
+- What failed:
+  - no functional failures in this slice
+- What was rolled back:
+  - nothing
+- Tests run:
+  - `INSTALL_DIR=/Applications ./build.sh`
+  - `swift build`
+  - `swift test`
+  - `swift run VerificationRunner`
+- Metrics captured:
+  - installed app path refreshed: `/Applications/DexDictate.app`
+  - `swift build`: pass
+  - `swift test`: pass
+  - `swift run VerificationRunner`: pass
+- Regressions checked:
+  - no source changes were made outside documentation in this slice
+  - build/install path still works from the current checkout
+  - verification runner still passes after the documentation refresh
+- Remaining risks:
+  - release notarization remains an external distribution concern, not something guaranteed by a local source build
+- Next step: stage, commit, and push the clarified repository state.
