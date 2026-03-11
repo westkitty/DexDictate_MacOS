@@ -65,8 +65,7 @@ public class AppSettings: ObservableObject {
 
     // MARK: - System
 
-    /// Whether the app registers itself as a login item via `ServiceManagement`.
-    /// NOTE: SMAppService integration is pending; this setting is stored but not yet enforced.
+    /// Mirrors whether DexDictate is currently configured to launch at login.
     @AppStorage("launchAtLogin") public var launchAtLogin: Bool = false
 
     /// Whether the user has completed the onboarding flow.
