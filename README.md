@@ -16,7 +16,26 @@
 
 # DexDictate for macOS
 
-A high-performance, privacy-focused dictation bridge for macOS. DexDictate runs locally in your Menu Bar, converting speech to text with zero latency and full privacy, designed to seamlessly integrate with your workflow.
+A privacy-first, fully local dictation bridge for macOS. DexDictate lives in the menu bar, records on-device, transcribes with the bundled Whisper model, and never sends audio off the machine.
+
+## Quick Start
+
+If you just want the app installed and running from source:
+
+```bash
+git clone https://github.com/WestKitty/DexDictate_MacOS.git
+cd DexDictate_MacOS
+INSTALL_DIR=/Applications ./build.sh
+open /Applications/DexDictate.app
+```
+
+That command path:
+
+- builds the release app bundle
+- installs it into `/Applications`
+- leaves the finished app at `/Applications/DexDictate.app`
+
+If you prefer a user-local install instead of a system-wide one, omit `INSTALL_DIR=/Applications` and the app will install into `~/Applications`.
 
 ## Key Features
 
@@ -33,46 +52,100 @@ A high-performance, privacy-focused dictation bridge for macOS. DexDictate runs 
 - **Internationalization:** Ready for global use with full localization support.
 - **Interactive Onboarding:** A friendly setup wizard guides you through permissions and shortcut configuration on first launch.
 
-## Installation
+## Install and Run
 
 ### Option A: Download Release
+
 Download the latest pre-built application from the [Releases](https://github.com/WestKitty/DexDictate_MacOS/releases) page.
 
 > **Note:** If you encounter an "Unidentified Developer" warning, simply Right-Click the app and select **Open** to bypass the check.
 
 ### Option B: Build from Source
 
-**Prerequisites:**
+Prerequisites:
 - macOS 14+
 - Xcode 15+ (or Xcode Command Line Tools)
 
-**Fast Track (One-Liner):**
-Simply copy and paste this entire line into your terminal to build and install everything at once:
+Fast path:
+
 ```bash
-git clone https://github.com/WestKitty/DexDictate_MacOS.git && cd DexDictate_MacOS && ./build.sh
+git clone https://github.com/WestKitty/DexDictate_MacOS.git
+cd DexDictate_MacOS
+INSTALL_DIR=/Applications ./build.sh
+open /Applications/DexDictate.app
 ```
 
-**Step-by-Step Guide:**
-If you prefer to see exactly what is happening, follow these steps:
+Step-by-step:
 
-1.  **Open Terminal:** Open the "Terminal" app on your Mac (you can find it in your Applications folder or search for it with Spotlight).
-2.  **Download the Code:** Type the following command and press Enter to download the project:
+1. Clone the repository.
     ```bash
     git clone https://github.com/WestKitty/DexDictate_MacOS.git
-    ```
-3.  **Enter the Folder:** Move into the project directory by typing:
-    ```bash
     cd DexDictate_MacOS
     ```
-4.  **Build and Install:** Run the build script to compile and install into `~/Applications`:
+2. Build and install to your user Applications folder.
     ```bash
     ./build.sh
     ```
+3. Or build and install to `/Applications`.
+    ```bash
+    INSTALL_DIR=/Applications ./build.sh
+    ```
+4. Launch the installed app.
+    ```bash
+    open ~/Applications/DexDictate.app
+    ```
+5. If you installed to `/Applications`, launch that copy instead.
+    ```bash
+    open /Applications/DexDictate.app
+    ```
 
-To install into `/Applications` instead:
+There is also a thin wrapper script if you want a more obvious command name:
+
 ```bash
-INSTALL_DIR=/Applications ./build.sh
+./install.sh
 ```
+
+`./install.sh` just calls `./build.sh`, so `build.sh` remains the canonical path.
+
+## Verify the Build
+
+From a fresh clone, these are the useful checks:
+
+```bash
+swift build
+swift test
+swift run VerificationRunner
+```
+
+Expected outcome:
+
+- the package builds successfully
+- the test suite passes
+- `VerificationRunner` reports a passing summary
+
+## Build Outputs
+
+Important generated paths:
+
+- source-built app bundle: `.build/DexDictate.app`
+- user-local install target: `~/Applications/DexDictate.app`
+- system-wide install target when requested: `/Applications/DexDictate.app`
+- release artifacts: `_releases/`
+- release validation reports: `_releases/validation/`
+
+## Release Build
+
+To create release artifacts and validate them:
+
+```bash
+./scripts/build_release.sh
+```
+
+That script:
+
+- builds the app bundle
+- packages `.zip` and `.dmg` artifacts into `_releases/`
+- runs `./scripts/validate_release.sh`
 
 ## First Run and Permissions
 
@@ -82,11 +155,13 @@ DexDictate needs these macOS privacy permissions:
 - **Accessibility** to install the system-wide event tap.
 - **Input Monitoring** to receive global shortcut events.
 
-When the app opens, it prompts for missing permissions. You can also verify in:
+When the app opens, onboarding shows what is missing. DexDictate preserves a specific permission order and does not collapse these into one prompt. You can also verify them manually in:
 
 - System Settings -> Privacy & Security -> Microphone
 - System Settings -> Privacy & Security -> Accessibility
 - System Settings -> Privacy & Security -> Input Monitoring
+
+Launch at login is configured inside DexDictate Quick Settings. If macOS requires approval, use the app’s Login Items shortcut to finish enabling it in System Settings.
 
 ## Troubleshooting
 
@@ -97,6 +172,23 @@ If dictation does not start with your shortcut:
 3. Check the live mic meter and partial transcription for activity.
 
 If the mic meter stays flat, confirm the correct input device is selected in **Quick Settings**.
+
+If launch at login does not immediately turn on:
+
+1. Enable it in DexDictate Quick Settings.
+2. If prompted, approve it in System Settings -> General -> Login Items.
+3. Reopen DexDictate Quick Settings to confirm the status updated.
+
+## Repository Checklist
+
+The GitHub repository contains the files required to build and run the app from source, including:
+
+- `Package.swift` and `Package.resolved`
+- the bundled Whisper model at `Sources/DexDictateKit/Resources/tiny.en.bin`
+- app icon and resource assets
+- the canonical installer/build script `build.sh`
+- the wrapper installer `install.sh`
+- release validation scripts in `scripts/`
 
 ## Governance 
 
