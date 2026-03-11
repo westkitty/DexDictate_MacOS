@@ -62,6 +62,10 @@ public struct AccessibilityFocusedContextInspector: FocusedContextInspecting {
             return .standard
         }
 
+        guard CFGetTypeID(focusedValue) == AXUIElementGetTypeID() else {
+            return .standard
+        }
+
         let focusedElement = unsafeBitCast(focusedValue, to: AXUIElement.self)
         let snapshot = FocusedElementSnapshot(
             role: stringAttribute(kAXRoleAttribute as String, from: focusedElement),
