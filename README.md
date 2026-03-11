@@ -56,7 +56,7 @@ If you prefer a user-local install instead of a system-wide one, omit `INSTALL_D
 
 ### Option A: Download Release
 
-Download the latest pre-built application from the [Releases](https://github.com/WestKitty/DexDictate_MacOS/releases) page.
+Download the latest pre-built application from the [Releases](https://github.com/WestKitty/DexDictate_MacOS/releases) page. Each release should include a `.dmg` and `.zip` artifact for the tagged version.
 
 > **Note:** If you encounter an "Unidentified Developer" warning, simply Right-Click the app and select **Open** to bypass the check.
 
