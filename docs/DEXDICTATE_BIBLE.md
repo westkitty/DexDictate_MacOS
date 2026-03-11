@@ -2128,3 +2128,71 @@ Rationale:
 - Regressions checked: Pending.
 - Remaining risks: Pending.
 - Next step: Add a release validation script, wire it into release packaging, and run it against the current local build outputs.
+
+### 18.47 Roadmap Status Addendum A-0008
+
+- Timestamp: 2026-03-10 America/Detroit
+- Scope: `R29`
+- Status update:
+  - `R29` is now complete.
+- Evidence:
+  - `scripts/build_release.sh` now invokes release validation after packaging.
+  - `scripts/validate_release.sh` checks bundle structure, metadata, signing verification, entitlements, Gatekeeper assessment, and artifact hashes.
+  - Release artifacts were produced in `_releases/` and validation reports were written to `_releases/validation/`.
+- Notes:
+  - Initial validation incorrectly assumed SwiftPM resource bundles nested files under `Contents/Resources`; the actual shipped layout places `tiny.en.bin` at the bundle root. The validator was corrected and rerun.
+  - Gatekeeper assessment still warns on the current local development-signed build, which is expected absent notarization/stapling. This is reported as a warning rather than a hard failure.
+
+### 18.48 Ledger Entry B-0014
+
+- Entry ID: B-0014
+- Timestamp: 2026-03-10 America/Detroit
+- Improvement ID(s): R29
+- Goal: Make release packaging self-validating and emit integrity evidence for local release artifacts.
+- Why now: Release packaging existed, but it did not verify what it produced or preserve integrity metadata.
+- Dependency context: Tooling-only improvement, safe to land independently of runtime work.
+- Files likely or actually changed:
+  - `scripts/build_release.sh`
+  - `scripts/validate_release.sh`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Low. No product runtime code changed. Main risk was validator correctness and avoiding false failures for expected local signing conditions.
+- Invariant check:
+  - no runtime permission flow changes
+  - no menu-bar workflow changes
+  - no networking introduced
+  - no brand or asset changes
+  - local-only transcription preserved
+- What was attempted:
+  - made release packaging scripts root-relative and strict-shell safe
+  - added standalone release validation covering bundle structure, signing, entitlements, Gatekeeper assessment, and artifact hashing
+  - wired validation into the release packaging flow
+  - executed the release packaging flow against the current repository state
+- What succeeded:
+  - release packaging produced fresh `.zip` and `.dmg` artifacts in `_releases/`
+  - validator emitted timestamped reports under `_releases/validation/`
+  - code signing verification, bundle metadata checks, entitlements dump, and artifact hashing all passed
+  - final validation rerun passed with warnings only
+- What failed:
+  - the first validator run falsely reported the embedded Whisper model as missing because the script assumed a nested `Contents/Resources` layout inside the SwiftPM resource bundle
+- What was rolled back:
+  - nothing was rolled back; the validator path assumption was corrected and rerun
+- Tests run:
+  - `swift build`
+  - `swift test`
+  - `swift run VerificationRunner`
+  - `./scripts/build_release.sh`
+  - `./scripts/validate_release.sh .build/DexDictate.app`
+- Metrics captured:
+  - `swift test`: 17 tests passed
+  - `swift run VerificationRunner`: 43 checks passed
+  - release artifact hash: `DexDictate_MacOS.zip` = `84de507f525d294c6cd010a63b7889ef8c90f40bdafe6eb94c313892f85a5c9d`
+  - release artifact hash: `DexDictate_MacOS.dmg` = `f5dcc421365b0b2fc25398f3452dfe1e70cf940b953ec0cceefa1225d9969275`
+  - validation report: `_releases/validation/release-validation-20260310-232201.txt`
+- Regressions checked:
+  - no product build/test regressions introduced
+  - invariant runner still confirms no networking and preserved branding/watermark assets
+  - release validation warning is limited to Gatekeeper rejection on the local, non-notarized build
+- Remaining risks:
+  - notarization and stapling are still external/manual; this work validates readiness and integrity evidence, not full notarization automation
+  - the current signing identity is a local development certificate, so Gatekeeper rejection remains expected until a distribution signing/notarization path is used
+- Next step: move to the remaining behavior-heavy items: dependency seams/tests, destructive-command safety, secure-context handling, audio route recovery, launch-at-login truthfulness, and modularization.
