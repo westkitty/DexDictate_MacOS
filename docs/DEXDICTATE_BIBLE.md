@@ -2392,3 +2392,110 @@ Rationale:
   - the undo affordance currently targets history restoration only; it does not attempt to reverse pasted text already inserted into third-party apps
   - no manual visual QA of the compact controls surface was performed in this turn
 - Next step: continue into the remaining hard tail: `R18`, `R22`, `R23`, `R26`, and `R30`.
+
+### 18.55 Pre-Implementation Note P-0014
+
+- Entry ID: P-0014
+- Timestamp: 2026-03-11 America/Detroit
+- Improvement ID(s): R18, R22, R23
+- Goal: Introduce a testable output-delivery seam, add a soft secure-context copy-only fallback, and expand automated coverage around output decisions.
+- Why now: The remaining workflow hardening work benefits from a real seam around clipboard/paste behavior instead of more singleton coupling.
+- Dependency context: This can complete `R18` and materially close out `R22` and `R23` before audio recovery and structural reorganization.
+- Files likely to change:
+  - `Sources/DexDictateKit/ClipboardManager.swift`
+  - new output/context coordination files in `Sources/DexDictateKit`
+  - `Sources/DexDictateKit/AppSettings.swift`
+  - `Sources/DexDictateKit/TranscriptionEngine.swift`
+  - `Sources/DexDictateKit/TranscriptionFeedback.swift`
+  - `Sources/DexDictate/QuickSettingsView.swift`
+  - new unit tests for output/context decisions
+  - Bible
+- Risk assessment: Medium. The secure-context detection must stay soft and privacy-respecting, not pretend to be perfectly authoritative.
+- Invariant check:
+  - no permission-order changes
+  - no remote services
+  - no change to the core trigger/capture/transcribe workflow
+  - auto-paste remains available outside sensitive contexts
+- What was attempted: Pending.
+- What succeeded: Pending.
+- What failed: Pending.
+- What was rolled back: Pending.
+- Tests run: Pending.
+- Metrics captured: Pending.
+- Regressions checked: Pending.
+- Remaining risks: Pending.
+- Next step: Add the output seam, implement copy-only fallback for likely secure fields, and cover the decision logic with unit tests.
+
+### 18.56 Roadmap Status Addendum A-0011
+
+- Timestamp: 2026-03-11 America/Detroit
+- Scope: `R18`, `R22`, `R23`
+- Status update:
+  - `R18` is now complete.
+  - `R22` is now complete.
+  - `R23` is now complete.
+- Evidence:
+  - output delivery now goes through an explicit coordinator seam instead of direct singleton clipboard calls inside the engine
+  - likely secure input contexts fall back to copy-only with distinct user feedback
+  - new unit tests cover output decisions and secure-context heuristics
+  - `VerificationRunner` now checks that the secure-context control and explicit output coordination remain present
+- Notes:
+  - secure-context detection is intentionally heuristic and soft. It looks for likely secure-field signals and avoids pretending to be perfectly authoritative.
+
+### 18.57 Ledger Entry B-0017
+
+- Entry ID: B-0017
+- Timestamp: 2026-03-11 America/Detroit
+- Improvement ID(s): R18, R22, R23
+- Goal: Make output behavior testable, add a privacy-safe secure-context fallback, and deepen automated coverage around output decisions.
+- Why now: The remaining workflow hardening work needed a seam around clipboard/paste behavior instead of more direct singleton coupling.
+- Dependency context: This batch finishes the output-side safety and testability work before the remaining audio recovery and structure cleanup.
+- Files likely or actually changed:
+  - `Sources/DexDictateKit/ClipboardManager.swift`
+  - `Sources/DexDictateKit/Output/OutputCoordinator.swift`
+  - `Sources/DexDictateKit/Output/SecureInputContext.swift`
+  - `Sources/DexDictateKit/AppSettings.swift`
+  - `Sources/DexDictateKit/TranscriptionEngine.swift`
+  - `Sources/DexDictateKit/TranscriptionFeedback.swift`
+  - `Sources/DexDictate/QuickSettingsView.swift`
+  - `Tests/DexDictateTests/OutputCoordinatorTests.swift`
+  - `Tests/DexDictateTests/TranscriptionFeedbackTests.swift`
+  - `Sources/VerificationRunner/main.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Medium. Main risk was overclaiming secure-context certainty or breaking normal auto-paste behavior outside those contexts.
+- Invariant check:
+  - permission order unchanged
+  - no networking introduced
+  - core trigger/capture/transcribe workflow unchanged
+  - local-only behavior preserved
+- What was attempted:
+  - added explicit protocols for output writing and focused-context inspection
+  - added an output coordinator that decides between save-only, paste, and copy-only delivery
+  - added a soft Accessibility-based heuristic for likely secure fields
+  - surfaced a new quick-setting to enable or disable secure-context copy-only fallback
+  - updated engine feedback and tests
+- What succeeded:
+  - output delivery is now explicitly coordinated and mockable
+  - likely secure fields now trigger copy-only behavior instead of blind auto-paste
+  - user feedback distinguishes copy-only fallback from ordinary paste/history outcomes
+  - unit tests passed for saved-only, standard paste, secure fallback, and heuristic classification
+  - verification coverage increased
+- What failed:
+  - the first compile failed because public default arguments referenced internal concrete types
+- What was rolled back:
+  - nothing functionally; concrete default collaborators were made public so the public coordinator initializer remained valid
+- Tests run:
+  - `swift test`
+  - `swift build && swift run VerificationRunner`
+- Metrics captured:
+  - `swift test`: 25 tests passed
+  - `swift run VerificationRunner`: 49 checks passed
+  - new automated coverage: 4 output-coordinator tests
+- Regressions checked:
+  - ordinary auto-paste path still exists outside likely secure contexts
+  - save-only path still works when auto-paste is disabled
+  - no network or permission regressions introduced
+- Remaining risks:
+  - secure-context detection is heuristic and may miss uncommon secure controls or over-warn on unusually labeled fields
+  - no manual live smoke test against real secure text fields was performed during this turn
+- Next step: finish `R26` audio route-change recovery/default failover and `R30` clearer subdomain modularization.

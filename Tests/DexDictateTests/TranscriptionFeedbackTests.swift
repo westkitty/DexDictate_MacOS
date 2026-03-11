@@ -10,6 +10,10 @@ final class TranscriptionFeedbackTests: XCTestCase {
         XCTAssertEqual(TranscriptionFeedback.discardedCurrentUtterance.title, "Current utterance discarded")
         XCTAssertEqual(TranscriptionFeedback.savedToHistory(modified: false).title, "Saved to history")
         XCTAssertEqual(TranscriptionFeedback.savedToHistory(modified: true).title, "Saved with changes")
+        XCTAssertEqual(
+            TranscriptionFeedback.copiedOnlySensitiveContext(modified: false, reason: "Detected likely secure input context (password).").title,
+            "Copied only instead of pasting"
+        )
         XCTAssertEqual(TranscriptionFeedback.pastedToActiveApp(modified: false).title, "Pasted into active app")
     }
 
@@ -20,6 +24,10 @@ final class TranscriptionFeedbackTests: XCTestCase {
         XCTAssertEqual(TranscriptionFeedback.discardedCurrentUtterance.tone, .warning)
         XCTAssertEqual(TranscriptionFeedback.restoredPreviousHistory.tone, .success)
         XCTAssertEqual(TranscriptionFeedback.savedToHistory(modified: false).tone, .success)
+        XCTAssertEqual(
+            TranscriptionFeedback.copiedOnlySensitiveContext(modified: false, reason: "Detected likely secure input context (password).").tone,
+            .success
+        )
         XCTAssertEqual(TranscriptionFeedback.pastedToActiveApp(modified: true).tone, .success)
     }
 }

@@ -14,6 +14,7 @@ public enum TranscriptionFeedback: Equatable {
     case restoredPreviousHistory
     case discardedCurrentUtterance
     case savedToHistory(modified: Bool)
+    case copiedOnlySensitiveContext(modified: Bool, reason: String)
     case pastedToActiveApp(modified: Bool)
 
     public var title: String {
@@ -32,6 +33,8 @@ public enum TranscriptionFeedback: Equatable {
             return "Current utterance discarded"
         case .savedToHistory(let modified):
             return modified ? "Saved with changes" : "Saved to history"
+        case .copiedOnlySensitiveContext(let modified, _):
+            return modified ? "Copied only for secure field" : "Copied only instead of pasting"
         case .pastedToActiveApp(let modified):
             return modified ? "Pasted with changes" : "Pasted into active app"
         }
@@ -55,6 +58,10 @@ public enum TranscriptionFeedback: Equatable {
             return modified
                 ? "The result was kept locally after vocabulary or filter changes."
                 : "The result was kept locally without auto-paste."
+        case .copiedOnlySensitiveContext(let modified, let reason):
+            return modified
+                ? "The result was adjusted locally, copied instead of pasted, and kept out of the focused field. \(reason)"
+                : "The result was copied instead of pasted because the focused field looks sensitive. \(reason)"
         case .pastedToActiveApp(let modified):
             return modified
                 ? "The result was adjusted locally, then pasted into the active app."
@@ -76,6 +83,8 @@ public enum TranscriptionFeedback: Equatable {
             return "arrow.uturn.backward.circle.fill"
         case .savedToHistory:
             return "tray.and.arrow.down"
+        case .copiedOnlySensitiveContext:
+            return "doc.on.doc"
         case .pastedToActiveApp:
             return "doc.on.clipboard"
         }
@@ -87,7 +96,7 @@ public enum TranscriptionFeedback: Equatable {
             return .neutral
         case .noSpeechDetected, .nothingToDelete, .deletedPreviousHistory, .discardedCurrentUtterance:
             return .warning
-        case .restoredPreviousHistory, .savedToHistory, .pastedToActiveApp:
+        case .restoredPreviousHistory, .savedToHistory, .copiedOnlySensitiveContext, .pastedToActiveApp:
             return .success
         }
     }

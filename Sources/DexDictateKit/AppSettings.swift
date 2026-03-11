@@ -53,6 +53,9 @@ public class AppSettings: ObservableObject {
     /// When `true`, transcribed text is automatically pasted into the frontmost app via Cmd+V.
     @AppStorage("autoPaste") public var autoPaste: Bool = true
 
+    /// When `true`, likely secure text-entry contexts fall back to copy-only instead of auto-paste.
+    @AppStorage("copyOnlyInSensitiveFields") public var copyOnlyInSensitiveFields: Bool = true
+
     /// When `true`, transcribed text is passed through `ProfanityFilter` before use.
     @AppStorage("profanityFilter") public var profanityFilter: Bool = false
 
@@ -262,6 +265,7 @@ public class AppSettings: ObservableObject {
         selectedStopSound = .none
         
         autoPaste = true
+        copyOnlyInSensitiveFields = true
         profanityFilter = false
         appendMode = false
         safeModeEnabled = false

@@ -149,6 +149,12 @@ struct QuickSettingsView: View {
                             .fixedSize(horizontal: false, vertical: true)
                             .padding(.leading, 20).padding(.bottom, 2)
 
+                        Toggle(NSLocalizedString("Copy Only in Sensitive Fields", comment: ""), isOn: $settings.copyOnlyInSensitiveFields)
+                        Text(NSLocalizedString("If the focused field looks like a password, passcode, token, or other secure input, DexDictate will copy the result without auto-pasting it.", comment: ""))
+                            .font(.caption2).foregroundStyle(.white.opacity(0.5))
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.leading, 20).padding(.bottom, 2)
+
                         Toggle(NSLocalizedString("Filter Profanity", comment: ""), isOn: $settings.profanityFilter)
 
                         Toggle(NSLocalizedString("Show Floating HUD", comment: ""), isOn: $settings.showFloatingHUD)

@@ -176,12 +176,14 @@ private func runSkeletonPath() {
     settings.restoreDefaults()
     settings.showFloatingHUD = false
     settings.autoPaste = false
+    settings.copyOnlyInSensitiveFields = false
     settings.playStartSound = false
     settings.playStopSound = false
     settings.silenceTimeout = 0
 
     check(path, settings.showFloatingHUD == false, "HUD can be disabled")
     check(path, settings.autoPaste == false, "auto-paste can be disabled")
+    check(path, settings.copyOnlyInSensitiveFields == false, "secure-context copy-only can be disabled")
     check(path, settings.playStartSound == false && settings.playStopSound == false, "audio cues can be disabled")
     check(path, settings.silenceTimeout == 0, "silence timeout can be disabled")
 }
@@ -256,8 +258,11 @@ private func runWonderPath() {
 
     let engineSource = readSource("Sources/DexDictateKit/TranscriptionEngine.swift")
     let lifecycleSource = readSource("Sources/DexDictateKit/EngineLifecycle.swift")
+    let settingsSource = readSource("Sources/DexDictateKit/AppSettings.swift")
     check(path, lifecycleSource.contains("case (.transcribing, .transcriptionCompleted):"), "explicit lifecycle maps transcription completion back to ready")
     check(path, engineSource.contains("defer {\n            _ = applyLifecycle(.transcriptionCompleted"), "transcription completion still returns the engine to ready through the lifecycle model")
+    check(path, engineSource.contains("outputCoordinator.deliver("), "engine routes output through explicit output coordination")
+    check(path, settingsSource.contains("copyOnlyInSensitiveFields"), "settings expose secure-context copy-only control")
 }
 
 @MainActor

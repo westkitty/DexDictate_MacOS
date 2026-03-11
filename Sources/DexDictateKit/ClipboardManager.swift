@@ -6,6 +6,11 @@ import AppKit
 /// - Important: Requires the Accessibility entitlement and user approval so that
 ///   `CGEvent.post(tap:)` is permitted to inject synthetic keyboard events.
 enum ClipboardManager {
+    static func copy(_ text: String) {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+    }
 
     /// Copies `text` to the general pasteboard, then simulates Cmd+V in the frontmost app.
     /// The clipboard is automatically cleared after paste to prevent data leakage.
@@ -17,8 +22,7 @@ enum ClipboardManager {
         // Store original clipboard content to restore it
         let originalContent = pasteboard.string(forType: .string)
 
-        pasteboard.clearContents()
-        pasteboard.setString(text, forType: .string)
+        copy(text)
         simulatePaste()
 
         // Clear clipboard after paste completes (with slight delay to ensure paste succeeds)
