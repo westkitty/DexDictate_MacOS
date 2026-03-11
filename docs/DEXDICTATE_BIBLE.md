@@ -2067,3 +2067,37 @@ Rationale:
   - manual visual QA across all theme modes and reduced-transparency settings still has not been executed
   - remaining non-visual roadmap items are still open
 - Next step: move back to the harder operational and workflow tail: protocol seams/tests, destructive-command safety, secure-context handling, audio recovery, launch-at-login truthfulness, release automation, and modularization.
+
+### 18.45 Ledger Entry B-0013
+
+- Entry ID: B-0013
+- Timestamp: 2026-03-10 America/Detroit
+- Improvement ID(s): checkpoint
+- Goal: Record the clean staged-and-committed state before continuing into the remaining harder roadmap items.
+- Why now: User requested another commit/archive point before further work.
+- Dependency context: Follows B-0012 with no code changes in between.
+- Files likely or actually changed:
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Documentation-only checkpoint entry.
+- Invariant check:
+  - repository remained clean
+  - no code changed in this entry
+  - branch remained ahead of `origin/main`
+- What was attempted:
+  - verified clean git state
+  - appended a checkpoint entry to the Bible
+- What succeeded:
+  - archival trail remained continuous
+- What failed:
+  - nothing
+- What was rolled back:
+  - nothing
+- Tests run:
+  - none for this checkpoint-only entry
+- Metrics captured:
+  - branch state observed as clean and ahead of `origin/main`
+- Regressions checked:
+  - none required for documentation-only checkpoint
+- Remaining risks:
+  - remaining roadmap items are still the harder operational/behavioral tail
+- Next step: create the requested commit, then continue with another remaining roadmap slice.
