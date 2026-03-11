@@ -26,6 +26,7 @@ public final class TranscriptionEngine: ObservableObject {
 
     private let audioService = AudioRecorderService()
     private let whisperService = WhisperService()
+    private let outputCoordinator: OutputCoordinating
     public let vocabularyManager = VocabularyManager()
     private let commandProcessor = CommandProcessor()
     
@@ -69,7 +70,8 @@ public final class TranscriptionEngine: ObservableObject {
     
     public static let shared = TranscriptionEngine()
              
-    public init() {
+    public init(outputCoordinator: OutputCoordinating = OutputCoordinator()) {
+        self.outputCoordinator = outputCoordinator
         // AudioRecorderService.inputLevel is @MainActor @Published — safe to bind directly.
         audioService.$inputLevel
             .assign(to: &$inputLevel)
@@ -427,11 +429,19 @@ public final class TranscriptionEngine: ObservableObject {
         statusText = String(format: doneFormat, finalText)
         liveTranscript = ""
         
-        if AppSettings.shared.autoPaste {
-             ClipboardManager.copyAndPaste(finalText)
-             resultFeedback = .pastedToActiveApp(modified: wasModified)
-        } else {
-             resultFeedback = .savedToHistory(modified: wasModified)
+        let deliveryDecision = outputCoordinator.deliver(
+            text: finalText,
+            autoPaste: AppSettings.shared.autoPaste,
+            protectSensitiveContexts: AppSettings.shared.copyOnlyInSensitiveFields
+        )
+
+        switch deliveryDecision.delivery {
+        case .savedOnly:
+            resultFeedback = .savedToHistory(modified: wasModified)
+        case .pastedToActiveApp:
+            resultFeedback = .pastedToActiveApp(modified: wasModified)
+        case .copiedOnly(let reason):
+            resultFeedback = .copiedOnlySensitiveContext(modified: wasModified, reason: reason)
         }
     }
 
