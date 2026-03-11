@@ -2101,3 +2101,30 @@ Rationale:
 - Remaining risks:
   - remaining roadmap items are still the harder operational/behavioral tail
 - Next step: create the requested commit, then continue with another remaining roadmap slice.
+
+### 18.46 Pre-Implementation Note P-0011
+
+- Entry ID: P-0011
+- Timestamp: 2026-03-10 America/Detroit
+- Improvement ID(s): R29
+- Goal: Add runnable release-validation automation for bundle integrity, signing state, and packaged artifact hashing.
+- Why now: This is a contained tooling improvement that does not disturb runtime behavior.
+- Dependency context: Safe to land independently while harder behavior changes remain open.
+- Files likely to change:
+  - `scripts/build_release.sh`
+  - new validation helper script(s)
+  - Bible
+- Risk assessment: Low. Tooling-only changes, but the validation output must be clear and honest about warnings versus hard failures.
+- Invariant check:
+  - no product runtime logic changes
+  - no permission changes
+  - no UI/brand changes
+- What was attempted: Pending.
+- What succeeded: Pending.
+- What failed: Pending.
+- What was rolled back: Pending.
+- Tests run: Pending.
+- Metrics captured: Pending.
+- Regressions checked: Pending.
+- Remaining risks: Pending.
+- Next step: Add a release validation script, wire it into release packaging, and run it against the current local build outputs.
