@@ -1,0 +1,26 @@
+{
+  "name": "dexdictate_macos-remotion-runner-20260314-225455",
+  "version": "1.0.0",
+  "description": "![DexDictate Banner](assets/banner.webp)",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "remotion:studio": "remotion studio src/index.ts",
+    "remotion:compositions": "remotion compositions src/index.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@remotion/cli": "^4.0.435",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "remotion": "^4.0.435",
+    "typescript": "^5.9.3"
+  }
+}
