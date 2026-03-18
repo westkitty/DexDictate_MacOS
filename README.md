@@ -1,7 +1,7 @@
 ![DexDictate Banner](assets/banner.webp)
 
 <div align="center">
-  <img src="assets/icon.png" width="128" height="128" />
+  <img src="assets/dexdictate-icon-standard-05.png" width="128" height="128" />
 </div>
 
 <div align="center">
