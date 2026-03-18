@@ -15,6 +15,12 @@ public class AppSettings: ObservableObject {
            let theme = AppearanceTheme(rawValue: stored) {
             appearanceTheme = theme
         }
+
+        let defaults = UserDefaults.standard
+        if defaults.object(forKey: "menuBarDisplayMode_v1") == nil,
+           !selectedMenuBarIconIdentifier.isEmpty {
+            menuBarDisplayMode = .customIcon
+        }
     }
 
     // MARK: - Interaction
@@ -77,6 +83,15 @@ public class AppSettings: ObservableObject {
     /// Whether to show the floating dictation HUD.
     @AppStorage("showFloatingHUD") public var showFloatingHUD: Bool = false
 
+    /// Controls how the primary menu bar item renders while idle.
+    @AppStorage("menuBarDisplayMode_v1") public var menuBarDisplayMode: MenuBarDisplayMode = .micAndText
+
+    /// Persisted selection for the Dex icon asset.
+    @AppStorage("selectedMenuBarIconIdentifier_v2") public var selectedMenuBarIconIdentifier: String = ""
+
+    /// Persisted selection for the emoji-based menu bar icon.
+    @AppStorage("selectedMenuBarEmoji_v1") public var selectedMenuBarEmoji: String = "🐶"
+
     /// Controls which transcription engine to use.
     /// DexDictate uses Whisper exclusively — no Apple Speech Recognition.
     /// This enum is kept for UserDefaults compatibility;  is the only valid value.
@@ -103,6 +118,16 @@ public class AppSettings: ObservableObject {
         case minimalist = "Minimalist"
         case highContrast = "High Contrast"
         
+        public var id: String { rawValue }
+    }
+
+    public enum MenuBarDisplayMode: String, CaseIterable, Identifiable {
+        case micAndText = "Mic + Text"
+        case micOnly = "Mic Only"
+        case customIcon = "Custom Icon"
+        case logoOnly = "Logo Only"
+        case emojiIcon = "Emoji"
+
         public var id: String { rawValue }
     }
     
@@ -277,8 +302,35 @@ public class AppSettings: ObservableObject {
         selectedTheme = .custom
         appearanceTheme = .system
         appearanceThemeStored = AppearanceTheme.system.rawValue
+        menuBarDisplayMode = .micAndText
+        selectedMenuBarIconIdentifier = ""
+        selectedMenuBarEmoji = "🐶"
         
         userShortcutData = (try? JSONEncoder().encode(UserShortcut.defaultMiddleMouse)) ?? Data()
+    }
+
+    public func selectMenuBarDisplayMode(_ mode: MenuBarDisplayMode) {
+        objectWillChange.send()
+        menuBarDisplayMode = mode
+    }
+
+    public func selectMenuBarIcon(identifier: String?) {
+        objectWillChange.send()
+        selectedMenuBarIconIdentifier = identifier ?? ""
+        if identifier != nil {
+            menuBarDisplayMode = .customIcon
+        }
+    }
+
+    public func selectMenuBarEmoji(_ emoji: String) {
+        let trimmed = emoji.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return
+        }
+
+        objectWillChange.send()
+        selectedMenuBarEmoji = trimmed
+        menuBarDisplayMode = .emojiIcon
     }
 
     public func enableSafeMode() {

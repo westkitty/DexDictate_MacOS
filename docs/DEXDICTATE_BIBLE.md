@@ -519,7 +519,7 @@ Current state:
 ### 9.1 Model loading
 
 - Embedded model `tiny.en.bin` is bundled in the library resource bundle
-- `WhisperService.loadEmbeddedModel()` resolves model from `Bundle.module`
+- `WhisperService.loadEmbeddedModel()` resolves the model through `Safety.resourceBundle`, which scans packaged-app, test-bundle, and local-build layouts before falling back safely
 - optional Core ML encoder sidecar `<model>-encoder.mlmodelc` is detected if present
 
 ### 9.2 Parameter strategy
@@ -2950,3 +2950,61 @@ Rationale:
   - `gh release create` succeeded cleanly once the tag existed first; the earlier upload attempts through draft/untagged flows were noisy and partially failed, but the final published release ended in the correct state with all intended artifacts attached.
 - Residual note:
   - Gatekeeper/notarization remains an external signing pipeline concern. The published artifacts are validated local builds with the expected local development-signing warning documented in the release notes and validation report.
+
+### 18.72 Ledger Entry B-0023
+
+- Entry ID: B-0023
+- Timestamp: 2026-03-16 America/Detroit
+- Improvement ID(s): runtime stability sweep after crash report `88187DCC-F57C-4024-B010-226D39B21959`
+- Goal: fix the shipped menu-bar crash triggered by packaged resource lookup, sweep for related runtime faults, and record the outcome.
+- Why now: the installed `v1.0.1` app crashed on menu-bar open with `EXC_BREAKPOINT` in Swift Package Manager resource-bundle initialization.
+- Dependency context: runtime fix in `DexDictateKit`, plus regression coverage and release-layout validation.
+- Files likely or actually changed:
+  - `Sources/DexDictateKit/Diagnostics/Safety.swift`
+  - `Sources/DexDictateKit/ProfanityFilter.swift`
+  - `Sources/DexDictateKit/Settings/LaunchAtLogin.swift`
+  - `Tests/DexDictateTests/ResourceBundleTests.swift`
+  - `Tests/DexDictateTests/LaunchAtLoginControllerTests.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Medium. Resource lookup touches startup, model loading, profanity filtering, HUD watermark assets, and packaged-app behavior.
+- Invariant check:
+  - no network behavior introduced
+  - no transcription-engine swap; Whisper remains local-only
+  - no onboarding or permission-order changes
+  - no intentional brand or asset changes
+- What was attempted:
+  - traced the crash stack from `AntiGravityMainView` through `Safety.resourceBundle` into the generated Swift Package Manager `resource_bundle_accessor.swift`
+  - confirmed the installed app did contain `DexDictate_MacOS_DexDictateKit.bundle`, but the generated `Bundle.module` accessor searched `Bundle.main.bundleURL/...` instead of the app's `Contents/Resources`
+  - replaced the direct `Bundle.module` dependency with an explicit `Safety.resourceBundle` resolver that scans packaged-app, test, and local-build candidate locations and degrades safely to `Bundle.main`
+  - removed the remaining direct `Bundle.module` use from `ProfanityFilter`
+  - added a regression test that asserts the model, profanity list, and icon asset all resolve from the resource bundle
+  - ran a targeted bug sweep for remaining direct `Bundle.module`, `fatalError`, `assertionFailure`, and packaging-sensitive startup access
+  - fixed a second confirmed bug in launch-at-login reset flow by skipping unnecessary `unregister()` calls when the service is already disabled
+  - added tests covering the no-op-disabled and enabled-unregister launch-at-login reset paths
+- What succeeded:
+  - packaged resource lookup no longer depends on the generated `Bundle.module` fatal path
+  - profanity filtering now shares the same safe resource-bundle resolver as the rest of the runtime
+  - the launch-at-login reset path no longer emits spurious `Operation not permitted` warnings during tests and verification runs when launch-at-login is already disabled
+  - targeted sweep found no remaining direct `Bundle.module`, `fatalError`, `assertionFailure`, or `precondition` calls in `Sources/` or `Tests/`
+- What failed:
+  - nothing failed after the fix set was applied; the only persistent external warning remains Gatekeeper assessment on the local development-signed build
+- What was rolled back:
+  - nothing was rolled back
+- Tests run:
+  - `swift test`
+  - `swift run VerificationRunner`
+  - `./build.sh`
+  - `./scripts/validate_release.sh .build/DexDictate.app`
+- Metrics captured:
+  - `swift test`: 33 tests passed
+  - `swift run VerificationRunner`: 51 checks passed
+  - release validation report: `_releases/validation/release-validation-20260316-185916.txt`
+  - release validation: 0 failures, 1 warning
+- Regressions checked:
+  - packaged app bundle still contains `DexDictate_MacOS_DexDictateKit.bundle`, `tiny.en.bin`, and `AppIcon.icns`
+  - verification runner still confirms bundled model presence and watermark asset presence
+  - test sweep confirms profanity filtering and launch-at-login controller behavior still work
+- Remaining risks:
+  - the fix prevents the confirmed `Bundle.module` crash class in current package layouts, but a future bundle rename would require updating the explicit resource-bundle name in `Safety`
+  - local Gatekeeper warning persists until notarization/stapling is part of the release pipeline
+- Next step: include this runtime fix in the next shipped build and smoke-test the menu-bar open path on the packaged app before publishing.

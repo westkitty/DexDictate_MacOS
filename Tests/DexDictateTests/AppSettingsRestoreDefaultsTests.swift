@@ -19,6 +19,9 @@ final class AppSettingsRestoreDefaultsTests: XCTestCase {
         settings.selectedTheme = .retro
         settings.appearanceTheme = .highContrast
         settings.selectedEngine = .whisper
+        settings.menuBarDisplayMode = .customIcon
+        settings.selectedMenuBarIconIdentifier = "Gemini_Generated_Image_9999b99999b99999.png"
+        settings.selectedMenuBarEmoji = "🔥"
 
         settings.restoreDefaults()
 
@@ -36,6 +39,9 @@ final class AppSettingsRestoreDefaultsTests: XCTestCase {
         XCTAssertEqual(settings.selectedTheme, .custom)
         XCTAssertEqual(settings.appearanceTheme, .system)
         XCTAssertEqual(settings.appearanceThemeStored, AppSettings.AppearanceTheme.system.rawValue)
+        XCTAssertEqual(settings.menuBarDisplayMode, .micAndText)
+        XCTAssertEqual(settings.selectedMenuBarIconIdentifier, "")
+        XCTAssertEqual(settings.selectedMenuBarEmoji, "🐶")
         XCTAssertEqual(settings.userShortcut, .defaultMiddleMouse)
     }
 }

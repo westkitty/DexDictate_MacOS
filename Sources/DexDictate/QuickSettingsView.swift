@@ -7,6 +7,7 @@ struct QuickSettingsView: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var scanner: AudioDeviceScanner
     @ObservedObject var vocabularyManager: VocabularyManager
+    @ObservedObject var menuBarIconController: MenuBarIconController
     @State private var isExpanded = false
     @StateObject private var launchAtLoginController = LaunchAtLoginController()
 
@@ -197,6 +198,13 @@ struct QuickSettingsView: View {
 
                     Divider().background(Color.white.opacity(0.3))
 
+                    MenuBarSettingsSection(
+                        settings: settings,
+                        menuBarIconController: menuBarIconController
+                    )
+
+                    Divider().background(Color.white.opacity(0.3))
+
                     // MARK: - Input Configuration
                     VStack(alignment: .leading, spacing: 8) {
                         Text(NSLocalizedString("Input", comment: ""))
@@ -269,6 +277,7 @@ struct QuickSettingsView: View {
         .onAppear {
             launchAtLoginController.refresh()
             launchAtLoginController.syncStoredPreference(into: settings)
+            menuBarIconController.refreshAssets()
         }
         .onChange(of: settings.launchAtLogin) { _, _ in
             launchAtLoginController.refresh()
@@ -299,5 +308,406 @@ struct QuickSettingsView: View {
         window.makeKeyAndOrderFront(nil)
         NSApp.activate()
         vocabularyWindow = window
+    }
+}
+
+private struct MenuBarSettingsSection: View {
+    @ObservedObject var settings: AppSettings
+    @ObservedObject var menuBarIconController: MenuBarIconController
+    @State private var isEmojiPickerPresented = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(NSLocalizedString("Menu Bar Style", comment: ""))
+                .font(.caption).bold().foregroundStyle(.white.opacity(0.7))
+
+            Text("Default is the native microphone plus \"DexDictate.\" Switch to mic-only, a Dex icon, or an emoji icon. Dex icons now render larger and pulse with a recording badge while listening.")
+                .font(.caption2)
+                .foregroundStyle(.white.opacity(0.5))
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 10) {
+                Text("Style")
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.8))
+
+                Spacer(minLength: 8)
+
+                Picker("", selection: $settings.menuBarDisplayMode) {
+                    ForEach(AppSettings.MenuBarDisplayMode.allCases) { mode in
+                        Text(displayLabel(for: mode)).tag(mode)
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .controlSize(.small)
+            }
+
+            MenuBarDisplayPreview(
+                mode: settings.menuBarDisplayMode,
+                dexImage: selectedDexPreview,
+                logoImage: menuBarIconController.appLogoPreviewImage(),
+                emoji: settings.selectedMenuBarEmoji
+            )
+
+            switch settings.menuBarDisplayMode {
+            case .customIcon:
+                dexIconSection
+            case .logoOnly:
+                logoOnlySection
+            case .emojiIcon:
+                emojiIconSection
+            case .micAndText, .micOnly:
+                EmptyView()
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var selectedDexPreview: NSImage? {
+        menuBarIconController
+            .selectedIcon(using: settings)
+            .flatMap(menuBarIconController.previewImage(for:))
+    }
+
+    private var dexIconSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Dex icons are converted into monochrome template images so they behave like native macOS menu bar icons.")
+                .font(.caption2)
+                .foregroundStyle(.white.opacity(0.45))
+                .fixedSize(horizontal: false, vertical: true)
+
+            if menuBarIconController.icons.isEmpty {
+                Text("No Dex icons were found at \(menuBarIconController.assetDirectoryURL.path).")
+                    .font(.caption2)
+                    .foregroundStyle(.orange.opacity(0.85))
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                HStack(alignment: .center, spacing: 10) {
+                    MenuBarIconPreview(image: selectedDexPreview)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(settings.selectedMenuBarIconIdentifier.isEmpty ? "No Dex icon selected" : "Dex icon active")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white)
+                        Text(settings.selectedMenuBarIconIdentifier.isEmpty ? "Pick one of the Dex icons below." : "DexDictate will render the selected Dex icon as a menu bar icon.")
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.45))
+                    }
+
+                    Spacer()
+
+                    Menu {
+                        ForEach(Array(menuBarIconController.icons.enumerated()), id: \.element.id) { index, icon in
+                            Button {
+                                settings.selectMenuBarIcon(identifier: icon.id)
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: settings.selectedMenuBarIconIdentifier == icon.id ? "checkmark.circle.fill" : "circle")
+
+                                    if let previewImage = menuBarIconController.previewImage(for: icon) {
+                                        Image(nsImage: previewImage)
+                                            .resizable()
+                                            .interpolation(.high)
+                                            .scaledToFit()
+                                            .frame(width: 16, height: 16)
+                                    }
+
+                                    Text("DexDictate \(index + 1)")
+                                        .lineLimit(1)
+                                }
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Text("Choose")
+                                .font(.caption.weight(.semibold))
+                            Image(systemName: "chevron.down")
+                                .font(.caption2.weight(.semibold))
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Color.white.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+                    .menuStyle(.borderlessButton)
+                }
+                .padding(8)
+                .background(Color.white.opacity(0.04))
+                .overlay(
+                    RoundedRectangle(cornerRadius: SurfaceTokens.cornerRadius)
+                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: SurfaceTokens.cornerRadius))
+            }
+        }
+    }
+
+    private var emojiIconSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Choose an emoji for the menu bar. The emoji keeps its color and gets the same pulsing red recording badge while listening.")
+                .font(.caption2)
+                .foregroundStyle(.white.opacity(0.45))
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(alignment: .center, spacing: 10) {
+                MenuBarIconPreview(image: nil, emoji: settings.selectedMenuBarEmoji)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Emoji icon active")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white)
+                    Text("Current emoji: \(settings.selectedMenuBarEmoji)")
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.45))
+                }
+
+                Spacer()
+
+                Button("Choose Emoji") {
+                    isEmojiPickerPresented = true
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .popover(isPresented: $isEmojiPickerPresented, arrowEdge: .top) {
+                    EmojiIconPicker(
+                        selectedEmoji: Binding(
+                            get: { settings.selectedMenuBarEmoji },
+                            set: { settings.selectMenuBarEmoji($0) }
+                        ),
+                        isPresented: $isEmojiPickerPresented
+                    )
+                }
+            }
+            .padding(8)
+            .background(Color.white.opacity(0.04))
+            .overlay(
+                RoundedRectangle(cornerRadius: SurfaceTokens.cornerRadius)
+                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: SurfaceTokens.cornerRadius))
+        }
+    }
+
+    private var logoOnlySection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Logo Only uses the bundled DexDictate mark as the menu bar icon. It stays monochrome and gets the same recording indicator while active.")
+                .font(.caption2)
+                .foregroundStyle(.white.opacity(0.45))
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(alignment: .center, spacing: 10) {
+                MenuBarIconPreview(image: menuBarIconController.appLogoPreviewImage())
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("DexDictate logo active")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white)
+                    Text("Uses the bundled app logo without extra text.")
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.45))
+                }
+
+                Spacer()
+            }
+            .padding(8)
+            .background(Color.white.opacity(0.04))
+            .overlay(
+                RoundedRectangle(cornerRadius: SurfaceTokens.cornerRadius)
+                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: SurfaceTokens.cornerRadius))
+        }
+    }
+
+    private func displayLabel(for mode: AppSettings.MenuBarDisplayMode) -> String {
+        switch mode {
+        case .micAndText:
+            return "Mic + Text"
+        case .micOnly:
+            return "Mic Only"
+        case .customIcon:
+            return "Dex Icon"
+        case .logoOnly:
+            return "Logo Only"
+        case .emojiIcon:
+            return "Emoji"
+        }
+    }
+}
+
+private struct MenuBarIconPreview: View {
+    let image: NSImage?
+    let emoji: String?
+
+    init(image: NSImage?, emoji: String? = nil) {
+        self.image = image
+        self.emoji = emoji
+    }
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: SurfaceTokens.cornerRadius)
+                .fill(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.96), Color(red: 0.86, green: 0.88, blue: 0.92)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+
+            if let image {
+                Image(nsImage: image)
+                    .resizable()
+                    .interpolation(.high)
+                    .scaledToFit()
+                    .padding(4)
+            } else if let emoji {
+                Text(emoji)
+                    .font(.system(size: 24))
+            } else {
+                RoundedRectangle(cornerRadius: SurfaceTokens.cornerRadius)
+                    .stroke(Color.white.opacity(0.16), style: StrokeStyle(lineWidth: 1, dash: [3, 2]))
+
+                Image(systemName: "questionmark.square.dashed")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.45))
+            }
+        }
+        .frame(width: 38, height: 38)
+    }
+}
+
+private struct MenuBarDisplayPreview: View {
+    let mode: AppSettings.MenuBarDisplayMode
+    let dexImage: NSImage?
+    let logoImage: NSImage?
+    let emoji: String
+
+    var body: some View {
+        HStack(spacing: 10) {
+            ZStack {
+                RoundedRectangle(cornerRadius: SurfaceTokens.cornerRadius)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.96), Color(red: 0.86, green: 0.88, blue: 0.92)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+
+                previewContent
+                    .foregroundStyle(.black.opacity(0.88))
+                    .padding(.horizontal, 10)
+            }
+            .frame(height: 34)
+
+            Spacer(minLength: 0)
+        }
+    }
+
+    @ViewBuilder
+    private var previewContent: some View {
+        switch mode {
+        case .micAndText:
+            HStack(spacing: 4) {
+                Image(systemName: "mic.fill")
+                    .font(.caption.weight(.semibold))
+                Text("DexDictate")
+                    .font(.caption.weight(.semibold))
+                    .lineLimit(1)
+            }
+        case .micOnly:
+            Image(systemName: "mic.fill")
+                .font(.caption.weight(.semibold))
+        case .customIcon:
+            if let dexImage {
+                Image(nsImage: dexImage)
+                    .resizable()
+                    .interpolation(.high)
+                    .scaledToFit()
+                    .frame(width: 22, height: 22)
+            } else {
+                HStack(spacing: 4) {
+                    Text("Dex")
+                        .font(.caption.weight(.semibold))
+                        .lineLimit(1)
+                }
+            }
+        case .logoOnly:
+            if let logoImage {
+                Image(nsImage: logoImage)
+                    .resizable()
+                    .interpolation(.high)
+                    .scaledToFit()
+                    .frame(width: 22, height: 22)
+            } else {
+                Text("Logo")
+                    .font(.caption.weight(.semibold))
+            }
+        case .emojiIcon:
+            Text(emoji)
+                .font(.system(size: 20))
+        }
+    }
+}
+
+private struct EmojiIconPicker: View {
+    @Binding var selectedEmoji: String
+    @Binding var isPresented: Bool
+    @State private var draftEmoji: String
+
+    private let suggestedEmojis = [
+        "🐶", "🎙️", "🎤", "🗣️", "🐾", "🦴", "🐕", "🐺",
+        "🦊", "🐱", "🤖", "🎧", "📣", "✨", "⚡", "🔥",
+        "⭐", "🫡", "🎯", "🧠", "🛸", "🚀", "💬", "📝"
+    ]
+
+    init(selectedEmoji: Binding<String>, isPresented: Binding<Bool>) {
+        _selectedEmoji = selectedEmoji
+        _isPresented = isPresented
+        _draftEmoji = State(initialValue: selectedEmoji.wrappedValue)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Pick an Emoji")
+                .font(.headline)
+
+            Text("Click one of the suggestions or paste any emoji below.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            TextField("Paste any emoji", text: $draftEmoji)
+                .textFieldStyle(.roundedBorder)
+
+            Button("Use Entered Emoji") {
+                let trimmed = draftEmoji.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty else { return }
+                selectedEmoji = trimmed
+                isPresented = false
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.small)
+
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 6), spacing: 8) {
+                ForEach(suggestedEmojis, id: \.self) { emoji in
+                    Button {
+                        draftEmoji = emoji
+                        selectedEmoji = emoji
+                        isPresented = false
+                    } label: {
+                        Text(emoji)
+                            .font(.system(size: 26))
+                            .frame(maxWidth: .infinity, minHeight: 34)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+            }
+        }
+        .padding(14)
+        .frame(width: 300)
     }
 }
