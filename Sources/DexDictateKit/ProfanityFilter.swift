@@ -9,10 +9,10 @@ public enum ProfanityFilter {
     }
     
     private static var filterData: FilterData = {
-        guard let url = Bundle.module.url(forResource: "profanity_list", withExtension: "json"),
+        guard let url = Safety.resourceBundle.url(forResource: "profanity_list", withExtension: "json"),
               let data = try? Data(contentsOf: url),
               let decoded = try? JSONDecoder().decode(FilterData.self, from: data) else {
-            print("⚠️ Failed to load profanity_list.json. Using empty filter.")
+            Safety.log("WARNING: Failed to load profanity_list.json. Using empty filter.")
             return FilterData(strictReplacements: [:], whimsicalMap: [:])
         }
         return decoded

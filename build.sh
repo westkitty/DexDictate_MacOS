@@ -7,7 +7,11 @@ SWIFT_PRODUCT="DexDictate_MacOS"
 CERT_NAME="DexDictate Development"
 BUILD_DIR=".build"
 BUNDLE="$BUILD_DIR/$APP_NAME.app"
-INSTALL_DIR="${INSTALL_DIR:-$HOME/Applications}"
+DEFAULT_INSTALL_DIR="/Applications"
+if [ ! -w "$DEFAULT_INSTALL_DIR" ]; then
+    DEFAULT_INSTALL_DIR="$HOME/Applications"
+fi
+INSTALL_DIR="${INSTALL_DIR:-$DEFAULT_INSTALL_DIR}"
 ENTITLEMENTS="Sources/DexDictate/DexDictate.entitlements"
 ICON_SOURCE="Sources/DexDictate/AppIcon.icns"
 INFO_TEMPLATE="templates/Info.plist.template"

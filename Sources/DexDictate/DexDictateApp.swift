@@ -1,5 +1,6 @@
 import SwiftUI
 import AVFoundation
+import Combine
 import DexDictateKit
 
 /// Application entry point. Configures the `MenuBarExtra` scene and wires together
@@ -12,6 +13,7 @@ struct DexDictateApp: App {
     @StateObject private var permissionManager = PermissionManager()
     @StateObject private var scanner = AudioDeviceScanner()
     @ObservedObject var settings = AppSettings.shared
+    @StateObject private var menuBarIconController = MenuBarIconController.shared
     
     // HUD Controller
     @StateObject private var hudController = FloatingHUDController()
@@ -29,6 +31,7 @@ struct DexDictateApp: App {
                 permissionManager: permissionManager,
                 settings: settings,
                 scanner: scanner,
+                menuBarIconController: menuBarIconController,
                 onDetachHistory: {
                     historyController.show()
                 }
@@ -73,18 +76,203 @@ struct DexDictateApp: App {
                 hudController.toggle(shouldShow: newValue)
             }
         } label: {
+            MenuBarStatusLabel(
+                engine: engine,
+                settings: settings,
+                menuBarIconController: menuBarIconController
+            )
+        }
+        .menuBarExtraStyle(.window)
+    }
+}
+
+private struct MenuBarStatusLabel: View {
+    @ObservedObject var engine: TranscriptionEngine
+    @ObservedObject var settings: AppSettings
+    @ObservedObject var menuBarIconController: MenuBarIconController
+    @State private var isPulsing = false
+    private let pulseTimer = Timer.publish(every: 0.75, on: .main, in: .common).autoconnect()
+
+    private var isActive: Bool {
+        engine.state == .listening || engine.state == .transcribing
+    }
+
+    private var activeStatusText: String {
+        engine.state == .transcribing ? "Processing" : "Recording"
+    }
+
+    var body: some View {
+        Group {
+            if isActive {
+                activeLabel
+            } else {
+                idleLabel
+            }
+        }
+        .onAppear { isPulsing = isActive }
+        .onChange(of: isActive) { _, newValue in
+            isPulsing = newValue
+        }
+        .onReceive(pulseTimer) { _ in
+            guard isActive else {
+                isPulsing = false
+                return
+            }
+
+            withAnimation(.easeInOut(duration: 0.28)) {
+                isPulsing.toggle()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var idleLabel: some View {
+        switch settings.menuBarDisplayMode {
+        case .micAndText:
             HStack(spacing: 4) {
-                Image(systemName: engine.state == .listening ? "waveform.circle.fill" : "mic.fill")
-                    .foregroundStyle(engine.state == .listening ? .red : .primary)
-                if engine.state == .listening {
-                    Text("Recording")
-                        .foregroundStyle(.red)
-                } else {
+                Image(systemName: "mic.fill")
+                Text("DexDictate")
+            }
+        case .micOnly:
+            Image(systemName: "mic.fill")
+        case .customIcon:
+            if let selectedIcon = menuBarIconController.selectedIcon(using: settings),
+               let image = menuBarIconController.menuBarImage(for: selectedIcon) {
+                MenuBarDexIcon(image: image, isActive: false, isPulsing: false)
+            } else {
+                HStack(spacing: 4) {
+                    Image(systemName: "mic.fill")
                     Text("DexDictate")
                 }
             }
+        case .logoOnly:
+            if let image = menuBarIconController.appLogoMenuBarImage() {
+                MenuBarDexIcon(image: image, isActive: false, isPulsing: false)
+            } else {
+                Image(systemName: "mic.fill")
+            }
+        case .emojiIcon:
+            MenuBarEmojiIcon(emoji: settings.selectedMenuBarEmoji, isActive: false, isPulsing: false)
         }
-        .menuBarExtraStyle(.window)
+    }
+
+    @ViewBuilder
+    private var activeLabel: some View {
+        switch settings.menuBarDisplayMode {
+        case .micAndText:
+            HStack(spacing: 4) {
+                Image(systemName: "waveform.circle.fill")
+                    .foregroundStyle(.red)
+                Text(activeStatusText)
+                    .foregroundStyle(.red)
+            }
+        case .micOnly:
+            HStack(spacing: 4) {
+                Image(systemName: "waveform.circle.fill")
+                    .foregroundStyle(.red)
+                Text(activeStatusText)
+                    .foregroundStyle(.red)
+            }
+        case .customIcon:
+            if let selectedIcon = menuBarIconController.selectedIcon(using: settings),
+               let image = menuBarIconController.menuBarImage(for: selectedIcon) {
+                HStack(spacing: 4) {
+                    MenuBarDexIcon(image: image, isActive: true, isPulsing: isPulsing)
+                    Text(activeStatusText)
+                        .foregroundStyle(.red)
+                }
+            } else {
+                Image(systemName: "waveform.circle.fill")
+                    .foregroundStyle(.red)
+            }
+        case .logoOnly:
+            if let image = menuBarIconController.appLogoMenuBarImage() {
+                HStack(spacing: 4) {
+                    MenuBarDexIcon(image: image, isActive: true, isPulsing: isPulsing)
+                    Text(activeStatusText)
+                        .foregroundStyle(.red)
+                }
+            } else {
+                Image(systemName: "waveform.circle.fill")
+                    .foregroundStyle(.red)
+            }
+        case .emojiIcon:
+            HStack(spacing: 4) {
+                MenuBarEmojiIcon(emoji: settings.selectedMenuBarEmoji, isActive: true, isPulsing: isPulsing)
+                Text(activeStatusText)
+                    .foregroundStyle(.red)
+            }
+        }
+    }
+}
+
+private struct MenuBarDexIcon: View {
+    let image: NSImage
+    let isActive: Bool
+    let isPulsing: Bool
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ZStack {
+                if isActive {
+                    Circle()
+                        .fill(Color.red.opacity(isPulsing ? 0.28 : 0.14))
+                        .frame(width: 22, height: 22)
+                }
+
+                Image(nsImage: image)
+                    .renderingMode(.template)
+                    .resizable()
+                    .interpolation(.high)
+                    .scaledToFit()
+                    .foregroundStyle(isActive ? .red : .primary)
+                    .frame(width: 19, height: 19)
+                    .scaleEffect(isActive && isPulsing ? 1.06 : 1)
+            }
+
+            if isActive {
+                MenuBarRecordingBadge(isPulsing: isPulsing)
+            }
+        }
+    }
+}
+
+private struct MenuBarEmojiIcon: View {
+    let emoji: String
+    let isActive: Bool
+    let isPulsing: Bool
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ZStack {
+                if isActive {
+                    Circle()
+                        .fill(Color.red.opacity(isPulsing ? 0.28 : 0.14))
+                        .frame(width: 22, height: 22)
+                }
+
+                Text(emoji)
+                    .font(.system(size: 17))
+                    .frame(width: 20, height: 20)
+                    .scaleEffect(isActive && isPulsing ? 1.07 : 1)
+            }
+
+            if isActive {
+                MenuBarRecordingBadge(isPulsing: isPulsing)
+            }
+        }
+    }
+}
+
+private struct MenuBarRecordingBadge: View {
+    let isPulsing: Bool
+
+    var body: some View {
+        Image(systemName: "record.circle.fill")
+            .font(.system(size: 10, weight: .bold))
+            .foregroundStyle(.red)
+            .scaleEffect(isPulsing ? 1.18 : 0.9)
+            .shadow(color: .red.opacity(0.45), radius: isPulsing ? 3 : 1)
     }
 }
 
@@ -96,6 +284,7 @@ struct AntiGravityMainView: View {
     @ObservedObject var permissionManager: PermissionManager
     @ObservedObject var settings: AppSettings
     @ObservedObject var scanner: AudioDeviceScanner
+    @ObservedObject var menuBarIconController: MenuBarIconController
     @State private var expandedHistory: Bool = false
     
     var onDetachHistory: (() -> Void)?
@@ -157,7 +346,8 @@ struct AntiGravityMainView: View {
                     QuickSettingsView(
                         settings: settings, 
                         scanner: scanner,
-                        vocabularyManager: engine.vocabularyManager
+                        vocabularyManager: engine.vocabularyManager,
+                        menuBarIconController: menuBarIconController
                     )
 
                     Spacer(minLength: 0)

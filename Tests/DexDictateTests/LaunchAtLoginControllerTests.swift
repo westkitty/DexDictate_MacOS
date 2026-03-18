@@ -3,6 +3,25 @@ import XCTest
 
 @MainActor
 final class LaunchAtLoginControllerTests: XCTestCase {
+    func testUnregisterIfPossibleSkipsDisabledService() {
+        let service = MockLaunchAtLoginService(status: .disabled)
+
+        let didUnregister = SystemLaunchAtLoginService.unregisterIfPossible(service: service)
+
+        XCTAssertFalse(didUnregister)
+        XCTAssertEqual(service.unregisterCallCount, 0)
+    }
+
+    func testUnregisterIfPossibleUnregistersEnabledService() {
+        let service = MockLaunchAtLoginService(status: .enabled)
+
+        let didUnregister = SystemLaunchAtLoginService.unregisterIfPossible(service: service)
+
+        XCTAssertTrue(didUnregister)
+        XCTAssertEqual(service.unregisterCallCount, 1)
+        XCTAssertEqual(service.status, .disabled)
+    }
+
     func testRegisterSuccessUpdatesStatusAndClearsErrors() {
         let service = MockLaunchAtLoginService(status: .disabled)
         let controller = LaunchAtLoginController(service: service)

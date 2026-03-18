@@ -74,9 +74,8 @@ public struct SystemLaunchAtLoginService: LaunchAtLoginServicing {
     }
 
     @discardableResult
-    public static func unregisterIfPossible() -> Bool {
-        let service = SystemLaunchAtLoginService()
-        guard service.status != .unavailable else { return false }
+    public static func unregisterIfPossible(service: LaunchAtLoginServicing = SystemLaunchAtLoginService()) -> Bool {
+        guard service.status.isEnabled else { return false }
 
         do {
             try service.unregister()
