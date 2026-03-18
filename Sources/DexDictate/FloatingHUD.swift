@@ -26,11 +26,20 @@ class FloatingHUDWindow: NSPanel {
 
 struct FloatingHUDView: View {
     @ObservedObject var engine: TranscriptionEngine
+    @ObservedObject var profileManager: ProfileManager
 
     var body: some View {
         ZStack {
             // Logo watermark (background) — load directly from kit bundle PNG
-            if let url = Safety.resourceBundle.url(forResource: "Assets.xcassets/AppIcon.appiconset/icon", withExtension: "png"),
+            if let assetURL = profileManager.currentWatermarkAsset?.url,
+               let nsImage = NSImage(contentsOf: assetURL) {
+                Image(nsImage: nsImage)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: watermarkSize, height: watermarkSize)
+                    .opacity(watermarkOpacity)
+                    .ignoresSafeArea()
+            } else if let url = Safety.resourceBundle.url(forResource: "Assets.xcassets/AppIcon.appiconset/icon", withExtension: "png"),
                let nsImage = NSImage(contentsOf: url) {
                 Image(nsImage: nsImage)
                     .resizable()
@@ -159,17 +168,19 @@ struct FloatingHUDView: View {
 class FloatingHUDController: ObservableObject {
     private var window: FloatingHUDWindow?
     private var engine: TranscriptionEngine?
+    private var profileManager: ProfileManager?
     
     init() {}
     
-    func setup(engine: TranscriptionEngine) {
+    func setup(engine: TranscriptionEngine, profileManager: ProfileManager) {
         self.engine = engine
+        self.profileManager = profileManager
     }
     
     func show() {
-        guard let engine = engine else { return }
+        guard let engine = engine, let profileManager = profileManager else { return }
         if window == nil {
-            let view = FloatingHUDView(engine: engine)
+            let view = FloatingHUDView(engine: engine, profileManager: profileManager)
             window = FloatingHUDWindow(
                 contentRect: NSRect(x: 100, y: 100, width: 200, height: 60),
                 rootView: AnyView(view)

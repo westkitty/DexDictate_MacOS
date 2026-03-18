@@ -12,6 +12,7 @@ struct DexDictateApp: App {
     @StateObject private var engine = TranscriptionEngine.shared
     @StateObject private var permissionManager = PermissionManager()
     @StateObject private var scanner = AudioDeviceScanner()
+    @StateObject private var profileManager = ProfileManager()
     @ObservedObject var settings = AppSettings.shared
     @StateObject private var menuBarIconController = MenuBarIconController.shared
     
@@ -31,6 +32,7 @@ struct DexDictateApp: App {
                 permissionManager: permissionManager,
                 settings: settings,
                 scanner: scanner,
+                profileManager: profileManager,
                 menuBarIconController: menuBarIconController,
                 onDetachHistory: {
                     historyController.show()
@@ -42,6 +44,8 @@ struct DexDictateApp: App {
                 // Everything after the guard can fire on every open safely.
                 permissionManager.startMonitoring(engine: engine)
                 permissionManager.refreshPermissions()
+                profileManager.synchronizeBundledVocabulary(with: engine.vocabularyManager)
+                profileManager.refreshDynamicContent()
 
                 guard engine.state == .stopped else {
                     // Engine already running — just refresh permissions on each open.
@@ -65,7 +69,7 @@ struct DexDictateApp: App {
                 }
 
                 // Configure HUD and History controllers (idempotent but guard anyway).
-                hudController.setup(engine: engine)
+                hudController.setup(engine: engine, profileManager: profileManager)
                 historyController.setup(engine: engine)
 
                 if settings.showFloatingHUD {
@@ -74,6 +78,11 @@ struct DexDictateApp: App {
             }
             .onChange(of: settings.showFloatingHUD) { _, newValue in
                 hudController.toggle(shouldShow: newValue)
+            }
+            .onChange(of: settings.localizationMode) { _, _ in
+                profileManager.synchronizeFromSettings()
+                profileManager.synchronizeBundledVocabulary(with: engine.vocabularyManager)
+                profileManager.refreshDynamicContent()
             }
         } label: {
             MenuBarStatusLabel(
@@ -284,6 +293,7 @@ struct AntiGravityMainView: View {
     @ObservedObject var permissionManager: PermissionManager
     @ObservedObject var settings: AppSettings
     @ObservedObject var scanner: AudioDeviceScanner
+    @ObservedObject var profileManager: ProfileManager
     @ObservedObject var menuBarIconController: MenuBarIconController
     @State private var expandedHistory: Bool = false
     
@@ -301,7 +311,15 @@ struct AntiGravityMainView: View {
             }
 
             // Large app-icon watermark behind all content (visible on every theme).
-            if let url = Safety.resourceBundle.url(forResource: "Assets.xcassets/AppIcon.appiconset/icon", withExtension: "png"),
+            if let assetURL = profileManager.currentWatermarkAsset?.url,
+               let nsImage = NSImage(contentsOf: assetURL) {
+                Image(nsImage: nsImage)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 200, height: 200)
+                    .opacity(0.12)
+                    .allowsHitTesting(false)
+            } else if let url = Safety.resourceBundle.url(forResource: "Assets.xcassets/AppIcon.appiconset/icon", withExtension: "png"),
                let nsImage = NSImage(contentsOf: url) {
                 Image(nsImage: nsImage)
                     .resizable()
@@ -329,6 +347,13 @@ struct AntiGravityMainView: View {
                         .foregroundStyle(.white)
                         .padding(.top, 4)
 
+                    if settings.showFlavorTicker {
+                        FlavorTickerView(
+                            text: profileManager.currentFlavorLine?.text ?? "",
+                            animateWhenNeeded: settings.animateFlavorTicker
+                        )
+                    }
+
                     PermissionBannerView(permissionManager: permissionManager)
 
                     HistoryView(
@@ -344,8 +369,9 @@ struct AntiGravityMainView: View {
                     ControlsView(engine: engine)
 
                     QuickSettingsView(
-                        settings: settings, 
+                        settings: settings,
                         scanner: scanner,
+                        profileManager: profileManager,
                         vocabularyManager: engine.vocabularyManager,
                         menuBarIconController: menuBarIconController
                     )
@@ -402,6 +428,10 @@ struct CheckboxToggleStyle: ToggleStyle {
 /// Handles early app-lifecycle callbacks.
 class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            LaunchIntroController.shared.playIfNeeded()
+        }
+
         if !AppSettings.shared.hasCompletedOnboarding {
              showOnboarding()
         } else {

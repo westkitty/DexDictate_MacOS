@@ -32,12 +32,14 @@ final class SettingsMigrationTests: XCTestCase {
     func testMigrationNormalizesInvalidStoredValues() throws {
         defaults.set("Bad Theme", forKey: "appearanceTheme_stored")
         defaults.set("Bad Engine", forKey: "selectedEngine")
+        defaults.set("Bad Mode", forKey: "localizationMode_v1")
         defaults.set(Data("not-json".utf8), forKey: "userShortcutData")
 
         SettingsMigrationCoordinator(store: defaults).migrateIfNeeded()
 
         XCTAssertEqual(defaults.string(forKey: "appearanceTheme_stored"), AppSettings.AppearanceTheme.system.rawValue)
         XCTAssertEqual(defaults.string(forKey: "selectedEngine"), AppSettings.TranscriptionEngineType.whisper.rawValue)
+        XCTAssertEqual(defaults.string(forKey: "localizationMode_v1"), AppProfile.standard.rawValue)
 
         let shortcutData = try XCTUnwrap(defaults.data(forKey: "userShortcutData"))
         let decoded = try JSONDecoder().decode(AppSettings.UserShortcut.self, from: shortcutData)

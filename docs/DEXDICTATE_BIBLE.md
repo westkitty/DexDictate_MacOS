@@ -3008,3 +3008,659 @@ Rationale:
   - the fix prevents the confirmed `Bundle.module` crash class in current package layouts, but a future bundle rename would require updating the explicit resource-bundle name in `Safety`
   - local Gatekeeper warning persists until notarization/stapling is part of the release pipeline
 - Next step: include this runtime fix in the next shipped build and smoke-test the menu-bar open path on the packaged app before publishing.
+
+### 18.73 Ledger Entry B-0024
+
+- Entry ID: B-0024
+- Timestamp: 2026-03-18 America/Detroit
+- Improvement ID(s): project bible maintenance protocol and current-state capture
+- Goal: formalize the additive-only Bible update workflow and record the current repository state so future steps have an explicit baseline.
+- Why now: a persistent project record was requested for every subsequent work step, and the repository already contained a partial Bible rather than needing a new one.
+- Dependency context: documentation-only change grounded in the current repository and git state.
+- Files likely or actually changed:
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Low. This is process documentation only.
+- Invariant check:
+  - no runtime behavior changes
+  - no permission-order changes
+  - no packaging changes
+  - no asset pipeline changes
+  - no commit or push required for this step
+- What was attempted:
+  - searched the repository for an existing Bible or equivalent running log
+  - confirmed that `docs/DEXDICTATE_BIBLE.md` already exists and already declares itself additive-only
+  - reviewed the current repository state, recent git history, and outstanding worktree state
+  - appended this ledger entry so the Bible now explicitly records the operating rule for future additive updates
+- What succeeded:
+  - confirmed the canonical project Bible path is `docs/DEXDICTATE_BIBLE.md`
+  - confirmed the Bible should be continued rather than replaced
+  - established that future work steps should append new ledger entries or addenda rather than rewriting prior history
+  - recorded the current project snapshot below for future reference
+- What failed:
+  - nothing failed in this step
+- What was rolled back:
+  - nothing was rolled back
+- Tests run:
+  - none; documentation-only step
+- Metrics captured:
+  - current branch: `main`
+  - most recent pushed commit: `5395169` (`Organize and normalize icon asset variants`)
+  - previous pushed commit in this run of work: `183c499` (`Refine menu bar icon modes and install flow`)
+- Regressions checked:
+  - none; no product code changed
+- Remaining risks:
+  - the Bible will only remain complete if future changes continue to append to it consistently
+  - process documentation does not enforce itself; omissions remain possible if a future change skips the append step
+- Next step: whenever substantive work is performed, append a new ledger entry or addendum here describing the goal, actual changes, verification, and residual risks.
+
+### 18.74 Addendum A-0016
+
+- Timestamp: 2026-03-18 America/Detroit
+- Scope: current project state snapshot after menu-bar icon and asset normalization work
+- Current state:
+  - DexDictate is presently positioned as a menu-bar-first macOS dictation app with `LSUIElement` behavior in the installed app flow and `/Applications` as the preferred install target in `build.sh`
+  - the repository contains an expanded menu-bar icon system with microphone, microphone-plus-text, Dex icon, logo-only, and emoji icon display modes
+  - recent work added menu-bar icon processing and display logic in `Sources/DexDictate/MenuBarIconController.swift`
+  - recent work expanded menu-bar settings persistence in `Sources/DexDictateKit/Settings/AppSettings.swift`
+  - recent work expanded quick settings UI behavior in `Sources/DexDictate/QuickSettingsView.swift`
+  - recent work updated menu-bar labeling and active-state presentation in `Sources/DexDictate/DexDictateApp.swift`
+  - the asset folder now contains named icon variants instead of timestamp-named exports:
+    - standard set `dexdictate-icon-standard-01.png` through `dexdictate-icon-standard-11.png`
+    - standard source sheets `dexdictate-icon-standard-sheet-01.png` and `dexdictate-icon-standard-sheet-02.png`
+    - Canada set `dexdictate-icon-canada-01.png` through `dexdictate-icon-canada-05.png`
+    - Aussie set `dexdictate-icon-aussie-01.png` and `dexdictate-icon-aussie-02.png`
+  - `assets/ICON_VARIANTS.md` currently documents the standard, Canada, and Aussie icon variant groups
+  - `README.md` now references `assets/dexdictate-icon-standard-05.png` instead of the deleted legacy `assets/icon.png`
+- Current worktree note:
+  - at the time of this addendum, the only known unrelated untracked files in the worktree are:
+    - `assets/grok-video-4c77a3a4-ef43-4e4f-a620-db0b57a5025d (1).mp4`
+    - `assets/into_animation.mp4`
+- Process rule:
+  - from this point forward, treat this Bible as the canonical additive record of substantive project steps
+  - append new entries; do not rewrite prior entries except by adding corrective addenda
+
+### 18.75 Ledger Entry B-0025
+
+- Entry ID: B-0025
+- Timestamp: 2026-03-18 America/Detroit
+- Improvement ID(s): profile-mode foundation
+- Goal: add the minimal persisted mode/profile foundation required for Standard, Canadian, and Aussie content switching.
+- Why now: the quote packs, bundled vocabulary packs, watermark pools, and Quick Settings controls all depend on a stable shared mode model first.
+- Dependency context: follows the Bible workflow baseline in B-0024 and the current menu-bar app structure already present in the repository.
+- Files likely or actually changed:
+  - `Sources/DexDictateKit/Profiles/AppProfile.swift`
+  - `Sources/DexDictateKit/Profiles/ProfileManager.swift`
+  - `Sources/DexDictateKit/Settings/AppSettings.swift`
+  - `Sources/DexDictateKit/Settings/SettingsMigration.swift`
+  - `Sources/DexDictate/DexDictateApp.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Low to medium. This adds persisted state and a new shared observable object, but it does not yet change runtime dictation behavior.
+- Invariant check:
+  - Standard remains the default mode
+  - no hidden activation behavior was introduced
+  - no vocabulary persistence semantics changed yet
+  - no asset runtime behavior changed yet
+- What was attempted:
+  - added a new `AppProfile` enum with `standard`, `canadian`, and `aussie`
+  - added a shared `ProfileManager` that tracks and updates the active profile through `AppSettings`
+  - added persisted settings keys for localization mode, ticker visibility, and ticker animation defaults
+  - updated settings reset behavior so the new profile/ticker values restore to the intended defaults
+  - updated settings migration to normalize invalid stored mode values back to Standard
+  - injected the new profile manager into the main app view tree
+- What succeeded:
+  - the project now has a concrete persisted mode foundation instead of ad hoc future hooks
+  - the app settings layer now exposes the defaults required by the acceptance criteria for Standard mode and ticker behavior
+  - the app scene now has a single observable profile manager ready for the upcoming quote, vocabulary, and watermark wiring
+- What failed:
+  - nothing failed in this step
+- What was rolled back:
+  - nothing was rolled back
+- Tests run:
+  - none yet; verification is deferred until the feature stack is wired far enough to compile and exercise meaningfully
+- Regressions checked:
+  - manual source inspection confirmed no existing menu-bar display mode settings were removed
+  - manual source inspection confirmed restore-defaults behavior still resets the existing pre-feature settings
+- Remaining risks:
+  - `ProfileManager` is only a foundation at this point; later steps still need to bind real content packs and refresh behavior to it
+  - schema version advancement will require test updates later in the implementation sequence
+- Next step: refactor vocabulary layering so bundled regional vocabulary can be applied transiently without contaminating the user-owned custom vocabulary store.
+
+### 18.76 Ledger Entry B-0026
+
+- Entry ID: B-0026
+- Timestamp: 2026-03-18 America/Detroit
+- Improvement ID(s): vocabulary layering split
+- Goal: separate persisted user custom vocabulary from transient bundled mode vocabulary without breaking the existing custom vocabulary editor workflow.
+- Why now: the regional profile feature requires bundled recognition terms that must never be written into the user’s saved custom vocabulary store.
+- Dependency context: builds directly on the new profile foundation from B-0025.
+- Files likely or actually changed:
+  - `Sources/DexDictateKit/VocabularyManager.swift`
+  - `Sources/DexDictateKit/TranscriptionEngine.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Medium. This touches the text post-processing pipeline that runs on every transcription result.
+- Invariant check:
+  - the `customVocabulary` persistence key remains the user-owned storage location
+  - the custom vocabulary UI contract still points at `VocabularyManager.items`
+  - dictation command handling still happens before vocabulary replacement
+  - profanity filtering still happens after vocabulary replacement
+- What was attempted:
+  - added a transient bundled vocabulary layer to `VocabularyManager`
+  - added an `effectiveItems` merge view that combines bundled vocabulary and user custom vocabulary while allowing user entries to override bundled entries with the same source token
+  - kept `apply(to:)` scoped to the custom layer for compatibility with existing callers
+  - added `applyEffective(to:)` for the combined runtime vocabulary path
+  - updated `TranscriptionEngine.finalizeTranscription` to use the effective vocabulary set after command handling and before profanity filtering
+- What succeeded:
+  - bundled vocabulary can now be activated at runtime without being saved into `UserDefaults`
+  - the user custom vocabulary store remains isolated and editable on its own
+  - the dictation pipeline now has the exact seam needed for per-mode vocabulary packs
+- What failed:
+  - nothing failed in this step
+- What was rolled back:
+  - nothing was rolled back
+- Tests run:
+  - none yet; runtime and unit verification are deferred until the profile-bound vocabulary packs are added
+- Regressions checked:
+  - source inspection confirmed `VocabularySettingsView` still reads and edits only `vocabularyManager.items`
+  - source inspection confirmed `TranscriptionEngine` still applies vocabulary after `CommandProcessor`
+- Remaining risks:
+  - effective vocabulary ordering is currently only merged by normalized source phrase, so the upcoming bundled packs still need careful authoring to avoid self-conflicting entries
+  - tests still need to be added for persistence isolation and effective-layer behavior
+- Next step: add the flavor-line model and ticker manager so per-mode quote selection and recent-history avoidance can be wired cleanly.
+
+### 18.77 Ledger Entry B-0027
+
+- Entry ID: B-0027
+- Timestamp: 2026-03-18 America/Detroit
+- Improvement ID(s): quote model and ticker selection manager
+- Goal: add the minimal runtime model and selection logic needed for single-line quote rotation by profile.
+- Why now: the app needs a stable selector before the three 100-line quote packs are added and wired to popover-open refreshes.
+- Dependency context: uses the new `AppProfile` foundation from B-0025 and prepares for the per-profile quote packs that follow next.
+- Files likely or actually changed:
+  - `Sources/DexDictateKit/Quotes/FlavorLine.swift`
+  - `Sources/DexDictateKit/Quotes/FlavorTickerManager.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Low. This adds isolated content-selection logic but does not yet affect visible UI.
+- Invariant check:
+  - quote storage uses raw strings only
+  - immediate repeats are explicitly blocked when the pack size allows
+  - the manager prefers avoiding the last 5 shown lines when the pack size allows
+  - no quote list UI was added
+- What was attempted:
+  - added a `FlavorLine` model that stores raw quote text and exposes a stable identifier
+  - added a `FlavorTickerManager` with per-profile recent-history tracking
+  - implemented selection fallback order: avoid recent five when possible, otherwise avoid only the immediate prior line, otherwise fall back to the full pack
+- What succeeded:
+  - the app now has a focused quote-rotation primitive that fits the acceptance criteria without introducing a larger framework
+  - the manager is profile-aware, which keeps Standard, Canadian, and Aussie recent-history state independent
+- What failed:
+  - nothing failed in this step
+- What was rolled back:
+  - nothing was rolled back
+- Tests run:
+  - none yet; quote-pack and profile-manager wiring still need to be added before the tests are meaningful
+- Regressions checked:
+  - source inspection confirmed the new quote model does not introduce numbering or metadata into the stored strings
+- Remaining risks:
+  - recent-history avoidance quality depends on pack size and exact content uniqueness, so the upcoming packs still need precise authoring
+  - `FlavorTickerManager` is not yet bound to UI refresh events
+- Next step: add the exact Standard, Canadian, and Aussie quote packs with 100 entries each.
+
+### 18.78 Ledger Entry B-0028
+
+- Entry ID: B-0028
+- Timestamp: 2026-03-18 America/Detroit
+- Improvement ID(s): profile quote packs
+- Goal: add the three concrete quote packs required for Standard, Canadian, and Aussie mode behavior.
+- Why now: the ticker manager from B-0027 needs real per-profile content before UI and refresh wiring can be completed.
+- Dependency context: builds on the `FlavorLine` and `FlavorTickerManager` types introduced in B-0027.
+- Files likely or actually changed:
+  - `Sources/DexDictateKit/Quotes/FlavorQuotePacks.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Low. This is content data addition with no runtime binding yet.
+- Invariant check:
+  - exactly three quote packs were added
+  - each pack stores raw text strings only, without numbering
+  - the packs map directly to `standard`, `canadian`, and `aussie`
+- What was attempted:
+  - added a single quote-pack source file exposing pack lookup by `AppProfile`
+  - loaded the provided Standard quote pack into code
+  - loaded the provided Canadian quote pack into code
+  - loaded the provided Aussie quote pack into code
+  - counted the resulting entries to ensure each pack contains exactly 100 lines
+- What succeeded:
+  - Standard pack count verified at 100
+  - Canadian pack count verified at 100
+  - Aussie pack count verified at 100
+  - the runtime now has a clean content source for per-profile quote selection
+- What failed:
+  - nothing failed in this step
+- What was rolled back:
+  - nothing was rolled back
+- Tests run:
+  - ad hoc count verification with `awk` against `Sources/DexDictateKit/Quotes/FlavorQuotePacks.swift`
+- Regressions checked:
+  - source inspection confirmed there is no numbering or list-style rendering metadata embedded in the stored quote strings
+- Remaining risks:
+  - the quote packs are present but not yet connected to the popover-open refresh path
+  - quote display and motion behavior still need UI work to satisfy the acceptance criteria
+- Next step: add the bundled Standard, Canadian, and Aussie vocabulary packs, keeping them separate from persisted custom vocabulary.
+
+### 18.79 Ledger Entry B-0029
+
+- Entry ID: B-0029
+- Timestamp: 2026-03-18 America/Detroit
+- Improvement ID(s): bundled profile vocabulary packs
+- Goal: add transient Standard, Canadian, and Aussie bundled vocabulary packs for runtime recognition and correction support.
+- Why now: the new layered vocabulary system from B-0026 needs concrete per-profile data before mode switching can be made meaningful.
+- Dependency context: depends on the bundled/custom layering split introduced in B-0026.
+- Files likely or actually changed:
+  - `Sources/DexDictateKit/Vocabulary/BundledVocabularyPacks.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Medium. Content quality matters because these entries will influence post-recognition text replacement once wired.
+- Invariant check:
+  - bundled vocabulary remains separate from the persisted `customVocabulary` storage
+  - the data is authored as recognition/correction pairs rather than as user-edited settings
+  - the packs are keyed directly by the three supported profiles only
+- What was attempted:
+  - added a bundled vocabulary source for `standard`, `canadian`, and `aussie`
+  - included app-specific and general dictation correction terms in the Standard pack
+  - included Canadian spelling/slang plus Canadian queer-community terminology in the Canadian pack
+  - included Australian spelling/slang plus Australian queer/reclaimed vernacular support in the Aussie pack
+  - documented in comments that the bundled packs are transient runtime data and must not replace the user-owned custom layer
+- What succeeded:
+  - the project now has concrete per-profile bundled vocabulary data to apply through the new effective-layer API
+  - requested regional and queer-vernacular support is present in the bundled packs rather than being pushed into user settings
+- What failed:
+  - nothing failed in this step
+- What was rolled back:
+  - nothing was rolled back
+- Tests run:
+  - none yet; persistence isolation and runtime application tests are deferred to the verification phase
+- Regressions checked:
+  - source inspection confirmed `VocabularySettingsView` still has no path to mutate the bundled packs directly
+- Remaining risks:
+  - replacement phrase quality will need real runtime coverage through tests to catch overly broad or conflicting entries
+  - the packs are not yet connected to `ProfileManager`, so they are still dormant data
+- Next step: add the packaged watermark asset provider and exact runtime icon pools, excluding the two standard sheet files.
+
+### 18.80 Ledger Entry B-0030
+
+- Entry ID: B-0030
+- Timestamp: 2026-03-18 America/Detroit
+- Improvement ID(s): runtime watermark asset provider
+- Goal: package the finalized icon variants into the app bundle and expose them through an exact per-profile runtime provider.
+- Why now: the popover-open refresh requirement needs a packaged runtime icon source of truth rather than the loose top-level asset directory.
+- Dependency context: relies on the previously normalized icon filenames already documented in the repository asset manifest.
+- Files likely or actually changed:
+  - `Sources/DexDictateKit/Profiles/WatermarkAssetProvider.swift`
+  - `Sources/DexDictateKit/Resources/ProfileAssets/Icons/dexdictate-icon-standard-01.png`
+  - `Sources/DexDictateKit/Resources/ProfileAssets/Icons/dexdictate-icon-standard-02.png`
+  - `Sources/DexDictateKit/Resources/ProfileAssets/Icons/dexdictate-icon-standard-03.png`
+  - `Sources/DexDictateKit/Resources/ProfileAssets/Icons/dexdictate-icon-standard-04.png`
+  - `Sources/DexDictateKit/Resources/ProfileAssets/Icons/dexdictate-icon-standard-05.png`
+  - `Sources/DexDictateKit/Resources/ProfileAssets/Icons/dexdictate-icon-standard-06.png`
+  - `Sources/DexDictateKit/Resources/ProfileAssets/Icons/dexdictate-icon-standard-07.png`
+  - `Sources/DexDictateKit/Resources/ProfileAssets/Icons/dexdictate-icon-standard-08.png`
+  - `Sources/DexDictateKit/Resources/ProfileAssets/Icons/dexdictate-icon-standard-09.png`
+  - `Sources/DexDictateKit/Resources/ProfileAssets/Icons/dexdictate-icon-standard-10.png`
+  - `Sources/DexDictateKit/Resources/ProfileAssets/Icons/dexdictate-icon-standard-11.png`
+  - `Sources/DexDictateKit/Resources/ProfileAssets/Icons/dexdictate-icon-canada-01.png`
+  - `Sources/DexDictateKit/Resources/ProfileAssets/Icons/dexdictate-icon-canada-02.png`
+  - `Sources/DexDictateKit/Resources/ProfileAssets/Icons/dexdictate-icon-canada-03.png`
+  - `Sources/DexDictateKit/Resources/ProfileAssets/Icons/dexdictate-icon-canada-04.png`
+  - `Sources/DexDictateKit/Resources/ProfileAssets/Icons/dexdictate-icon-canada-05.png`
+  - `Sources/DexDictateKit/Resources/ProfileAssets/Icons/dexdictate-icon-aussie-01.png`
+  - `Sources/DexDictateKit/Resources/ProfileAssets/Icons/dexdictate-icon-aussie-02.png`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Medium. This introduces packaged runtime assets and new selection behavior that later UI code will depend on.
+- Invariant check:
+  - runtime filename pools are explicit and profile-bound
+  - no `dexdictate-icon-standard-sheet-01.png` or `dexdictate-icon-standard-sheet-02.png` entries are present in the runtime provider
+  - asset selection prefers not to repeat the last icon for a given profile when multiple variants exist
+- What was attempted:
+  - copied the finalized runtime icon variants into `Sources/DexDictateKit/Resources/ProfileAssets/Icons/`
+  - added a `WatermarkAsset` model for packaged runtime assets
+  - added a `WatermarkAssetProvider` that resolves bundled URLs from the resource bundle
+  - hard-coded the exact profile-to-filename manifest required by the acceptance criteria
+  - added non-repeating random selection logic per profile
+- What succeeded:
+  - the runtime now has a packaged source of truth for Standard, Canadian, and Aussie watermark/icon variant pools
+  - the two standard sheet files are structurally excluded from the runtime manifest rather than merely being ignored by convention
+- What failed:
+  - nothing failed in this step
+- What was rolled back:
+  - nothing was rolled back
+- Tests run:
+  - none yet; bundle and provider verification will be added in the final verification phase
+- Regressions checked:
+  - manual manifest inspection confirmed the provider lists exactly 11 Standard variants, 5 Canadian variants, and 2 Aussie variants
+- Remaining risks:
+  - the provider is not yet wired into the popover and HUD watermark surfaces
+  - bundle verification still needs tests to confirm the copied assets are available in built artifacts
+- Next step: add the single-line ticker UI under the app title and above the history panel.
+
+### 18.81 Ledger Entry B-0031
+
+- Entry ID: B-0031
+- Timestamp: 2026-03-18 America/Detroit
+- Improvement ID(s): flavor ticker UI
+- Goal: add the single-line quote ticker to the main popover under the app title and above transcription history.
+- Why now: the quote system needs a visible presentation surface before mode controls and popover refresh behavior can be considered complete.
+- Dependency context: depends on the quote model and pack work in B-0027 and B-0028.
+- Files likely or actually changed:
+  - `Sources/DexDictate/FlavorTickerView.swift`
+  - `Sources/DexDictate/DexDictateApp.swift`
+  - `Sources/DexDictateKit/Profiles/ProfileManager.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Medium. This adds new layout and animation behavior in the primary menu-bar popover UI.
+- Invariant check:
+  - the ticker is inserted directly under the `DexDictate` title
+  - the ticker sits above `HistoryView`
+  - the ticker is single-line only
+  - the ticker does not render all quotes at once
+  - ticker animation is gated by both the app setting and the system Reduce Motion setting
+- What was attempted:
+  - added a dedicated `FlavorTickerView` with a fixed-height single-line container
+  - added width measurement so marquee motion only activates when the quote overflows the available width
+  - added fade-edge masking for a more stable ticker presentation
+  - added scroll-reset behavior when text or width changes
+  - expanded `ProfileManager` so it now owns current quote state and can refresh it later from the popover-open hook
+  - inserted the ticker view into the main popover layout under the title and above history
+- What succeeded:
+  - the popover now has the required ticker placement and single-line presentation shell
+  - static display is used automatically when text fits or when motion should be suppressed
+  - Reduce Motion now has a direct path to override ticker animation even if the app setting remains enabled
+- What failed:
+  - nothing failed in this step
+- What was rolled back:
+  - nothing was rolled back
+- Tests run:
+  - none yet; visual behavior and overflow conditions will be covered by source-based verification and unit checks later
+- Regressions checked:
+  - source inspection confirmed `HistoryView` remains a separate panel below the new ticker
+  - source inspection confirmed the ticker does not alter the existing history data model or controls
+- Remaining risks:
+  - the ticker is present but still needs quote-refresh wiring so it shows fresh content on popover open
+  - the current ticker state source is not yet synchronized with profile-driven vocabulary and watermark refresh behavior
+- Next step: add the visible Quick Settings controls for mode selection, return-to-standard, and ticker preferences.
+
+### 18.82 Ledger Entry B-0032
+
+- Entry ID: B-0032
+- Timestamp: 2026-03-18 America/Detroit
+- Improvement ID(s): quick settings mode controls
+- Goal: expose the new profile and ticker controls as normal visible Quick Settings UI.
+- Why now: the hidden-activation idea was explicitly rejected, so the mode system must be user-facing and directly controllable.
+- Dependency context: builds on the persisted profile settings from B-0025 and the ticker UI shell from B-0031.
+- Files likely or actually changed:
+  - `Sources/DexDictate/QuickSettingsView.swift`
+  - `Sources/DexDictate/DexDictateApp.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Medium. This changes the primary settings UI and introduces new runtime state changes from user interaction.
+- Invariant check:
+  - Quick Settings visibly includes Standard, Canadian, and Aussie
+  - a visible `Return to Standard` action appears whenever the active profile is not Standard
+  - quote strip visibility remains a separate toggle
+  - quote strip animation remains a separate toggle
+  - switching profiles does not silently overwrite those ticker preferences
+- What was attempted:
+  - added a new Quick Settings mode section with a visible picker bound to `AppProfile`
+  - added a visible `Return to Standard` button for non-Standard modes
+  - added `Show Flavor Ticker` and `Animate Flavor Ticker` toggles
+  - added explanatory text clarifying that macOS Reduce Motion still overrides ticker animation
+  - synchronized mode changes from Quick Settings into bundled vocabulary and refreshed profile content immediately
+- What succeeded:
+  - mode selection is now a normal visible user-facing control
+  - the settings UI now exposes separate display and motion controls for the ticker as required
+  - profile switches already refresh the content state that the upcoming popover-open hook will also use
+- What failed:
+  - nothing failed in this step
+- What was rolled back:
+  - nothing was rolled back
+- Tests run:
+  - none yet; settings and profile tests still need to be added in the verification phase
+- Regressions checked:
+  - source inspection confirmed the existing custom vocabulary management button still opens the same dedicated editor window
+  - source inspection confirmed no hidden footer activation logic was introduced
+- Remaining risks:
+  - the popover-open refresh path still needs explicit wiring so every open selects a fresh quote and icon
+  - watermark surfaces are not yet consuming the new provider-driven asset state
+- Next step: wire the popover-open refresh behavior and provider-driven content refresh path through the existing `MenuBarExtra` lifecycle hook.
+
+### 18.83 Ledger Entry B-0033
+
+- Entry ID: B-0033
+- Timestamp: 2026-03-18 America/Detroit
+- Improvement ID(s): popover-open refresh wiring
+- Goal: use the existing menu-bar popover lifecycle hook to refresh quote and watermark content on every open.
+- Why now: the acceptance criteria explicitly require fresh quote and icon selection every time the menubar popover opens.
+- Dependency context: relies on the ticker/view state from B-0031 and the watermark provider from B-0030.
+- Files likely or actually changed:
+  - `Sources/DexDictate/DexDictateApp.swift`
+  - `Sources/DexDictate/FloatingHUD.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Medium. This changes the behavior that runs on every popover open and touches two visible watermark surfaces.
+- Invariant check:
+  - the existing `MenuBarExtra` `.onAppear` path is used as the refresh hook
+  - no brittle low-level click detection was added
+  - a new quote is selected on every popover open
+  - a new profile-bound watermark asset is selected on every popover open
+  - the main popover watermark now uses provider-driven assets
+- What was attempted:
+  - added bundled vocabulary synchronization to the popover `.onAppear` path
+  - added `ProfileManager.refreshDynamicContent()` to the popover `.onAppear` path
+  - switched the main popover watermark image from the hardcoded app icon asset to the selected provider-driven watermark asset with a safe fallback
+  - extended the floating HUD setup so it can consume the same `ProfileManager` watermark state without introducing separate asset logic
+  - switched the floating HUD watermark image to the provider-driven selection with the old app-icon watermark as a fallback
+- What succeeded:
+  - the popover now has the requested refresh behavior at the existing safest lifecycle seam
+  - the main popover watermark randomization is now profile-aware and selection-driven
+  - the floating HUD now reuses the same provider-driven watermark state cleanly
+- What failed:
+  - nothing failed in this step
+- What was rolled back:
+  - nothing was rolled back
+- Tests run:
+  - none yet; source-based verification and bundle/resource tests still need to be updated
+- Regressions checked:
+  - source inspection confirmed the engine one-time startup guard remains in place and is not bypassed by the new content refresh calls
+  - source inspection confirmed the popover refresh logic runs before the engine startup guard, which is necessary for repeated content refreshes
+- Remaining risks:
+  - intro assets and the launch-only intro controller are still pending
+  - full verification is still needed to ensure the packaged resource paths resolve correctly in built artifacts
+- Next step: prepare the canonical intro animation resources in the package bundle and preserve the alternate asset as packaged-but-unused runtime data.
+
+### 18.84 Ledger Entry B-0034
+
+- Entry ID: B-0034
+- Timestamp: 2026-03-18 America/Detroit
+- Improvement ID(s): canonical intro asset preparation
+- Goal: package the chosen intro animation and the prepared alternate under stable canonical resource names for runtime use.
+- Why now: the launch intro controller needs bundle-stable resource names before playback logic can be implemented safely.
+- Dependency context: uses the untracked source MP4 files that were already present in the worktree and documented in the Bible baseline addendum.
+- Files likely or actually changed:
+  - `Sources/DexDictateKit/Resources/ProfileAssets/Intro/IntroAnimation.mp4`
+  - `Sources/DexDictateKit/Resources/ProfileAssets/Intro/IntroAnimation_AltPrepared.mp4`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Low to medium. This adds packaged binary resources but does not yet change runtime behavior.
+- Invariant check:
+  - only the packaged resource names were normalized; the top-level source MP4 files were preserved
+  - the preferred runtime asset is `IntroAnimation`
+  - the alternate asset is preserved as `IntroAnimation_AltPrepared`
+  - no runtime code points at the alternate asset yet
+- What was attempted:
+  - copied `assets/into_animation.mp4` into the resource bundle as `ProfileAssets/Intro/IntroAnimation.mp4`
+  - copied `assets/grok-video-4c77a3a4-ef43-4e4f-a620-db0b57a5025d (1).mp4` into the resource bundle as `ProfileAssets/Intro/IntroAnimation_AltPrepared.mp4`
+  - preserved the original top-level untracked inputs instead of renaming or deleting them
+- What succeeded:
+  - the package now contains the canonical intro animation runtime asset name required by the implementation plan
+  - the package also contains a clearly prepared-but-unused alternate asset name for future use
+- What failed:
+  - nothing failed in this step
+- What was rolled back:
+  - nothing was rolled back
+- Tests run:
+  - none yet; bundle presence tests will be added in the verification phase
+- Regressions checked:
+  - manual file inspection confirmed the canonical packaged names exist under `Sources/DexDictateKit/Resources/ProfileAssets/Intro/`
+- Remaining risks:
+  - the current assets still contain original media streams; runtime code still needs to force muted playback and ignore the alternate
+  - launch-only presentation logic is still pending
+- Next step: add the transparent launch intro panel/controller and session guard so the canonical intro asset plays once per app launch and never on popover open.
+
+### 18.85 Ledger Entry B-0035
+
+- Entry ID: B-0035
+- Timestamp: 2026-03-18 America/Detroit
+- Improvement ID(s): launch intro controller
+- Goal: add a launch-only transparent intro overlay that plays the canonical intro animation once per app session.
+- Why now: the packaged intro asset from B-0034 now has a stable runtime name and can finally be wired into app launch behavior.
+- Dependency context: depends on the packaged `IntroAnimation.mp4` resource prepared in B-0034.
+- Files likely or actually changed:
+  - `Sources/DexDictate/LaunchIntroController.swift`
+  - `Sources/DexDictate/DexDictateApp.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Medium. This introduces new AppKit windowing behavior and AV playback at launch.
+- Invariant check:
+  - the intro runs only once per app launch/session
+  - the intro is triggered from app launch, not from popover open
+  - only `IntroAnimation` is wired into runtime behavior
+  - playback is forced muted in code
+  - the exit path uses approximate top-bar convergence rather than attempting brittle menu-bar icon frame detection
+- What was attempted:
+  - added a new `LaunchIntroController` singleton with an in-session replay guard
+  - added a transparent, non-activating `NSPanel` for the intro overlay
+  - added a circular SwiftUI/AppKit player surface backed by `AVPlayerLayer`
+  - configured `AVPlayer` to play the canonical intro asset muted with no audio reliance
+  - added a launch hook in `applicationDidFinishLaunching` to trigger the intro exactly once per session
+  - scheduled a fade-in, play, shrink, upward travel, and fade-out sequence based on the intro duration
+- What succeeded:
+  - the app now has a discrete launch-only intro path using the packaged canonical asset
+  - the intro path is isolated from the popover lifecycle, so it will not replay when the menubar popover opens
+  - the alternate intro asset remains unused at runtime as required
+- What failed:
+  - nothing failed in this step
+- What was rolled back:
+  - nothing was rolled back
+- Tests run:
+  - none yet; build and source verification are still pending in the final phase
+- Regressions checked:
+  - source inspection confirmed the intro uses `IntroAnimation` only and does not reference `IntroAnimation_AltPrepared`
+  - source inspection confirmed the launch trigger is attached to `applicationDidFinishLaunching` rather than the popover path
+- Remaining risks:
+  - compile-time validation is still needed for the new AppKit and AVFoundation code paths
+  - runtime polish still depends on final build verification because media playback and window animation are sensitive to resource resolution
+- Next step: update tests and verification, build the package, run the test suite and verification runner, then fix any compile or behavior regressions that surface.
+
+### 18.86 Ledger Entry B-0036
+
+- Entry ID: B-0036
+- Timestamp: 2026-03-18 America/Detroit
+- Improvement ID(s): final verification and cleanup for profile/ticker/intro feature set
+- Goal: validate the full feature stack, fix surfaced regressions, and leave the repository in a clean compilable state with a built app bundle.
+- Why now: all feature phases were implemented, so the remaining work was verification, regression fixes, and final packaging confirmation.
+- Dependency context: closes out the work started in B-0025 through B-0035.
+- Files likely or actually changed:
+  - `Tests/DexDictateTests/AppSettingsRestoreDefaultsTests.swift`
+  - `Tests/DexDictateTests/ProfileContentTests.swift`
+  - `Tests/DexDictateTests/ResourceBundleTests.swift`
+  - `Tests/DexDictateTests/SettingsMigrationTests.swift`
+  - `Tests/DexDictateTests/VocabularyLayeringTests.swift`
+  - `Sources/VerificationRunner/main.swift`
+  - `Sources/DexDictateKit/Profiles/WatermarkAssetProvider.swift`
+  - `Sources/DexDictate/LaunchIntroController.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Medium, now reduced by passing verification. This step touched tests plus resource resolution for the new packaged assets.
+- Invariant check:
+  - Standard remains the default mode
+  - ticker visibility and ticker animation remain default-on settings
+  - custom vocabulary persistence remains separate from bundled mode vocabulary
+  - runtime icon pools still exclude the two `standard-sheet` files
+  - only `IntroAnimation` is referenced by runtime code
+- What was attempted:
+  - ran `swift build` to compile the package and surfaced actor-isolation issues in `ProfileManager`
+  - fixed actor-isolated default-parameter construction in `ProfileManager`
+  - added test coverage for new settings defaults, profile content behavior, watermark manifest integrity, layered vocabulary persistence, and canonical resource presence
+  - updated `VerificationRunner` to check provider-driven watermark usage, ticker presence, layered vocabulary usage, and persisted profile settings
+  - ran `swift test` and found resource-resolution failures caused by SwiftPM flattening the copied intro and icon resources at bundle build time
+  - fixed `WatermarkAssetProvider`, `LaunchIntroController`, and resource-bundle tests to resolve the actual flattened bundle layout
+  - cleaned the remaining launch-intro compile warnings by removing deprecated duration usage and moving completion cleanup back onto the main actor
+  - reran `swift test`, `swift run VerificationRunner`, and the app-bundle `./build.sh` flow
+- What succeeded:
+  - `swift build` passed
+  - `swift test` passed with 40 tests and 0 failures
+  - `swift run VerificationRunner` passed with 57 checks and 0 failures
+  - `./build.sh` completed successfully and installed the signed app bundle to `/Applications/DexDictate.app`
+  - the runtime resource lookup bug for packaged intro/icon assets was fixed before closing the work
+- What failed:
+  - the first `swift build` failed on actor-isolated default initializer usage in `ProfileManager`
+  - the first `swift test` run failed because the new resource lookups assumed preserved subdirectories in the built SwiftPM bundle
+- What was rolled back:
+  - no feature work was rolled back; only the incorrect resource lookup assumptions were corrected in place
+- Tests run:
+  - `swift build`
+  - `swift test`
+  - `swift run VerificationRunner`
+  - `./build.sh`
+- Metrics captured:
+  - XCTest summary: 40 tests, 0 failures
+  - VerificationRunner summary: 57 checks, 0 failures
+  - app bundle install path: `/Applications/DexDictate.app`
+- Regressions checked:
+  - provider-driven watermark state is now confirmed in both the main popover and the floating HUD source checks
+  - resource bundle checks now confirm canonical intro assets and runtime icon variants are packaged
+  - layered vocabulary tests confirm bundled vocabulary does not persist into the custom vocabulary store
+- Remaining risks:
+  - launch intro motion is based on approximate top-center convergence rather than a real menu-bar icon frame by design
+  - the packaged intro media still contains its original source streams, but runtime playback is muted and only the canonical asset is used
+- Next step: smoke-test the installed `/Applications/DexDictate.app` interactively to confirm the launch intro timing and ticker motion feel right in a live menu-bar session.
+
+### 18.87 Ledger Entry B-0037
+
+- Entry ID: B-0037
+- Timestamp: 2026-03-18 America/Detroit
+- Improvement ID(s): post-implementation bug sweep and regression pass
+- Goal: perform a deeper bug sweep across the new profile/ticker/intro work, correct anything real that surfaced, and rerun the widest sensible verification set.
+- Why now: after the initial feature completion pass, a second correctness-focused sweep was requested instead of assuming the first green run meant the work was bulletproof.
+- Dependency context: follows the feature-complete verification state recorded in B-0036.
+- Files likely or actually changed:
+  - `Sources/DexDictateKit/Profiles/ProfileManager.swift`
+  - `Sources/DexDictate/DexDictateApp.swift`
+  - `Tests/DexDictateTests/ProfileContentTests.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Low to medium. This was a targeted correctness fix plus repeated verification, not a feature expansion.
+- Invariant check:
+  - no new feature scope was added
+  - mode selection remains Standard/Canadian/Aussie only
+  - ticker defaults remain on
+  - bundled vocabulary still remains separate from persisted custom vocabulary
+- What was attempted:
+  - manually reviewed the new profile/ticker wiring with attention to settings-driven state transitions rather than just initial popover-open behavior
+  - inspected how `Restore Defaults` and other external `localizationMode` writes propagate relative to the live `ProfileManager` state
+  - identified that the previous `ProfileManager` synchronization path depended on `settings.objectWillChange`, which can observe the old setting value and leave bundled vocabulary/current profile state stale until the popover is reopened
+  - replaced that implicit timing assumption with an explicit `synchronizeFromSettings()` path
+  - added a top-level `.onChange(of: settings.localizationMode)` handler in `DexDictateApp` to resync profile state, bundled vocabulary, and refreshed quote/watermark content whenever the stored mode changes externally
+  - added a regression test covering external settings-driven profile changes
+- What succeeded:
+  - the live profile state now resynchronizes correctly after external mode changes such as `Restore Defaults`
+  - bundled vocabulary and refreshed per-profile content no longer rely on a later popover reopen to catch up after an external mode write
+  - the new regression test passed
+- What failed:
+  - no new failures remained after the fix
+- What was rolled back:
+  - nothing was rolled back
+- Tests run:
+  - `swift test`
+  - `./scripts/run_quality_paths.sh`
+  - `./build.sh`
+- Metrics captured:
+  - XCTest summary after the sweep: 41 tests, 0 failures
+  - quality script summary: `swift build` passed and `VerificationRunner` passed with 57 checks, 0 failures
+  - rebuilt app install path: `/Applications/DexDictate.app`
+- Regressions checked:
+  - external mode changes now update `ProfileManager.activeProfile` and bundled vocabulary state immediately
+  - quote and watermark refresh behavior still remains tied to the existing popover-open hook
+  - the packaged app bundle was rebuilt after the sync fix so the installed app matches the corrected source
+- Remaining risks:
+  - this was still a code-and-automation-driven sweep; true interactive UX polish for the intro/ticker motion still benefits from live manual use
+- Next step: if deeper validation is wanted beyond automated checks, do an interactive manual smoke pass of `/Applications/DexDictate.app` focusing on menu-bar open behavior, ticker overflow motion, and the one-time launch intro timing.
