@@ -414,9 +414,9 @@ public final class TranscriptionEngine: ObservableObject {
             return
         }
 
-        // 1. Apply Custom Vocabulary
+        // 1. Apply Effective Vocabulary (bundled mode vocabulary + user custom vocabulary)
         let preProcessingText = finalText
-        finalText = vocabularyManager.apply(to: finalText)
+        finalText = vocabularyManager.applyEffective(to: finalText)
         
         // 2. Apply Profanity Filter
         if AppSettings.shared.profanityFilter {

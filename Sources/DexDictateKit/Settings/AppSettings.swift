@@ -86,6 +86,15 @@ public class AppSettings: ObservableObject {
     /// Controls how the primary menu bar item renders while idle.
     @AppStorage("menuBarDisplayMode_v1") public var menuBarDisplayMode: MenuBarDisplayMode = .micAndText
 
+    /// Controls the active bundled profile content set.
+    @AppStorage("localizationMode_v1") public var localizationMode: AppProfile = .standard
+
+    /// Whether the single-line flavor ticker is visible in the menu bar popover.
+    @AppStorage("showFlavorTicker_v1") public var showFlavorTicker: Bool = true
+
+    /// Whether the flavor ticker may animate when content overflows and motion is allowed.
+    @AppStorage("animateFlavorTicker_v1") public var animateFlavorTicker: Bool = true
+
     /// Persisted selection for the Dex icon asset.
     @AppStorage("selectedMenuBarIconIdentifier_v2") public var selectedMenuBarIconIdentifier: String = ""
 
@@ -303,6 +312,9 @@ public class AppSettings: ObservableObject {
         appearanceTheme = .system
         appearanceThemeStored = AppearanceTheme.system.rawValue
         menuBarDisplayMode = .micAndText
+        localizationMode = .standard
+        showFlavorTicker = true
+        animateFlavorTicker = true
         selectedMenuBarIconIdentifier = ""
         selectedMenuBarEmoji = "🐶"
         

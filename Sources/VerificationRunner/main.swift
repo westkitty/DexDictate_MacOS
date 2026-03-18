@@ -249,12 +249,18 @@ private func runWonderPath() {
     section("Wonder Path")
 
     let appUI = readSource("Sources/DexDictate/DexDictateApp.swift")
-    check(path, appUI.contains("AppIcon.appiconset/icon"), "main UI includes app icon watermark asset")
+    check(path, appUI.contains("currentWatermarkAsset"), "main UI uses provider-driven watermark state")
     check(path, appUI.contains("Text(\"DEXDICTATE\")"), "main UI includes visible text watermark")
+    check(path, appUI.contains("FlavorTickerView"), "main UI includes the flavor ticker under the title")
 
     let hudUI = readSource("Sources/DexDictate/FloatingHUD.swift")
-    check(path, hudUI.contains("AppIcon.appiconset/icon"), "floating HUD includes watermark asset")
+    check(path, hudUI.contains("currentWatermarkAsset"), "floating HUD uses provider-driven watermark state")
     check(path, hudUI.contains("Text(\"DEX\")"), "floating HUD includes visible watermark text")
+
+    let profileSource = readSource("Sources/DexDictateKit/Profiles/WatermarkAssetProvider.swift")
+    check(path, profileSource.contains("dexdictate-icon-standard-11.png"), "watermark provider includes full Standard runtime pool")
+    check(path, !profileSource.contains("dexdictate-icon-standard-sheet-01.png"), "watermark provider excludes standard sheet source files")
+    check(path, profileSource.contains("dexdictate-icon-aussie-02.png"), "watermark provider includes Aussie runtime pool")
 
     let engineSource = readSource("Sources/DexDictateKit/TranscriptionEngine.swift")
     let lifecycleSource = readSource("Sources/DexDictateKit/EngineLifecycle.swift")
@@ -265,7 +271,9 @@ private func runWonderPath() {
     check(path, lifecycleSource.contains("case (.transcribing, .transcriptionCompleted):"), "explicit lifecycle maps transcription completion back to ready")
     check(path, engineSource.contains("defer {\n            _ = applyLifecycle(.transcriptionCompleted"), "transcription completion still returns the engine to ready through the lifecycle model")
     check(path, engineSource.contains("outputCoordinator.deliver("), "engine routes output through explicit output coordination")
+    check(path, engineSource.contains("applyEffective(to:"), "engine applies effective layered vocabulary")
     check(path, settingsSource.contains("copyOnlyInSensitiveFields"), "settings expose secure-context copy-only control")
+    check(path, settingsSource.contains("localizationMode_v1"), "settings expose persisted profile mode")
     check(path, capturePolicySource.contains("System Default"), "audio device failover preserves system-default fallback")
     check(path, !capturePolicySource.isEmpty && !outputCoordinatorSource.isEmpty && !permissionsSource.isEmpty, "DexDictateKit is split into capture, output, and permissions subdomains")
 }

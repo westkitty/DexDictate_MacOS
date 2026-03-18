@@ -11,7 +11,7 @@ protocol SettingsStore: AnyObject {
 extension UserDefaults: SettingsStore {}
 
 struct SettingsMigrationCoordinator {
-    static let currentSchemaVersion = 1
+    static let currentSchemaVersion = 2
     static let schemaVersionKey = "settingsSchemaVersion"
 
     private let store: SettingsStore
@@ -28,6 +28,10 @@ struct SettingsMigrationCoordinator {
             migrateToVersion1()
         }
 
+        if currentVersion < 2 {
+            migrateToVersion2()
+        }
+
         store.set(Self.currentSchemaVersion, forKey: Self.schemaVersionKey)
     }
 
@@ -36,6 +40,10 @@ struct SettingsMigrationCoordinator {
         normalizeAppearanceTheme()
         normalizeSelectedEngine()
         normalizeShortcutPayload()
+    }
+
+    private func migrateToVersion2() {
+        normalizeLocalizationMode()
     }
 
     private func migrateLegacyHUDVisibility() {
@@ -74,5 +82,14 @@ struct SettingsMigrationCoordinator {
 
         let fallback = (try? JSONEncoder().encode(AppSettings.UserShortcut.defaultMiddleMouse)) ?? Data()
         store.set(fallback, forKey: "userShortcutData")
+    }
+
+    private func normalizeLocalizationMode() {
+        let storedMode = store.string(forKey: "localizationMode_v1")
+        guard AppProfile(rawValue: storedMode ?? "") == nil else {
+            return
+        }
+
+        store.set(AppProfile.standard.rawValue, forKey: "localizationMode_v1")
     }
 }

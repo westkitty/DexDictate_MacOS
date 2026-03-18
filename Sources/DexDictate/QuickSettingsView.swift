@@ -6,6 +6,7 @@ import DexDictateKit
 struct QuickSettingsView: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var scanner: AudioDeviceScanner
+    @ObservedObject var profileManager: ProfileManager
     @ObservedObject var vocabularyManager: VocabularyManager
     @ObservedObject var menuBarIconController: MenuBarIconController
     @State private var isExpanded = false
@@ -56,6 +57,50 @@ struct QuickSettingsView: View {
                 VStack(alignment: .leading, spacing: SurfaceTokens.sectionSpacing) {
                     
                     // MARK: - Feedback Section (Sound Effects)
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(NSLocalizedString("Mode", comment: ""))
+                            .font(.caption).bold().foregroundStyle(.white.opacity(0.7))
+
+                        HStack {
+                            Text(NSLocalizedString("Profile:", comment: ""))
+                                .font(.caption).foregroundStyle(.white.opacity(0.8))
+                            Spacer()
+                            Picker("", selection: Binding(
+                                get: { profileManager.activeProfile },
+                                set: { newValue in
+                                    profileManager.selectProfile(newValue)
+                                    profileManager.synchronizeBundledVocabulary(with: vocabularyManager)
+                                    profileManager.refreshDynamicContent()
+                                }
+                            )) {
+                                ForEach(AppProfile.allCases) { profile in
+                                    Text(profile.title).tag(profile)
+                                }
+                            }
+                            .labelsHidden().frame(width: 120).fixedSize()
+                        }
+
+                        if profileManager.activeProfile != .standard {
+                            Button("Return to Standard") {
+                                profileManager.returnToStandard()
+                                profileManager.synchronizeBundledVocabulary(with: vocabularyManager)
+                                profileManager.refreshDynamicContent()
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                        }
+
+                        Toggle(NSLocalizedString("Show Flavor Ticker", comment: ""), isOn: $settings.showFlavorTicker)
+                        Toggle(NSLocalizedString("Animate Flavor Ticker", comment: ""), isOn: $settings.animateFlavorTicker)
+
+                        Text(NSLocalizedString("Ticker motion still yields to macOS Reduce Motion even when animation stays enabled here.", comment: ""))
+                            .font(.caption2).foregroundStyle(.white.opacity(0.5))
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.leading, 20)
+                    }
+
+                    Divider().background(Color.white.opacity(0.3))
+
                     VStack(alignment: .leading, spacing: 8) {
                         Text(NSLocalizedString("Feedback (Sound Effects)", comment: ""))
                             .font(.caption).bold().foregroundStyle(.white.opacity(0.7))
@@ -278,6 +323,7 @@ struct QuickSettingsView: View {
             launchAtLoginController.refresh()
             launchAtLoginController.syncStoredPreference(into: settings)
             menuBarIconController.refreshAssets()
+            profileManager.synchronizeBundledVocabulary(with: vocabularyManager)
         }
         .onChange(of: settings.launchAtLogin) { _, _ in
             launchAtLoginController.refresh()

@@ -20,6 +20,9 @@ final class AppSettingsRestoreDefaultsTests: XCTestCase {
         settings.appearanceTheme = .highContrast
         settings.selectedEngine = .whisper
         settings.menuBarDisplayMode = .customIcon
+        settings.localizationMode = .aussie
+        settings.showFlavorTicker = false
+        settings.animateFlavorTicker = false
         settings.selectedMenuBarIconIdentifier = "Gemini_Generated_Image_9999b99999b99999.png"
         settings.selectedMenuBarEmoji = "🔥"
 
@@ -40,6 +43,9 @@ final class AppSettingsRestoreDefaultsTests: XCTestCase {
         XCTAssertEqual(settings.appearanceTheme, .system)
         XCTAssertEqual(settings.appearanceThemeStored, AppSettings.AppearanceTheme.system.rawValue)
         XCTAssertEqual(settings.menuBarDisplayMode, .micAndText)
+        XCTAssertEqual(settings.localizationMode, .standard)
+        XCTAssertTrue(settings.showFlavorTicker)
+        XCTAssertTrue(settings.animateFlavorTicker)
         XCTAssertEqual(settings.selectedMenuBarIconIdentifier, "")
         XCTAssertEqual(settings.selectedMenuBarEmoji, "🐶")
         XCTAssertEqual(settings.userShortcut, .defaultMiddleMouse)

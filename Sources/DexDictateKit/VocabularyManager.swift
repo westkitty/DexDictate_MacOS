@@ -18,6 +18,33 @@ public class VocabularyManager: ObservableObject {
             save()
         }
     }
+
+    @Published public private(set) var bundledItems: [VocabularyItem] = []
+
+    public var effectiveItems: [VocabularyItem] {
+        var mergedByOriginal: [String: VocabularyItem] = [:]
+        var orderedKeys: [String] = []
+
+        for item in bundledItems {
+            let key = item.original.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            guard !key.isEmpty else { continue }
+            if mergedByOriginal[key] == nil {
+                orderedKeys.append(key)
+            }
+            mergedByOriginal[key] = item
+        }
+
+        for item in items {
+            let key = item.original.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            guard !key.isEmpty else { continue }
+            if mergedByOriginal[key] == nil {
+                orderedKeys.append(key)
+            }
+            mergedByOriginal[key] = item
+        }
+
+        return orderedKeys.compactMap { mergedByOriginal[$0] }
+    }
     
     private let storageKey = "customVocabulary"
     
@@ -35,6 +62,22 @@ public class VocabularyManager: ObservableObject {
     }
     
     public func apply(to text: String) -> String {
+        apply(text, using: items)
+    }
+
+    public func applyEffective(to text: String) -> String {
+        apply(text, using: effectiveItems)
+    }
+
+    public func setBundledItems(_ items: [VocabularyItem]) {
+        bundledItems = items
+    }
+
+    public func clearBundledItems() {
+        bundledItems = []
+    }
+
+    private func apply(_ text: String, using items: [VocabularyItem]) -> String {
         var processed = text
         for item in items {
             // Conditional word boundaries: only apply if the pattern starts/ends with a word character
