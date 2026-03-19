@@ -3664,3 +3664,86 @@ Rationale:
 - Remaining risks:
   - this was still a code-and-automation-driven sweep; true interactive UX polish for the intro/ticker motion still benefits from live manual use
 - Next step: if deeper validation is wanted beyond automated checks, do an interactive manual smoke pass of `/Applications/DexDictate.app` focusing on menu-bar open behavior, ticker overflow motion, and the one-time launch intro timing.
+
+### 18.88 Ledger Entry B-0038
+
+- Entry ID: B-0038
+- Timestamp: 2026-03-18 America/Detroit
+- Improvement ID(s): rss-style ticker restyle
+- Goal: make the top flavor ticker read more like an early-2000s RSS/news marquee instead of a subdued modern strip.
+- Why now: a direct preference was stated for a more obviously scrolling RSS-feed style at the top of the popover.
+- Dependency context: refines the ticker UI introduced in B-0031 without changing the profile, quote, or vocabulary systems.
+- Files likely or actually changed:
+  - `Sources/DexDictate/FlavorTickerView.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Low. This is a presentation-layer change within the existing ticker surface.
+- Invariant check:
+  - the ticker still remains at the top of the popover under the app title
+  - Reduce Motion still suppresses ticker animation
+  - the ticker remains single-line
+  - no quote-list UI was introduced
+- What was attempted:
+  - replaced the previous understated ticker styling with a more explicit marquee strip
+  - added a labeled `DEX FEED` left rail and a stronger old-site-style chrome treatment
+  - changed the animation rule so the ticker now scrolls whenever ticker animation is enabled and Reduce Motion is off, instead of only when the text overflows
+  - normalized the displayed ticker content into a more overt feed string presentation
+- What succeeded:
+  - the top strip now reads visually like a classic RSS/news ticker instead of a subtle caption bar
+  - the ticker continues to animate through the existing app setting and accessibility guardrails
+- What failed:
+  - nothing failed in this step
+- What was rolled back:
+  - nothing was rolled back
+- Tests run:
+  - `swift test`
+- Metrics captured:
+  - XCTest summary after ticker restyle: 41 tests, 0 failures
+- Regressions checked:
+  - build remained clean after the ticker rewrite
+  - the restyled ticker view still compiles into the main popover path without affecting the underlying quote-selection logic
+- Remaining risks:
+  - this change intentionally overrides the earlier overflow-only marquee rule in favor of the newly requested always-scrolling RSS-style presentation when animation is enabled
+- Next step: if desired, tune ticker speed, typography, or chrome further after a live visual pass in the running app.
+
+### 18.89 Ledger Entry B-0039
+
+- Entry ID: B-0039
+- Timestamp: 2026-03-18 America/Detroit
+- Improvement ID(s): seamless ticker loop fix
+- Goal: remove the visible marquee reset and make the RSS-style ticker scroll smoothly without a jarring snap back to the start.
+- Why now: the newly restyled ticker still had an obvious wrap point and was reported as visually broken.
+- Dependency context: directly fixes the ticker presentation change introduced in B-0038.
+- Files likely or actually changed:
+  - `Sources/DexDictate/FlavorTickerView.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Low. This is a localized ticker animation implementation fix.
+- Invariant check:
+  - ticker remains single-line
+  - ticker remains Reduce-Motion aware
+  - ticker remains positioned under the title and above history
+  - no quote/content model changes were introduced
+- What was attempted:
+  - replaced the repeat-forever offset animation with a timeline-driven loop
+  - switched the marquee to a duplicated-content conveyor approach so the feed wraps continuously instead of jumping back to the start
+  - reset the ticker timeline origin when text or width changes so new quotes begin cleanly
+  - rebuilt and relaunched the installed app after the fix
+- What succeeded:
+  - the ticker no longer depends on a visible repeat-forever animation reset
+  - the scrolling feed now uses a continuous loop model instead of a snap-back model
+  - the rebuilt `/Applications/DexDictate.app` is running with the updated ticker implementation
+- What failed:
+  - nothing failed in this step
+- What was rolled back:
+  - nothing was rolled back
+- Tests run:
+  - `swift test`
+  - `./build.sh`
+- Metrics captured:
+  - XCTest summary after seamless-loop fix: 41 tests, 0 failures
+  - rebuilt app process check: `/Applications/DexDictate.app/Contents/MacOS/DexDictate`
+- Regressions checked:
+  - app still builds and installs successfully after the ticker animation rewrite
+  - the smoother loop change stayed isolated to the ticker view implementation
+- Remaining risks:
+  - perceived smoothness can still benefit from live visual tuning of speed and spacing, but the mechanical snap-back issue is removed from the implementation
+- Next step: if you still want the feed to feel more period-correct, tune crawl speed and spacing after a live look at the running app.
