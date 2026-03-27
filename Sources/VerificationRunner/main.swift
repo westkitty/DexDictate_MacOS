@@ -262,6 +262,11 @@ private func runWonderPath() {
     check(path, !profileSource.contains("dexdictate-icon-standard-sheet-01.png"), "watermark provider excludes standard sheet source files")
     check(path, profileSource.contains("dexdictate-icon-aussie-02.png"), "watermark provider includes Aussie runtime pool")
 
+    let benchmarkCorpus = BenchmarkCorpus.strictPrompts
+    checkEqual(path, benchmarkCorpus.count, 30, "strict benchmark corpus is present")
+    checkEqual(path, Set(benchmarkCorpus.map(\.fileName)).count, benchmarkCorpus.count, "benchmark corpus file names are unique")
+    checkEqual(path, BenchmarkCorpus.strictTranscriptMap.count, benchmarkCorpus.count, "benchmark transcript map matches corpus size")
+
     let engineSource = readSource("Sources/DexDictateKit/TranscriptionEngine.swift")
     let lifecycleSource = readSource("Sources/DexDictateKit/EngineLifecycle.swift")
     let settingsSource = readSource("Sources/DexDictateKit/Settings/AppSettings.swift")
@@ -362,7 +367,7 @@ private func runBenchmark(path: String, modelName: String) async {
             print("BENCHMARK_LATENCY_MS:\(ms)")
             continuation.resume()
         }
-        whisper.transcribe(audioFrames: whisperSamples)
+        _ = whisper.transcribe(audioFrames: whisperSamples)
     }
     exit(0)
 }
@@ -372,9 +377,21 @@ Task { @MainActor in
     if let idx = args.firstIndex(of: "--benchmark"), idx + 1 < args.count {
         let path = args[idx + 1]
         var modelName = "tiny.en"
+        var decodeProfile: ExperimentFlags.DecodeProfile = .accuracy
         if let modelIdx = args.firstIndex(of: "--model"), modelIdx + 1 < args.count {
             modelName = args[modelIdx + 1]
         }
+        if let profileIdx = args.firstIndex(of: "--decode-profile"), profileIdx + 1 < args.count {
+            switch args[profileIdx + 1].lowercased() {
+            case "speed":
+                decodeProfile = .speed
+            case "balanced":
+                decodeProfile = .balanced
+            default:
+                decodeProfile = .accuracy
+            }
+        }
+        ExperimentFlags.whisperDecodeProfile = decodeProfile
         await runBenchmark(path: path, modelName: modelName)
     } else {
         runAllPaths()

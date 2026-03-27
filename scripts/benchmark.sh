@@ -5,11 +5,14 @@ usage() {
     cat <<'EOF'
 Usage:
   ./scripts/benchmark.sh <path_to_audio_file.wav> [model_name]
-  ./scripts/benchmark.sh --audio <path> [--model tiny.en] [--iterations 5] [--build release] [--output-dir artifacts/benchmarks] [--baseline-ms 500] [--budget-pct 10]
+  ./scripts/benchmark.sh --audio <path> [--model tiny.en] [--decode-profile accuracy] [--iterations 5] [--build release] [--output-dir artifacts/benchmarks] [--baseline-ms 500] [--budget-pct 10]
+  ./scripts/benchmark.sh --corpus-dir <path> [--model tiny.en] [--decode-profile accuracy] [--build release]
 
 Options:
   --audio <path>         Audio file to benchmark.
+  --corpus-dir <path>    Directory containing wav files plus transcripts.json.
   --model <name>         Whisper model name without .bin suffix. Default: tiny.en
+  --decode-profile <p>    Whisper decode profile: accuracy, balanced, or speed. Default: accuracy
   --iterations <count>   Number of benchmark runs to execute. Default: 1
   --build <mode>         Swift build mode: debug or release. Default: release
   --output-dir <path>    Directory for JSON benchmark artifacts. Default: artifacts/benchmarks
@@ -19,7 +22,9 @@ EOF
 }
 
 AUDIO_FILE=""
+CORPUS_DIR=""
 MODEL_NAME="tiny.en"
+DECODE_PROFILE="accuracy"
 ITERATIONS=1
 BUILD_MODE="release"
 OUTPUT_DIR="artifacts/benchmarks"
@@ -46,8 +51,16 @@ while [[ $# -gt 0 ]]; do
             AUDIO_FILE="$2"
             shift 2
             ;;
+        --corpus-dir)
+            CORPUS_DIR="$2"
+            shift 2
+            ;;
         --model)
             MODEL_NAME="$2"
+            shift 2
+            ;;
+        --decode-profile)
+            DECODE_PROFILE="$2"
             shift 2
             ;;
         --iterations)
@@ -83,14 +96,22 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$AUDIO_FILE" ]]; then
-    echo "Missing audio file." >&2
-    usage
-    exit 1
+    if [[ -z "$CORPUS_DIR" ]]; then
+        echo "Missing audio file or corpus directory." >&2
+        usage
+        exit 1
+    fi
 fi
 
-if [[ ! -f "$AUDIO_FILE" ]]; then
-    echo "Audio file not found: $AUDIO_FILE" >&2
-    exit 1
+if [[ -n "$CORPUS_DIR" ]]; then
+    if [[ ! -d "$CORPUS_DIR" ]]; then
+        echo "Corpus directory not found: $CORPUS_DIR" >&2
+        exit 1
+    fi
+    if [[ ! -f "$CORPUS_DIR/transcripts.json" ]]; then
+        echo "Corpus transcripts not found at $CORPUS_DIR/transcripts.json" >&2
+        exit 1
+    fi
 fi
 
 if [[ "$BUILD_MODE" != "debug" && "$BUILD_MODE" != "release" ]]; then
@@ -104,6 +125,16 @@ if ! [[ "$ITERATIONS" =~ ^[0-9]+$ ]] || [[ "$ITERATIONS" -lt 1 ]]; then
 fi
 
 mkdir -p "$OUTPUT_DIR"
+
+if [[ -n "$CORPUS_DIR" ]]; then
+    python3 "$(dirname "$0")/benchmark.py" --corpus-dir "$CORPUS_DIR" --model "$MODEL_NAME" --decode-profile "$DECODE_PROFILE" --build "$BUILD_MODE"
+    exit 0
+fi
+
+if [[ ! -f "$AUDIO_FILE" ]]; then
+    echo "Audio file not found: $AUDIO_FILE" >&2
+    exit 1
+fi
 
 echo "Building VerificationRunner in $BUILD_MODE mode..."
 swift build -c "$BUILD_MODE" --product VerificationRunner
@@ -121,7 +152,7 @@ LAST_OUTPUT=""
 
 for ((i = 1; i <= ITERATIONS; i++)); do
     echo "Benchmark iteration $i/$ITERATIONS..."
-    OUTPUT="$("$RUNNER" --benchmark "$AUDIO_FILE" --model "$MODEL_NAME")"
+    OUTPUT="$("$RUNNER" --benchmark "$AUDIO_FILE" --model "$MODEL_NAME" --decode-profile "$DECODE_PROFILE")"
     LAST_OUTPUT="$OUTPUT"
     LATENCY="$(printf '%s\n' "$OUTPUT" | awk -F: '/^BENCHMARK_LATENCY_MS:/{print $2; exit}')"
     TRANSCRIPT_LINE="$(printf '%s\n' "$OUTPUT" | sed -n 's/^BENCHMARK_RESULT://p' | tail -n 1)"

@@ -13,6 +13,7 @@ struct DexDictateApp: App {
     @StateObject private var permissionManager = PermissionManager()
     @StateObject private var scanner = AudioDeviceScanner()
     @StateObject private var profileManager = ProfileManager()
+    @StateObject private var benchmarkCaptureController = BenchmarkCaptureWindowController()
     @ObservedObject var settings = AppSettings.shared
     @StateObject private var menuBarIconController = MenuBarIconController.shared
     
@@ -33,6 +34,7 @@ struct DexDictateApp: App {
                 settings: settings,
                 scanner: scanner,
                 profileManager: profileManager,
+                benchmarkCaptureController: benchmarkCaptureController,
                 menuBarIconController: menuBarIconController,
                 onDetachHistory: {
                     historyController.show()
@@ -294,6 +296,7 @@ struct AntiGravityMainView: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var scanner: AudioDeviceScanner
     @ObservedObject var profileManager: ProfileManager
+    @ObservedObject var benchmarkCaptureController: BenchmarkCaptureWindowController
     @ObservedObject var menuBarIconController: MenuBarIconController
     @State private var expandedHistory: Bool = false
     
@@ -369,9 +372,11 @@ struct AntiGravityMainView: View {
                     ControlsView(engine: engine)
 
                     QuickSettingsView(
+                        engine: engine,
                         settings: settings,
                         scanner: scanner,
                         profileManager: profileManager,
+                        benchmarkCaptureController: benchmarkCaptureController,
                         vocabularyManager: engine.vocabularyManager,
                         menuBarIconController: menuBarIconController
                     )

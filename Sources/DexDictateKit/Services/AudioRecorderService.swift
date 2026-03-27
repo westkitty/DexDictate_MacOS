@@ -14,12 +14,12 @@ import AVFoundation
 ///   - `bufferQueue` protects `_accumulatedSamples` between the tap callback thread and
 ///     the main thread (collectRecording).
 ///   - UI-visible state (@Published) is always updated on the main actor via Task { @MainActor }.
-final class AudioRecorderService: ObservableObject {
+public final class AudioRecorderService: ObservableObject {
     // nonisolated(unsafe): engine is accessed exclusively on audioQueue.
     // The compiler can't verify this statically, so we assert it manually.
     nonisolated(unsafe) private let engine = AVAudioEngine()
 
-    @MainActor @Published var inputLevel: Double = 0
+    @MainActor @Published public var inputLevel: Double = 0
 
     /// All engine lifecycle operations run on this serial queue.
     private let audioQueue = DispatchQueue(label: "com.dexdictate.audioEngine", qos: .userInitiated)
@@ -27,7 +27,7 @@ final class AudioRecorderService: ObservableObject {
     private var sleepObserver: NSObjectProtocol?
     private var wakeObserver: NSObjectProtocol?
 
-    init() {
+    public init() {
         setupSleepWakeNotifications()
     }
 
@@ -63,7 +63,7 @@ final class AudioRecorderService: ObservableObject {
     /// All AVAudioEngine operations (inputNode, outputFormat, installTap, prepare, start)
     /// run serially on audioQueue, keeping the main actor free throughout.
     /// `completion` is called back on the main actor.
-    func startRecordingAsync(inputDeviceUID: String, completion: @escaping @MainActor (Error?) -> Void) {
+    public func startRecordingAsync(inputDeviceUID: String, completion: @escaping @MainActor (Error?) -> Void) {
         Safety.log("startRecordingInternal() — dispatching audio setup to audioQueue")
         audioQueue.async { [weak self] in
             guard let self else { return }
@@ -110,7 +110,7 @@ final class AudioRecorderService: ObservableObject {
     /// Stops the engine and returns all accumulated samples atomically.
     /// Blocks the calling thread until the audioQueue drains — safe to call from @MainActor
     /// because audioQueue never calls back to main synchronously (no deadlock risk).
-    func stopAndCollect() -> (samples: [Float], sampleRate: Double) {
+    public func stopAndCollect() -> (samples: [Float], sampleRate: Double) {
         audioQueue.sync { [weak self] in
             guard let self else { return ([], 44100) }
             if self.engine.isRunning {
@@ -128,7 +128,7 @@ final class AudioRecorderService: ObservableObject {
     }
 
     /// Stops the engine without collecting samples (e.g. on system stop/sleep).
-    func stopRecording() {
+    public func stopRecording() {
         audioQueue.async { [weak self] in
             guard let self, self.engine.isRunning else { return }
             self.engine.inputNode.removeTap(onBus: 0)
