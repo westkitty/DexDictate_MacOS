@@ -143,10 +143,10 @@ public class WhisperService: ObservableObject {
         }
     }
     
-    public func transcribe(audioFrames: [Float]) {
+    public func transcribe(audioFrames: [Float]) -> Bool {
         guard let whisper = whisper, isModelLoaded else {
             Safety.log("transcribe() skipped — whisper=\(self.whisper == nil ? "nil" : "ok") isModelLoaded=\(isModelLoaded)")
-            return
+            return false
         }
         // Cancel any in-flight transcription before starting a new one.
         // whisper.cpp is not thread-safe; concurrent calls cause undefined behaviour.
@@ -165,6 +165,7 @@ public class WhisperService: ObservableObject {
             }
             self.isTranscribing = false
         }
+        return true
     }
 
     /// Cancels any in-flight transcription task. Call before stopping recording.

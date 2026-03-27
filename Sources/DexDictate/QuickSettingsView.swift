@@ -4,9 +4,11 @@ import DexDictateKit
 
 /// Collapsible settings panel embedded in the main popover.
 struct QuickSettingsView: View {
+    @ObservedObject var engine: TranscriptionEngine
     @ObservedObject var settings: AppSettings
     @ObservedObject var scanner: AudioDeviceScanner
     @ObservedObject var profileManager: ProfileManager
+    @ObservedObject var benchmarkCaptureController: BenchmarkCaptureWindowController
     @ObservedObject var vocabularyManager: VocabularyManager
     @ObservedObject var menuBarIconController: MenuBarIconController
     @State private var isExpanded = false
@@ -247,6 +249,38 @@ struct QuickSettingsView: View {
                         settings: settings,
                         menuBarIconController: menuBarIconController
                     )
+
+                    Divider().background(Color.white.opacity(0.3))
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(NSLocalizedString("Benchmark", comment: ""))
+                            .font(.caption).bold().foregroundStyle(.white.opacity(0.7))
+
+                        Text("Open the local capture tool to record the strict corpus, then benchmark it with the existing scripts.")
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.5))
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Button("Open Benchmark Capture") {
+                            benchmarkCaptureController.show(engine: engine)
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+
+                        if let sessionDirectory = benchmarkCaptureController.sessionDirectory {
+                            Button("Open Captured Corpus") {
+                                benchmarkCaptureController.openCorpusFolder()
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+
+                            Text(sessionDirectory.lastPathComponent)
+                                .font(.caption2.monospacedDigit())
+                                .foregroundStyle(.white.opacity(0.45))
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                        }
+                    }
 
                     Divider().background(Color.white.opacity(0.3))
 

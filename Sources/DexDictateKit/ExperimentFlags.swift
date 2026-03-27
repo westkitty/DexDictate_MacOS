@@ -8,8 +8,8 @@ public struct ExperimentFlags {
     public static var enableSilenceTrim = false
     
     /// Amount of tail delay (ms) applied after trigger release before stopping audio engine.
-    /// Current head is 250ms. Older builds used 750ms.
-    public static var stopTailDelayMs: UInt64 = 750
+    /// Current default is 250ms. Older builds used 750ms.
+    public static var stopTailDelayMs: UInt64 = 250
     
     public enum DecodeProfile {
         case speed

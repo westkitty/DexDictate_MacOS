@@ -338,7 +338,13 @@ public final class TranscriptionEngine: ObservableObject {
         }
         
         currentMetrics.t_whisper_submit = Date()
-        whisperService.transcribe(audioFrames: whisperSamples)
+        if !whisperService.transcribe(audioFrames: whisperSamples) {
+            Safety.log("stopListening() — Whisper refused transcription; resetting to ready state")
+            statusText = NSLocalizedString("Ready", comment: "Status: Ready to dictate")
+            liveTranscript = ""
+            resultFeedback = .idle
+            _ = applyLifecycle(.transcriptionCompleted, context: "whisper unavailable")
+        }
     }
 
     /// Called by WhisperService when the single-batch transcription completes.

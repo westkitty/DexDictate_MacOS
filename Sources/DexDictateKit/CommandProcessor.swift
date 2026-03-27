@@ -13,29 +13,40 @@ public class CommandProcessor {
     /// Processes text for commands.
     /// - Returns: Tuple containing processed text (if any remains) and the command action.
     public func process(_ text: String) -> (String, DictationCommand) {
-        let lower = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        
-        // Command: "Scratch that" (Delete last)
-        if lower.hasSuffix("scratch that") || lower == "scratch that" {
-            // If the text is JUST "scratch that", we return empty and the command to delete previous.
-            // If it's "Hello world scratch that", we return "Hello" (conceptually? or just delete last bit?)
-            // Simple logic: "Scratch that" at end = Delete entire current segment/previous segment.
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return (text, .none) }
+
+        if matchesCommand(trimmed, pattern: #"(?i)(?:^|\s)scratch that$"#) {
             return ("", .deleteLastSentence)
         }
-        
-        // Command: "New line" or "Next line"
-        if lower.contains("new line") || lower.contains("next line") {
-            let processed = text.replacingOccurrences(of: "new line", with: "\n", options: .caseInsensitive)
-                                .replacingOccurrences(of: "next line", with: "\n", options: .caseInsensitive)
-            return (processed, .newLine) // .newLine action might not be needed if we just replaced text
+
+        if matchesCommand(trimmed, pattern: #"(?i)(?:^|\s)all caps$"#) {
+            let content = trimmed.replacingOccurrences(
+                of: #"(?i)(?:^|\s)all caps$"#,
+                with: "",
+                options: .regularExpression
+            ).trimmingCharacters(in: .whitespaces)
+            return (content.uppercased(), .none)
         }
-        
-        // Command: "All caps" (Uppercases the whole segment)
-        if lower.hasSuffix("all caps") {
-            let contentObj = text.dropLast("all caps".count).trimmingCharacters(in: .whitespaces)
-            return (contentObj.uppercased(), .none)
+
+        let replaced = replaceCommands(trimmed)
+        if replaced != trimmed {
+            return (replaced, .newLine)
         }
-        
+
         return (text, .none)
+    }
+
+    private func matchesCommand(_ text: String, pattern: String) -> Bool {
+        text.range(of: pattern, options: .regularExpression) != nil
+    }
+
+    private func replaceCommands(_ text: String) -> String {
+        guard let regex = try? NSRegularExpression(pattern: #"(?i)\b(?:new line|next line)\b"#) else {
+            return text
+        }
+
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        return regex.stringByReplacingMatches(in: text, options: [], range: range, withTemplate: "\n")
     }
 }

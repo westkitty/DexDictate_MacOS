@@ -22,7 +22,7 @@ Goal: Recover and exceed prior speed + accuracy while preserving offline behavio
 Run this before each series:
 1. Close all heavy apps (browser tabs, Xcode indexing, video apps).
 2. Use same microphone and distance (10-15 cm) for all runs.
-3. Keep room noise level constant.
+3. Keep room conditions constant and quiet.
 4. Reboot once before Series 1 and Series 5.
 5. Use identical target app for paste validation (e.g., TextEdit plain text).
 
@@ -56,9 +56,9 @@ Run this before each series:
 4. `ane transformer core ml encoder`
 5. `whisper cpp swift whisper`
 
-### E. Noise Robustness
-1. Read A1-A5 with low fan noise.
-2. Read A1-A5 with medium keyboard noise.
+### E. Quiet Room Stability
+1. Read A1-A5 in a quiet room.
+2. Read A1-A5 again in the same quiet-room setup.
 
 ## Series of Instructions
 
@@ -173,4 +173,3 @@ Produce a final report with:
 2. Baseline vs final metrics table.
 3. Failures observed and mitigations.
 4. Residual risks and next experiment candidates.
-
