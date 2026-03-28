@@ -16,26 +16,81 @@ struct ShortcutRecorder: View {
     /// Retained handle for the `NSEvent` local monitor; `nil` when not recording.
     @State private var monitor: Any?
 
+    @State private var pendingShortcut: AppSettings.UserShortcut? = nil
+    @State private var detectedConflicts: [ShortcutConflict] = []
+
     var body: some View {
-        HStack {
-            Text(NSLocalizedString("Input:", comment: ""))
-                .font(.caption).bold()
-                .foregroundStyle(.white.opacity(0.7))
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(NSLocalizedString("Input:", comment: ""))
+                    .font(.caption).bold()
+                    .foregroundStyle(.white.opacity(0.7))
 
-            Spacer()
+                Spacer()
 
-            Button(action: startRecording) {
-                Text(isRecording ? NSLocalizedString("Press Key/Button...", comment: "") : shortcut.displayString)
-                    .font(.caption)
-                    .frame(minWidth: 100)
-                    .padding(.vertical, 4)
-                    .padding(.horizontal, 8)
-                    .background(isRecording ? Color.red.opacity(0.6) : Color.white.opacity(0.2))
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-                    .foregroundStyle(.white)
+                Button(action: startRecording) {
+                    Text(isRecording ? NSLocalizedString("Press Key/Button...", comment: "") : shortcut.displayString)
+                        .font(.caption)
+                        .frame(minWidth: 100)
+                        .padding(.vertical, 4)
+                        .padding(.horizontal, 8)
+                        .background(isRecording ? Color.red.opacity(0.6) : Color.white.opacity(0.2))
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                        .foregroundStyle(.white)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(isRecording ? "Recording shortcut" : "Shortcut recorder")
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(isRecording ? "Recording shortcut" : "Shortcut recorder")
+
+            if let pending = pendingShortcut, !detectedConflicts.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.yellow)
+                            .font(.caption)
+                        Text(NSLocalizedString("Conflict detected", comment: ""))
+                            .font(.caption)
+                            .bold()
+                            .foregroundStyle(.yellow)
+                    }
+
+                    ForEach(Array(detectedConflicts.enumerated()), id: \.offset) { _, conflict in
+                        Text("• \(conflict.description)")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    HStack(spacing: 8) {
+                        Button(NSLocalizedString("Use Anyway", comment: "")) {
+                            shortcut = pending
+                            pendingShortcut = nil
+                            detectedConflicts = []
+                        }
+                        .font(.caption)
+                        .buttonStyle(.borderless)
+                        .foregroundStyle(.orange)
+
+                        Button(NSLocalizedString("Try Again", comment: "")) {
+                            pendingShortcut = nil
+                            detectedConflicts = []
+                            startRecording()
+                        }
+                        .font(.caption)
+                        .buttonStyle(.borderless)
+
+                        Button(NSLocalizedString("Keep Current", comment: "")) {
+                            pendingShortcut = nil
+                            detectedConflicts = []
+                        }
+                        .font(.caption)
+                        .buttonStyle(.borderless)
+                        .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(8)
+                .background(Color.yellow.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
         }
         .onDisappear { stopRecording() }
     }
@@ -82,8 +137,15 @@ struct ShortcutRecorder: View {
             }
             
             if let sc = newShortcut {
-                self.shortcut = sc
-                self.stopRecording()
+                let conflicts = ShortcutConflictDetector.conflicts(for: sc)
+                if conflicts.isEmpty {
+                    self.shortcut = sc
+                    self.stopRecording()
+                } else {
+                    self.pendingShortcut = sc
+                    self.detectedConflicts = conflicts
+                    self.stopRecording()
+                }
                 return nil // Consume the event so it doesn't trigger other things
             }
             
