@@ -112,7 +112,17 @@ def main():
         choices=["accuracy", "balanced", "speed"],
         help="Whisper decode profile used by the benchmark runner",
     )
+    parser.add_argument(
+        "--utterance-end-preset",
+        type=str,
+        default="stable",
+        choices=["stable", "fast", "conservative"],
+        help="Utterance-end preset to mirror into benchmark processing",
+    )
     parser.add_argument("--build", type=str, default="release", choices=["debug", "release"], help="Swift build mode")
+    parser.add_argument("--json-output", type=str, help="Optional JSON output path")
+    parser.add_argument("--csv-output", type=str, help="Optional CSV output path")
+    parser.add_argument("--gate-file", type=str, help="Optional committed baseline JSON for gate evaluation")
     args = parser.parse_args()
 
     audio_dir = args.corpus_dir or args.audio_dir
@@ -129,70 +139,32 @@ def main():
     if not os.path.isfile(transcripts_file):
         parser.error(f"Transcripts JSON not found: {transcripts_file}")
 
-    corpus = load_corpus(audio_dir, transcripts_file)
     runner = build_runner(args.build)
+    command = [
+        runner,
+        "--benchmark-corpus",
+        audio_dir,
+        "--model",
+        args.model,
+        "--decode-profile",
+        args.decode_profile,
+        "--utterance-end-preset",
+        args.utterance_end_preset,
+    ]
+    if args.json_output:
+        command.extend(["--json-output", args.json_output])
+    if args.csv_output:
+        command.extend(["--csv-output", args.csv_output])
+    if args.gate_file:
+        command.extend(["--gate-file", args.gate_file])
 
-    total_latency_ms = 0
-    total_wer = 0.0
-    processed = 0
+    result = subprocess.run(command, capture_output=True, text=True, check=False)
+    output = (result.stdout or "") + ("\n" + result.stderr if result.stderr else "")
 
-    print("Starting Benchmark Sweep...")
-    print("-" * 50)
-
-    for audio_file, file_path, expected_text in corpus:
-        if not os.path.exists(file_path):
-            print(f"[{audio_file}] SKIPPED (File not found)")
-            continue
-
-        try:
-            result = subprocess.run(
-                [runner, "--benchmark", file_path, "--model", args.model, "--decode-profile", args.decode_profile],
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-        except Exception as exc:
-            print(f"[{audio_file}] FAILED ({exc})")
-            continue
-
-        output = (result.stdout or "") + ("\n" + result.stderr if result.stderr else "")
-
-        actual_text = ""
-        latency_ms = 0
-
-        for line in output.split("\n"):
-            if line.startswith("BENCHMARK_RESULT:"):
-                actual_text = line.replace("BENCHMARK_RESULT:", "").strip()
-            elif line.startswith("BENCHMARK_LATENCY_MS:"):
-                latency_ms = int(line.replace("BENCHMARK_LATENCY_MS:", "").strip())
-
-        if not actual_text and result.returncode != 0:
-            print(f"[{audio_file}] FAILED (VerificationRunner exited with {result.returncode})")
-            print(output)
-            continue
-
-        wer = compute_wer(expected_text, actual_text)
-
-        print(f"File:     {audio_file}")
-        print(f"Expected: {expected_text}")
-        print(f"Actual:   {actual_text}")
-        print(f"Latency:  {latency_ms} ms")
-        print(f"WER:      {wer:.2%}")
-        print("-" * 50)
-
-        total_latency_ms += latency_ms
-        total_wer += wer
-        processed += 1
-
-    if processed > 0:
-        avg_latency = total_latency_ms / processed
-        avg_wer = total_wer / processed
-        print("=== BENCHMARK SUMMARY ===")
-        print(f"Total Files: {processed}")
-        print(f"Avg Latency: {avg_latency:.1f} ms")
-        print(f"Avg WER:     {avg_wer:.2%}")
-    else:
-        print("No files processed.")
+    print(output.strip())
+    if result.returncode not in (0, 2):
+        raise SystemExit(result.returncode)
+    raise SystemExit(result.returncode)
 
 
 if __name__ == "__main__":

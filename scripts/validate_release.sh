@@ -15,6 +15,8 @@ INFO_PLIST="$APP_PATH/Contents/Info.plist"
 RESOURCE_BUNDLE="$APP_PATH/Contents/Resources/DexDictate_MacOS_DexDictateKit.bundle"
 MODEL_PATH="$RESOURCE_BUNDLE/tiny.en.bin"
 ICON_PATH="$APP_PATH/Contents/Resources/AppIcon.icns"
+HELPER_PATH="$APP_PATH/Contents/Helpers/VerificationRunner"
+BASELINE_PATH="$APP_PATH/Contents/Resources/benchmark_baseline.json"
 
 FAILURES=0
 WARNINGS=0
@@ -88,8 +90,10 @@ log "App path: $APP_PATH"
 section "Bundle integrity"
 check_path "$APP_PATH" "Application bundle"
 check_path "$EXECUTABLE_PATH" "Executable"
+check_path "$HELPER_PATH" "VerificationRunner helper"
 check_path "$INFO_PLIST" "Info.plist"
 check_path "$ICON_PATH" "App icon"
+check_path "$BASELINE_PATH" "Benchmark baseline"
 check_path "$RESOURCE_BUNDLE" "SwiftPM resource bundle"
 check_path "$MODEL_PATH" "Embedded Whisper model"
 

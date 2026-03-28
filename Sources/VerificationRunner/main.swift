@@ -7,6 +7,19 @@ private struct Metrics {
     var failures = 0
 }
 
+private struct BenchmarkItem {
+    let fileName: String
+    let fileURL: URL
+    let referenceText: String
+}
+
+private struct CorpusSummary: Codable {
+    let processedFiles: Int
+    let averageWER: Double
+    let averageLatencyMs: Double
+    let p95LatencyMs: Double
+}
+
 private var metrics = Metrics()
 
 private func pass(_ path: String, _ message: String) {
@@ -51,6 +64,88 @@ private struct LCG {
     mutating func nextInt(_ upperBound: Int) -> Int {
         Int(next() % UInt64(max(1, upperBound)))
     }
+}
+
+private func computeWER(reference: String, hypothesis: String) -> Double {
+    func normalize(_ text: String) -> [String] {
+        text
+            .lowercased()
+            .replacingOccurrences(of: #"[^\w\s]"#, with: "", options: .regularExpression)
+            .split(separator: " ")
+            .map(String.init)
+    }
+
+    let ref = normalize(reference)
+    let hyp = normalize(hypothesis)
+
+    if ref.isEmpty {
+        return hyp.isEmpty ? 0 : Double.infinity
+    }
+
+    var matrix = Array(repeating: Array(repeating: 0, count: hyp.count + 1), count: ref.count + 1)
+    for i in 0...ref.count { matrix[i][0] = i }
+    for j in 0...hyp.count { matrix[0][j] = j }
+
+    if !ref.isEmpty && !hyp.isEmpty {
+        for i in 1...ref.count {
+            for j in 1...hyp.count {
+                let cost = ref[i - 1] == hyp[j - 1] ? 0 : 1
+                matrix[i][j] = min(
+                    matrix[i - 1][j] + 1,
+                    matrix[i][j - 1] + 1,
+                    matrix[i - 1][j - 1] + cost
+                )
+            }
+        }
+    }
+
+    return Double(matrix[ref.count][hyp.count]) / Double(ref.count)
+}
+
+private func percentile(_ values: [Double], p: Double) -> Double {
+    guard !values.isEmpty else { return 0 }
+    let sorted = values.sorted()
+    let index = Int(ceil((p * Double(sorted.count)) - 1))
+    return sorted[max(0, min(sorted.count - 1, index))]
+}
+
+private func loadBenchmarkCorpus(from directory: URL) throws -> [BenchmarkItem] {
+    let manifestURL = directory.appendingPathComponent("benchmark_manifest.json")
+    let transcriptsURL = directory.appendingPathComponent("transcripts.json")
+
+    if let data = try? Data(contentsOf: manifestURL),
+       let manifest = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+       let prompts = manifest["prompts"] as? [[String: Any]] {
+        let capturedEntries = (manifest["capturedEntries"] as? [[String: Any]]) ?? []
+        let capturedNames = Set(capturedEntries.compactMap { $0["fileName"] as? String })
+        let items = prompts.compactMap { prompt -> BenchmarkItem? in
+            guard let fileName = prompt["fileName"] as? String,
+                  let referenceText = prompt["referenceText"] as? String else {
+                return nil
+            }
+            if !capturedNames.isEmpty && !capturedNames.contains(fileName) {
+                return nil
+            }
+            return BenchmarkItem(
+                fileName: fileName,
+                fileURL: directory.appendingPathComponent(fileName),
+                referenceText: referenceText
+            )
+        }
+        if !items.isEmpty {
+            return items
+        }
+    }
+
+    let transcriptsData = try Data(contentsOf: transcriptsURL)
+    let transcripts = try JSONDecoder().decode([String: String].self, from: transcriptsData)
+    return transcripts.map {
+        BenchmarkItem(
+            fileName: $0.key,
+            fileURL: directory.appendingPathComponent($0.key),
+            referenceText: $0.value
+        )
+    }.sorted(by: { $0.fileName < $1.fileName })
 }
 
 @MainActor
@@ -372,27 +467,181 @@ private func runBenchmark(path: String, modelName: String) async {
     exit(0)
 }
 
+@MainActor
+private func runBenchmarkCorpus(
+    corpusPath: String,
+    modelName: String,
+    decodeProfile: ExperimentFlags.DecodeProfile,
+    utteranceEndPreset: String,
+    jsonOutputPath: String?,
+    csvOutputPath: String?,
+    gatePath: String?
+) async {
+    let directory = URL(fileURLWithPath: corpusPath)
+
+    let items: [BenchmarkItem]
+    do {
+        items = try loadBenchmarkCorpus(from: directory)
+    } catch {
+        print("BENCHMARK_FAIL: Could not load corpus at \(corpusPath)")
+        exit(1)
+    }
+
+    guard let modelURL = Safety.resourceBundle.url(forResource: modelName, withExtension: "bin")
+        ?? WhisperModelCatalog.shared.descriptor(for: modelName)?.url else {
+        print("BENCHMARK_FAIL: Could not locate \(modelName).bin")
+        exit(1)
+    }
+
+    ExperimentFlags.whisperDecodeProfile = decodeProfile
+    if let preset = AppSettings.UtteranceEndPreset.allCases.first(where: { $0.rawValue.lowercased() == utteranceEndPreset.lowercased() }) {
+        let settings = AppSettings.shared
+        settings.utteranceEndPreset = preset
+        ExperimentFlags.applyRuntimeSettings(settings)
+    }
+
+    let whisper = WhisperService()
+    whisper.loadModel(url: modelURL, modelID: modelName, decodeProfile: decodeProfile)
+
+    var latencies: [Double] = []
+    var wers: [Double] = []
+    var csvLines = ["file_name,reference,hypothesis,latency_ms,wer"]
+
+    for item in items {
+        guard FileManager.default.fileExists(atPath: item.fileURL.path) else { continue }
+        guard let file = try? AVAudioFile(forReading: item.fileURL) else { continue }
+
+        let frameCount = AVAudioFrameCount(file.length)
+        guard let format = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: file.fileFormat.sampleRate, channels: 1, interleaved: false),
+              let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount) else {
+            continue
+        }
+
+        buffer.frameLength = frameCount
+        try? file.read(into: buffer)
+        guard let floatData = buffer.floatChannelData?[0] else { continue }
+
+        let nativeSamples = Array(UnsafeBufferPointer(start: floatData, count: Int(buffer.frameLength)))
+        var trimmedSamples = nativeSamples
+        if ExperimentFlags.enableTrailingTrim {
+            trimmedSamples = AudioResampler.trimTrailingSilenceCalibrated(
+                nativeSamples,
+                sampleRate: file.fileFormat.sampleRate,
+                minimumSilenceMs: ExperimentFlags.trailingTrimMinimumSilenceMs,
+                padMs: ExperimentFlags.trailingTrimPadMs
+            )
+        }
+        let whisperSamples = AudioResampler.resampleToWhisper(trimmedSamples, fromRate: file.fileFormat.sampleRate)
+
+        let start = Date()
+        let hypothesis: String = await withCheckedContinuation { continuation in
+            whisper.ontranscriptionComplete = { text in
+                continuation.resume(returning: text.trimmingCharacters(in: .whitespacesAndNewlines))
+            }
+            _ = whisper.transcribe(audioFrames: whisperSamples)
+        }
+        let latencyMs = Double(Int(Date().timeIntervalSince(start) * 1000))
+        let wer = computeWER(reference: item.referenceText, hypothesis: hypothesis)
+        latencies.append(latencyMs)
+        wers.append(wer)
+        csvLines.append("\"\(item.fileName)\",\"\(item.referenceText.replacingOccurrences(of: "\"", with: "\"\""))\",\"\(hypothesis.replacingOccurrences(of: "\"", with: "\"\""))\",\(Int(latencyMs)),\(wer)")
+    }
+
+    let averageWER = wers.isEmpty ? 0 : wers.reduce(0, +) / Double(wers.count)
+    let averageLatency = latencies.isEmpty ? 0 : latencies.reduce(0, +) / Double(latencies.count)
+    let p95Latency = percentile(latencies, p: 0.95)
+    let summary = ModelBenchmarkResult(
+        hardwareFingerprint: BenchmarkEnvironment.hardwareFingerprint(),
+        appVersion: BenchmarkEnvironment.appVersion(),
+        modelID: modelName,
+        modelIdentity: whisper.loadedModelURL.map { (try? WhisperModelCatalog.sha256(for: $0)) ?? "\($0.lastPathComponent)" } ?? modelName,
+        decodeProfile: decodeProfile.cliName,
+        utteranceEndPreset: AppSettings.shared.utteranceEndPreset.rawValue,
+        processedFiles: latencies.count,
+        averageWER: averageWER,
+        averageLatencyMs: averageLatency,
+        p95LatencyMs: p95Latency,
+        completedAt: Date()
+    )
+
+    if let jsonOutputPath {
+        let url = URL(fileURLWithPath: jsonOutputPath)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        if let data = try? encoder.encode(summary) {
+            try? data.write(to: url, options: .atomic)
+        }
+    }
+
+    if let csvOutputPath {
+        try? csvLines.joined(separator: "\n").appending("\n").write(to: URL(fileURLWithPath: csvOutputPath), atomically: true, encoding: .utf8)
+    }
+
+    print("BENCHMARK_CORPUS_FILES:\(summary.processedFiles)")
+    print("BENCHMARK_CORPUS_AVG_WER:\(summary.averageWER)")
+    print("BENCHMARK_CORPUS_AVG_LATENCY_MS:\(summary.averageLatencyMs)")
+    print("BENCHMARK_CORPUS_P95_LATENCY_MS:\(summary.p95LatencyMs)")
+
+    if let gatePath,
+       let gateData = try? Data(contentsOf: URL(fileURLWithPath: gatePath)),
+       let baseline = try? JSONDecoder().decode(BenchmarkBaseline.self, from: gateData) {
+        let passed = summary.averageWER <= baseline.thresholds.maxAverageWER &&
+            summary.p95LatencyMs <= baseline.thresholds.maxP95LatencyMs
+        print("BENCHMARK_GATE_RESULT:\(passed ? "PASS" : "FAIL")")
+        exit(passed ? 0 : 2)
+    }
+
+    exit(0)
+}
+
 Task { @MainActor in
     let args = ProcessInfo.processInfo.arguments
-    if let idx = args.firstIndex(of: "--benchmark"), idx + 1 < args.count {
-        let path = args[idx + 1]
-        var modelName = "tiny.en"
-        var decodeProfile: ExperimentFlags.DecodeProfile = .accuracy
-        if let modelIdx = args.firstIndex(of: "--model"), modelIdx + 1 < args.count {
-            modelName = args[modelIdx + 1]
+    var modelName = "tiny.en"
+    var decodeProfile: ExperimentFlags.DecodeProfile = .accuracy
+    var utteranceEndPreset = "stable"
+    var jsonOutputPath: String?
+    var csvOutputPath: String?
+    var gatePath: String?
+
+    if let modelIdx = args.firstIndex(of: "--model"), modelIdx + 1 < args.count {
+        modelName = args[modelIdx + 1]
+    }
+    if let profileIdx = args.firstIndex(of: "--decode-profile"), profileIdx + 1 < args.count {
+        switch args[profileIdx + 1].lowercased() {
+        case "speed":
+            decodeProfile = .speed
+        case "balanced":
+            decodeProfile = .balanced
+        default:
+            decodeProfile = .accuracy
         }
-        if let profileIdx = args.firstIndex(of: "--decode-profile"), profileIdx + 1 < args.count {
-            switch args[profileIdx + 1].lowercased() {
-            case "speed":
-                decodeProfile = .speed
-            case "balanced":
-                decodeProfile = .balanced
-            default:
-                decodeProfile = .accuracy
-            }
-        }
+    }
+    if let presetIdx = args.firstIndex(of: "--utterance-end-preset"), presetIdx + 1 < args.count {
+        utteranceEndPreset = args[presetIdx + 1]
+    }
+    if let jsonIdx = args.firstIndex(of: "--json-output"), jsonIdx + 1 < args.count {
+        jsonOutputPath = args[jsonIdx + 1]
+    }
+    if let csvIdx = args.firstIndex(of: "--csv-output"), csvIdx + 1 < args.count {
+        csvOutputPath = args[csvIdx + 1]
+    }
+    if let gateIdx = args.firstIndex(of: "--gate-file"), gateIdx + 1 < args.count {
+        gatePath = args[gateIdx + 1]
+    }
+
+    if let idx = args.firstIndex(of: "--benchmark-corpus"), idx + 1 < args.count {
+        await runBenchmarkCorpus(
+            corpusPath: args[idx + 1],
+            modelName: modelName,
+            decodeProfile: decodeProfile,
+            utteranceEndPreset: utteranceEndPreset,
+            jsonOutputPath: jsonOutputPath,
+            csvOutputPath: csvOutputPath,
+            gatePath: gatePath
+        )
+    } else if let idx = args.firstIndex(of: "--benchmark"), idx + 1 < args.count {
         ExperimentFlags.whisperDecodeProfile = decodeProfile
-        await runBenchmark(path: path, modelName: modelName)
+        await runBenchmark(path: args[idx + 1], modelName: modelName)
     } else {
         runAllPaths()
     }

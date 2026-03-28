@@ -111,6 +111,63 @@ public class AppSettings: ObservableObject {
 
     /// The selected transcription engine. Defaults to Whisper (local-only, no data sent to Apple).
     @AppStorage("selectedEngine") public var selectedEngine: TranscriptionEngineType = .whisper
+
+    public enum ModelSelectionMode: String, CaseIterable, Identifiable {
+        case autoIdleBenchmark = "Auto Idle Benchmark"
+        case manual = "Manual"
+
+        public var id: String { rawValue }
+    }
+
+    public enum UtteranceEndPreset: String, CaseIterable, Identifiable {
+        case stable = "Stable"
+        case fast = "Fast"
+        case conservative = "Conservative"
+
+        public var id: String { rawValue }
+
+        public var stopTailDelayMs: UInt64 {
+            switch self {
+            case .stable:
+                return 250
+            case .fast:
+                return 180
+            case .conservative:
+                return 400
+            }
+        }
+
+        public var trailingTrimMinimumSilenceMs: Int {
+            switch self {
+            case .stable:
+                return 220
+            case .fast:
+                return 150
+            case .conservative:
+                return 320
+            }
+        }
+
+        public var trailingTrimPadMs: Int {
+            switch self {
+            case .stable:
+                return 80
+            case .fast:
+                return 50
+            case .conservative:
+                return 120
+            }
+        }
+    }
+
+    @AppStorage("activeWhisperModelID_v1") public var activeWhisperModelID: String = "tiny.en"
+    @AppStorage("modelSelectionMode_v1") public var modelSelectionMode: ModelSelectionMode = .autoIdleBenchmark
+    @AppStorage("utteranceEndPreset_v1") public var utteranceEndPreset: UtteranceEndPreset = .stable
+    @AppStorage("benchmarkGateEnabled_v1") public var benchmarkGateEnabled: Bool = true
+    @AppStorage("allowAutoModelPromotion_v1") public var allowAutoModelPromotion: Bool = true
+    @AppStorage("enableTrailingTrimExperiment_v1") public var enableTrailingTrimExperiment: Bool = false
+    @AppStorage("enableAccuracyRetry_v1") public var enableAccuracyRetry: Bool = true
+    @AppStorage("enableCorrectionSheet_v1") public var enableCorrectionSheet: Bool = true
     
     public enum SoundTheme: String, CaseIterable, Identifiable {
         case custom = "Custom"
@@ -313,12 +370,28 @@ public class AppSettings: ObservableObject {
         appearanceThemeStored = AppearanceTheme.system.rawValue
         menuBarDisplayMode = .micAndText
         localizationMode = .standard
+        activeWhisperModelID = "tiny.en"
+        modelSelectionMode = .autoIdleBenchmark
+        utteranceEndPreset = .stable
+        benchmarkGateEnabled = true
+        allowAutoModelPromotion = true
+        enableTrailingTrimExperiment = false
+        enableAccuracyRetry = true
+        enableCorrectionSheet = true
         showFlavorTicker = true
         animateFlavorTicker = true
         selectedMenuBarIconIdentifier = ""
         selectedMenuBarEmoji = "🐶"
         
         userShortcutData = (try? JSONEncoder().encode(UserShortcut.defaultMiddleMouse)) ?? Data()
+    }
+
+    public func restoreStableDictationDefaults() {
+        activeWhisperModelID = "tiny.en"
+        utteranceEndPreset = .stable
+        enableTrailingTrimExperiment = false
+        enableAccuracyRetry = true
+        enableCorrectionSheet = true
     }
 
     public func selectMenuBarDisplayMode(_ mode: MenuBarDisplayMode) {

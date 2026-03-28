@@ -6,6 +6,9 @@ public class WhisperService: ObservableObject {
     private var whisper: Whisper?
     @Published public var isModelLoaded: Bool = false
     @Published public var isTranscribing: Bool = false
+    @Published public private(set) var loadedModelID: String?
+    @Published public private(set) var loadedModelURL: URL?
+    @Published public private(set) var loadedDecodeProfileName: String?
 
     /// Serialises transcription calls — cancels the previous task before starting a new one,
     /// preventing concurrent access to the non-thread-safe whisper.cpp C++ object.
@@ -16,7 +19,11 @@ public class WhisperService: ObservableObject {
 
     public init() {}
     
-    public func loadModel(url: URL) {
+    public func loadModel(
+        url: URL,
+        modelID: String? = nil,
+        decodeProfile: ExperimentFlags.DecodeProfile? = nil
+    ) {
         do {
 #if DEBUG
             Safety.log("DEBUG build detected — transcription may be slow without optimized SwiftWhisper binaries")
@@ -45,7 +52,8 @@ public class WhisperService: ObservableObject {
             }
 
             // Build speed-optimised params before loading the model.
-            let params = Self.makeFastParams()
+            let resolvedProfile = decodeProfile ?? ExperimentFlags.whisperDecodeProfile
+            let params = Self.makeFastParams(for: resolvedProfile)
 
             // whisper.cpp will auto-load "<model>-encoder.mlmodelc" when present.
             // If absent, it falls back to CPU/Accelerate (still fully offline).
@@ -62,14 +70,23 @@ public class WhisperService: ObservableObject {
             if whisper != nil {
                 whisper?.delegate = self
                 isModelLoaded = true
+                loadedModelID = modelID ?? url.deletingPathExtension().lastPathComponent
+                loadedModelURL = url
+                loadedDecodeProfileName = resolvedProfile.cliName
                 Safety.log("Whisper model loaded successfully")
             } else {
                 Safety.log("ERROR: Whisper(fromFileURL:) returned nil — model load failed")
                 isModelLoaded = false
+                loadedModelID = nil
+                loadedModelURL = nil
+                loadedDecodeProfileName = nil
             }
         } catch {
             Safety.log("ERROR: Exception during model load: \(error)")
             isModelLoaded = false
+            loadedModelID = nil
+            loadedModelURL = nil
+            loadedDecodeProfileName = nil
         }
     }
 
@@ -94,10 +111,10 @@ public class WhisperService: ObservableObject {
     /// - `max_tokens = 128` — caps runaway decoding on noise while keeping normal dictation
     ///   lengths intact.
     /// - `suppress_non_speech_tokens = true` — reduces non-speech hallucinations and wasted decode.
-    private static func makeFastParams() -> WhisperParams {
+    private static func makeFastParams(for decodeProfile: ExperimentFlags.DecodeProfile) -> WhisperParams {
         let params = WhisperParams(strategy: .greedy)
         
-        switch ExperimentFlags.whisperDecodeProfile {
+        switch decodeProfile {
         case .accuracy:
             params.greedy.best_of = 2
             params.speed_up = false
@@ -137,10 +154,25 @@ public class WhisperService: ObservableObject {
         Safety.log("Looking for tiny.en.bin in resourceBundle: \(Safety.resourceBundle.bundlePath)")
         if let url = Safety.resourceBundle.url(forResource: "tiny.en", withExtension: "bin") {
             Safety.log("Found model at \(url.path)")
-            loadModel(url: url)
+            loadModel(url: url, modelID: "tiny.en")
         } else {
             Safety.log("ERROR: tiny.en.bin not found in bundle at \(Safety.resourceBundle.bundlePath)")
         }
+    }
+
+    public func ensureModelLoaded(
+        descriptor: WhisperModelDescriptor,
+        decodeProfile: ExperimentFlags.DecodeProfile? = nil
+    ) {
+        let targetProfile = decodeProfile?.cliName ?? ExperimentFlags.whisperDecodeProfile.cliName
+        if isModelLoaded,
+           loadedModelID == descriptor.id,
+           loadedModelURL == descriptor.url,
+           loadedDecodeProfileName == targetProfile {
+            return
+        }
+
+        loadModel(url: descriptor.url, modelID: descriptor.id, decodeProfile: decodeProfile)
     }
     
     public func transcribe(audioFrames: [Float]) -> Bool {

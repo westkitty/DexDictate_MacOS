@@ -16,6 +16,9 @@ struct DexDictateApp: App {
     @StateObject private var benchmarkCaptureController = BenchmarkCaptureWindowController()
     @ObservedObject var settings = AppSettings.shared
     @StateObject private var menuBarIconController = MenuBarIconController.shared
+    @StateObject private var modelCatalog = WhisperModelCatalog.shared
+    @StateObject private var adaptiveBenchmarkController = AdaptiveBenchmarkController()
+    @StateObject private var benchmarkResultsStore = BenchmarkResultsStore.shared
     
     // HUD Controller
     @StateObject private var hudController = FloatingHUDController()
@@ -36,6 +39,9 @@ struct DexDictateApp: App {
                 profileManager: profileManager,
                 benchmarkCaptureController: benchmarkCaptureController,
                 menuBarIconController: menuBarIconController,
+                modelCatalog: modelCatalog,
+                adaptiveBenchmarkController: adaptiveBenchmarkController,
+                benchmarkResultsStore: benchmarkResultsStore,
                 onDetachHistory: {
                     historyController.show()
                 }
@@ -48,6 +54,12 @@ struct DexDictateApp: App {
                 permissionManager.refreshPermissions()
                 profileManager.synchronizeBundledVocabulary(with: engine.vocabularyManager)
                 profileManager.refreshDynamicContent()
+                ExperimentFlags.applyRuntimeSettings(settings)
+                modelCatalog.refresh()
+
+                if modelCatalog.descriptor(for: settings.activeWhisperModelID) == nil {
+                    settings.activeWhisperModelID = "tiny.en"
+                }
 
                 guard engine.state == .stopped else {
                     // Engine already running — just refresh permissions on each open.
@@ -61,8 +73,8 @@ struct DexDictateApp: App {
                 // Load embedded Whisper model (74 MB, only load once).
                 // Guard against reloading if model is already loaded (e.g. stopSystem() was
                 // called which sets state=.stopped but the model remains loaded).
-                if !engine.isModelLoaded {
-                    engine.loadEmbeddedWhisperModel()
+                if let activeModel = modelCatalog.activeDescriptor(settings: settings) {
+                    engine.loadWhisperModel(descriptor: activeModel)
                 }
 
                 // Auto-start: sets up event tap + moves engine to .ready state.
@@ -72,7 +84,8 @@ struct DexDictateApp: App {
 
                 // Configure HUD and History controllers (idempotent but guard anyway).
                 hudController.setup(engine: engine, profileManager: profileManager)
-                historyController.setup(engine: engine)
+                historyController.setup(engine: engine, vocabularyManager: engine.vocabularyManager)
+                adaptiveBenchmarkController.start(engine: engine)
 
                 if settings.showFloatingHUD {
                     hudController.show()
@@ -85,6 +98,28 @@ struct DexDictateApp: App {
                 profileManager.synchronizeFromSettings()
                 profileManager.synchronizeBundledVocabulary(with: engine.vocabularyManager)
                 profileManager.refreshDynamicContent()
+            }
+            .onChange(of: settings.activeWhisperModelID) { _, _ in
+                modelCatalog.refresh()
+                if engine.state == .ready || engine.state == .stopped,
+                   let activeModel = modelCatalog.activeDescriptor(settings: settings) {
+                    engine.loadWhisperModel(descriptor: activeModel)
+                }
+            }
+            .onChange(of: settings.utteranceEndPreset) { _, _ in
+                if engine.state == .ready || engine.state == .stopped {
+                    ExperimentFlags.applyRuntimeSettings(settings)
+                }
+            }
+            .onChange(of: settings.enableTrailingTrimExperiment) { _, _ in
+                if engine.state == .ready || engine.state == .stopped {
+                    ExperimentFlags.applyRuntimeSettings(settings)
+                }
+            }
+            .onChange(of: engine.lastDictationCompletionAt) { _, newValue in
+                if newValue != nil {
+                    adaptiveBenchmarkController.noteDictationFinished()
+                }
             }
         } label: {
             MenuBarStatusLabel(
@@ -298,6 +333,9 @@ struct AntiGravityMainView: View {
     @ObservedObject var profileManager: ProfileManager
     @ObservedObject var benchmarkCaptureController: BenchmarkCaptureWindowController
     @ObservedObject var menuBarIconController: MenuBarIconController
+    @ObservedObject var modelCatalog: WhisperModelCatalog
+    @ObservedObject var adaptiveBenchmarkController: AdaptiveBenchmarkController
+    @ObservedObject var benchmarkResultsStore: BenchmarkResultsStore
     @State private var expandedHistory: Bool = false
     
     var onDetachHistory: (() -> Void)?
@@ -369,7 +407,10 @@ struct AntiGravityMainView: View {
                         onDetach: onDetachHistory
                     )
 
-                    ControlsView(engine: engine)
+                    ControlsView(
+                        engine: engine,
+                        adaptiveBenchmarkController: adaptiveBenchmarkController
+                    )
 
                     QuickSettingsView(
                         engine: engine,
@@ -378,7 +419,10 @@ struct AntiGravityMainView: View {
                         profileManager: profileManager,
                         benchmarkCaptureController: benchmarkCaptureController,
                         vocabularyManager: engine.vocabularyManager,
-                        menuBarIconController: menuBarIconController
+                        menuBarIconController: menuBarIconController,
+                        modelCatalog: modelCatalog,
+                        adaptiveBenchmarkController: adaptiveBenchmarkController,
+                        benchmarkResultsStore: benchmarkResultsStore
                     )
 
                     Spacer(minLength: 0)

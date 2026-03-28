@@ -8,10 +8,19 @@ public struct HistoryItem: Identifiable {
     public let id = UUID()
     public let text: String
     public let createdAt: Date
+    public let sourceHistoryItemID: UUID?
+    public let isAccuracyRetry: Bool
     
-    public init(text: String, createdAt: Date = Date()) {
+    public init(
+        text: String,
+        createdAt: Date = Date(),
+        sourceHistoryItemID: UUID? = nil,
+        isAccuracyRetry: Bool = false
+    ) {
         self.text = text
         self.createdAt = createdAt
+        self.sourceHistoryItemID = sourceHistoryItemID
+        self.isAccuracyRetry = isAccuracyRetry
     }
 }
 
@@ -36,12 +45,23 @@ public final class TranscriptionHistory: ObservableObject {
     /// Prepends a new item and trims the list when it exceeds `maxItems`.
     ///
     /// - Parameter text: The transcription text to add. Empty strings are silently ignored.
-    public func add(_ text: String) {
-        guard !text.isEmpty else { return }
-        items.insert(HistoryItem(text: text), at: 0)
+    @discardableResult
+    public func add(
+        _ text: String,
+        sourceHistoryItemID: UUID? = nil,
+        isAccuracyRetry: Bool = false
+    ) -> HistoryItem? {
+        guard !text.isEmpty else { return nil }
+        let item = HistoryItem(
+            text: text,
+            sourceHistoryItemID: sourceHistoryItemID,
+            isAccuracyRetry: isAccuracyRetry
+        )
+        items.insert(item, at: 0)
         if items.count > maxItems {
             items.removeLast()
         }
+        return item
     }
 
     public func clear() {
