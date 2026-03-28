@@ -375,7 +375,7 @@ public class AppSettings: ObservableObject {
         utteranceEndPreset = .stable
         benchmarkGateEnabled = true
         allowAutoModelPromotion = true
-        enableTrailingTrimExperiment = false
+        enableTrailingTrimExperiment = true
         enableAccuracyRetry = true
         enableCorrectionSheet = true
         showFlavorTicker = true

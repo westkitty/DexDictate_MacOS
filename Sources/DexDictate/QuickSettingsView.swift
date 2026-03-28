@@ -210,10 +210,9 @@ struct QuickSettingsView: View {
 
                         Toggle(NSLocalizedString("Show Floating HUD", comment: ""), isOn: $settings.showFloatingHUD)
 
-                        Toggle("Trim trailing silence", isOn: $settings.enableTrailingTrimExperiment)
+                        Toggle(NSLocalizedString("Trim trailing silence", comment: ""), isOn: $settings.enableTrailingTrimExperiment)
                             .toggleStyle(.switch)
                             .font(.caption)
-                            .help("Removes silent audio at the end of each recording before transcription — reduces Whisper processing time.")
                         Text(NSLocalizedString("Removes silent audio at the end of each recording before transcription — reduces Whisper processing time.", comment: ""))
                             .font(.caption2).foregroundStyle(.white.opacity(0.5))
                             .fixedSize(horizontal: false, vertical: true)
@@ -334,7 +333,6 @@ struct QuickSettingsView: View {
                             .labelsHidden().frame(width: 150).fixedSize()
                         }
 
-                        Toggle("Trailing Trim Experiment", isOn: $settings.enableTrailingTrimExperiment)
                         Toggle("Accuracy Retry", isOn: $settings.enableAccuracyRetry)
                         Toggle("Correction Sheet", isOn: $settings.enableCorrectionSheet)
 
