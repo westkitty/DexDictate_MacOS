@@ -11,7 +11,7 @@ final class BenchmarkCaptureWindowController: NSObject, ObservableObject, NSWind
     @Published private(set) var isStarting = false
     @Published private(set) var isSessionReady = false
     @Published private(set) var inputLevel: Double = 0
-    @Published private(set) var statusMessage = "Ready"
+    @Published private(set) var statusMessage = "Ready."
     @Published private(set) var sessionDirectory: URL?
     @Published private(set) var manifestURL: URL?
     @Published private(set) var transcriptsURL: URL?
@@ -64,7 +64,7 @@ final class BenchmarkCaptureWindowController: NSObject, ObservableObject, NSWind
 
     var currentPromptDetails: String {
         guard let prompt = currentPrompt else {
-            return "The corpus is complete. Open the folder to run the benchmark scripts."
+            return "All prompts recorded. Run the benchmark."
         }
         return "\(prompt.section) · \(prompt.id) · \(prompt.fileName)"
     }
@@ -112,7 +112,7 @@ final class BenchmarkCaptureWindowController: NSObject, ObservableObject, NSWind
     func previousPrompt() {
         guard !isRecording, currentIndex > 0 else { return }
         currentIndex -= 1
-        statusMessage = "Moved back to \(currentPrompt?.id ?? "previous prompt")."
+        statusMessage = "Back to \(currentPrompt?.id ?? "previous")."
         lastErrorMessage = nil
     }
 
@@ -122,7 +122,7 @@ final class BenchmarkCaptureWindowController: NSObject, ObservableObject, NSWind
         capturedEntries = []
         capturedCount = 0
         currentIndex = 0
-        statusMessage = "Session reset. Ready to record."
+        statusMessage = "Session reset. Starting from A1."
         lastErrorMessage = nil
         prepareNewSessionIfNeeded(forceNew: true)
     }
@@ -136,7 +136,7 @@ final class BenchmarkCaptureWindowController: NSObject, ObservableObject, NSWind
         guard let sessionDirectory else { return }
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(sessionDirectory.path, forType: .string)
-        statusMessage = "Copied corpus folder path."
+        statusMessage = "Corpus path copied."
     }
 
     func copyBenchmarkCommand() {
@@ -144,7 +144,7 @@ final class BenchmarkCaptureWindowController: NSObject, ObservableObject, NSWind
         let command = "python3 scripts/benchmark.py --corpus-dir \"\(sessionDirectory.path)\" --model tiny.en --build release --json-output /tmp/dexdictate-benchmark.json --csv-output /tmp/dexdictate-benchmark.csv --gate-file benchmark_baseline.json"
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(command, forType: .string)
-        statusMessage = "Copied benchmark command."
+        statusMessage = "Benchmark command copied."
     }
 
     private func prepareNewSessionIfNeeded(forceNew: Bool = false) {
@@ -171,7 +171,7 @@ final class BenchmarkCaptureWindowController: NSObject, ObservableObject, NSWind
             manifestURL = sessionURL.appendingPathComponent("benchmark_manifest.json")
             transcriptsURL = sessionURL.appendingPathComponent("transcripts.json")
             isSessionReady = true
-            statusMessage = "Session ready. Record the first prompt."
+            statusMessage = "Session ready. Record A1 when you're ready."
             lastErrorMessage = nil
             writeSessionFiles()
         } catch {
@@ -183,7 +183,7 @@ final class BenchmarkCaptureWindowController: NSObject, ObservableObject, NSWind
     private func startRecording() {
         guard !isStarting, !isRecording else { return }
         guard let prompt = currentPrompt else {
-            statusMessage = "Benchmark capture is complete."
+            statusMessage = "Nothing left to record."
             return
         }
 
@@ -229,13 +229,13 @@ final class BenchmarkCaptureWindowController: NSObject, ObservableObject, NSWind
             guard shouldActivateRecording else { return }
             if let error {
                 self.lastErrorMessage = error.localizedDescription
-                self.statusMessage = "Benchmark recording failed to start."
+                self.statusMessage = "Recording failed to start."
                 self.isRecording = false
                 return
             }
 
             self.isRecording = true
-            self.statusMessage = "Recording \(prompt.id). Speak the prompt, then stop."
+            self.statusMessage = "Recording \(prompt.id) — speak now."
         }
     }
 
@@ -252,7 +252,7 @@ final class BenchmarkCaptureWindowController: NSObject, ObservableObject, NSWind
         inputLevel = 0
 
         guard !result.samples.isEmpty else {
-            statusMessage = "No audio captured for \(prompt.id). Record it again."
+            statusMessage = "No audio captured for \(prompt.id). Try again."
             lastErrorMessage = nil
             return
         }
@@ -286,17 +286,17 @@ final class BenchmarkCaptureWindowController: NSObject, ObservableObject, NSWind
         isRecording = false
         isStarting = false
         inputLevel = 0
-        statusMessage = "Current take discarded."
+        statusMessage = "Take discarded."
         lastErrorMessage = nil
     }
 
     private func advanceAfterCapture() {
         if currentIndex + 1 < corpus.count {
             currentIndex += 1
-            statusMessage = "Saved. Next: \(currentPrompt?.id ?? "done")."
+            statusMessage = "Saved. Up next: \(currentPrompt?.id ?? "done")."
         } else {
             currentIndex = corpus.count
-            statusMessage = "Capture complete. Open the folder to benchmark the corpus."
+            statusMessage = "All \(corpus.count) prompts captured. Open the folder."
         }
     }
 
@@ -329,18 +329,39 @@ final class BenchmarkCaptureWindowController: NSObject, ObservableObject, NSWind
 struct BenchmarkCaptureView: View {
     @ObservedObject var controller: BenchmarkCaptureWindowController
 
+    private var sectionAccent: Color {
+        switch controller.currentPrompt?.section {
+        case "General":        return .blue
+        case "Punctuation":    return .orange
+        case "Commands":       return .purple
+        case "Hard Words":     return .red
+        case "Voice and Style": return Color(red: 0.2, green: 0.8, blue: 0.7)
+        case "Anchor":         return Color(red: 1.0, green: 0.78, blue: 0.1)
+        default:               return .cyan
+        }
+    }
+
     var body: some View {
         ZStack {
+            // Background gradient
             LinearGradient(
                 colors: [
                     Color.black,
-                    Color(red: 0.12, green: 0.12, blue: 0.16),
-                    Color(red: 0.08, green: 0.10, blue: 0.12)
+                    Color(red: 0.10, green: 0.10, blue: 0.14),
+                    Color(red: 0.06, green: 0.08, blue: 0.12)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
+
+            // Watermark
+            Text("BENCHMARK")
+                .font(.system(size: 120, weight: .black, design: .monospaced))
+                .foregroundStyle(.white.opacity(0.025))
+                .rotationEffect(.degrees(-28))
+                .offset(x: 40, y: 80)
+                .allowsHitTesting(false)
 
             VStack(alignment: .leading, spacing: 18) {
                 header
@@ -360,108 +381,147 @@ struct BenchmarkCaptureView: View {
             HStack(spacing: 10) {
                 Image(systemName: "waveform.badge.mic")
                     .font(.title2)
-                    .foregroundStyle(.cyan)
+                    .foregroundStyle(sectionAccent)
                     .frame(width: 36, height: 36)
-                    .background(Color.cyan.opacity(0.15))
+                    .background(sectionAccent.opacity(0.15))
                     .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .animation(.easeInOut(duration: 0.3), value: controller.currentPrompt?.section)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Benchmark Capture")
                         .font(.title2.weight(.bold))
                         .foregroundStyle(.white)
-                    Text("Build a reference corpus to measure transcription accuracy")
+                    Text("Your voice. Exact prompts. Measurable accuracy.")
                         .font(.caption)
-                        .foregroundStyle(.white.opacity(0.55))
+                        .foregroundStyle(.white.opacity(0.5))
                 }
             }
 
             VStack(alignment: .leading, spacing: 6) {
-                Text("What is this?")
+                Text("How it works")
                     .font(.caption.weight(.semibold))
                     .textCase(.uppercase)
-                    .foregroundStyle(.cyan.opacity(0.8))
+                    .foregroundStyle(sectionAccent.opacity(0.85))
                     .tracking(0.6)
-                Text("Record each prompt exactly as written. DexDictate saves your voice alongside the correct text, then runs Whisper against both to measure how accurately it transcribes your voice in your environment. Run the benchmark after any model, device, or settings change to see if accuracy improved.")
+                Text("Read each prompt aloud, exactly as written. DexDictate records your voice alongside the reference text, then runs Whisper against both to compute Word Error Rate. Lower WER is better. Run after changing models, devices, or settings — accuracy should be measured, not assumed.")
                     .font(.caption)
-                    .foregroundStyle(.white.opacity(0.68))
+                    .foregroundStyle(.white.opacity(0.65))
                     .fixedSize(horizontal: false, vertical: true)
             }
             .padding(12)
-            .background(Color.cyan.opacity(0.07))
-            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.cyan.opacity(0.18), lineWidth: 1))
+            .background(sectionAccent.opacity(0.07))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(sectionAccent.opacity(0.18), lineWidth: 1))
             .clipShape(RoundedRectangle(cornerRadius: 10))
+            .animation(.easeInOut(duration: 0.3), value: controller.currentPrompt?.section)
         }
     }
 
     private var promptCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text(controller.currentPrompt?.section ?? "Complete")
-                    .font(.caption.weight(.semibold))
-                    .textCase(.uppercase)
-                    .foregroundStyle(.cyan.opacity(0.85))
+            HStack(alignment: .center, spacing: 8) {
+                // Section badge
+                if let section = controller.currentPrompt?.section {
+                    Text(section.uppercased())
+                        .font(.caption2.weight(.bold))
+                        .tracking(0.8)
+                        .foregroundStyle(sectionAccent)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(sectionAccent.opacity(0.15))
+                        .clipShape(Capsule())
+                        .animation(.easeInOut(duration: 0.3), value: section)
+                } else {
+                    Text("COMPLETE")
+                        .font(.caption2.weight(.bold))
+                        .tracking(0.8)
+                        .foregroundStyle(.green)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(Color.green.opacity(0.15))
+                        .clipShape(Capsule())
+                }
+
                 Spacer()
+
+                // Progress counter
                 Text(controller.progressText)
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.white.opacity(0.6))
+                    .font(.caption.monospacedDigit().weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.55))
             }
 
+            // The prompt text — primary focus
             Text(controller.currentPromptDescription)
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(.white)
                 .fixedSize(horizontal: false, vertical: true)
 
+            // Instruction note (when present)
             if let instruction = controller.currentPromptInstructionNote {
-                Text("Session note: \(instruction)")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.orange.opacity(0.9))
-                    .fixedSize(horizontal: false, vertical: true)
+                HStack(alignment: .top, spacing: 6) {
+                    Image(systemName: "info.circle")
+                        .font(.caption)
+                        .foregroundStyle(.orange.opacity(0.85))
+                        .padding(.top, 1)
+                    Text(instruction)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.orange.opacity(0.9))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
 
+            // Metadata line
             Text(controller.currentPromptDetails)
-                .font(.caption)
-                .foregroundStyle(.white.opacity(0.58))
-                .fixedSize(horizontal: false, vertical: true)
+                .font(.caption.monospaced())
+                .foregroundStyle(.white.opacity(0.4))
         }
         .padding(16)
         .background(.white.opacity(0.07))
         .overlay(
             RoundedRectangle(cornerRadius: 18)
-                .stroke(.white.opacity(0.12), lineWidth: 1)
+                .stroke(sectionAccent.opacity(0.25), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 18))
+        .animation(.easeInOut(duration: 0.3), value: controller.currentPrompt?.section)
     }
 
     private var meterCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("Microphone")
+                Text("Input Level")
                     .font(.caption.weight(.semibold))
                     .textCase(.uppercase)
-                    .foregroundStyle(.white.opacity(0.6))
+                    .foregroundStyle(.white.opacity(0.55))
+                    .tracking(0.6)
                 Spacer()
                 Text(controller.statusMessage)
                     .font(.caption)
-                    .foregroundStyle(.white.opacity(0.65))
+                    .foregroundStyle(controller.isRecording ? .green : .white.opacity(0.6))
                     .lineLimit(2)
+                    .animation(.easeInOut(duration: 0.2), value: controller.statusMessage)
             }
 
             ProgressView(value: controller.inputLevel)
-                .tint(.green)
+                .tint(controller.isRecording ? .green : .white.opacity(0.3))
+                .animation(.linear(duration: 0.05), value: controller.inputLevel)
 
             HStack {
-                Text("Quiet")
+                Text("–60 dB")
                 Spacer()
-                Text("Hot")
+                Text("0 dB")
             }
-            .font(.caption2)
-            .foregroundStyle(.white.opacity(0.45))
+            .font(.caption2.monospaced())
+            .foregroundStyle(.white.opacity(0.35))
 
             if let lastErrorMessage = controller.lastErrorMessage {
-                Text(lastErrorMessage)
-                    .font(.caption)
-                    .foregroundStyle(.orange.opacity(0.88))
-                    .fixedSize(horizontal: false, vertical: true)
+                HStack(alignment: .top, spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                    Text(lastErrorMessage)
+                        .font(.caption)
+                        .foregroundStyle(.orange.opacity(0.88))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
         }
         .padding(16)
@@ -475,13 +535,14 @@ struct BenchmarkCaptureView: View {
 
     private var controlRow: some View {
         VStack(spacing: 8) {
-            // Primary record/stop button — full width, matches Stop Dictation style
+            // Primary record/stop button
             Button(action: controller.startRecordingOrStop) {
-                HStack {
+                HStack(spacing: 8) {
                     Image(systemName: controller.isRecording ? "stop.circle.fill" : "mic.fill")
+                        .font(.headline)
                     Text(controller.isStarting ? "Starting…" : controller.isRecording ? "Stop & Save" : "Record Prompt")
+                        .font(.headline)
                 }
-                .font(.headline)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
                 .background(controller.isRecording ? Color.orange.opacity(0.5) : Color.green.opacity(0.45))
@@ -492,7 +553,6 @@ struct BenchmarkCaptureView: View {
             .buttonStyle(.plain)
             .disabled(controller.isStarting || (!controller.isRecording && controller.currentPrompt == nil))
 
-            // Secondary actions
             HStack(spacing: 8) {
                 Button(action: controller.previousPrompt) {
                     HStack(spacing: 4) {
@@ -549,12 +609,12 @@ struct BenchmarkCaptureView: View {
             Text("After Capture")
                 .font(.caption.weight(.semibold))
                 .textCase(.uppercase)
-                .foregroundStyle(.white.opacity(0.6))
+                .foregroundStyle(.white.opacity(0.55))
                 .tracking(0.6)
 
-            Text("When all prompts are recorded, run the benchmark script against the folder. It compares each WAV file to the reference transcript and reports a Word Error Rate (WER). Lower WER = better accuracy for your voice and setup.")
+            Text("Run the benchmark script against the capture folder. It compares each WAV to its reference transcript and reports Word Error Rate per section. A perfect score is 0%. Any number above 5% is worth investigating.")
                 .font(.caption)
-                .foregroundStyle(.white.opacity(0.65))
+                .foregroundStyle(.white.opacity(0.6))
                 .fixedSize(horizontal: false, vertical: true)
 
             HStack(spacing: 8) {
@@ -594,7 +654,7 @@ struct BenchmarkCaptureView: View {
             if let sessionDirectory = controller.sessionDirectory {
                 Text(sessionDirectory.path)
                     .font(.caption2.monospaced())
-                    .foregroundStyle(.white.opacity(0.35))
+                    .foregroundStyle(.white.opacity(0.3))
                     .lineLimit(1)
                     .truncationMode(.middle)
             }
