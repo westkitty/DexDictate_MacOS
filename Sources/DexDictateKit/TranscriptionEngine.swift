@@ -97,6 +97,7 @@ public final class TranscriptionEngine: ObservableObject {
 
         // Bind Whisper output
         whisperService.ontranscriptionComplete = { [weak self] text in
+            guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
             Task { @MainActor in
                 self?.liveTranscript = text
             }

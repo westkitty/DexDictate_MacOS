@@ -74,6 +74,7 @@ public class WhisperService: ObservableObject {
                 loadedModelURL = url
                 loadedDecodeProfileName = resolvedProfile.cliName
                 Safety.log("Whisper model loaded successfully")
+                warmup()
             } else {
                 Safety.log("ERROR: Whisper(fromFileURL:) returned nil — model load failed")
                 isModelLoaded = false
@@ -175,6 +176,15 @@ public class WhisperService: ObservableObject {
         loadModel(url: descriptor.url, modelID: descriptor.id, decodeProfile: decodeProfile)
     }
     
+    /// Runs a silent inference to prime Whisper's internal buffers.
+    /// Call after model loads to eliminate first-transcription latency.
+    public func warmup() {
+        guard isModelLoaded, !isTranscribing else { return }
+        // 0.5 seconds of silence at 16 kHz (Whisper's required rate)
+        let silenceFrames = [Float](repeating: 0, count: 8000)
+        _ = transcribe(audioFrames: silenceFrames)
+    }
+
     public func transcribe(audioFrames: [Float]) -> Bool {
         guard let whisper = whisper, isModelLoaded else {
             Safety.log("transcribe() skipped — whisper=\(self.whisper == nil ? "nil" : "ok") isModelLoaded=\(isModelLoaded)")
