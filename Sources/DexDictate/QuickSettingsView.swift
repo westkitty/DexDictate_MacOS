@@ -244,6 +244,20 @@ struct QuickSettingsView: View {
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                             .padding(.leading, 20).padding(.bottom, 2)
+
+                        Toggle(NSLocalizedString("Remember history between sessions", comment: ""), isOn: $settings.persistHistory)
+                            .toggleStyle(.switch)
+                            .font(.caption)
+                            .onChange(of: settings.persistHistory) { _, enabled in
+                                if !enabled {
+                                    engine.history.deletePersistedFile()
+                                }
+                            }
+                        Text(NSLocalizedString("Saves your transcription history to disk so it persists after the app restarts. Stored in ~/Library/Application Support/DexDictate/.", comment: ""))
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.leading, 20).padding(.bottom, 2)
                     }
 
                     Divider().background(Color.white.opacity(0.3))

@@ -92,6 +92,10 @@ public final class TranscriptionEngine: ObservableObject {
              
     public init(outputCoordinator: OutputCoordinating = OutputCoordinator()) {
         self.outputCoordinator = outputCoordinator
+        // Load persisted history if the user has opted in.
+        if AppSettings.shared.persistHistory {
+            try? history.load(from: TranscriptionHistory.defaultStorageURL)
+        }
         // AudioRecorderService.inputLevel is @MainActor @Published — safe to bind directly.
         audioService.$inputLevel
             .assign(to: &$inputLevel)
@@ -494,6 +498,9 @@ public final class TranscriptionEngine: ObservableObject {
         lastTranscriptionWasSuspect = finalText.trimmingCharacters(in: .whitespacesAndNewlines).count < 3
 
         let addedItem = history.add(finalText)
+        if AppSettings.shared.persistHistory {
+            try? history.save(to: TranscriptionHistory.defaultStorageURL)
+        }
         let doneFormat = NSLocalizedString("Done: %@", comment: "Status: Transcription complete")
         statusText = String(format: doneFormat, finalText)
         liveTranscript = ""

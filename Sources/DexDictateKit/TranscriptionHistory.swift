@@ -4,19 +4,21 @@ import Foundation
 ///
 /// Wraps the transcribed text with a stable `UUID` identity so SwiftUI's `ForEach` can
 /// animate insertions and deletions correctly (unlike an index-based approach).
-public struct HistoryItem: Identifiable {
-    public let id = UUID()
+public struct HistoryItem: Identifiable, Codable {
+    public let id: UUID
     public let text: String
     public let createdAt: Date
     public let sourceHistoryItemID: UUID?
     public let isAccuracyRetry: Bool
-    
+
     public init(
+        id: UUID = UUID(),
         text: String,
         createdAt: Date = Date(),
         sourceHistoryItemID: UUID? = nil,
         isAccuracyRetry: Bool = false
     ) {
+        self.id = id
         self.text = text
         self.createdAt = createdAt
         self.sourceHistoryItemID = sourceHistoryItemID
@@ -86,5 +88,42 @@ public final class TranscriptionHistory: ObservableObject {
         }
         self.lastRemovedItem = nil
         return true
+    }
+
+    // MARK: - Persistence
+
+    /// The default file URL for persisted history.
+    public static var defaultStorageURL: URL {
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        let dir = appSupport.appendingPathComponent("DexDictate", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir.appendingPathComponent("history.json")
+    }
+
+    /// Saves items to `url`.
+    public func save(to url: URL) throws {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let data = try encoder.encode(items)
+        try data.write(to: url, options: .atomic)
+    }
+
+    /// Loads items from `url`, replacing current contents. Silently ignores missing file.
+    public func load(from url: URL) throws {
+        guard FileManager.default.fileExists(atPath: url.path) else { return }
+        let data = try Data(contentsOf: url)
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        items = try decoder.decode([HistoryItem].self, from: data)
+    }
+
+    /// Deletes the persisted history file at the default storage location.
+    public func deletePersistedFile() {
+        try? FileManager.default.removeItem(at: TranscriptionHistory.defaultStorageURL)
+    }
+
+    /// Deletes the persisted history file at a custom `url`.
+    public func deletePersistedFile(at url: URL) {
+        try? FileManager.default.removeItem(at: url)
     }
 }

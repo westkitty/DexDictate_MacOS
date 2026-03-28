@@ -175,6 +175,9 @@ public class AppSettings: ObservableObject {
     @AppStorage("enableAccuracyRetry_v1") public var enableAccuracyRetry: Bool = true
     @AppStorage("enableCorrectionSheet_v1") public var enableCorrectionSheet: Bool = true
     @AppStorage("enableContextInjection_v1") public var enableContextInjection: Bool = false
+
+    /// When `true`, transcription history is persisted to disk between sessions.
+    @AppStorage("persistHistory_v1") public var persistHistory: Bool = false
     
     public enum SoundTheme: String, CaseIterable, Identifiable {
         case custom = "Custom"
@@ -386,6 +389,7 @@ public class AppSettings: ObservableObject {
         enableOnsetTrim = false
         enableAccuracyRetry = true
         enableCorrectionSheet = true
+        persistHistory = false
         showFlavorTicker = true
         animateFlavorTicker = true
         selectedMenuBarIconIdentifier = ""
