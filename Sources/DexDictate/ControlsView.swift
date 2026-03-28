@@ -106,14 +106,7 @@ struct ControlsView: View {
                             .accessibilityLabel("Restore the most recently removed history entry")
                         }
 
-                        if engine.canRetryLastUtterance {
-                            Button("Retry Last in Accuracy Mode") {
-                                retryLastUtterance()
-                            }
-                            .buttonStyle(.bordered)
-                            .controlSize(.small)
-                            .accessibilityLabel("Retry the last utterance in accuracy mode")
-                        }
+                        retryAffordanceView
 
                         if AppSettings.shared.enableCorrectionSheet, engine.latestHistoryItem != nil {
                             Button("Learn Correction") {
@@ -178,6 +171,33 @@ struct ControlsView: View {
                 draft: $correctionDraft,
                 onSave: saveCorrection
             )
+        }
+    }
+
+    @ViewBuilder
+    private var retryAffordanceView: some View {
+        if engine.lastTranscriptionWasSuspect && engine.canRetryLastUtterance {
+            HStack(spacing: 6) {
+                Image(systemName: "questionmark.circle")
+                    .foregroundStyle(.orange)
+                Text(NSLocalizedString("Didn't catch that", comment: ""))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Button(NSLocalizedString("Retry", comment: "")) {
+                    retryLastUtterance()
+                }
+                .font(.caption)
+                .buttonStyle(.borderless)
+                .foregroundStyle(Color.accentColor)
+            }
+            .padding(.top, 2)
+        } else if engine.canRetryLastUtterance {
+            Button("Retry Last in Accuracy Mode") {
+                retryLastUtterance()
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .accessibilityLabel("Retry the last utterance in accuracy mode")
         }
     }
 

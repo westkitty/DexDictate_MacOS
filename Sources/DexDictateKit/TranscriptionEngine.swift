@@ -35,6 +35,7 @@ public final class TranscriptionEngine: ObservableObject {
     @Published public private(set) var lastUtteranceSnapshot: LastUtteranceSnapshot?
     @Published public private(set) var latestHistoryItem: HistoryItem?
     @Published public private(set) var lastDictationCompletionAt: Date?
+    @Published public private(set) var lastTranscriptionWasSuspect: Bool = false
     public var canUndoLastHistoryRemoval: Bool { history.canRestoreLastRemovedItem }
     public var canRetryLastUtterance: Bool {
         AppSettings.shared.enableAccuracyRetry &&
@@ -191,6 +192,7 @@ public final class TranscriptionEngine: ObservableObject {
 
             if state != .listening {
                 resultFeedback = .idle
+                lastTranscriptionWasSuspect = false
                 startListening()
             }
         } else {
@@ -410,6 +412,7 @@ public final class TranscriptionEngine: ObservableObject {
             _ = applyLifecycle(.transcriptionCompleted, context: "empty whisper result")
             statusText = NSLocalizedString("Ready", comment: "Status: Ready to dictate")
             resultFeedback = .noSpeechDetected
+            lastTranscriptionWasSuspect = true
             activityPhase = .ready
             lastDictationCompletionAt = Date()
         } else {
@@ -488,7 +491,8 @@ public final class TranscriptionEngine: ObservableObject {
              finalText = ProfanityFilter.filter(finalText)
         }
         let wasModified = finalText != preProcessingText
-        
+        lastTranscriptionWasSuspect = finalText.trimmingCharacters(in: .whitespacesAndNewlines).count < 3
+
         let addedItem = history.add(finalText)
         let doneFormat = NSLocalizedString("Done: %@", comment: "Status: Transcription complete")
         statusText = String(format: doneFormat, finalText)
