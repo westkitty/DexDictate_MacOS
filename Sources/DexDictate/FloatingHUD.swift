@@ -9,7 +9,7 @@ class FloatingHUDWindow: NSPanel {
                    styleMask: [.nonactivatingPanel, .hudWindow, .utilityWindow, .titled],
                    backing: .buffered,
                    defer: false)
-        
+
         self.isFloatingPanel = true
         self.level = .floating
         self.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
@@ -18,7 +18,7 @@ class FloatingHUDWindow: NSPanel {
         self.isMovableByWindowBackground = true
         self.backgroundColor = .clear
         self.hasShadow = true
-        
+
         let hostingView = NSHostingView(rootView: rootView)
         self.contentView = hostingView
     }
@@ -27,6 +27,9 @@ class FloatingHUDWindow: NSPanel {
 struct FloatingHUDView: View {
     @ObservedObject var engine: TranscriptionEngine
     @ObservedObject var profileManager: ProfileManager
+
+    @State private var waveformHistory: [Double] = []
+    private let maxWaveformSamples = 60  // ~6s at 10fps
 
     var body: some View {
         ZStack {
@@ -69,21 +72,14 @@ struct FloatingHUDView: View {
                             .bold()
                             .lineLimit(1)
 
-                        // Mic Level
-                        GeometryReader { geo in
-                            ZStack(alignment: .leading) {
-                                Rectangle()
-                                    .fill(Color.white.opacity(0.2))
-                                Rectangle()
-                                    .fill(statusColor)
-                                    .frame(width: geo.size.width * CGFloat(engine.inputLevel))
-                                    .animation(.linear(duration: 0.1), value: engine.inputLevel)
-                            }
-                        }
-                        .frame(height: 4)
-                        .clipShape(RoundedRectangle(cornerRadius: 2))
+                        // Animated waveform
+                        WaveformView(levels: waveformHistory, color: statusColor)
+                            .frame(height: 24)
+
+                        // Partial transcript / last result
+                        partialTranscriptView
                     }
-                    .frame(width: 100)
+                    .frame(width: 160)
                 }
             }
             .padding(12)
@@ -105,8 +101,46 @@ struct FloatingHUDView: View {
                     )
             }
         }
+        .onChange(of: engine.inputLevel) { _, level in
+            if engine.state == .listening {
+                waveformHistory.append(level)
+                if waveformHistory.count > maxWaveformSamples {
+                    waveformHistory.removeFirst()
+                }
+            } else if engine.state != .transcribing {
+                // Fade out when not recording
+                if !waveformHistory.isEmpty {
+                    waveformHistory = waveformHistory.map { $0 * 0.8 }.filter { $0 > 0.01 }
+                }
+            }
+        }
     }
-    
+
+    @ViewBuilder
+    private var partialTranscriptView: some View {
+        let displayText = computedDisplayText
+        if !displayText.isEmpty {
+            Text(displayText)
+                .font(.system(size: 10, weight: .regular, design: .monospaced))
+                .foregroundStyle(.white.opacity(0.7))
+                .lineLimit(2)
+                .frame(width: 160, alignment: .leading)
+                .animation(.easeInOut(duration: 0.2), value: displayText)
+        }
+    }
+
+    private var computedDisplayText: String {
+        if engine.state == .transcribing {
+            return "Transcribing..."
+        }
+        let live = engine.liveTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !live.isEmpty { return live }
+        if let lastItem = engine.history.items.first {
+            return "..." + String(lastItem.text.suffix(40))
+        }
+        return ""
+    }
+
     var statusColor: Color {
         switch engine.state {
         case .listening: return .red
@@ -164,25 +198,55 @@ struct FloatingHUDView: View {
     }
 }
 
+/// Animated waveform built from a rolling history of audio level samples.
+private struct WaveformView: View {
+    let levels: [Double]   // 0.0 – 1.0, most-recent last
+    let color: Color
+
+    private let barCount = 30
+    private let barWidth: CGFloat = 2
+    private let barSpacing: CGFloat = 1.5
+    private let maxHeight: CGFloat = 20
+
+    var body: some View {
+        HStack(alignment: .center, spacing: barSpacing) {
+            ForEach(paddedLevels.indices, id: \.self) { i in
+                RoundedRectangle(cornerRadius: 1)
+                    .frame(width: barWidth, height: max(2, CGFloat(paddedLevels[i]) * maxHeight))
+                    .foregroundStyle(color.opacity(0.5 + 0.5 * paddedLevels[i]))
+            }
+        }
+        .animation(.linear(duration: 0.1), value: levels.last ?? 0)
+    }
+
+    private var paddedLevels: [Double] {
+        let needed = barCount
+        if levels.count >= needed {
+            return Array(levels.suffix(needed))
+        }
+        return [Double](repeating: 0, count: needed - levels.count) + levels
+    }
+}
+
 @MainActor
 class FloatingHUDController: ObservableObject {
     private var window: FloatingHUDWindow?
     private var engine: TranscriptionEngine?
     private var profileManager: ProfileManager?
-    
+
     init() {}
-    
+
     func setup(engine: TranscriptionEngine, profileManager: ProfileManager) {
         self.engine = engine
         self.profileManager = profileManager
     }
-    
+
     func show() {
         guard let engine = engine, let profileManager = profileManager else { return }
         if window == nil {
             let view = FloatingHUDView(engine: engine, profileManager: profileManager)
             window = FloatingHUDWindow(
-                contentRect: NSRect(x: 100, y: 100, width: 200, height: 60),
+                contentRect: NSRect(x: 100, y: 100, width: 240, height: 80),
                 rootView: AnyView(view)
             )
             // Set window size constraints to prevent invalid resizing
@@ -197,11 +261,11 @@ class FloatingHUDController: ObservableObject {
         }
         window?.orderFront(nil)
     }
-    
+
     func hide() {
         window?.orderOut(nil)
     }
-    
+
     func toggle(shouldShow: Bool) {
         if shouldShow {
             show()
