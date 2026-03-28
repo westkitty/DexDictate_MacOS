@@ -77,6 +77,18 @@ struct DexDictateApp: App {
                     engine.loadWhisperModel(descriptor: activeModel)
                 }
 
+                // Load persisted history if opt-in is enabled.
+                if settings.persistHistory {
+                    let saved = HistoryPersistenceManager.load()
+                    if !saved.isEmpty {
+                        Task { @MainActor in
+                            for item in saved {
+                                engine.history.insert(item)
+                            }
+                        }
+                    }
+                }
+
                 // Auto-start: sets up event tap + moves engine to .ready state.
                 Task {
                     await engine.startSystem()
@@ -116,9 +128,19 @@ struct DexDictateApp: App {
                     ExperimentFlags.applyRuntimeSettings(settings)
                 }
             }
+            .onChange(of: settings.enableSilenceTrim) { _, _ in
+                if engine.state == .ready || engine.state == .stopped {
+                    ExperimentFlags.applyRuntimeSettings(settings)
+                }
+            }
             .onChange(of: engine.lastDictationCompletionAt) { _, newValue in
                 if newValue != nil {
                     adaptiveBenchmarkController.noteDictationFinished()
+                }
+            }
+            .onReceive(engine.history.$items) { items in
+                if settings.persistHistory {
+                    HistoryPersistenceManager.save(items)
                 }
             }
         } label: {
@@ -337,7 +359,8 @@ struct AntiGravityMainView: View {
     @ObservedObject var adaptiveBenchmarkController: AdaptiveBenchmarkController
     @ObservedObject var benchmarkResultsStore: BenchmarkResultsStore
     @State private var expandedHistory: Bool = false
-    
+    @State private var isDroppingFile: Bool = false
+
     var onDetachHistory: (() -> Void)?
 
     var body: some View {
@@ -395,6 +418,13 @@ struct AntiGravityMainView: View {
                         )
                     }
 
+                    if settings.showDictationStats {
+                        StatsTickerView(
+                            history: engine.history,
+                            animateWhenNeeded: settings.animateFlavorTicker
+                        )
+                    }
+
                     PermissionBannerView(permissionManager: permissionManager)
 
                     HistoryView(
@@ -404,7 +434,8 @@ struct AntiGravityMainView: View {
                         inputLevel: engine.inputLevel,
                         isListening: engine.state == .listening || engine.state == .transcribing,
                         expanded: $expandedHistory,
-                        onDetach: onDetachHistory
+                        onDetach: onDetachHistory,
+                        silenceCountdown: engine.silenceCountdown
                     )
 
                     ControlsView(
@@ -434,6 +465,22 @@ struct AntiGravityMainView: View {
             }
         }
         .frame(width: 320, height: 540)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.cyan.opacity(isDroppingFile ? 0.8 : 0), lineWidth: 2)
+                .animation(.easeInOut(duration: 0.15), value: isDroppingFile)
+        )
+        .onDrop(of: [.fileURL], isTargeted: $isDroppingFile) { providers in
+            guard engine.state == .ready else { return false }
+            providers.first?.loadItem(forTypeIdentifier: "public.file-url", options: nil) { item, _ in
+                guard let data = item as? Data,
+                      let url = URL(dataRepresentation: data, relativeTo: nil) else { return }
+                Task { @MainActor in
+                    engine.transcribeAudioFile(url: url)
+                }
+            }
+            return true
+        }
     }
 }
 

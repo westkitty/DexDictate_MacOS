@@ -35,6 +35,10 @@ public final class TranscriptionEngine: ObservableObject {
     @Published public private(set) var lastUtteranceSnapshot: LastUtteranceSnapshot?
     @Published public private(set) var latestHistoryItem: HistoryItem?
     @Published public private(set) var lastDictationCompletionAt: Date?
+
+    /// Seconds remaining until auto-stop due to silence; `nil` when inactive.
+    @Published public private(set) var silenceCountdown: Double? = nil
+
     public var canUndoLastHistoryRemoval: Bool { history.canRestoreLastRemovedItem }
     public var canRetryLastUtterance: Bool {
         AppSettings.shared.enableAccuracyRetry &&
@@ -47,12 +51,17 @@ public final class TranscriptionEngine: ObservableObject {
     private let outputCoordinator: OutputCoordinating
     public let vocabularyManager = VocabularyManager()
     private let commandProcessor = CommandProcessor()
+    public let customCommandsManager = CustomCommandsManager()
+    public let appInsertionOverridesManager = AppInsertionOverridesManager()
     
     /// Global input monitor.
     private var inputMonitor: InputMonitor?
 
     /// Pending stop task (debounce).
     private var stopTask: Task<Void, Error>?
+
+    /// Task managing the silence-timeout countdown.
+    private var silenceTimeoutTask: Task<Void, Never>?
 
     private weak var permissionManager: PermissionManager?
     private var currentSessionId = UUID()
@@ -121,6 +130,9 @@ public final class TranscriptionEngine: ObservableObject {
     }
 
     public func stopSystem() {
+        silenceTimeoutTask?.cancel()
+        silenceTimeoutTask = nil
+        silenceCountdown = nil
         inputMonitor?.stop()
         audioService.stopRecording()
         _ = applyLifecycle(.systemStopped, context: "stopSystem")
@@ -299,10 +311,39 @@ public final class TranscriptionEngine: ObservableObject {
                 _ = self.applyLifecycle(.audioCaptureFailed, context: "audio start failure")
             } else {
                 Safety.log("Audio engine started successfully — accumulating audio until trigger release")
+                self.startSilenceCountdownIfNeeded()
             }
         }
     }
-    
+
+    private func startSilenceCountdownIfNeeded() {
+        let timeout = AppSettings.shared.silenceTimeout
+        guard timeout > 0 else { return }
+        silenceTimeoutTask?.cancel()
+        silenceCountdown = timeout
+        let tickInterval: Double = 0.25
+        silenceTimeoutTask = Task { @MainActor [weak self] in
+            var remaining = timeout
+            while remaining > 0 {
+                do {
+                    try await Task.sleep(nanoseconds: UInt64(tickInterval * 1_000_000_000))
+                } catch {
+                    break
+                }
+                guard let self, !Task.isCancelled else { break }
+                if self.inputLevel > 0.01 {
+                    remaining = timeout
+                } else {
+                    remaining -= tickInterval
+                }
+                self.silenceCountdown = max(0, remaining)
+            }
+            guard let self, !Task.isCancelled, self.state == .listening else { return }
+            self.silenceCountdown = nil
+            self.stopListening()
+        }
+    }
+
     // NOTE: startWhisperRecognition() has been removed.
     // Audio is accumulated during the recording session and submitted to Whisper
     // as a single batch in stopListening() after the trigger is released.
@@ -319,6 +360,9 @@ public final class TranscriptionEngine: ObservableObject {
             Safety.log("stopListening() BLOCKED — lifecycle rejected transcription start from \(state)", category: .lifecycle)
             return
         }
+        silenceTimeoutTask?.cancel()
+        silenceTimeoutTask = nil
+        silenceCountdown = nil
         statusText = NSLocalizedString("Transcribing...", comment: "Status: Transcribing")
         inputLevel = 0
 
@@ -390,6 +434,50 @@ public final class TranscriptionEngine: ObservableObject {
     }
 
     /// Called by WhisperService when the single-batch transcription completes.
+    /// Transcribes an audio file from disk, routing the result through the normal
+    /// post-processing and output pipeline (commands, vocab, history, paste).
+    public func transcribeAudioFile(url: URL) {
+        guard state == .ready else {
+            Safety.log("transcribeAudioFile() skipped — state is \(state), must be .ready")
+            return
+        }
+        guard applyLifecycle(.transcriptionStarted, context: "transcribeAudioFile") else { return }
+        statusText = NSLocalizedString("Processing file...", comment: "Status: Processing audio file")
+        activityPhase = .transcribing
+
+        whisperService.ontranscriptionComplete = { [weak self] text in
+            Task { @MainActor [weak self] in
+                self?.handleWhisperResult(text)
+            }
+        }
+
+        Task.detached(priority: .userInitiated) { [weak self] in
+            do {
+                let (samples, sampleRate) = try AudioFileImporter.loadSamples(from: url)
+                let whisperSamples = AudioResampler.resampleToWhisper(samples, fromRate: sampleRate)
+                await MainActor.run { [weak self] in
+                    guard let self else { return }
+                    if !self.whisperService.transcribe(audioFrames: whisperSamples) {
+                        Safety.log("transcribeAudioFile() — Whisper refused transcription; resetting to ready state")
+                        _ = self.applyLifecycle(.transcriptionCompleted, context: "whisper unavailable (file)")
+                        self.statusText = NSLocalizedString("Ready", comment: "Status: Ready to dictate")
+                        self.resultFeedback = .idle
+                        self.activityPhase = .ready
+                    }
+                }
+            } catch {
+                let errorMessage = error.localizedDescription
+                await MainActor.run { [weak self] in
+                    guard let self else { return }
+                    _ = self.applyLifecycle(.transcriptionCompleted, context: "audio file import error")
+                    self.statusText = errorMessage
+                    self.resultFeedback = .idle
+                    self.activityPhase = .ready
+                }
+            }
+        }
+    }
+
     private func handleWhisperResult(_ text: String) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         Safety.log("handleWhisperResult — \(trimmed.isEmpty ? "empty" : "\(trimmed.count) chars")")
@@ -406,6 +494,17 @@ public final class TranscriptionEngine: ObservableObject {
 
 
     
+    /// Resolves the effective text insertion mode by checking per-app overrides first,
+    /// then the global `useAccessibilityInsertion` setting.
+    private func resolvedInsertionMode() -> InsertionModeOverride {
+        let settings = AppSettings.shared
+        if let bundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
+           let perAppMode = appInsertionOverridesManager.effectiveMode(for: bundleID) {
+            return perAppMode
+        }
+        return settings.useAccessibilityInsertion ? .accessibilityAPI : .clipboardPaste
+    }
+
     private func finalizeTranscription(_ text: String) {
         // Any path through this method completes the transcription cycle.
         // Without this, early returns (e.g. command-only utterances) can leave state
@@ -417,8 +516,8 @@ public final class TranscriptionEngine: ObservableObject {
             lastDictationCompletionAt = Date()
         }
 
-        // 0. Process Commands
-        let (processedText, command) = commandProcessor.process(text)
+        // 0. Process Commands (built-in + user-defined hot-word commands)
+        let (processedText, command) = commandProcessor.process(text, customCommands: customCommandsManager.commands)
         
         if command == .deleteLastSentence {
             // Check if user said JUST "scratch that" (meaning delete previous history item)
@@ -472,7 +571,11 @@ public final class TranscriptionEngine: ObservableObject {
         
         // 2. Apply Profanity Filter
         if AppSettings.shared.profanityFilter {
-             finalText = ProfanityFilter.filter(finalText)
+            finalText = ProfanityFilter.filter(
+                finalText,
+                additions: AppSettings.shared.customProfanityWords,
+                removals: AppSettings.shared.customProfanityRemovals
+            )
         }
         let wasModified = finalText != preProcessingText
         
@@ -493,7 +596,8 @@ public final class TranscriptionEngine: ObservableObject {
         let deliveryDecision = outputCoordinator.deliver(
             text: finalText,
             autoPaste: AppSettings.shared.autoPaste,
-            protectSensitiveContexts: AppSettings.shared.copyOnlyInSensitiveFields
+            protectSensitiveContexts: AppSettings.shared.copyOnlyInSensitiveFields,
+            insertionMode: resolvedInsertionMode()
         )
 
         switch deliveryDecision.delivery {
@@ -561,7 +665,11 @@ public final class TranscriptionEngine: ObservableObject {
 
         var finalText = vocabularyManager.applyEffective(to: trimmed)
         if AppSettings.shared.profanityFilter {
-            finalText = ProfanityFilter.filter(finalText)
+            finalText = ProfanityFilter.filter(
+                finalText,
+                additions: AppSettings.shared.customProfanityWords,
+                removals: AppSettings.shared.customProfanityRemovals
+            )
         }
 
         latestHistoryItem = history.add(
