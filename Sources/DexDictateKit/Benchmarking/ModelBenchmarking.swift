@@ -706,13 +706,37 @@ public final class AdaptiveBenchmarkController: ObservableObject {
     }
 
     private func bundledCorpusDirectoryURL() -> URL? {
+        // 1. Bundled resource inside the app bundle (production).
         if let resourceURL = Safety.resourceBundle.url(forResource: "BundledBenchmarkCorpus", withExtension: nil) {
             return resourceURL
         }
 
+        // 2. Developer environment: sample_corpus in the current working directory.
         let cwd = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
         let sourceCorpus = cwd.appendingPathComponent("sample_corpus")
-        return FileManager.default.fileExists(atPath: sourceCorpus.path) ? sourceCorpus : nil
+        if FileManager.default.fileExists(atPath: sourceCorpus.path) {
+            return sourceCorpus
+        }
+
+        // 3. User-captured sessions in ~/Library/Application Support/DexDictate/BenchmarkCaptures/.
+        //    Return the most recent session directory that contains at least one .wav file —
+        //    sessions without recordings cannot be used for benchmarking.
+        if let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
+            let capturesDir = appSupport.appendingPathComponent("DexDictate/BenchmarkCaptures", isDirectory: true)
+            let sessions = (try? FileManager.default.contentsOfDirectory(
+                at: capturesDir,
+                includingPropertiesForKeys: nil
+            ).filter { $0.hasDirectoryPath }.sorted { $0.path > $1.path }) ?? []
+            for session in sessions {
+                let wavFiles = (try? FileManager.default.contentsOfDirectory(
+                    at: session,
+                    includingPropertiesForKeys: nil
+                ).filter { $0.pathExtension.lowercased() == "wav" }) ?? []
+                if !wavFiles.isEmpty { return session }
+            }
+        }
+
+        return nil
     }
 
     private func modelsForCurrentRun() -> [String] {
