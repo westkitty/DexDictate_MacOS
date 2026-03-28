@@ -386,7 +386,13 @@ public final class TranscriptionEngine: ObservableObject {
         
         currentMetrics.t_whisper_submit = Date()
         activityPhase = .transcribing
-        if !whisperService.transcribe(audioFrames: whisperSamples) {
+
+        var contextPrompt: String? = nil
+        if AppSettings.shared.enableContextInjection {
+            contextPrompt = FocusedTextReader().readTail(maxChars: 200)
+        }
+
+        if !whisperService.transcribe(audioFrames: whisperSamples, initialPrompt: contextPrompt) {
             Safety.log("stopListening() — Whisper refused transcription; resetting to ready state")
             statusText = NSLocalizedString("Ready", comment: "Status: Ready to dictate")
             liveTranscript = ""

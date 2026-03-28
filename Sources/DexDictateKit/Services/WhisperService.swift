@@ -14,6 +14,10 @@ public class WhisperService: ObservableObject {
     /// preventing concurrent access to the non-thread-safe whisper.cpp C++ object.
     private var transcriptionTask: Task<Void, Never>?
 
+    /// Heap-allocated copy of the most-recently-set initial_prompt C string.
+    /// Must outlive the `whisper_full` call; freed before each new transcription.
+    private var _initialPromptCString: UnsafeMutablePointer<CChar>?
+
     // Callback closure to pass text back to the engine (marked Sendable for thread-safe access)
     public var ontranscriptionComplete: (@Sendable (String) -> Void)?
 
@@ -185,7 +189,7 @@ public class WhisperService: ObservableObject {
         _ = transcribe(audioFrames: silenceFrames)
     }
 
-    public func transcribe(audioFrames: [Float]) -> Bool {
+    public func transcribe(audioFrames: [Float], initialPrompt: String? = nil) -> Bool {
         guard let whisper = whisper, isModelLoaded else {
             Safety.log("transcribe() skipped — whisper=\(self.whisper == nil ? "nil" : "ok") isModelLoaded=\(isModelLoaded)")
             return false
@@ -193,6 +197,21 @@ public class WhisperService: ObservableObject {
         // Cancel any in-flight transcription before starting a new one.
         // whisper.cpp is not thread-safe; concurrent calls cause undefined behaviour.
         transcriptionTask?.cancel()
+
+        // Update the initial_prompt C string for context injection.
+        // Free any previous allocation, then strdup the new value (or set nil to clear).
+        if let prev = _initialPromptCString {
+            free(prev)
+            _initialPromptCString = nil
+        }
+        if let prompt = initialPrompt, !prompt.isEmpty {
+            _initialPromptCString = strdup(prompt)
+            whisper.params.initial_prompt = UnsafePointer(_initialPromptCString)
+            Safety.log("Context injection: set initial_prompt (\(prompt.count) chars)")
+        } else {
+            whisper.params.initial_prompt = nil
+        }
+
         isTranscribing = true
         let startedAt = Date()
         transcriptionTask = Task {

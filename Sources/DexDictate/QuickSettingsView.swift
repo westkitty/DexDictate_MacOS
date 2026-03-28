@@ -226,6 +226,15 @@ struct QuickSettingsView: View {
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                             .padding(.leading, 20).padding(.bottom, 2)
+
+                        Toggle(NSLocalizedString("Use context from focused field", comment: ""), isOn: $settings.enableContextInjection)
+                            .toggleStyle(.switch)
+                            .font(.caption)
+                        Text(NSLocalizedString("Reads your active text field to improve transcription accuracy for proper nouns and continuing sentences. Requires Accessibility permission.", comment: ""))
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.leading, 20).padding(.bottom, 2)
                     }
 
                     Divider().background(Color.white.opacity(0.3))

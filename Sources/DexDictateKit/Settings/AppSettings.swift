@@ -169,6 +169,7 @@ public class AppSettings: ObservableObject {
     @AppStorage("enableOnsetTrim_v1") public var enableOnsetTrim: Bool = false
     @AppStorage("enableAccuracyRetry_v1") public var enableAccuracyRetry: Bool = true
     @AppStorage("enableCorrectionSheet_v1") public var enableCorrectionSheet: Bool = true
+    @AppStorage("enableContextInjection_v1") public var enableContextInjection: Bool = false
     
     public enum SoundTheme: String, CaseIterable, Identifiable {
         case custom = "Custom"
