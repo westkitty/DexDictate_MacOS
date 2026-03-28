@@ -17,8 +17,17 @@ public class WhisperService: ObservableObject {
     // Callback closure to pass text back to the engine (marked Sendable for thread-safe access)
     public var ontranscriptionComplete: (@Sendable (String) -> Void)?
 
+    /// Cached initial prompt as C string for whisper.cpp
+    private var _initialPromptCString: UnsafeMutablePointer<CChar>?
+
     public init() {}
-    
+
+    deinit {
+        if let ptr = _initialPromptCString {
+            free(ptr)
+        }
+    }
+
     public func loadModel(
         url: URL,
         modelID: String? = nil,
