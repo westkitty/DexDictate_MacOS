@@ -166,6 +166,7 @@ public class AppSettings: ObservableObject {
     @AppStorage("benchmarkGateEnabled_v1") public var benchmarkGateEnabled: Bool = true
     @AppStorage("allowAutoModelPromotion_v1") public var allowAutoModelPromotion: Bool = true
     @AppStorage("enableTrailingTrimExperiment_v1") public var enableTrailingTrimExperiment: Bool = true
+    @AppStorage("enableOnsetTrim_v1") public var enableOnsetTrim: Bool = false
     @AppStorage("enableAccuracyRetry_v1") public var enableAccuracyRetry: Bool = true
     @AppStorage("enableCorrectionSheet_v1") public var enableCorrectionSheet: Bool = true
     

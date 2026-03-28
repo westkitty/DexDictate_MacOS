@@ -36,6 +36,7 @@ public struct ExperimentFlags {
         enableTrailingTrim = settings.enableTrailingTrimExperiment
         trailingTrimMinimumSilenceMs = settings.utteranceEndPreset.trailingTrimMinimumSilenceMs
         trailingTrimPadMs = settings.utteranceEndPreset.trailingTrimPadMs
+        enableSilenceTrim = settings.enableOnsetTrim
     }
 }
 

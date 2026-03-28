@@ -217,6 +217,15 @@ struct QuickSettingsView: View {
                             .font(.caption2).foregroundStyle(.white.opacity(0.5))
                             .fixedSize(horizontal: false, vertical: true)
                             .padding(.leading, 20).padding(.bottom, 2)
+
+                        Toggle(NSLocalizedString("Trim leading silence (experimental)", comment: ""), isOn: $settings.enableOnsetTrim)
+                            .toggleStyle(.switch)
+                            .font(.caption)
+                        Text(NSLocalizedString("Detects and removes silence at the start of recordings. May clip quiet speech — test before enabling.", comment: ""))
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.leading, 20).padding(.bottom, 2)
                     }
 
                     Divider().background(Color.white.opacity(0.3))

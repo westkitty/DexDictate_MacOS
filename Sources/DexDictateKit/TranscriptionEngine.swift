@@ -342,7 +342,16 @@ public final class TranscriptionEngine: ObservableObject {
 
         var samplesToProcess = rawSamples
         if ExperimentFlags.enableSilenceTrim {
-            samplesToProcess = AudioResampler.trimSilenceFast(samplesToProcess, sampleRate: sourceSampleRate)
+            // Prepend 200ms of silence so the noise-floor estimator has a quiet
+            // calibration window (the estimator uses the first 500ms, which would
+            // otherwise be speech in hold-to-talk mode).
+            let calibrationSamples = Int(sourceSampleRate * 0.2)
+            let paddedSamples = [Float](repeating: 0, count: calibrationSamples) + samplesToProcess
+            samplesToProcess = AudioResampler.trimSilenceFast(paddedSamples, sampleRate: sourceSampleRate)
+            // Drop the prepended calibration silence from the result
+            if samplesToProcess.count > calibrationSamples {
+                samplesToProcess = Array(samplesToProcess.dropFirst(calibrationSamples))
+            }
             if samplesToProcess.count != rawSamples.count {
                 let pct = Int((1.0 - Double(samplesToProcess.count) / Double(rawSamples.count)) * 100)
                 Safety.log("Silence trim: \(rawSamples.count) → \(samplesToProcess.count) samples (\(pct)% removed)")
