@@ -209,6 +209,15 @@ struct QuickSettingsView: View {
                         Toggle(NSLocalizedString("Filter Profanity", comment: ""), isOn: $settings.profanityFilter)
 
                         Toggle(NSLocalizedString("Show Floating HUD", comment: ""), isOn: $settings.showFloatingHUD)
+
+                        Toggle("Trim trailing silence", isOn: $settings.enableTrailingTrimExperiment)
+                            .toggleStyle(.switch)
+                            .font(.caption)
+                            .help("Removes silent audio at the end of each recording before transcription — reduces Whisper processing time.")
+                        Text(NSLocalizedString("Removes silent audio at the end of each recording before transcription — reduces Whisper processing time.", comment: ""))
+                            .font(.caption2).foregroundStyle(.white.opacity(0.5))
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.leading, 20).padding(.bottom, 2)
                     }
 
                     Divider().background(Color.white.opacity(0.3))

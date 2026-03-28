@@ -165,7 +165,7 @@ public class AppSettings: ObservableObject {
     @AppStorage("utteranceEndPreset_v1") public var utteranceEndPreset: UtteranceEndPreset = .stable
     @AppStorage("benchmarkGateEnabled_v1") public var benchmarkGateEnabled: Bool = true
     @AppStorage("allowAutoModelPromotion_v1") public var allowAutoModelPromotion: Bool = true
-    @AppStorage("enableTrailingTrimExperiment_v1") public var enableTrailingTrimExperiment: Bool = false
+    @AppStorage("enableTrailingTrimExperiment_v1") public var enableTrailingTrimExperiment: Bool = true
     @AppStorage("enableAccuracyRetry_v1") public var enableAccuracyRetry: Bool = true
     @AppStorage("enableCorrectionSheet_v1") public var enableCorrectionSheet: Bool = true
     
