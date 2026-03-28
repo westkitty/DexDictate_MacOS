@@ -107,11 +107,12 @@ struct FloatingHUDView: View {
                 if waveformHistory.count > maxWaveformSamples {
                     waveformHistory.removeFirst()
                 }
-            } else if engine.state != .transcribing {
-                // Fade out when not recording
-                if !waveformHistory.isEmpty {
-                    waveformHistory = waveformHistory.map { $0 * 0.8 }.filter { $0 > 0.01 }
-                }
+            }
+        }
+        .onChange(of: engine.state) { _, newState in
+            // When transitioning away from listening, clear the waveform buffer
+            if newState != .listening {
+                waveformHistory = []
             }
         }
     }
@@ -216,7 +217,7 @@ private struct WaveformView: View {
                     .foregroundStyle(color.opacity(0.5 + 0.5 * paddedLevels[i]))
             }
         }
-        .animation(.linear(duration: 0.1), value: levels.last ?? 0)
+        .animation(.linear(duration: 0.1), value: levels.count)
     }
 
     private var paddedLevels: [Double] {
