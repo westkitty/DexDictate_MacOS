@@ -70,15 +70,19 @@ struct WelcomePage: View {
                 .resizable()
                 .frame(width: 80, height: 80)
                 .foregroundStyle(.blue)
-            
+
             Text(NSLocalizedString("Welcome to DexDictate", comment: ""))
                 .font(.largeTitle)
                 .bold()
-            
-            Text(NSLocalizedString("Supercharge your dictation with global shortcuts and Whisper-powered accuracy.", comment: ""))
                 .multilineTextAlignment(.center)
-                .padding(.horizontal)
+
+            Text(NSLocalizedString("Supercharge your dictation with\nglobal shortcuts and Whisper-powered accuracy.", comment: ""))
+                .multilineTextAlignment(.center)
+                .font(.body)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: 360)
         }
+        .frame(maxWidth: .infinity)
     }
 }
 
@@ -208,19 +212,22 @@ private struct LivePermissionChecklist: View {
             PermissionStatusRow(
                 title: NSLocalizedString("Accessibility", comment: ""),
                 detail: NSLocalizedString("Needed for the event tap trust path and output control.", comment: ""),
-                isGranted: permissionManager.accessibilityGranted
+                isGranted: permissionManager.accessibilityGranted,
+                settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
             )
 
             PermissionStatusRow(
                 title: NSLocalizedString("Input Monitoring", comment: ""),
                 detail: NSLocalizedString("Needed to receive your global trigger events.", comment: ""),
-                isGranted: permissionManager.inputMonitoringGranted
+                isGranted: permissionManager.inputMonitoringGranted,
+                settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent"
             )
 
             PermissionStatusRow(
                 title: NSLocalizedString("Microphone", comment: ""),
                 detail: NSLocalizedString("Checked separately and prompted when dictation actually needs audio access.", comment: ""),
-                isGranted: permissionManager.microphoneGranted
+                isGranted: permissionManager.microphoneGranted,
+                settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
             )
         }
         .padding(14)
@@ -247,9 +254,10 @@ private struct PermissionStatusRow: View {
     let title: String
     let detail: String
     let isGranted: Bool
+    var settingsURL: String? = nil
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
+        let rowContent = HStack(alignment: .top, spacing: 12) {
             Image(systemName: isGranted ? "checkmark.circle.fill" : "circle.dotted")
                 .foregroundStyle(isGranted ? Color.green : Color.orange)
                 .font(.title3)
@@ -268,6 +276,27 @@ private struct PermissionStatusRow: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
+
+            Spacer()
+
+            if settingsURL != nil {
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+
+        if let urlString = settingsURL, let url = URL(string: urlString) {
+            Button(action: { NSWorkspace.shared.open(url) }) {
+                rowContent
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .onHover { inside in
+                if inside { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+            }
+        } else {
+            rowContent
         }
     }
 }
