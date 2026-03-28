@@ -377,6 +377,7 @@ public class AppSettings: ObservableObject {
         benchmarkGateEnabled = true
         allowAutoModelPromotion = true
         enableTrailingTrimExperiment = true
+        enableOnsetTrim = false
         enableAccuracyRetry = true
         enableCorrectionSheet = true
         showFlavorTicker = true

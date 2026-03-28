@@ -342,16 +342,13 @@ public final class TranscriptionEngine: ObservableObject {
 
         var samplesToProcess = rawSamples
         if ExperimentFlags.enableSilenceTrim {
-            // Prepend 200ms of silence so the noise-floor estimator has a quiet
-            // calibration window (the estimator uses the first 500ms, which would
-            // otherwise be speech in hold-to-talk mode).
-            let calibrationSamples = Int(sourceSampleRate * 0.2)
+            // Prepend 500ms of silence to cover trimSilenceFast's full noise-floor
+            // estimation window (5 frames × 100ms). The trimmer's forward scan will
+            // naturally skip the silent pad and land at the speech onset.
+            let calibrationSamples = Int(sourceSampleRate * 0.5)
             let paddedSamples = [Float](repeating: 0, count: calibrationSamples) + samplesToProcess
             samplesToProcess = AudioResampler.trimSilenceFast(paddedSamples, sampleRate: sourceSampleRate)
-            // Drop the prepended calibration silence from the result
-            if samplesToProcess.count > calibrationSamples {
-                samplesToProcess = Array(samplesToProcess.dropFirst(calibrationSamples))
-            }
+            // No dropFirst needed — the trimmer eliminates the silent pad in its forward scan
             if samplesToProcess.count != rawSamples.count {
                 let pct = Int((1.0 - Double(samplesToProcess.count) / Double(rawSamples.count)) * 100)
                 Safety.log("Silence trim: \(rawSamples.count) → \(samplesToProcess.count) samples (\(pct)% removed)")
