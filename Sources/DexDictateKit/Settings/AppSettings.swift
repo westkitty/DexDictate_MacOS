@@ -84,6 +84,9 @@ public class AppSettings: ObservableObject {
 
     /// Whether the user has completed the onboarding flow.
     @AppStorage("hasCompletedOnboarding") public var hasCompletedOnboarding: Bool = false
+
+    /// Whether the user has seen the help tutorial modal at least once.
+    @AppStorage("hasSeenHelpTutorial_v1") public var hasSeenHelpTutorial: Bool = false
     
     /// Whether to show the floating dictation HUD.
     @AppStorage("showFloatingHUD") public var showFloatingHUD: Bool = false
@@ -390,6 +393,7 @@ public class AppSettings: ObservableObject {
         enableAccuracyRetry = true
         enableCorrectionSheet = true
         persistHistory = false
+        hasSeenHelpTutorial = false
         showFlavorTicker = true
         animateFlavorTicker = true
         selectedMenuBarIconIdentifier = ""

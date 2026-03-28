@@ -92,6 +92,8 @@ struct PermissionsPage: View {
     @StateObject private var permissionManager = PermissionManager()
     @StateObject private var microphoneHarness = MicrophoneValidationHarness()
     @State private var triggerValidationState: TriggerValidationState = .idle
+    @State private var accessibilityButtonHovered = false
+    @State private var inputMonitorButtonHovered = false
 
     var body: some View {
         ScrollView {
@@ -133,6 +135,9 @@ struct PermissionsPage: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(.blue)
+                    .scaleEffect(accessibilityButtonHovered ? 1.03 : 1.0)
+                    .animation(.easeInOut(duration: 0.15), value: accessibilityButtonHovered)
+                    .onHover { accessibilityButtonHovered = $0 }
                 }
 
                 // ── Step 2: Input Monitoring (manual — macOS requires it) ─────
@@ -167,6 +172,9 @@ struct PermissionsPage: View {
                             .buttonStyle(.borderedProminent)
                             .tint(.orange)
                             .padding(.top, 4)
+                            .scaleEffect(inputMonitorButtonHovered ? 1.03 : 1.0)
+                            .animation(.easeInOut(duration: 0.15), value: inputMonitorButtonHovered)
+                            .onHover { inputMonitorButtonHovered = $0 }
                         }
                     }
                     .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -179,7 +187,7 @@ struct PermissionsPage: View {
                     iconColor: .red,
                     title: NSLocalizedString("Microphone", comment: ""),
                     description: NSLocalizedString(
-                        "macOS will ask automatically when you first press your dictation shortcut. No action needed now.",
+                        "macOS cannot grant microphone access here — the permission dialog will appear the first time you actually use dictation. To trigger it now, close this window and click the DexDictate icon in the menu bar, then press your trigger shortcut.",
                         comment: "")
                 ) { EmptyView() }
             }

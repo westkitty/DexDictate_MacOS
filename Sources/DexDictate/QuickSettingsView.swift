@@ -463,6 +463,30 @@ struct QuickSettingsView: View {
                         }
                     }
 
+                    // Trigger mode
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(NSLocalizedString("Trigger Mode", comment: ""))
+                            .font(.caption).bold().foregroundStyle(.white.opacity(0.7))
+
+                        Picker("", selection: $settings.triggerMode) {
+                            ForEach(AppSettings.TriggerMode.allCases) { mode in
+                                Text(mode.rawValue).tag(mode)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
+
+                        Text(settings.triggerMode == .holdToTalk
+                             ? NSLocalizedString("Hold trigger → record. Release → transcribe. Best for quick bursts.", comment: "")
+                             : NSLocalizedString("Press trigger → start recording. Press again → stop and transcribe.", comment: ""))
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.5))
+                            .fixedSize(horizontal: false, vertical: true)
+                            .animation(.easeInOut(duration: 0.2), value: settings.triggerMode)
+                    }
+
+                    Divider().background(Color.white.opacity(0.15))
+
                     ShortcutRecorder(shortcut: $settings.userShortcut)
                 }
             }

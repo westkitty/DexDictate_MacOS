@@ -13,6 +13,9 @@ struct ControlsView: View {
     @ObservedObject var adaptiveBenchmarkController: AdaptiveBenchmarkController
     @State private var isCorrectionSheetPresented = false
     @State private var correctionDraft = VocabularyCorrectionDraft()
+    @State private var isHelpPresented = false
+    @State private var helpGlowing = false
+    @ObservedObject private var settings = AppSettings.shared
 
     // MARK: - Derived
 
@@ -51,6 +54,30 @@ struct ControlsView: View {
                 .accessibilityLabel("Start dictation system")
             } else {
                 // ── Running: status + shortcut hint + stop button ─────────────
+
+                HStack {
+                    Spacer()
+                    Button(action: {
+                        isHelpPresented = true
+                        settings.hasSeenHelpTutorial = true
+                        helpGlowing = false
+                    }) {
+                        Image(systemName: "questionmark.circle.fill")
+                            .font(.title3)
+                            .foregroundStyle(.white.opacity(0.7))
+                            .scaleEffect(helpGlowing ? 1.15 : 1.0)
+                            .shadow(color: helpGlowing ? Color.blue.opacity(0.8) : .clear, radius: helpGlowing ? 8 : 0)
+                    }
+                    .buttonStyle(.plain)
+                    .help("How DexDictate works")
+                }
+                .onAppear {
+                    if !settings.hasSeenHelpTutorial {
+                        withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) {
+                            helpGlowing = true
+                        }
+                    }
+                }
 
                 // Colour-coded status label (Listening / Transcribing / Ready / …)
                 Text(engine.statusText)
@@ -109,12 +136,12 @@ struct ControlsView: View {
                         retryAffordanceView
 
                         if AppSettings.shared.enableCorrectionSheet, engine.latestHistoryItem != nil {
-                            Button("Learn Correction") {
-                                openCorrectionSheet()
-                            }
-                            .buttonStyle(.bordered)
-                            .controlSize(.small)
-                            .accessibilityLabel("Create a custom vocabulary correction")
+                            actionButton(
+                                label: "Learn Correction",
+                                icon: "text.badge.plus",
+                                color: .purple.opacity(0.45),
+                                action: openCorrectionSheet
+                            )
                         }
                     }
                 }
@@ -126,34 +153,38 @@ struct ControlsView: View {
                         .multilineTextAlignment(.center)
                 }
 
-                // Stop the whole dictation system (returns to .stopped)
-                Button(action: stopDictation) {
-                    HStack {
-                        Image(systemName: "stop.fill")
-                        Text(NSLocalizedString("Turn Off Dictation", comment: ""))
+                // Stop the whole dictation system
+                VStack(spacing: 4) {
+                    Button(action: stopDictation) {
+                        HStack {
+                            Image(systemName: "stop.fill")
+                            Text(NSLocalizedString("Turn Off Dictation", comment: ""))
+                        }
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(Color.red.opacity(0.5))
+                        .foregroundStyle(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .shadow(color: .red.opacity(0.3), radius: 5)
                     }
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .background(Color.red.opacity(0.5))
-                    .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .shadow(color: .red.opacity(0.3), radius: 5)
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Turn off dictation system")
+
+                    Text(AppSettings.shared.triggerMode == .holdToTalk
+                         ? NSLocalizedString("DexDictate only listens while the trigger is held.", comment: "")
+                         : NSLocalizedString("DexDictate listens until you press the trigger again.", comment: ""))
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.45))
+                        .multilineTextAlignment(.center)
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Turn off dictation system")
             }
 
             // ── Always visible: Quit ──────────────────────────────────────────
             Button(action: quitApp) {
                 Text(NSLocalizedString("Quit App", comment: ""))
-                    .font(.subheadline).fontWeight(.medium)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
-                    .background(Color.black.opacity(0.4))
-                    .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.2), lineWidth: 1))
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.45))
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Quit DexDictate")
@@ -172,18 +203,22 @@ struct ControlsView: View {
                 onSave: saveCorrection
             )
         }
+        .sheet(isPresented: $isHelpPresented) {
+            HelpTutorialView()
+        }
     }
 
     @ViewBuilder
     private var retryAffordanceView: some View {
         if engine.lastTranscriptionWasSuspect && engine.canRetryLastUtterance {
+            // Suspect result inline inline prompt
             HStack(spacing: 6) {
                 Image(systemName: "questionmark.circle")
                     .foregroundStyle(.orange)
                 Text(NSLocalizedString("Didn't catch that", comment: ""))
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Button(NSLocalizedString("Retry", comment: "")) {
+                Button(NSLocalizedString("Retry in Accuracy Mode", comment: "")) {
                     retryLastUtterance()
                 }
                 .font(.caption)
@@ -192,12 +227,12 @@ struct ControlsView: View {
             }
             .padding(.top, 2)
         } else if engine.canRetryLastUtterance {
-            Button("Retry Last in Accuracy Mode") {
-                retryLastUtterance()
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
-            .accessibilityLabel("Retry the last utterance in accuracy mode")
+            actionButton(
+                label: "Retry Last in Accuracy Mode",
+                icon: "arrow.counterclockwise",
+                color: .blue.opacity(0.45),
+                action: retryLastUtterance
+            )
         }
     }
 
@@ -267,5 +302,88 @@ struct ControlsView: View {
         guard !incorrect.isEmpty, !corrected.isEmpty else { return }
         engine.vocabularyManager.add(original: incorrect, replacement: corrected)
         isCorrectionSheetPresented = false
+    }
+
+    /// Uniform-sized action button matching the Stop Dictation style.
+    private func actionButton(label: String, icon: String, color: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack {
+                Image(systemName: icon)
+                Text(NSLocalizedString(label, comment: ""))
+            }
+            .font(.subheadline.weight(.semibold))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 9)
+            .background(color)
+            .foregroundStyle(.white)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct HelpTutorialView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    private let items: [(icon: String, color: Color, title: String, body: String)] = [
+        ("mic.fill", .blue, "Hold to Talk (default)",
+         "Hold your trigger (middle mouse or custom key) and speak. Release when done — DexDictate transcribes and types the result automatically."),
+        ("arrow.triangle.2.circlepath", .orange, "Click to Toggle",
+         "Press trigger once to start listening, press again to stop. Useful for longer dictations. Change this in Quick Settings."),
+        ("waveform", .green, "Live Accuracy",
+         "DexDictate uses Whisper AI running 100% on-device — no internet, no cloud. For difficult audio, use 'Retry in Accuracy Mode' to reprocess with higher quality settings."),
+        ("text.badge.plus", .purple, "Learn Correction",
+         "If Whisper mishears a word (like a name or jargon), use 'Learn Correction' to teach it the right substitution. Applied automatically on every future transcription."),
+        ("doc.on.clipboard", .cyan, "Clipboard-Free Paste",
+         "Enable 'Insert without clipboard' in Quick Settings to type text directly into the focused field — your clipboard stays untouched."),
+        ("clock.arrow.circlepath", .yellow, "History",
+         "Every transcription is saved to the history list. Click the expand arrow to see past results. Enable 'Remember history between sessions' to persist across launches."),
+    ]
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text(NSLocalizedString("How DexDictate Works", comment: ""))
+                    .font(.title2.bold())
+                Spacer()
+                Button(action: { dismiss() }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding()
+
+            Divider()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    ForEach(items, id: \.title) { item in
+                        HStack(alignment: .top, spacing: 14) {
+                            Image(systemName: item.icon)
+                                .font(.title3)
+                                .foregroundStyle(item.color)
+                                .frame(width: 32)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(item.title)
+                                    .font(.subheadline.bold())
+                                Text(item.body)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                    }
+                }
+                .padding()
+            }
+
+            Divider()
+            Button(NSLocalizedString("Got it", comment: "")) { dismiss() }
+                .buttonStyle(.borderedProminent)
+                .padding()
+        }
+        .frame(width: 420, height: 500)
     }
 }
