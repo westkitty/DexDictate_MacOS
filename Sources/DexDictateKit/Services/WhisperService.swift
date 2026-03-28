@@ -22,7 +22,11 @@ public class WhisperService: ObservableObject {
     public var ontranscriptionComplete: (@Sendable (String) -> Void)?
 
     public init() {}
-    
+
+    deinit {
+        if let p = _initialPromptCString { free(p) }
+    }
+
     public func loadModel(
         url: URL,
         modelID: String? = nil,
@@ -151,7 +155,7 @@ public class WhisperService: ObservableObject {
         params.single_segment = true
         // Language already locked to English (model is tiny.en); set explicitly.
         params.language = .english
-        Safety.log("WhisperParams: best_of=1 speed_up=true retries=off max_tokens=128 n_threads=\(params.n_threads) single_segment=true")
+        Safety.log("WhisperParams: best_of=\(params.greedy.best_of) speed_up=\(params.speed_up) retries=\(params.temperature_inc > 0 ? "on" : "off") max_tokens=\(params.max_tokens) n_threads=\(params.n_threads) single_segment=\(params.single_segment)")
         return params
     }
 

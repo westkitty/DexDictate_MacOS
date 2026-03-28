@@ -254,11 +254,8 @@ class FloatingHUDController: ObservableObject {
             window?.minSize = NSSize(width: 150, height: 50)
             window?.maxSize = NSSize(width: 400, height: 200)
 
-            // Restore saved position or center on first launch
+            // Restore saved position; autosave handles persistence across launches.
             window?.setFrameAutosaveName("FloatingHUDPosition")
-            if window?.frame.origin == .zero {
-                window?.center() // Only center on first launch
-            }
         }
         window?.orderFront(nil)
     }

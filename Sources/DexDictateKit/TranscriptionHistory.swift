@@ -29,7 +29,8 @@ public struct HistoryItem: Identifiable, Codable {
 /// An ordered, size-bounded list of ``HistoryItem`` values for the current session.
 ///
 /// Items are prepended (most-recent first) and the list is capped at 50 entries.
-/// History is **not** persisted to disk — it resets on every app launch.
+/// History persists to disk when the user enables the "Remember history between sessions"
+/// setting; otherwise it resets on every app launch.
 @MainActor
 public final class TranscriptionHistory: ObservableObject {
 

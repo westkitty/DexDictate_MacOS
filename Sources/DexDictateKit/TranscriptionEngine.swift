@@ -356,7 +356,7 @@ public final class TranscriptionEngine: ObservableObject {
             let paddedSamples = [Float](repeating: 0, count: calibrationSamples) + samplesToProcess
             samplesToProcess = AudioResampler.trimSilenceFast(paddedSamples, sampleRate: sourceSampleRate)
             // No dropFirst needed — the trimmer eliminates the silent pad in its forward scan
-            if samplesToProcess.count != rawSamples.count {
+            if samplesToProcess.count < rawSamples.count {
                 let pct = Int((1.0 - Double(samplesToProcess.count) / Double(rawSamples.count)) * 100)
                 Safety.log("Silence trim: \(rawSamples.count) → \(samplesToProcess.count) samples (\(pct)% removed)")
             }
@@ -582,6 +582,7 @@ public final class TranscriptionEngine: ObservableObject {
             activityPhase = .ready
             return
         }
+        lastTranscriptionWasSuspect = false
 
         var finalText = vocabularyManager.applyEffective(to: trimmed)
         if AppSettings.shared.profanityFilter {
@@ -593,6 +594,9 @@ public final class TranscriptionEngine: ObservableObject {
             sourceHistoryItemID: sourceHistoryItemID,
             isAccuracyRetry: true
         )
+        if AppSettings.shared.persistHistory {
+            try? history.save(to: TranscriptionHistory.defaultStorageURL)
+        }
         if let snapshot = lastUtteranceSnapshot {
             lastUtteranceSnapshot = LastUtteranceSnapshot(
                 rawSamples: snapshot.rawSamples,
