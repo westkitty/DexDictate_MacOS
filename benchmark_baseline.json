@@ -1,0 +1,10 @@
+{
+  "benchmarkVersion": "2026-03-27",
+  "stableModelID": "tiny.en",
+  "thresholds": {
+    "maxAverageWER": 0.08,
+    "maxP95LatencyMs": 2200,
+    "minImprovementWERRatio": 0.2,
+    "maxP95LatencyRegressionRatio": 0.35
+  }
+}

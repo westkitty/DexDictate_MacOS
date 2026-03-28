@@ -16,6 +16,7 @@ ENTITLEMENTS="Sources/DexDictate/DexDictate.entitlements"
 ICON_SOURCE="Sources/DexDictate/AppIcon.icns"
 INFO_TEMPLATE="templates/Info.plist.template"
 VERSION_FILE="VERSION"
+BENCHMARK_BASELINE="benchmark_baseline.json"
 
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -25,9 +26,11 @@ NC='\033[0m'
 echo -e "${BLUE}🔨 Building $APP_NAME...${NC}"
 echo -e "${BLUE}🚀 Compiling sources...${NC}"
 swift build -c release --disable-sandbox
+swift build -c release --disable-sandbox --product VerificationRunner
 
 BIN_PATH="$(swift build -c release --show-bin-path)"
 BINARY="$BIN_PATH/$SWIFT_PRODUCT"
+HELPER_BINARY="$BIN_PATH/VerificationRunner"
 RESOURCE_BUNDLE="$BIN_PATH/${SWIFT_PRODUCT}_DexDictateKit.bundle"
 
 if [ ! -f "$BINARY" ]; then
@@ -40,11 +43,19 @@ if [ ! -d "$RESOURCE_BUNDLE" ]; then
     exit 1
 fi
 
-mkdir -p "$BUNDLE/Contents/MacOS" "$BUNDLE/Contents/Resources"
+if [ ! -f "$HELPER_BINARY" ]; then
+    echo "❌ Missing helper binary: $HELPER_BINARY"
+    exit 1
+fi
+
+mkdir -p "$BUNDLE/Contents/MacOS" "$BUNDLE/Contents/Resources" "$BUNDLE/Contents/Helpers"
 cp -f "$BINARY" "$BUNDLE/Contents/MacOS/$EXECUTABLE_NAME"
+cp -f "$HELPER_BINARY" "$BUNDLE/Contents/Helpers/VerificationRunner"
+chmod +x "$BUNDLE/Contents/Helpers/VerificationRunner"
 rm -rf "$BUNDLE/Contents/Resources/$(basename "$RESOURCE_BUNDLE")"
 cp -R "$RESOURCE_BUNDLE" "$BUNDLE/Contents/Resources/"
 cp -f "$ICON_SOURCE" "$BUNDLE/Contents/Resources/AppIcon.icns"
+cp -f "$BENCHMARK_BASELINE" "$BUNDLE/Contents/Resources/benchmark_baseline.json"
 
 VERSION="$(cat "$VERSION_FILE")"
 echo "📄 Generating Info.plist..."

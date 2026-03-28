@@ -75,6 +75,53 @@ public struct AudioResampler {
         return Array(samples[speechStart..<speechEnd])
     }
 
+    /// Trailing-only trim path used by the benchmark-safe experiment flow.
+    /// It never removes leading samples.
+    public static func trimTrailingSilenceCalibrated(
+        _ samples: [Float],
+        sampleRate: Double,
+        minimumSilenceMs: Int,
+        padMs: Int
+    ) -> [Float] {
+        guard !samples.isEmpty else { return samples }
+
+        let frameSize = max(1, Int(sampleRate * 0.02))
+        let minimumSilentFrames = max(1, Int(Double(minimumSilenceMs) / 20.0))
+        let padSamples = max(0, Int(sampleRate * Double(padMs) / 1000.0))
+        let floorWindow = min(samples.count, frameSize * 10)
+        guard floorWindow >= frameSize else { return samples }
+
+        var baselineRMS: Float = 0
+        var countedFrames = 0
+        var index = max(0, samples.count - floorWindow)
+        while index + frameSize <= samples.count {
+            baselineRMS += rmsEnergy(samples, from: index, count: frameSize)
+            countedFrames += 1
+            index += frameSize
+        }
+        guard countedFrames > 0 else { return samples }
+        let threshold = max(0.0008, (baselineRMS / Float(countedFrames)) * 1.8)
+
+        var silentFrameCount = 0
+        var trimStart = samples.count
+        var cursor = max(0, samples.count - frameSize)
+        while cursor >= 0 {
+            let rms = rmsEnergy(samples, from: cursor, count: min(frameSize, samples.count - cursor))
+            if rms <= threshold {
+                silentFrameCount += 1
+                trimStart = cursor
+            } else {
+                break
+            }
+            cursor -= frameSize
+        }
+
+        guard silentFrameCount >= minimumSilentFrames else { return samples }
+        let endIndex = min(samples.count, trimStart + padSamples)
+        guard endIndex > 0 else { return samples }
+        return Array(samples[..<endIndex])
+    }
+
     // MARK: - Private helpers
 
     @inline(__always)

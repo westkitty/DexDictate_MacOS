@@ -6,6 +6,15 @@ import Combine
 /// The central coordinator for the speech-recognition pipeline.
 @MainActor
 public final class TranscriptionEngine: ObservableObject {
+    public enum ActivityPhase: Equatable {
+        case idle
+        case ready
+        case listening
+        case captured
+        case resampling
+        case transcribing
+        case retryingAccuracy
+    }
 
     /// Current lifecycle phase of the engine.
     @Published public var state: EngineState = .stopped
@@ -22,7 +31,16 @@ public final class TranscriptionEngine: ObservableObject {
     /// Transcription history.
     @Published public var history = TranscriptionHistory()
     @Published public var resultFeedback: TranscriptionFeedback = .idle
+    @Published public private(set) var activityPhase: ActivityPhase = .idle
+    @Published public private(set) var lastUtteranceSnapshot: LastUtteranceSnapshot?
+    @Published public private(set) var latestHistoryItem: HistoryItem?
+    @Published public private(set) var lastDictationCompletionAt: Date?
     public var canUndoLastHistoryRemoval: Bool { history.canRestoreLastRemovedItem }
+    public var canRetryLastUtterance: Bool {
+        AppSettings.shared.enableAccuracyRetry &&
+        lastUtteranceSnapshot?.hasAudio == true &&
+        state == .ready
+    }
 
     private let audioService = AudioRecorderService()
     private let whisperService = WhisperService()
@@ -42,6 +60,7 @@ public final class TranscriptionEngine: ObservableObject {
     private var recognitionTask: Task<Void, Error>?
     private var cancellables = Set<AnyCancellable>()
     private var lifecycle = EngineLifecycleStateMachine()
+    private var lastCapturedUtterance: (samples: [Float], sampleRate: Double)?
 
     // MARK: - Metrics
     private struct MetricsSession {
@@ -109,6 +128,7 @@ public final class TranscriptionEngine: ObservableObject {
         liveTranscript = ""
         inputLevel = 0
         resultFeedback = .idle
+        activityPhase = .idle
     }
     
     /// True once the Whisper model has been successfully loaded into memory.
@@ -118,6 +138,13 @@ public final class TranscriptionEngine: ObservableObject {
 
     public func loadWhisperModel(url: URL) {
         whisperService.loadModel(url: url)
+    }
+
+    public func loadWhisperModel(
+        descriptor: WhisperModelDescriptor,
+        decodeProfile: ExperimentFlags.DecodeProfile? = nil
+    ) {
+        whisperService.ensureModelLoaded(descriptor: descriptor, decodeProfile: decodeProfile)
     }
 
     public func loadEmbeddedWhisperModel() {
@@ -188,6 +215,7 @@ public final class TranscriptionEngine: ObservableObject {
         if inputMonitor?.isEventTapActive == true {
             _ = applyLifecycle(.inputMonitorActivated, context: "input monitor active")
             statusText = NSLocalizedString("Ready", comment: "Status: Ready")
+            activityPhase = .ready
         }
         // If tap failed, state stays .initializing until the InputMonitor Task sets .error.
     }
@@ -247,6 +275,7 @@ public final class TranscriptionEngine: ObservableObject {
         statusText = NSLocalizedString("Listening...", comment: "Status: Listening")
         liveTranscript = ""
         inputLevel = 0
+        activityPhase = .listening
 
         if AppSettings.shared.playStartSound {
             SoundPlayer.play(AppSettings.shared.selectedStartSound)
@@ -302,6 +331,8 @@ public final class TranscriptionEngine: ObservableObject {
         let (rawSamples, sourceSampleRate) = audioService.stopAndCollect()
         currentMetrics.t_audio_stop = Date()
         currentMetrics.raw_samples = rawSamples.count
+        lastCapturedUtterance = (rawSamples, sourceSampleRate)
+        activityPhase = .captured
         
         Safety.log("stopListening() — collected \(rawSamples.count) samples @ \(sourceSampleRate) Hz")
 
@@ -317,12 +348,21 @@ public final class TranscriptionEngine: ObservableObject {
                 Safety.log("Silence trim: \(rawSamples.count) → \(samplesToProcess.count) samples (\(pct)% removed)")
             }
         }
+        if ExperimentFlags.enableTrailingTrim {
+            samplesToProcess = AudioResampler.trimTrailingSilenceCalibrated(
+                samplesToProcess,
+                sampleRate: sourceSampleRate,
+                minimumSilenceMs: ExperimentFlags.trailingTrimMinimumSilenceMs,
+                padMs: ExperimentFlags.trailingTrimPadMs
+            )
+        }
         currentMetrics.trim_samples = samplesToProcess.count
         
         // Immediate UI feedback to user that dictation was captured and is processing.
         self.liveTranscript = NSLocalizedString("Processing...", comment: "Status: Processing audio")
 
         // 2. Resample to 16 kHz (Whisper's required sample rate) and submit once.
+        activityPhase = .resampling
         let whisperSamples = AudioResampler.resampleToWhisper(samplesToProcess, fromRate: sourceSampleRate)
         currentMetrics.t_resample_done = Date()
         currentMetrics.resample_samples = whisperSamples.count
@@ -338,11 +378,13 @@ public final class TranscriptionEngine: ObservableObject {
         }
         
         currentMetrics.t_whisper_submit = Date()
+        activityPhase = .transcribing
         if !whisperService.transcribe(audioFrames: whisperSamples) {
             Safety.log("stopListening() — Whisper refused transcription; resetting to ready state")
             statusText = NSLocalizedString("Ready", comment: "Status: Ready to dictate")
             liveTranscript = ""
             resultFeedback = .idle
+            activityPhase = .ready
             _ = applyLifecycle(.transcriptionCompleted, context: "whisper unavailable")
         }
     }
@@ -355,6 +397,8 @@ public final class TranscriptionEngine: ObservableObject {
             _ = applyLifecycle(.transcriptionCompleted, context: "empty whisper result")
             statusText = NSLocalizedString("Ready", comment: "Status: Ready to dictate")
             resultFeedback = .noSpeechDetected
+            activityPhase = .ready
+            lastDictationCompletionAt = Date()
         } else {
             finalizeTranscription(trimmed)
         }
@@ -369,6 +413,8 @@ public final class TranscriptionEngine: ObservableObject {
         defer {
             _ = applyLifecycle(.transcriptionCompleted, context: "finalizeTranscription")
             emitMetricsCSV()
+            activityPhase = .ready
+            lastDictationCompletionAt = Date()
         }
 
         // 0. Process Commands
@@ -430,10 +476,19 @@ public final class TranscriptionEngine: ObservableObject {
         }
         let wasModified = finalText != preProcessingText
         
-        history.add(finalText)
+        let addedItem = history.add(finalText)
         let doneFormat = NSLocalizedString("Done: %@", comment: "Status: Transcription complete")
         statusText = String(format: doneFormat, finalText)
         liveTranscript = ""
+        latestHistoryItem = addedItem
+        if let captured = lastCapturedUtterance {
+            lastUtteranceSnapshot = LastUtteranceSnapshot(
+                rawSamples: captured.samples,
+                sourceSampleRate: captured.sampleRate,
+                originalTranscript: finalText,
+                sourceHistoryItemID: addedItem?.id
+            )
+        }
         
         let deliveryDecision = outputCoordinator.deliver(
             text: finalText,
@@ -460,6 +515,73 @@ public final class TranscriptionEngine: ObservableObject {
 
         statusText = NSLocalizedString("Restored previous entry", comment: "")
         resultFeedback = .restoredPreviousHistory
+    }
+
+    public func retryLastUtteranceInAccuracyMode() {
+        guard canRetryLastUtterance,
+              let snapshot = lastUtteranceSnapshot,
+              let descriptor = WhisperModelCatalog.shared.activeDescriptor() else {
+            return
+        }
+
+        activityPhase = .retryingAccuracy
+        statusText = NSLocalizedString("Retrying last utterance...", comment: "Status: retrying last utterance")
+        liveTranscript = NSLocalizedString("Retrying in accuracy mode...", comment: "Retry progress")
+        resultFeedback = .idle
+
+        whisperService.ensureModelLoaded(descriptor: descriptor, decodeProfile: .accuracy)
+        let whisperSamples = AudioResampler.resampleToWhisper(snapshot.rawSamples, fromRate: snapshot.sourceSampleRate)
+
+        whisperService.ontranscriptionComplete = { [weak self] text in
+            Task { @MainActor in
+                self?.handleAccuracyRetryResult(
+                    text: text,
+                    sourceHistoryItemID: snapshot.sourceHistoryItemID
+                )
+            }
+        }
+
+        activityPhase = .transcribing
+        if !whisperService.transcribe(audioFrames: whisperSamples) {
+            statusText = NSLocalizedString("Retry unavailable", comment: "")
+            liveTranscript = ""
+            activityPhase = .ready
+        }
+    }
+
+    private func handleAccuracyRetryResult(text: String, sourceHistoryItemID: UUID?) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            statusText = NSLocalizedString("Retry returned no speech", comment: "")
+            liveTranscript = ""
+            resultFeedback = .noSpeechDetected
+            activityPhase = .ready
+            return
+        }
+
+        var finalText = vocabularyManager.applyEffective(to: trimmed)
+        if AppSettings.shared.profanityFilter {
+            finalText = ProfanityFilter.filter(finalText)
+        }
+
+        latestHistoryItem = history.add(
+            finalText,
+            sourceHistoryItemID: sourceHistoryItemID,
+            isAccuracyRetry: true
+        )
+        if let snapshot = lastUtteranceSnapshot {
+            lastUtteranceSnapshot = LastUtteranceSnapshot(
+                rawSamples: snapshot.rawSamples,
+                sourceSampleRate: snapshot.sourceSampleRate,
+                originalTranscript: finalText,
+                sourceHistoryItemID: latestHistoryItem?.id
+            )
+        }
+        statusText = NSLocalizedString("Saved retried result", comment: "")
+        liveTranscript = ""
+        resultFeedback = .savedToHistory(modified: finalText != trimmed)
+        activityPhase = .ready
+        lastDictationCompletionAt = Date()
     }
 
     private func emitMetricsCSV() {

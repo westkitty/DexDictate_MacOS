@@ -27,4 +27,18 @@ final class TranscriptionHistoryTests: XCTestCase {
         XCTAssertEqual(history.items.map(\.text), ["second", "first"])
         XCTAssertFalse(history.canRestoreLastRemovedItem)
     }
+
+    func testHistoryCapturesAccuracyRetryMetadata() {
+        let history = TranscriptionHistory()
+        let source = history.add("original")
+        let retry = history.add(
+            "corrected",
+            sourceHistoryItemID: source?.id,
+            isAccuracyRetry: true
+        )
+
+        XCTAssertEqual(history.items.first?.text, "corrected")
+        XCTAssertEqual(retry?.sourceHistoryItemID, source?.id)
+        XCTAssertEqual(retry?.isAccuracyRetry, true)
+    }
 }

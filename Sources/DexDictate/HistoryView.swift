@@ -110,6 +110,12 @@ struct HistoryView: View {
                                         .font(.caption)
                                         .foregroundStyle(.white.opacity(0.9))
                                         .fixedSize(horizontal: false, vertical: true)
+
+                                    if item.isAccuracyRetry {
+                                        Text("Accuracy retry")
+                                            .font(.caption2.weight(.semibold))
+                                            .foregroundStyle(.cyan)
+                                    }
                                 }
                                 Spacer()
                                 ChromeIconButton(

@@ -141,7 +141,7 @@ final class BenchmarkCaptureWindowController: NSObject, ObservableObject, NSWind
 
     func copyBenchmarkCommand() {
         guard let sessionDirectory else { return }
-        let command = "python3 scripts/benchmark.py --corpus-dir \"\(sessionDirectory.path)\" --model tiny.en --build release"
+        let command = "python3 scripts/benchmark.py --corpus-dir \"\(sessionDirectory.path)\" --model tiny.en --build release --json-output /tmp/dexdictate-benchmark.json --csv-output /tmp/dexdictate-benchmark.csv --gate-file benchmark_baseline.json"
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(command, forType: .string)
         statusMessage = "Copied benchmark command."

@@ -7,17 +7,19 @@ import DexDictateKit
 class HistoryWindowController: ObservableObject {
     private var window: NSWindow?
     private var engine: TranscriptionEngine?
+    private var vocabularyManager: VocabularyManager?
     
     init() {}
     
-    func setup(engine: TranscriptionEngine) {
+    func setup(engine: TranscriptionEngine, vocabularyManager: VocabularyManager) {
         self.engine = engine
+        self.vocabularyManager = vocabularyManager
     }
     
     func show() {
-        guard let engine = engine else { return }
+        guard let engine = engine, let vocabularyManager else { return }
         if window == nil {
-            let view = FullHistoryView(history: engine.history)
+            let view = FullHistoryView(history: engine.history, vocabularyManager: vocabularyManager)
             let hosting = NSHostingController(rootView: view)
             window = NSWindow(contentViewController: hosting)
             window?.title = NSLocalizedString("Transcription History", comment: "")
@@ -59,9 +61,12 @@ struct TextDocument: FileDocument {
 struct FullHistoryView: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @ObservedObject var history: TranscriptionHistory
+    @ObservedObject var vocabularyManager: VocabularyManager
     @State private var isExporting = false
     @State private var document: TextDocument?
     @State private var searchText = ""
+    @State private var draft = VocabularyCorrectionDraft()
+    @State private var isCorrectionSheetPresented = false
 
     private var filteredItems: [HistoryItem] {
         guard !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
@@ -144,7 +149,10 @@ struct FullHistoryView: View {
                         .padding()
                 } else {
                     ForEach(filteredItems) { item in
-                        HistoryItemRow(item: item)
+                        HistoryItemRow(item: item) {
+                            draft = VocabularyCorrectionDraft(incorrectPhrase: item.text, correctPhrase: "")
+                            isCorrectionSheetPresented = true
+                        }
                     }
                 }
             }
@@ -175,11 +183,21 @@ struct FullHistoryView: View {
             }
             #endif
         }
+        .sheet(isPresented: $isCorrectionSheetPresented) {
+            VocabularyCorrectionSheet(draft: $draft) {
+                vocabularyManager.add(
+                    original: draft.incorrectPhrase.trimmingCharacters(in: .whitespacesAndNewlines),
+                    replacement: draft.correctPhrase.trimmingCharacters(in: .whitespacesAndNewlines)
+                )
+                isCorrectionSheetPresented = false
+            }
+        }
     }
 }
 
 struct HistoryItemRow: View {
     let item: HistoryItem
+    var onLearnCorrection: () -> Void
 
     var body: some View {
         HStack(alignment: .top) {
@@ -192,11 +210,25 @@ struct HistoryItemRow: View {
                     .font(.body)
                     .textSelection(.enabled)
                     .fixedSize(horizontal: false, vertical: true)
+
+                if item.isAccuracyRetry {
+                    Text("Accuracy retry")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.cyan)
+                }
             }
             Spacer()
-            ChromeIconButton(systemName: "doc.on.doc", accessibilityText: "Copy history item") {
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(item.text, forType: .string)
+            VStack(spacing: 6) {
+                ChromeIconButton(systemName: "doc.on.doc", accessibilityText: "Copy history item") {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(item.text, forType: .string)
+                }
+
+                if AppSettings.shared.enableCorrectionSheet {
+                    ChromeIconButton(systemName: "character.book.closed", accessibilityText: "Learn correction from history item") {
+                        onLearnCorrection()
+                    }
+                }
             }
         }
         .padding(.vertical, 4)

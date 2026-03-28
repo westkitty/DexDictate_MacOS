@@ -11,6 +11,9 @@ struct QuickSettingsView: View {
     @ObservedObject var benchmarkCaptureController: BenchmarkCaptureWindowController
     @ObservedObject var vocabularyManager: VocabularyManager
     @ObservedObject var menuBarIconController: MenuBarIconController
+    @ObservedObject var modelCatalog: WhisperModelCatalog
+    @ObservedObject var adaptiveBenchmarkController: AdaptiveBenchmarkController
+    @ObservedObject var benchmarkResultsStore: BenchmarkResultsStore
     @State private var isExpanded = false
     @StateObject private var launchAtLoginController = LaunchAtLoginController()
 
@@ -280,6 +283,91 @@ struct QuickSettingsView: View {
                                 .lineLimit(1)
                                 .truncationMode(.middle)
                         }
+
+                        Divider().background(Color.white.opacity(0.3))
+
+                        Text("Optimization")
+                            .font(.caption).bold().foregroundStyle(.white.opacity(0.7))
+
+                        HStack {
+                            Text("Active Model:")
+                                .font(.caption).foregroundStyle(.white.opacity(0.8))
+                            Spacer()
+                            Picker("", selection: $settings.activeWhisperModelID) {
+                                ForEach(modelCatalog.availableModels) { model in
+                                    Text(model.displayName).tag(model.id)
+                                }
+                            }
+                            .labelsHidden().frame(width: 150).fixedSize()
+                        }
+
+                        HStack {
+                            Text("Model Selection:")
+                                .font(.caption).foregroundStyle(.white.opacity(0.8))
+                            Spacer()
+                            Picker("", selection: $settings.modelSelectionMode) {
+                                ForEach(AppSettings.ModelSelectionMode.allCases) { mode in
+                                    Text(mode.rawValue).tag(mode)
+                                }
+                            }
+                            .labelsHidden().frame(width: 150).fixedSize()
+                        }
+
+                        HStack {
+                            Text("End Preset:")
+                                .font(.caption).foregroundStyle(.white.opacity(0.8))
+                            Spacer()
+                            Picker("", selection: $settings.utteranceEndPreset) {
+                                ForEach(AppSettings.UtteranceEndPreset.allCases) { preset in
+                                    Text(preset.rawValue).tag(preset)
+                                }
+                            }
+                            .labelsHidden().frame(width: 150).fixedSize()
+                        }
+
+                        Toggle("Trailing Trim Experiment", isOn: $settings.enableTrailingTrimExperiment)
+                        Toggle("Accuracy Retry", isOn: $settings.enableAccuracyRetry)
+                        Toggle("Correction Sheet", isOn: $settings.enableCorrectionSheet)
+
+                        HStack {
+                            Button("Import Model") {
+                                _ = modelCatalog.importModelFromOpenPanel()
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+
+                            Button("Run Benchmarks Now") {
+                                adaptiveBenchmarkController.runBenchmarksNow()
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                            .disabled(adaptiveBenchmarkController.status.isBusy || !(engine.state == .ready || engine.state == .stopped))
+
+                            Button("Restore Stable Defaults") {
+                                settings.restoreStableDictationDefaults()
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                        }
+
+                        Text(adaptiveBenchmarkController.status.description)
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.5))
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        if let importError = modelCatalog.lastImportError {
+                            Text(importError)
+                                .font(.caption2)
+                                .foregroundStyle(.orange.opacity(0.9))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+
+                        BenchmarkResultsSection(
+                            settings: settings,
+                            modelCatalog: modelCatalog,
+                            benchmarkResultsStore: benchmarkResultsStore,
+                            adaptiveBenchmarkController: adaptiveBenchmarkController
+                        )
                     }
 
                     Divider().background(Color.white.opacity(0.3))
@@ -302,24 +390,7 @@ struct QuickSettingsView: View {
                             .labelsHidden().frame(width: 180).fixedSize()
                         }
 
-                        // Silence Detection
-                        HStack {
-                            Text(NSLocalizedString("Silence Timeout:", comment: ""))
-                                .font(.caption).foregroundStyle(.white.opacity(0.8))
-                            Spacer()
-                            HStack(spacing: 8) {
-                                Slider(value: $settings.silenceTimeout, in: 0...10, step: 0.5)
-                                    .tint(.blue)
-                                    .frame(maxWidth: 60)
-                                TextField("0.0", value: $settings.silenceTimeout, format: .number)
-                                    .font(.caption2)
-                                    .frame(width: 40)
-                                    .textFieldStyle(.roundedBorder)
-                                Text("s").font(.caption2).foregroundStyle(.secondary)
-                            }
-                        }
-
-                        Text(NSLocalizedString("Applies the next time dictation starts.", comment: ""))
+                        Text(NSLocalizedString("Advanced end-of-utterance controls live in Benchmark optimization so the default surface stays honest.", comment: ""))
                             .font(.caption2).foregroundStyle(.white.opacity(0.5))
                             .fixedSize(horizontal: false, vertical: true)
 
@@ -358,6 +429,8 @@ struct QuickSettingsView: View {
             launchAtLoginController.syncStoredPreference(into: settings)
             menuBarIconController.refreshAssets()
             profileManager.synchronizeBundledVocabulary(with: vocabularyManager)
+            modelCatalog.refresh()
+            benchmarkResultsStore.reload()
         }
         .onChange(of: settings.launchAtLogin) { _, _ in
             launchAtLoginController.refresh()
@@ -613,6 +686,125 @@ private struct MenuBarSettingsSection: View {
             return "Logo Only"
         case .emojiIcon:
             return "Emoji"
+        }
+    }
+}
+
+private struct BenchmarkResultsSection: View {
+    @ObservedObject var settings: AppSettings
+    @ObservedObject var modelCatalog: WhisperModelCatalog
+    @ObservedObject var benchmarkResultsStore: BenchmarkResultsStore
+    @ObservedObject var adaptiveBenchmarkController: AdaptiveBenchmarkController
+
+    private var currentResults: [ModelBenchmarkResult] {
+        benchmarkResultsStore.latestResultsForCurrentEnvironment(settings: settings)
+    }
+
+    private var activeResult: ModelBenchmarkResult? {
+        guard let descriptor = modelCatalog.activeDescriptor(settings: settings) else { return nil }
+        return benchmarkResultsStore.latestResult(for: descriptor, settings: settings)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Benchmark Results")
+                .font(.caption).bold().foregroundStyle(.white.opacity(0.7))
+
+            if !adaptiveBenchmarkController.progressEntries.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Current Run")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.8))
+
+                    ForEach(adaptiveBenchmarkController.progressEntries) { entry in
+                        HStack(alignment: .top, spacing: 8) {
+                            Circle()
+                                .fill(progressColor(for: entry.state))
+                                .frame(width: 7, height: 7)
+                                .padding(.top, 4)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(entry.modelID)
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.white.opacity(0.9))
+                                Text(entry.detail)
+                                    .font(.caption2)
+                                    .foregroundStyle(.white.opacity(0.55))
+                            }
+                        }
+                    }
+                }
+                .padding(10)
+                .background(Color.white.opacity(0.04))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+
+            if let activeResult {
+                resultCard(
+                    title: "Active: \(activeResult.modelID)",
+                    result: activeResult,
+                    emphasized: true
+                )
+            } else {
+                Text("No cached benchmark results for the current preset yet.")
+                    .font(.caption2)
+                    .foregroundStyle(.white.opacity(0.5))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            ForEach(currentResults.filter { $0.modelID != activeResult?.modelID }.prefix(3)) { result in
+                resultCard(title: result.modelID, result: result, emphasized: false)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func resultCard(title: String, result: ModelBenchmarkResult, emphasized: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.white.opacity(emphasized ? 0.9 : 0.8))
+
+            Text("WER \(formatPercent(result.averageWER)) · avg \(Int(result.averageLatencyMs))ms · p95 \(Int(result.p95LatencyMs))ms")
+                .font(.caption2.monospacedDigit())
+                .foregroundStyle(.white.opacity(0.65))
+
+            Text("\(result.decodeProfile) · \(result.utteranceEndPreset) · \(result.completedAt.formatted(date: .abbreviated, time: .shortened))")
+                .font(.caption2)
+                .foregroundStyle(.white.opacity(0.45))
+        }
+        .padding(10)
+        .background(Color.white.opacity(emphasized ? 0.06 : 0.04))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color.white.opacity(emphasized ? 0.14 : 0.08), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    private func formatPercent(_ value: Double) -> String {
+        let percentage = value * 100
+        return String(format: "%.1f%%", percentage)
+    }
+
+    private func progressColor(for state: BenchmarkProgressState) -> Color {
+        switch state {
+        case .queued:
+            return .white.opacity(0.55)
+        case .running:
+            return .yellow
+        case .cached:
+            return .cyan
+        case .completed:
+            return .green
+        case .failed:
+            return .red
+        case .cancelled:
+            return .orange
         }
     }
 }

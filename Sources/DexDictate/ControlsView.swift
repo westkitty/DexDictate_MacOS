@@ -10,6 +10,9 @@ import DexDictateKit
 /// shortcut or the Start/Stop Dictation buttons are the only controls.
 struct ControlsView: View {
     @ObservedObject var engine: TranscriptionEngine
+    @ObservedObject var adaptiveBenchmarkController: AdaptiveBenchmarkController
+    @State private var isCorrectionSheetPresented = false
+    @State private var correctionDraft = VocabularyCorrectionDraft()
 
     // MARK: - Derived
 
@@ -102,7 +105,32 @@ struct ControlsView: View {
                             .controlSize(.small)
                             .accessibilityLabel("Restore the most recently removed history entry")
                         }
+
+                        if engine.canRetryLastUtterance {
+                            Button("Retry Last in Accuracy Mode") {
+                                retryLastUtterance()
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                            .accessibilityLabel("Retry the last utterance in accuracy mode")
+                        }
+
+                        if AppSettings.shared.enableCorrectionSheet, engine.latestHistoryItem != nil {
+                            Button("Learn Correction") {
+                                openCorrectionSheet()
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                            .accessibilityLabel("Create a custom vocabulary correction")
+                        }
                     }
+                }
+
+                if adaptiveBenchmarkController.status != .idle {
+                    Text(adaptiveBenchmarkController.status.description)
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.65))
+                        .multilineTextAlignment(.center)
                 }
 
                 // Stop the whole dictation system (returns to .stopped)
@@ -145,6 +173,12 @@ struct ControlsView: View {
         )
         .clipShape(RoundedRectangle(cornerRadius: SurfaceTokens.cornerRadius))
         .padding(.horizontal)
+        .sheet(isPresented: $isCorrectionSheetPresented) {
+            VocabularyCorrectionSheet(
+                draft: $correctionDraft,
+                onSave: saveCorrection
+            )
+        }
     }
 
     private var feedbackBackgroundColor: Color {
@@ -193,5 +227,25 @@ struct ControlsView: View {
 
     private func undoLastHistoryRemoval() {
         engine.undoLastHistoryRemoval()
+    }
+
+    private func retryLastUtterance() {
+        engine.retryLastUtteranceInAccuracyMode()
+    }
+
+    private func openCorrectionSheet() {
+        correctionDraft = VocabularyCorrectionDraft(
+            incorrectPhrase: engine.latestHistoryItem?.text ?? "",
+            correctPhrase: ""
+        )
+        isCorrectionSheetPresented = true
+    }
+
+    private func saveCorrection() {
+        let incorrect = correctionDraft.incorrectPhrase.trimmingCharacters(in: .whitespacesAndNewlines)
+        let corrected = correctionDraft.correctPhrase.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !incorrect.isEmpty, !corrected.isEmpty else { return }
+        engine.vocabularyManager.add(original: incorrect, replacement: corrected)
+        isCorrectionSheetPresented = false
     }
 }
