@@ -69,7 +69,14 @@ public struct OutputCoordinator: OutputCoordinating {
             }
         }
 
-        writer.copyAndPaste(text)
-        return OutputDeliveryDecision(delivery: .pastedToActiveApp)
+        // Try Accessibility insertion first (preserves clipboard).
+        // Fall back to clipboard+paste if Accessibility is disabled or fails.
+        if AppSettings.shared.useAccessibilityInsertion,
+           ClipboardManager.insertViaAccessibility(text) {
+            return OutputDeliveryDecision(delivery: .pastedToActiveApp)
+        } else {
+            writer.copyAndPaste(text)
+            return OutputDeliveryDecision(delivery: .pastedToActiveApp)
+        }
     }
 }

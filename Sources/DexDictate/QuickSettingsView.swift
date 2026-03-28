@@ -206,6 +206,15 @@ struct QuickSettingsView: View {
                             .fixedSize(horizontal: false, vertical: true)
                             .padding(.leading, 20).padding(.bottom, 2)
 
+                        Toggle(NSLocalizedString("Insert without clipboard (Accessibility)", comment: ""), isOn: $settings.useAccessibilityInsertion)
+                            .toggleStyle(.switch)
+                            .font(.caption)
+                        Text(NSLocalizedString("Inserts dictation text directly into the focused field without overwriting your clipboard. Falls back to normal paste if the field doesn't support it.", comment: ""))
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.leading, 20).padding(.bottom, 2)
+
                         Toggle(NSLocalizedString("Filter Profanity", comment: ""), isOn: $settings.profanityFilter)
 
                         Toggle(NSLocalizedString("Show Floating HUD", comment: ""), isOn: $settings.showFloatingHUD)

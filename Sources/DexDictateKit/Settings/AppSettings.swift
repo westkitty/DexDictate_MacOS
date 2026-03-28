@@ -65,6 +65,11 @@ public class AppSettings: ObservableObject {
     /// When `true`, transcribed text is passed through `ProfanityFilter` before use.
     @AppStorage("profanityFilter") public var profanityFilter: Bool = false
 
+    /// When `true`, dictation text is inserted via the Accessibility API instead of clipboard+Cmd+V.
+    /// Preserves the user's clipboard. Falls back to clipboard paste if the focused element
+    /// does not support `kAXSelectedTextAttribute`.
+    @AppStorage("useAccessibilityInsertion_v1") public var useAccessibilityInsertion: Bool = false
+
     /// Reserved for a future append-mode feature; not currently implemented.
     @AppStorage("appendMode") public var appendMode: Bool = false
 

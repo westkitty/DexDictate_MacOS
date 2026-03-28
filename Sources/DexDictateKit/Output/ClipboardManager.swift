@@ -1,4 +1,5 @@
 import AppKit
+import ApplicationServices
 
 /// Writes text to the system pasteboard and simulates a Cmd+V keystroke to paste it into
 /// the currently focused application.
@@ -33,6 +34,30 @@ enum ClipboardManager {
                 pasteboard.setString(original, forType: .string)
             }
         }
+    }
+
+    /// Inserts `text` at the cursor position of the focused UI element using the
+    /// Accessibility API. Returns `true` on success. Does not touch the clipboard.
+    ///
+    /// Works for standard text fields, NSTextView, and most SwiftUI text inputs.
+    /// Does NOT work for: web browser address bars, some Electron apps, Terminal.
+    @discardableResult
+    static func insertViaAccessibility(_ text: String) -> Bool {
+        let systemWide = AXUIElementCreateSystemWide()
+        var focusedRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(systemWide, kAXFocusedUIElementAttribute as CFString, &focusedRef) == .success,
+              let focusedValue = focusedRef else { return false }
+
+        let element = unsafeBitCast(focusedValue, to: AXUIElement.self)
+
+        // Verify the element supports setting selected text
+        var settable: DarwinBoolean = false
+        AXUIElementIsAttributeSettable(element, kAXSelectedTextAttribute as CFString, &settable)
+        guard settable.boolValue else { return false }
+
+        // Setting kAXSelectedTextAttribute replaces the current selection with `text`,
+        // or inserts at cursor if nothing is selected. Preserves surrounding text.
+        return AXUIElementSetAttributeValue(element, kAXSelectedTextAttribute as CFString, text as CFTypeRef) == .success
     }
 
     private static func simulatePaste() {
