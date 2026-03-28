@@ -66,13 +66,16 @@ final class InputMonitor {
                 guard let refcon = refcon else { return Unmanaged.passUnretained(event) }
                 let monitor = Unmanaged<InputMonitor>.fromOpaque(refcon).takeUnretainedValue()
 
-                // Handle Tap Disabled events to re-enable
+                // Handle Tap Disabled events to re-enable.
+                // NOTE: When type is .tapDisabledByTimeout or .tapDisabledByUserInput,
+                // the `event` parameter is NULL at the C level. Return nil (not passUnretained)
+                // to avoid passing a null CGEvent reference back to the system.
                 if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
                     Safety.log("Event Tap disabled by system (\(type == .tapDisabledByTimeout ? "Timeout" : "User Input")) — re-enabling", category: .input)
                     if let tap = monitor.eventTap {
                         CGEvent.tapEnable(tap: tap, enable: true)
                     }
-                    return Unmanaged.passUnretained(event)
+                    return nil
                 }
 
                 let shortcut = AppSettings.shared.userShortcut

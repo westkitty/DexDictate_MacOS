@@ -85,7 +85,7 @@ final class BenchmarkCaptureWindowController: NSObject, ObservableObject, NSWind
             let hosting = NSHostingController(rootView: view)
             let createdWindow = NSWindow(contentViewController: hosting)
             createdWindow.title = NSLocalizedString("Benchmark Capture", comment: "Benchmark window title")
-            createdWindow.setContentSize(NSSize(width: 640, height: 680))
+            createdWindow.setContentSize(NSSize(width: 640, height: 760))
             createdWindow.styleMask = [.titled, .closable, .resizable, .miniaturizable]
             createdWindow.center()
             createdWindow.isReleasedWhenClosed = false
@@ -352,18 +352,44 @@ struct BenchmarkCaptureView: View {
             }
             .padding(20)
         }
-        .frame(minWidth: 640, minHeight: 680)
+        .frame(minWidth: 640, minHeight: 760)
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Benchmark Capture")
-                .font(.largeTitle.weight(.bold))
-                .foregroundStyle(.white)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                Image(systemName: "waveform.badge.mic")
+                    .font(.title2)
+                    .foregroundStyle(.cyan)
+                    .frame(width: 36, height: 36)
+                    .background(Color.cyan.opacity(0.15))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
 
-            Text("Record the strict offline corpus one prompt at a time in your normal quiet-room setup. The app writes WAV files plus transcripts.json locally, ready for the benchmark scripts.")
-                .font(.callout)
-                .foregroundStyle(.white.opacity(0.72))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Benchmark Capture")
+                        .font(.title2.weight(.bold))
+                        .foregroundStyle(.white)
+                    Text("Build a reference corpus to measure transcription accuracy")
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.55))
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("What is this?")
+                    .font(.caption.weight(.semibold))
+                    .textCase(.uppercase)
+                    .foregroundStyle(.cyan.opacity(0.8))
+                    .tracking(0.6)
+                Text("Record each prompt exactly as written. DexDictate saves your voice alongside the correct text, then runs Whisper against both to measure how accurately it transcribes your voice in your environment. Run the benchmark after any model, device, or settings change to see if accuracy improved.")
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.68))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(12)
+            .background(Color.cyan.opacity(0.07))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.cyan.opacity(0.18), lineWidth: 1))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
         }
     }
 
@@ -448,64 +474,130 @@ struct BenchmarkCaptureView: View {
     }
 
     private var controlRow: some View {
-        HStack(spacing: 10) {
-            Button(controller.isRecording ? "Stop & Save" : "Record") {
-                controller.startRecordingOrStop()
+        VStack(spacing: 8) {
+            // Primary record/stop button — full width, matches Stop Dictation style
+            Button(action: controller.startRecordingOrStop) {
+                HStack {
+                    Image(systemName: controller.isRecording ? "stop.circle.fill" : "mic.fill")
+                    Text(controller.isStarting ? "Starting…" : controller.isRecording ? "Stop & Save" : "Record Prompt")
+                }
+                .font(.headline)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(controller.isRecording ? Color.orange.opacity(0.5) : Color.green.opacity(0.45))
+                .foregroundStyle(.white)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .shadow(color: (controller.isRecording ? Color.orange : Color.green).opacity(0.3), radius: 5)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(controller.isRecording ? .orange : .green)
+            .buttonStyle(.plain)
             .disabled(controller.isStarting || (!controller.isRecording && controller.currentPrompt == nil))
 
-            Button("Previous") {
-                controller.previousPrompt()
-            }
-            .buttonStyle(.bordered)
-            .disabled(controller.isRecording || controller.currentIndex == 0)
+            // Secondary actions
+            HStack(spacing: 8) {
+                Button(action: controller.previousPrompt) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                        Text("Previous")
+                    }
+                    .font(.caption.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 7)
+                    .background(Color.white.opacity(0.08))
+                    .foregroundStyle(.white.opacity(0.8))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.12), lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                .disabled(controller.isRecording || controller.currentIndex == 0)
 
-            Button("Restart Session") {
-                controller.restartSession()
-            }
-            .buttonStyle(.bordered)
+                Button(action: controller.restartSession) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.counterclockwise")
+                        Text("Restart")
+                    }
+                    .font(.caption.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 7)
+                    .background(Color.white.opacity(0.08))
+                    .foregroundStyle(.white.opacity(0.8))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.12), lineWidth: 1))
+                }
+                .buttonStyle(.plain)
 
-            Spacer()
-
-            Button("Copy Path") {
-                controller.copyCorpusPath()
+                Button(action: controller.copyCorpusPath) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "doc.on.doc")
+                        Text("Copy Path")
+                    }
+                    .font(.caption.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 7)
+                    .background(Color.white.opacity(0.08))
+                    .foregroundStyle(.white.opacity(0.8))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.12), lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                .disabled(controller.sessionDirectory == nil)
             }
-            .buttonStyle(.bordered)
-            .disabled(controller.sessionDirectory == nil)
         }
     }
 
     private var footerCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Button("Open Corpus Folder") {
-                    controller.openCorpusFolder()
+        VStack(alignment: .leading, spacing: 12) {
+            Text("After Capture")
+                .font(.caption.weight(.semibold))
+                .textCase(.uppercase)
+                .foregroundStyle(.white.opacity(0.6))
+                .tracking(0.6)
+
+            Text("When all prompts are recorded, run the benchmark script against the folder. It compares each WAV file to the reference transcript and reports a Word Error Rate (WER). Lower WER = better accuracy for your voice and setup.")
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.65))
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 8) {
+                Button(action: controller.openCorpusFolder) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "folder")
+                        Text("Open Folder")
+                    }
+                    .font(.caption.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 7)
+                    .background(Color.white.opacity(0.08))
+                    .foregroundStyle(.white.opacity(0.8))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.12), lineWidth: 1))
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.plain)
                 .disabled(controller.sessionDirectory == nil)
 
-                Button("Copy Benchmark Command") {
-                    controller.copyBenchmarkCommand()
+                Button(action: controller.copyBenchmarkCommand) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "terminal")
+                        Text("Copy Run Command")
+                    }
+                    .font(.caption.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 7)
+                    .background(Color.white.opacity(0.08))
+                    .foregroundStyle(.white.opacity(0.8))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.12), lineWidth: 1))
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.plain)
                 .disabled(controller.sessionDirectory == nil)
-
-                Spacer()
-
-                if let sessionDirectory = controller.sessionDirectory {
-                    Text(sessionDirectory.path)
-                        .font(.caption2.monospaced())
-                        .foregroundStyle(.white.opacity(0.4))
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                }
             }
 
-            Text("When the corpus is complete, run the existing benchmark scripts against the folder contents. No network calls, no cloud, no invented noise conditions.")
-                .font(.caption2)
-                .foregroundStyle(.white.opacity(0.55))
+            if let sessionDirectory = controller.sessionDirectory {
+                Text(sessionDirectory.path)
+                    .font(.caption2.monospaced())
+                    .foregroundStyle(.white.opacity(0.35))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
         }
         .padding(16)
         .background(.white.opacity(0.04))
