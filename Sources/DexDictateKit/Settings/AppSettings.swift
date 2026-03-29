@@ -102,6 +102,11 @@ public class AppSettings: ObservableObject {
     /// Whether to show the floating dictation HUD.
     @AppStorage("showFloatingHUD") public var showFloatingHUD: Bool = false
 
+    /// User-chosen accent colour for the floating HUD, stored as RGB components.
+    @AppStorage("hudAccentColorR") public var hudAccentColorR: Double = -1
+    @AppStorage("hudAccentColorG") public var hudAccentColorG: Double = -1
+    @AppStorage("hudAccentColorB") public var hudAccentColorB: Double = -1
+
     /// Controls how the primary menu bar item renders while idle.
     @AppStorage("menuBarDisplayMode_v1") public var menuBarDisplayMode: MenuBarDisplayMode = .micAndText
 
