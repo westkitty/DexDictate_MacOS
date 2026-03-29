@@ -1,10 +1,8 @@
 import Foundation
 
 public struct ExperimentFlags {
-    /// Silence trim heuristic. Disabled: the adaptive noise-floor estimator
-    /// samples the first 500ms of audio (which is speech in hold-to-talk mode),
-    /// inflating the threshold and clipping sentence onsets. Needs redesign with
-    /// a pre-trigger calibration window before this can safely be re-enabled.
+    /// Silence trim heuristic. Now fixed to use the quietest frames in the recording
+    /// (not the first frames) for noise floor estimation, so it's safe in hold-to-talk mode.
     public static var enableSilenceTrim = false
     
     /// Amount of tail delay (ms) applied after trigger release before stopping audio engine.
@@ -33,6 +31,7 @@ public struct ExperimentFlags {
 
     public static func applyRuntimeSettings(_ settings: AppSettings) {
         stopTailDelayMs = settings.utteranceEndPreset.stopTailDelayMs
+        enableSilenceTrim = settings.enableSilenceTrim
         enableTrailingTrim = settings.enableTrailingTrimExperiment
         trailingTrimMinimumSilenceMs = settings.utteranceEndPreset.trailingTrimMinimumSilenceMs
         trailingTrimPadMs = settings.utteranceEndPreset.trailingTrimPadMs
