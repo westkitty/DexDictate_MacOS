@@ -17,6 +17,7 @@ tmp/
 # IDEs
 .idea/
 .vscode/
+.claude/
 *.iml
 
 # OS junk
