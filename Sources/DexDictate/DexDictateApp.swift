@@ -427,6 +427,11 @@ struct AntiGravityMainView: View {
 
                     PermissionBannerView(permissionManager: permissionManager)
 
+                    ControlsView(
+                        engine: engine,
+                        adaptiveBenchmarkController: adaptiveBenchmarkController
+                    )
+
                     HistoryView(
                         history: engine.history,
                         statusText: engine.statusText,
@@ -436,11 +441,6 @@ struct AntiGravityMainView: View {
                         expanded: $expandedHistory,
                         onDetach: onDetachHistory,
                         silenceCountdown: engine.silenceCountdown
-                    )
-
-                    ControlsView(
-                        engine: engine,
-                        adaptiveBenchmarkController: adaptiveBenchmarkController
                     )
 
                     QuickSettingsView(
