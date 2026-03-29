@@ -4,12 +4,27 @@ import DexDictateKit
 struct OnboardingView: View {
     @ObservedObject var settings: AppSettings
     var onboardingWindow: NSWindow?
-    
-    // We can use a TabView for pages
+
     @State private var currentPage = 0
-    
+
+    private let stepLabels = [
+        NSLocalizedString("Welcome", comment: "Onboarding step"),
+        NSLocalizedString("Permissions", comment: "Onboarding step"),
+        NSLocalizedString("Shortcut", comment: "Onboarding step"),
+        NSLocalizedString("Done", comment: "Onboarding step"),
+    ]
+
     var body: some View {
-        VStack {
+        VStack(spacing: 0) {
+            // ── Step rail ────────────────────────────────────────────────────
+            OnboardingStepRail(currentStep: currentPage, stepLabels: stepLabels)
+                .padding(.horizontal, 32)
+                .padding(.top, 24)
+                .padding(.bottom, 16)
+
+            Divider().opacity(0.15)
+
+            // ── Page content ─────────────────────────────────────────────────
             ZStack {
                 if currentPage == 0 {
                     WelcomePage().transition(.opacity)
@@ -22,63 +37,150 @@ struct OnboardingView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            
-            HStack {
+
+            Divider().opacity(0.15)
+
+            // ── Navigation bar ───────────────────────────────────────────────
+            HStack(spacing: 12) {
                 if currentPage > 0 {
-                    Button(NSLocalizedString("Back", comment: "")) {
-                        withAnimation { currentPage -= 1 }
+                    Button(action: { withAnimation { currentPage -= 1 } }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.left")
+                                .font(.caption.weight(.semibold))
+                            Text(NSLocalizedString("Back", comment: ""))
+                        }
                     }
+                    .buttonStyle(.bordered)
+                    .controlSize(.regular)
                 }
-                
+
                 Spacer()
-                
-                // Dots indicator
-                HStack(spacing: 8) {
-                    ForEach(0..<4) { index in
-                        Circle()
-                            .fill(currentPage == index ? Color.white : Color.white.opacity(0.3))
-                            .frame(width: 8, height: 8)
-                    }
-                }
-                
-                Spacer()
-                
+
                 if currentPage < 3 {
-                    Button(NSLocalizedString("Next", comment: "")) {
-                        withAnimation { currentPage += 1 }
+                    Button(action: { withAnimation { currentPage += 1 } }) {
+                        HStack(spacing: 4) {
+                            Text(NSLocalizedString("Continue", comment: ""))
+                            Image(systemName: "chevron.right")
+                                .font(.caption.weight(.semibold))
+                        }
                     }
                     .buttonStyle(.borderedProminent)
+                    .controlSize(.regular)
                 } else {
-                    Button(NSLocalizedString("Get Started", comment: "")) {
+                    Button(action: {
                         settings.hasCompletedOnboarding = true
                         onboardingWindow?.close()
+                    }) {
+                        HStack(spacing: 4) {
+                            Text(NSLocalizedString("Start Dictating", comment: ""))
+                            Image(systemName: "arrow.right.circle.fill")
+                        }
                     }
                     .buttonStyle(.borderedProminent)
+                    .controlSize(.regular)
+                    .tint(SemanticColors.ready)
                 }
             }
-            .padding()
+            .padding(.horizontal, 24)
+            .padding(.vertical, 16)
         }
-        .frame(width: 520, height: 480)
+        .frame(width: 520, height: 520)
         .background(VisualEffectView(material: .hudWindow, blendingMode: .behindWindow))
+    }
+}
+
+// MARK: - Step Rail
+
+/// A connected step progress indicator with numbered circles, labels, and a fill line.
+private struct OnboardingStepRail: View {
+    let currentStep: Int
+    let stepLabels: [String]
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(0..<stepLabels.count, id: \.self) { index in
+                // Step node
+                VStack(spacing: 4) {
+                    ZStack {
+                        Circle()
+                            .fill(nodeFill(for: index))
+                            .frame(width: 28, height: 28)
+                        Circle()
+                            .strokeBorder(nodeBorder(for: index), lineWidth: 1.5)
+                            .frame(width: 28, height: 28)
+
+                        if index < currentStep {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(.white)
+                        } else {
+                            Text("\(index + 1)")
+                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .foregroundStyle(nodeLabel(for: index))
+                        }
+                    }
+
+                    Text(stepLabels[index])
+                        .font(.system(size: 9, weight: index == currentStep ? .semibold : .regular))
+                        .foregroundStyle(index == currentStep
+                            ? SemanticColors.accent
+                            : Color.white.opacity(0.3))
+                        .lineLimit(1)
+                }
+
+                // Connecting line (not after last step)
+                if index < stepLabels.count - 1 {
+                    Rectangle()
+                        .fill(index < currentStep
+                              ? SemanticColors.ready.opacity(0.7)
+                              : Color.white.opacity(0.1))
+                        .frame(height: 1.5)
+                        .frame(maxWidth: .infinity)
+                        .padding(.bottom, 20) // align with circle centre
+                }
+            }
+        }
+    }
+
+    private func nodeFill(for index: Int) -> Color {
+        if index < currentStep { return SemanticColors.ready.opacity(0.85) }
+        if index == currentStep { return SemanticColors.accent.opacity(0.15) }
+        return Color.white.opacity(0.05)
+    }
+
+    private func nodeBorder(for index: Int) -> Color {
+        if index < currentStep { return SemanticColors.ready.opacity(0.8) }
+        if index == currentStep { return SemanticColors.accent.opacity(0.8) }
+        return Color.white.opacity(0.12)
+    }
+
+    private func nodeLabel(for index: Int) -> Color {
+        if index == currentStep { return SemanticColors.accent }
+        return Color.white.opacity(0.25)
     }
 }
 
 struct WelcomePage: View {
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 16) {
             Image(systemName: "mic.circle.fill")
                 .resizable()
-                .frame(width: 80, height: 80)
-                .foregroundStyle(.blue)
-            
+                .frame(width: 72, height: 72)
+                .foregroundStyle(SemanticColors.accent)
+
             Text(NSLocalizedString("Welcome to DexDictate", comment: ""))
-                .font(.largeTitle)
-                .bold()
-            
-            Text(NSLocalizedString("Supercharge your dictation with global shortcuts and Whisper-powered accuracy.", comment: ""))
+                .font(.title.bold())
                 .multilineTextAlignment(.center)
-                .padding(.horizontal)
+
+            Text(NSLocalizedString("Supercharge your dictation with global shortcuts\nand Whisper-powered accuracy.", comment: ""))
+                .font(.body)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 40)
         }
+        .padding(.vertical, 24)
     }
 }
 
@@ -396,41 +498,60 @@ private struct PermissionStep<Action: View>: View {
 
 struct ShortcutPage: View {
     @ObservedObject var settings: AppSettings
-    
+
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 16) {
+            Image(systemName: "keyboard.fill")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 52, height: 40)
+                .foregroundStyle(SemanticColors.accent)
+
             Text(NSLocalizedString("Choose Your Trigger", comment: ""))
-                .font(.title)
-            
-            Text(NSLocalizedString("Select a shortcut to start dictation. The default is the Middle Mouse Button.", comment: ""))
+                .font(.title.bold())
                 .multilineTextAlignment(.center)
-            
+
+            Text(NSLocalizedString("Select a shortcut to start dictation.\nThe default is the Middle Mouse Button.", comment: ""))
+                .font(.body)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 40)
+
             ShortcutRecorder(shortcut: $settings.userShortcut)
                 .frame(width: 200)
                 .padding()
                 .background(Color.black.opacity(0.2))
                 .clipShape(RoundedRectangle(cornerRadius: 8))
         }
+        .padding(.vertical, 24)
     }
 }
 
 struct CompletionPage: View {
     @ObservedObject var settings: AppSettings
-    
+
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 16) {
             Image(systemName: "checkmark.circle.fill")
                 .resizable()
-                .frame(width: 80, height: 80)
-                .foregroundStyle(.green)
-            
+                .frame(width: 72, height: 72)
+                .foregroundStyle(SemanticColors.ready)
+
             Text(NSLocalizedString("You're All Set!", comment: ""))
-                .font(.title)
-            
-            Text(NSLocalizedString("DexDictate runs in your menu bar. Click the icon or use your shortcut to start dictating.", comment: ""))
+                .font(.title.bold())
                 .multilineTextAlignment(.center)
-                .padding(.horizontal)
+
+            Text(NSLocalizedString("DexDictate lives in your menu bar.\nClick the icon or press your shortcut to start dictating.", comment: ""))
+                .font(.body)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 40)
         }
+        .padding(.vertical, 24)
     }
 }
 

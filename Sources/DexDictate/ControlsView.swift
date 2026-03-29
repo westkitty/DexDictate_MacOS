@@ -16,15 +16,21 @@ struct ControlsView: View {
 
     // MARK: - Derived
 
-    /// Colour that reflects the current engine state.
+    /// Calibrated colour that reflects the current engine state.
     private var statusColor: Color {
         switch engine.state {
-        case .listening:    return .red
-        case .transcribing: return .yellow
-        case .ready:        return .green
-        case .error:        return .orange
-        default:            return .white
+        case .listening:    return SemanticColors.listening
+        case .transcribing: return SemanticColors.transcribing
+        case .ready:        return SemanticColors.ready
+        case .error:        return SemanticColors.error
+        case .initializing: return SemanticColors.initializing
+        default:            return SemanticColors.stopped
         }
+    }
+
+    /// True while the engine is actively capturing audio.
+    private var isActiveState: Bool {
+        engine.state == .listening || engine.state == .transcribing
     }
 
     // MARK: - Body
@@ -52,13 +58,8 @@ struct ControlsView: View {
             } else {
                 // ── Running: status + shortcut hint + stop button ─────────────
 
-                // Colour-coded status label (Listening / Transcribing / Ready / …)
-                Text(engine.statusText)
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundStyle(statusColor)
-                    .frame(maxWidth: .infinity)
-                    .multilineTextAlignment(.center)
+                // Glowing status pill — state readable at a glance
+                StatusPillView(text: engine.statusText, color: statusColor, isPulsing: isActiveState)
 
                 // Remind user which shortcut triggers dictation
                 VStack(spacing: 6) {
@@ -276,5 +277,50 @@ struct ControlsView: View {
         guard !incorrect.isEmpty, !corrected.isEmpty else { return }
         engine.vocabularyManager.add(original: incorrect, replacement: corrected)
         isCorrectionSheetPresented = false
+    }
+}
+
+// MARK: - Status Pill
+
+/// A glowing capsule pill that communicates engine state via colour and a pulsing dot.
+private struct StatusPillView: View {
+    let text: String
+    let color: Color
+    let isPulsing: Bool
+
+    @State private var dotOpacity: Double = 1.0
+
+    var body: some View {
+        HStack(spacing: 7) {
+            Circle()
+                .fill(color)
+                .frame(width: 6, height: 6)
+                .shadow(color: color.opacity(0.8), radius: 4)
+                .opacity(dotOpacity)
+                .onAppear { animateDot() }
+                .onChange(of: isPulsing) { _, _ in animateDot() }
+
+            Text(text)
+                .font(.system(.caption, design: .monospaced).weight(.semibold))
+                .tracking(0.6)
+                .foregroundStyle(color)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(color.opacity(0.10))
+        .clipShape(Capsule())
+        .overlay(Capsule().stroke(color.opacity(0.28), lineWidth: 1))
+        .shadow(color: color.opacity(0.25), radius: 6)
+        .frame(maxWidth: .infinity)
+    }
+
+    private func animateDot() {
+        guard isPulsing else {
+            withAnimation { dotOpacity = 1.0 }
+            return
+        }
+        withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) {
+            dotOpacity = 0.3
+        }
     }
 }

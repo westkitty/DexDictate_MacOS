@@ -19,6 +19,16 @@ struct QuickSettingsView: View {
     @State private var profanityAdditionsText: String = ""
     @State private var profanityRemovalsText: String = ""
 
+    // Per-section accordion state (all open by default)
+    @State private var secMode        = true
+    @State private var secSound       = false
+    @State private var secAppearance  = false
+    @State private var secOutput      = true
+    @State private var secSystem      = false
+    @State private var secMenuBar     = false
+    @State private var secBenchmark   = false
+    @State private var secInput       = true
+
     var body: some View {
         VStack(spacing: 0) {
             // Clickable header — the entire row toggles expansion (not just the chevron).
@@ -63,11 +73,11 @@ struct QuickSettingsView: View {
             VStack(spacing: 8) {
                 VStack(alignment: .leading, spacing: SurfaceTokens.sectionSpacing) {
                     
-                    // MARK: - Feedback Section (Sound Effects)
+                    // MARK: - Mode Section
                     VStack(alignment: .leading, spacing: 8) {
-                        Text(NSLocalizedString("Mode", comment: ""))
-                            .font(.caption).bold().foregroundStyle(.white.opacity(0.7))
+                        SettingsSectionHeader(title: NSLocalizedString("Mode", comment: ""), isExpanded: $secMode)
 
+                        if secMode {
                         HStack {
                             Text(NSLocalizedString("Profile:", comment: ""))
                                 .font(.caption).foregroundStyle(.white.opacity(0.8))
@@ -106,14 +116,15 @@ struct QuickSettingsView: View {
                             .font(.caption2).foregroundStyle(.white.opacity(0.5))
                             .fixedSize(horizontal: false, vertical: true)
                             .padding(.leading, 20)
+                        } // end secMode
                     }
 
                     Divider().background(Color.white.opacity(0.3))
 
                     VStack(alignment: .leading, spacing: 8) {
-                        Text(NSLocalizedString("Feedback (Sound Effects)", comment: ""))
-                            .font(.caption).bold().foregroundStyle(.white.opacity(0.7))
+                        SettingsSectionHeader(title: NSLocalizedString("Feedback (Sound Effects)", comment: ""), isExpanded: $secSound)
 
+                        if secSound {
                         Toggle(NSLocalizedString("Play Start Sound", comment: ""), isOn: $settings.playStartSound)
 
                         if settings.playStartSound {
@@ -153,29 +164,35 @@ struct QuickSettingsView: View {
                             }
                             .padding(.leading, 20)
                         }
+                        } // end secSound
                     }
                     
                     Divider().background(Color.white.opacity(0.3))
                     
                     // MARK: - Appearance Section
-                    HStack {
-                         Text(NSLocalizedString("Appearance:", comment: ""))
-                             .font(.caption).foregroundStyle(.white.opacity(0.8))
-                         Spacer()
-                         Picker("", selection: $settings.appearanceTheme) {
-                             ForEach(AppSettings.AppearanceTheme.allCases) { theme in
-                                 Text(theme.rawValue).tag(theme)
+                    VStack(alignment: .leading, spacing: 8) {
+                        SettingsSectionHeader(title: NSLocalizedString("Appearance", comment: ""), isExpanded: $secAppearance)
+                        if secAppearance {
+                        HStack {
+                             Text(NSLocalizedString("Appearance:", comment: ""))
+                                 .font(.caption).foregroundStyle(.white.opacity(0.8))
+                             Spacer()
+                             Picker("", selection: $settings.appearanceTheme) {
+                                 ForEach(AppSettings.AppearanceTheme.allCases) { theme in
+                                     Text(theme.rawValue).tag(theme)
+                                 }
                              }
-                         }
-                         .labelsHidden().frame(width: 120).fixedSize()
+                             .labelsHidden().frame(width: 120).fixedSize()
+                        }
+                        } // end secAppearance
                     }
 
                     Divider().background(Color.white.opacity(0.3))
                     
                     // MARK: - Output Section
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(NSLocalizedString("Output", comment: ""))
-                            .font(.caption).bold().foregroundStyle(.white.opacity(0.7))
+                        SettingsSectionHeader(title: NSLocalizedString("Output", comment: ""), isExpanded: $secOutput)
+                        if secOutput {
 
                         Toggle(
                             NSLocalizedString("Safe Mode", comment: ""),
@@ -267,13 +284,18 @@ struct QuickSettingsView: View {
                         }
 
                         Toggle(NSLocalizedString("Show Floating HUD", comment: ""), isOn: $settings.showFloatingHUD)
+
+                        if settings.showFloatingHUD {
+                            HUDColorPickerRow(settings: settings)
+                        }
+                        } // end secOutput
                     }
 
                     Divider().background(Color.white.opacity(0.3))
 
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(NSLocalizedString("System", comment: ""))
-                            .font(.caption).bold().foregroundStyle(.white.opacity(0.7))
+                        SettingsSectionHeader(title: NSLocalizedString("System", comment: ""), isExpanded: $secSystem)
+                        if secSystem {
 
                         Toggle(
                             NSLocalizedString("Launch at Login", comment: ""),
@@ -302,20 +324,26 @@ struct QuickSettingsView: View {
                             .controlSize(.small)
                             .padding(.leading, 20)
                         }
+                        } // end secSystem
                     }
 
                     Divider().background(Color.white.opacity(0.3))
 
-                    MenuBarSettingsSection(
-                        settings: settings,
-                        menuBarIconController: menuBarIconController
-                    )
+                    VStack(alignment: .leading, spacing: 8) {
+                        SettingsSectionHeader(title: NSLocalizedString("Menu Bar Style", comment: ""), isExpanded: $secMenuBar)
+                        if secMenuBar {
+                        MenuBarSettingsSection(
+                            settings: settings,
+                            menuBarIconController: menuBarIconController
+                        )
+                        } // end secMenuBar
+                    }
 
                     Divider().background(Color.white.opacity(0.3))
 
                     VStack(alignment: .leading, spacing: 8) {
-                        Text(NSLocalizedString("Benchmark", comment: ""))
-                            .font(.caption).bold().foregroundStyle(.white.opacity(0.7))
+                        SettingsSectionHeader(title: NSLocalizedString("Benchmark", comment: ""), isExpanded: $secBenchmark)
+                        if secBenchmark {
 
                         Text("Open the local capture tool to record the strict corpus, then benchmark it with the existing scripts.")
                             .font(.caption2)
@@ -427,14 +455,15 @@ struct QuickSettingsView: View {
                             benchmarkResultsStore: benchmarkResultsStore,
                             adaptiveBenchmarkController: adaptiveBenchmarkController
                         )
+                        } // end secBenchmark
                     }
 
                     Divider().background(Color.white.opacity(0.3))
 
                     // MARK: - Input Configuration
                     VStack(alignment: .leading, spacing: 8) {
-                        Text(NSLocalizedString("Input", comment: ""))
-                            .font(.caption).bold().foregroundStyle(.white.opacity(0.7))
+                        SettingsSectionHeader(title: NSLocalizedString("Input", comment: ""), isExpanded: $secInput)
+                        if secInput {
 
                         HStack {
                             Text(NSLocalizedString("Input Device:", comment: ""))
@@ -498,6 +527,7 @@ struct QuickSettingsView: View {
                             .buttonStyle(.bordered)
                             .controlSize(.small)
                         }
+                        } // end secInput
                     }
 
                     ShortcutRecorder(shortcut: $settings.userShortcut)
@@ -1106,5 +1136,77 @@ private struct EmojiIconPicker: View {
         }
         .padding(14)
         .frame(width: 300)
+    }
+}
+
+
+// MARK: - Shared Settings Components
+
+/// A collapsible section header with a rotating chevron arrow (no emojis).
+private struct SettingsSectionHeader: View {
+    let title: String
+    @Binding var isExpanded: Bool
+
+    var body: some View {
+        Button(action: { withAnimation(.easeInOut(duration: 0.2)) { isExpanded.toggle() } }) {
+            HStack(spacing: 6) {
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.75))
+                Spacer()
+                Image(systemName: "chevron.down")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.35))
+                    .rotationEffect(.degrees(isExpanded ? 0 : -90))
+                    .animation(.easeInOut(duration: 0.2), value: isExpanded)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(isExpanded ? "Collapse \(title)" : "Expand \(title)")
+    }
+}
+
+/// Inline color picker row for the floating HUD accent colour.
+private struct HUDColorPickerRow: View {
+    @ObservedObject var settings: AppSettings
+
+    /// Binding that bridges the three stored Double components to a SwiftUI Color.
+    private var colorBinding: Binding<Color> {
+        Binding(
+            get: {
+                if settings.hudAccentColorR >= 0 {
+                    return Color(red: settings.hudAccentColorR,
+                                 green: settings.hudAccentColorG,
+                                 blue: settings.hudAccentColorB)
+                }
+                return SemanticColors.accent
+            },
+            set: { newColor in
+                let resolved = NSColor(newColor).usingColorSpace(.sRGB) ?? .cyan
+                settings.hudAccentColorR = resolved.redComponent
+                settings.hudAccentColorG = resolved.greenComponent
+                settings.hudAccentColorB = resolved.blueComponent
+            }
+        )
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ColorPicker(NSLocalizedString("HUD Accent Color", comment: ""), selection: colorBinding)
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.8))
+            Spacer()
+            if settings.hudAccentColorR >= 0 {
+                Button(NSLocalizedString("Reset", comment: "")) {
+                    settings.hudAccentColorR = -1
+                    settings.hudAccentColorG = -1
+                    settings.hudAccentColorB = -1
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.mini)
+            }
+        }
+        .padding(.leading, 20)
     }
 }
