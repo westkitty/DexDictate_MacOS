@@ -71,22 +71,13 @@ struct HistoryView: View {
                     // Live capture section
                     if isListening {
                         VStack(alignment: .leading, spacing: 6) {
-                            // Waveform visualizer replaces the flat progress bar
+                            // Waveform visualizer
                             AudioWaveformView(inputLevel: inputLevel, isActive: isListening)
 
                             if let countdown = silenceCountdown, countdown > 0 {
                                 Text("Auto-stopping in \(Int(ceil(countdown)))s...")
                                     .font(.caption2)
                                     .foregroundStyle(SemanticColors.error.opacity(0.9))
-                            }
-                            if !liveTranscript.isEmpty {
-                                Text(liveTranscript)
-                                    .font(.caption)
-                                    .foregroundStyle(.white.opacity(0.9))
-                                    .fixedSize(horizontal: false, vertical: true)
-                                    .padding(6)
-                                    .background(SemanticColors.ready.opacity(0.08))
-                                    .clipShape(RoundedRectangle(cornerRadius: 6))
                             }
                         }
                     }

@@ -79,6 +79,22 @@ struct QuickSettingsView: View {
 
                         if secMode {
                         HStack {
+                            Text(NSLocalizedString("Trigger Mode:", comment: ""))
+                                .font(.caption).foregroundStyle(.white.opacity(0.8))
+                            Spacer()
+                            Picker("", selection: $settings.triggerMode) {
+                                ForEach(AppSettings.TriggerMode.allCases) { mode in
+                                    Text(mode.rawValue).tag(mode)
+                                }
+                            }
+                            .labelsHidden().frame(width: 140).fixedSize()
+                        }
+                        Text(NSLocalizedString("Hold to Talk: hold the key while speaking, release to transcribe. Click to Toggle: press once to start, press again to stop.", comment: ""))
+                            .font(.caption2).foregroundStyle(.white.opacity(0.5))
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.leading, 20).padding(.bottom, 2)
+
+                        HStack {
                             Text(NSLocalizedString("Profile:", comment: ""))
                                 .font(.caption).foregroundStyle(.white.opacity(0.8))
                             Spacer()
