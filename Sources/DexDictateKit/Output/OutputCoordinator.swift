@@ -110,7 +110,11 @@ public struct OutputCoordinator: OutputCoordinating {
             &focusedValue
         ) == .success, let focusedValue else { return false }
 
-        let element = focusedValue as! AXUIElement
+        guard CFGetTypeID(focusedValue) == AXUIElementGetTypeID() else {
+            return false
+        }
+
+        let element = unsafeBitCast(focusedValue, to: AXUIElement.self)
         let result = AXUIElementSetAttributeValue(
             element,
             kAXSelectedTextAttribute as CFString,
