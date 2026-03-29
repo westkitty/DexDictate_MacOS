@@ -21,11 +21,11 @@ struct QuickSettingsView: View {
 
     // Per-section accordion state (all open by default)
     @State private var secMode        = true
-    @State private var secSound       = false
-    @State private var secAppearance  = false
+    @State private var secSound       = true
+    @State private var secAppearance  = true
     @State private var secOutput      = true
-    @State private var secSystem      = false
-    @State private var secMenuBar     = false
+    @State private var secSystem      = true
+    @State private var secMenuBar     = true
     @State private var secBenchmark   = false
     @State private var secInput       = true
 
