@@ -34,6 +34,7 @@ public final class TranscriptionEngine: ObservableObject {
     @Published public private(set) var activityPhase: ActivityPhase = .idle
     @Published public private(set) var lastUtteranceSnapshot: LastUtteranceSnapshot?
     @Published public private(set) var latestHistoryItem: HistoryItem?
+    @Published public private(set) var importedFileResult: ImportedFileTranscriptionResult?
     @Published public private(set) var lastDictationCompletionAt: Date?
 
     /// Seconds remaining until auto-stop due to silence; `nil` when inactive.
@@ -70,6 +71,7 @@ public final class TranscriptionEngine: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var lifecycle = EngineLifecycleStateMachine()
     private var lastCapturedUtterance: (samples: [Float], sampleRate: Double)?
+    private var pendingImportedFileName: String?
 
     // MARK: - Metrics
     private struct MetricsSession {
@@ -141,6 +143,8 @@ public final class TranscriptionEngine: ObservableObject {
         inputLevel = 0
         resultFeedback = .idle
         activityPhase = .idle
+        pendingImportedFileName = nil
+        importedFileResult = nil
     }
     
     /// True once the Whisper model has been successfully loaded into memory.
@@ -442,6 +446,8 @@ public final class TranscriptionEngine: ObservableObject {
             return
         }
         guard applyLifecycle(.transcriptionStarted, context: "transcribeAudioFile") else { return }
+        pendingImportedFileName = url.lastPathComponent
+        importedFileResult = nil
         statusText = NSLocalizedString("Processing file...", comment: "Status: Processing audio file")
         activityPhase = .transcribing
 
@@ -457,12 +463,14 @@ public final class TranscriptionEngine: ObservableObject {
                 let whisperSamples = AudioResampler.resampleToWhisper(samples, fromRate: sampleRate)
                 await MainActor.run { [weak self] in
                     guard let self else { return }
+                    self.lastCapturedUtterance = (samples, sampleRate)
                     if !self.whisperService.transcribe(audioFrames: whisperSamples) {
                         Safety.log("transcribeAudioFile() — Whisper refused transcription; resetting to ready state")
                         _ = self.applyLifecycle(.transcriptionCompleted, context: "whisper unavailable (file)")
                         self.statusText = NSLocalizedString("Ready", comment: "Status: Ready to dictate")
                         self.resultFeedback = .idle
                         self.activityPhase = .ready
+                        self.pendingImportedFileName = nil
                     }
                 }
             } catch {
@@ -473,12 +481,15 @@ public final class TranscriptionEngine: ObservableObject {
                     self.statusText = errorMessage
                     self.resultFeedback = .idle
                     self.activityPhase = .ready
+                    self.pendingImportedFileName = nil
                 }
             }
         }
     }
 
     private func handleWhisperResult(_ text: String) {
+        let importedFileName = pendingImportedFileName
+        pendingImportedFileName = nil
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         Safety.log("handleWhisperResult — \(trimmed.isEmpty ? "empty" : "\(trimmed.count) chars")")
         if trimmed.isEmpty {
@@ -488,7 +499,11 @@ public final class TranscriptionEngine: ObservableObject {
             activityPhase = .ready
             lastDictationCompletionAt = Date()
         } else {
-            finalizeTranscription(trimmed)
+            if let importedFileName {
+                finalizeImportedFileTranscription(trimmed, fileName: importedFileName)
+            } else {
+                finalizeTranscription(trimmed)
+            }
         }
     }
 
@@ -516,69 +531,9 @@ public final class TranscriptionEngine: ObservableObject {
             lastDictationCompletionAt = Date()
         }
 
-        // 0. Process Commands (built-in + user-defined hot-word commands)
-        let (processedText, command) = commandProcessor.process(text, customCommands: customCommandsManager.commands)
-        
-        if command == .deleteLastSentence {
-            // Check if user said JUST "scratch that" (meaning delete previous history item)
-            // or if they said "oops scratch that" (meaning discard current utterance)
-            
-            // Heuristic: If processedText is empty, they likely meant "scratch that" for the previous sentence
-            // UNLESS the original text was just "scratch that".
-            // Actually, commandProcessor returns "" if it was "scratch that".
-            // The intent is ambiguous if we don't track state.
-            // Simplified:
-            // 1. If we have content to discard (the current utterance), we discard it.
-            // 2. If the current utterance WAS effectively empty/just a command, we discard history.
-            
-            // My CommandProcessor returns "" for "scratch that".
-            // So if processedText is empty, we effectively discarded the current utterance.
-            // But did we WANT to discard history?
-            // If the user said "Hello world scratch that", result is "".
-            // If the user said "Scratch that", result is "".
-            
-            // Let's check the original text length vs command length roughly or just assume:
-            // If the user said ONLY "scratch that", remove from history.
-            let input = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-            if input == "scratch that" {
-                if history.removeMostRecent() != nil {
-                    statusText = NSLocalizedString("Scratch that", comment: "")
-                    resultFeedback = .deletedPreviousHistory
-                } else {
-                    statusText = NSLocalizedString("Nothing to remove", comment: "")
-                    resultFeedback = .nothingToDelete
-                }
-                return // Nothing to add
-            } else {
-                // We had some text that we scratched. Do not add anything.
-                statusText = NSLocalizedString("Scratched", comment: "")
-                resultFeedback = .discardedCurrentUtterance
-                return
-            }
-        }
-        
-        var finalText = processedText
-        if finalText.isEmpty {
-            statusText = NSLocalizedString("Ready", comment: "Status: Ready to dictate")
-            liveTranscript = ""
-            resultFeedback = .noSpeechDetected
-            return
-        }
+        guard let preparedResult = prepareTranscriptionResult(from: text) else { return }
 
-        // 1. Apply Effective Vocabulary (bundled mode vocabulary + user custom vocabulary)
-        let preProcessingText = finalText
-        finalText = vocabularyManager.applyEffective(to: finalText)
-        
-        // 2. Apply Profanity Filter
-        if AppSettings.shared.profanityFilter {
-            finalText = ProfanityFilter.filter(
-                finalText,
-                additions: AppSettings.shared.customProfanityWords,
-                removals: AppSettings.shared.customProfanityRemovals
-            )
-        }
-        let wasModified = finalText != preProcessingText
-        
+        let finalText = preparedResult.finalText
         let addedItem = history.add(finalText)
         let doneFormat = NSLocalizedString("Done: %@", comment: "Status: Transcription complete")
         statusText = String(format: doneFormat, finalText)
@@ -602,12 +557,100 @@ public final class TranscriptionEngine: ObservableObject {
 
         switch deliveryDecision.delivery {
         case .savedOnly:
-            resultFeedback = .savedToHistory(modified: wasModified)
+            resultFeedback = .savedToHistory(modified: preparedResult.wasModified)
         case .pastedToActiveApp:
-            resultFeedback = .pastedToActiveApp(modified: wasModified)
+            resultFeedback = .pastedToActiveApp(modified: preparedResult.wasModified)
         case .copiedOnly(let reason):
-            resultFeedback = .copiedOnlySensitiveContext(modified: wasModified, reason: reason)
+            resultFeedback = .copiedOnlySensitiveContext(modified: preparedResult.wasModified, reason: reason)
         }
+    }
+
+    private func finalizeImportedFileTranscription(_ text: String, fileName: String) {
+        defer {
+            _ = applyLifecycle(.transcriptionCompleted, context: "finalizeImportedFileTranscription")
+            emitMetricsCSV()
+            activityPhase = .ready
+            lastDictationCompletionAt = Date()
+        }
+
+        guard let preparedResult = prepareTranscriptionResult(from: text) else { return }
+
+        let addedItem = history.add(preparedResult.finalText)
+        statusText = String(format: NSLocalizedString("Imported %@", comment: "Status: Imported file name"), fileName)
+        liveTranscript = ""
+        latestHistoryItem = addedItem
+        if let captured = lastCapturedUtterance {
+            lastUtteranceSnapshot = LastUtteranceSnapshot(
+                rawSamples: captured.samples,
+                sourceSampleRate: captured.sampleRate,
+                originalTranscript: preparedResult.finalText,
+                sourceHistoryItemID: addedItem?.id
+            )
+        }
+        importedFileResult = ImportedFileTranscriptionResult(
+            fileName: fileName,
+            transcript: preparedResult.finalText,
+            createdAt: addedItem?.createdAt ?? Date(),
+            wasModified: preparedResult.wasModified
+        )
+        resultFeedback = .savedToHistory(modified: preparedResult.wasModified)
+    }
+
+    private struct PreparedTranscriptionResult {
+        let finalText: String
+        let wasModified: Bool
+    }
+
+    private func prepareTranscriptionResult(from text: String) -> PreparedTranscriptionResult? {
+        let (processedText, command) = commandProcessor.process(
+            text,
+            customCommands: customCommandsManager.commands
+        )
+
+        if command == .deleteLastSentence {
+            let input = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            if input == "scratch that" {
+                if history.removeMostRecent() != nil {
+                    statusText = NSLocalizedString("Scratch that", comment: "")
+                    resultFeedback = .deletedPreviousHistory
+                } else {
+                    statusText = NSLocalizedString("Nothing to remove", comment: "")
+                    resultFeedback = .nothingToDelete
+                }
+                return nil
+            }
+
+            statusText = NSLocalizedString("Scratched", comment: "")
+            resultFeedback = .discardedCurrentUtterance
+            return nil
+        }
+
+        var finalText = processedText
+        if finalText.isEmpty {
+            statusText = NSLocalizedString("Ready", comment: "Status: Ready to dictate")
+            liveTranscript = ""
+            resultFeedback = .noSpeechDetected
+            return nil
+        }
+
+        let preProcessingText = finalText
+        finalText = vocabularyManager.applyEffective(to: finalText)
+        if AppSettings.shared.profanityFilter {
+            finalText = ProfanityFilter.filter(
+                finalText,
+                additions: AppSettings.shared.customProfanityWords,
+                removals: AppSettings.shared.customProfanityRemovals
+            )
+        }
+
+        return PreparedTranscriptionResult(
+            finalText: finalText,
+            wasModified: finalText != preProcessingText
+        )
+    }
+
+    public func dismissImportedFileResult() {
+        importedFileResult = nil
     }
 
     public func undoLastHistoryRemoval() {

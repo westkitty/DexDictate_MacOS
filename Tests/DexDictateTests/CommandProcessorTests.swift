@@ -46,4 +46,14 @@ final class CommandProcessorTests: XCTestCase {
         XCTAssertEqual(text, "DEXDICTATE")
         XCTAssertEqual(command, .none)
     }
+
+    func testCustomHotWordCommandResolvesBeforeBuiltIns() {
+        let processor = CommandProcessor()
+        let commands = [CustomCommand(keyword: "comma", insertText: ",")]
+
+        let (text, command) = processor.process("Dex comma", customCommands: commands)
+
+        XCTAssertEqual(text, ",")
+        XCTAssertEqual(command, .none)
+    }
 }

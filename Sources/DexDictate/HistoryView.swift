@@ -23,6 +23,9 @@ struct HistoryView: View {
     /// Action to perform when the detach button is clicked.
     var onDetach: (() -> Void)? = nil
 
+    /// Seconds remaining until silence auto-stop; `nil` when inactive.
+    var silenceCountdown: Double? = nil
+
     var body: some View {
         VStack(spacing: 5) {
             HStack {
@@ -70,6 +73,11 @@ struct HistoryView: View {
                             ProgressView(value: min(max(inputLevel, 0), 1))
                                 .progressViewStyle(.linear)
                                 .tint(.green)
+                        }
+                        if let countdown = silenceCountdown, countdown > 0 {
+                            Text("Auto-stopping in \(Int(ceil(countdown)))s...")
+                                .font(.caption2)
+                                .foregroundStyle(.orange.opacity(0.9))
                         }
                         if !liveTranscript.isEmpty {
                             Text(liveTranscript)

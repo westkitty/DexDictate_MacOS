@@ -20,4 +20,16 @@ final class DexDictateTests: XCTestCase {
         let result = ProfanityFilter.filter(input)
         XCTAssertEqual(result.lowercased(), expected.lowercased())
     }
+
+    func testProfanityFilterSupportsAdditionsAndRemovals() {
+        let input = "damn customword"
+
+        let result = ProfanityFilter.filter(
+            input,
+            additions: ["customword"],
+            removals: ["damn"]
+        )
+
+        XCTAssertEqual(result, "damn ****")
+    }
 }

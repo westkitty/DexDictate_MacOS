@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 import DexDictateKit
 
 /// Start/Stop Dictation and Quit buttons shown in the main popover.
@@ -133,6 +134,23 @@ struct ControlsView: View {
                         .multilineTextAlignment(.center)
                 }
 
+                Button(action: importAudioFile) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "doc.badge.plus")
+                        Text(NSLocalizedString("Transcribe File...", comment: "Button: Import audio file"))
+                    }
+                    .font(.subheadline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    .background(Color.cyan.opacity(0.15))
+                    .foregroundStyle(.cyan.opacity(0.9))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.cyan.opacity(0.3), lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                .disabled(engine.state != .ready)
+                .accessibilityLabel("Import audio file for transcription")
+
                 // Stop the whole dictation system (returns to .stopped)
                 Button(action: stopDictation) {
                     HStack {
@@ -219,6 +237,17 @@ struct ControlsView: View {
 
     private func stopDictation() {
         engine.stopSystem()
+    }
+
+    private func importAudioFile() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = [.audio]
+        panel.prompt = NSLocalizedString("Transcribe", comment: "Open panel button label")
+        panel.message = NSLocalizedString("Select an audio file to transcribe", comment: "Open panel message")
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        engine.transcribeAudioFile(url: url)
     }
 
     private func quitApp() {

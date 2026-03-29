@@ -470,6 +470,11 @@ struct AntiGravityMainView: View {
                 .stroke(Color.cyan.opacity(isDroppingFile ? 0.8 : 0), lineWidth: 2)
                 .animation(.easeInOut(duration: 0.15), value: isDroppingFile)
         )
+        .sheet(item: importedFileResultBinding) { result in
+            ImportedFileTranscriptionSheet(result: result) {
+                engine.dismissImportedFileResult()
+            }
+        }
         .onDrop(of: [.fileURL], isTargeted: $isDroppingFile) { providers in
             guard engine.state == .ready else { return false }
             providers.first?.loadItem(forTypeIdentifier: "public.file-url", options: nil) { item, _ in
@@ -481,6 +486,17 @@ struct AntiGravityMainView: View {
             }
             return true
         }
+    }
+
+    private var importedFileResultBinding: Binding<ImportedFileTranscriptionResult?> {
+        Binding(
+            get: { engine.importedFileResult },
+            set: { newValue in
+                if newValue == nil {
+                    engine.dismissImportedFileResult()
+                }
+            }
+        )
     }
 }
 

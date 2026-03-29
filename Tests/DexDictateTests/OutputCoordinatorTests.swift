@@ -59,6 +59,25 @@ final class OutputCoordinatorTests: XCTestCase {
             .sensitive(reason: "Detected likely secure input context (secure).")
         )
     }
+
+    func testClipboardOnlyModeCopiesWithoutPasting() {
+        let writer = MockOutputWriter()
+        let coordinator = OutputCoordinator(
+            writer: writer,
+            contextInspector: MockFocusedContextInspector(context: .standard)
+        )
+
+        let decision = coordinator.deliver(
+            text: "hello",
+            autoPaste: true,
+            protectSensitiveContexts: true,
+            insertionMode: .clipboardOnly
+        )
+
+        XCTAssertEqual(decision.delivery, .copiedOnly(reason: "Per-app clipboard-only mode"))
+        XCTAssertEqual(writer.copiedTexts, ["hello"])
+        XCTAssertEqual(writer.pastedTexts, [])
+    }
 }
 
 private final class MockOutputWriter: OutputWriting {
