@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 
 public enum OutputTargetContext: Equatable {
     case standard
@@ -29,7 +30,12 @@ public protocol FocusedContextInspecting {
 }
 
 public protocol OutputCoordinating {
-    func deliver(text: String, autoPaste: Bool, protectSensitiveContexts: Bool) -> OutputDeliveryDecision
+    func deliver(
+        text: String,
+        autoPaste: Bool,
+        protectSensitiveContexts: Bool,
+        insertionMode: InsertionModeOverride
+    ) -> OutputDeliveryDecision
 }
 
 public struct ClipboardOutputWriter: OutputWriting {
@@ -56,12 +62,24 @@ public struct OutputCoordinator: OutputCoordinating {
         self.contextInspector = contextInspector
     }
 
-    public func deliver(text: String, autoPaste: Bool, protectSensitiveContexts: Bool) -> OutputDeliveryDecision {
+    public func deliver(
+        text: String,
+        autoPaste: Bool,
+        protectSensitiveContexts: Bool,
+        insertionMode: InsertionModeOverride = .clipboardPaste
+    ) -> OutputDeliveryDecision {
         guard autoPaste else {
             return OutputDeliveryDecision(delivery: .savedOnly)
         }
 
-        if protectSensitiveContexts {
+        // Clipboard-only modes bypass paste entirely
+        if insertionMode == .clipboardOnly {
+            writer.copy(text)
+            return OutputDeliveryDecision(delivery: .copiedOnly(reason: "Per-app clipboard-only mode"))
+        }
+
+        // Sensitive context check (skip for accessibility insertion)
+        if insertionMode != .accessibilityAPI && protectSensitiveContexts {
             let context = contextInspector.inspectFocusedContext()
             if case .sensitive(let reason) = context {
                 writer.copy(text)
@@ -69,7 +87,35 @@ public struct OutputCoordinator: OutputCoordinating {
             }
         }
 
+        // Accessibility API insertion
+        if insertionMode == .accessibilityAPI {
+            if insertViaAccessibility(text) {
+                return OutputDeliveryDecision(delivery: .pastedToActiveApp)
+            }
+            // Fall back to clipboard paste if AX fails
+        }
+
         writer.copyAndPaste(text)
         return OutputDeliveryDecision(delivery: .pastedToActiveApp)
+    }
+
+    /// Attempts to insert text at the current cursor position via the Accessibility API.
+    /// Returns `true` if the insertion succeeded.
+    private func insertViaAccessibility(_ text: String) -> Bool {
+        let systemWide = AXUIElementCreateSystemWide()
+        var focusedValue: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            systemWide,
+            kAXFocusedUIElementAttribute as CFString,
+            &focusedValue
+        ) == .success, let focusedValue else { return false }
+
+        let element = focusedValue as! AXUIElement
+        let result = AXUIElementSetAttributeValue(
+            element,
+            kAXSelectedTextAttribute as CFString,
+            text as CFString
+        )
+        return result == .success
     }
 }

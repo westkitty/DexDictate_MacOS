@@ -25,7 +25,8 @@ public struct AudioResampler {
         _ samples: [Float],
         sampleRate: Double = 44100,
         snrFactor: Float = 4.0,     // active speech must be ≥ 4× the noise floor
-        padMs: Int = 80
+        padMs: Int = 80,
+        calibrationSamples: [Float]? = nil  // optional pre-trigger noise baseline
     ) -> [Float] {
         let frameSizeSamples = Int(sampleRate * 0.1)   // 100 ms per frame
         let padSamples       = Int(sampleRate * Double(padMs) / 1000.0)
@@ -34,12 +35,32 @@ public struct AudioResampler {
 
         guard samples.count > minSamples else { return samples }
 
-        // --- 1. Estimate noise floor from the first N frames ---
-        var noiseRMS: Float = 0
-        for n in 0..<noiseFrames {
-            noiseRMS += rmsEnergy(samples, from: n * frameSizeSamples, count: frameSizeSamples)
+        // --- 1. Estimate noise floor ---
+        // Priority: (a) explicit calibration samples, (b) quietest N frames in the recording.
+        // Approach (b) fixes the hold-to-talk problem where the first 500ms IS speech,
+        // causing the estimator to treat speech energy as the noise floor.
+        var noiseRMS: Float
+        if let cal = calibrationSamples, !cal.isEmpty {
+            // Use provided pre-trigger samples as the baseline
+            let calFrames = max(1, cal.count / frameSizeSamples)
+            var sum: Float = 0
+            for n in 0..<min(calFrames, noiseFrames) {
+                sum += rmsEnergy(cal, from: n * frameSizeSamples, count: min(frameSizeSamples, cal.count - n * frameSizeSamples))
+            }
+            noiseRMS = sum / Float(min(calFrames, noiseFrames))
+        } else {
+            // Collect RMS for all frames, then average the quietest N (most likely silence)
+            var frameRMSValues: [Float] = []
+            var offset = 0
+            while offset + frameSizeSamples <= samples.count {
+                frameRMSValues.append(rmsEnergy(samples, from: offset, count: frameSizeSamples))
+                offset += frameSizeSamples
+            }
+            let sorted = frameRMSValues.sorted()
+            let quietFrames = Array(sorted.prefix(noiseFrames))
+            noiseRMS = quietFrames.reduce(0, +) / Float(quietFrames.count)
         }
-        noiseRMS /= Float(noiseFrames)
+
         let threshold = noiseRMS * snrFactor
 
         Safety.log("Silence trimmer — noise floor RMS: \(String(format: "%.5f", noiseRMS)), threshold: \(String(format: "%.5f", threshold))")
