@@ -42,34 +42,42 @@ struct FloatingHUDView: View {
             watermarkLayer
 
             // Status content
-            VStack(spacing: 6) {
-                // Top row: dot + state label + app name
-                HStack(spacing: 7) {
-                    Circle()
-                        .fill(stateColor)
-                        .frame(width: 7, height: 7)
-                        .shadow(color: stateColor.opacity(0.8), radius: 5)
-                        .opacity(isActive ? 1.0 : 0.6)
+            HStack(spacing: 10) {
+                // Status icon with pulse — preserved from original design
+                Image(systemName: engine.statusIcon)
+                    .font(.title2)
+                    .symbolEffect(.pulse, isActive: isActive)
+                    .foregroundStyle(stateColor)
 
-                    Text(engine.statusText.uppercased())
-                        .font(.system(.caption2, design: .monospaced).weight(.bold))
-                        .tracking(0.7)
-                        .foregroundStyle(stateColor)
-                        .lineLimit(1)
+                VStack(alignment: .leading, spacing: 4) {
+                    // Top row: dot + state label + app name
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(stateColor)
+                            .frame(width: 6, height: 6)
+                            .shadow(color: stateColor.opacity(0.8), radius: 4)
+                            .opacity(isActive ? 1.0 : 0.6)
 
-                    Spacer()
+                        Text(engine.statusText.uppercased())
+                            .font(.system(.caption2, design: .monospaced).weight(.bold))
+                            .tracking(0.7)
+                            .foregroundStyle(stateColor)
+                            .lineLimit(1)
 
-                    Text("DEXDICTATE")
-                        .font(.system(size: 7, weight: .black, design: .monospaced))
-                        .tracking(1.2)
-                        .foregroundStyle(Color.white.opacity(0.12))
-                }
+                        Spacer()
 
-                // Waveform (listening) or shimmer bar (transcribing)
-                if engine.state == .listening {
-                    HUDWaveformView(barHeights: barHeights)
-                } else if engine.state == .transcribing {
-                    HUDShimmerBar(color: stateColor)
+                        Text("DEXDICTATE")
+                            .font(.system(size: 7, weight: .black, design: .monospaced))
+                            .tracking(1.2)
+                            .foregroundStyle(Color.white.opacity(0.12))
+                    }
+
+                    // Waveform (listening) or shimmer bar (transcribing)
+                    if engine.state == .listening {
+                        HUDWaveformView(barHeights: barHeights)
+                    } else if engine.state == .transcribing {
+                        HUDShimmerBar(color: stateColor)
+                    }
                 }
             }
             .padding(.horizontal, 14)
@@ -273,11 +281,11 @@ class FloatingHUDController: ObservableObject {
                 settings: AppSettings.shared
             )
             window = FloatingHUDWindow(
-                contentRect: NSRect(x: 100, y: 100, width: 220, height: 64),
+                contentRect: NSRect(x: 100, y: 100, width: 260, height: 70),
                 rootView: AnyView(view)
             )
-            window?.minSize = NSSize(width: 160, height: 50)
-            window?.maxSize = NSSize(width: 420, height: 200)
+            window?.minSize = NSSize(width: 200, height: 56)
+            window?.maxSize = NSSize(width: 480, height: 200)
             window?.setFrameAutosaveName("FloatingHUDPosition")
             if window?.frame.origin == .zero {
                 window?.center()
