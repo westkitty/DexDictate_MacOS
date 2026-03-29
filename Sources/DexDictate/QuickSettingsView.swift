@@ -16,6 +16,8 @@ struct QuickSettingsView: View {
     @ObservedObject var benchmarkResultsStore: BenchmarkResultsStore
     @State private var isExpanded = false
     @StateObject private var launchAtLoginController = LaunchAtLoginController()
+    @State private var profanityAdditionsText: String = ""
+    @State private var profanityRemovalsText: String = ""
 
     var body: some View {
         VStack(spacing: 0) {
@@ -97,8 +99,10 @@ struct QuickSettingsView: View {
 
                         Toggle(NSLocalizedString("Show Flavor Ticker", comment: ""), isOn: $settings.showFlavorTicker)
                         Toggle(NSLocalizedString("Animate Flavor Ticker", comment: ""), isOn: $settings.animateFlavorTicker)
+                        Toggle(NSLocalizedString("Show Dictation Stats", comment: ""), isOn: $settings.showDictationStats)
+                        Toggle(NSLocalizedString("Persist History Across Sessions", comment: ""), isOn: $settings.persistHistory)
 
-                        Text(NSLocalizedString("Ticker motion still yields to macOS Reduce Motion even when animation stays enabled here.", comment: ""))
+                        Text(NSLocalizedString("Ticker motion still yields to macOS Reduce Motion even when animation stays enabled here. Stats show word count, session duration, and WPM for the current session. History is saved to disk when persistence is enabled.", comment: ""))
                             .font(.caption2).foregroundStyle(.white.opacity(0.5))
                             .fixedSize(horizontal: false, vertical: true)
                             .padding(.leading, 20)
@@ -164,9 +168,6 @@ struct QuickSettingsView: View {
                              }
                          }
                          .labelsHidden().frame(width: 120).fixedSize()
-                         .onChange(of: settings.appearanceTheme) { _, newValue in
-                             settings.appearanceThemeStored = newValue.rawValue
-                         }
                     }
 
                     Divider().background(Color.white.opacity(0.3))
@@ -207,6 +208,63 @@ struct QuickSettingsView: View {
                             .padding(.leading, 20).padding(.bottom, 2)
 
                         Toggle(NSLocalizedString("Filter Profanity", comment: ""), isOn: $settings.profanityFilter)
+
+                        if settings.profanityFilter {
+                            VStack(alignment: .leading, spacing: 6) {
+                                let bundled = ProfanityFilter.bundledWordCount
+                                let custom = settings.customProfanityWords.count
+                                Text("Filtering \(bundled + custom) words (\(bundled) bundled + \(custom) custom)")
+                                    .font(.caption2).foregroundStyle(.white.opacity(0.5))
+
+                                Text(NSLocalizedString("Add words to filter (comma-separated):", comment: ""))
+                                    .font(.caption2).foregroundStyle(.white.opacity(0.6))
+                                TextEditor(text: $profanityAdditionsText)
+                                    .font(.caption2)
+                                    .frame(height: 44)
+                                    .clipShape(RoundedRectangle(cornerRadius: 4))
+
+                                Text(NSLocalizedString("Un-filter bundled words (comma-separated):", comment: ""))
+                                    .font(.caption2).foregroundStyle(.white.opacity(0.6))
+                                TextEditor(text: $profanityRemovalsText)
+                                    .font(.caption2)
+                                    .frame(height: 44)
+                                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                            }
+                            .padding(.leading, 20)
+                            .onAppear {
+                                profanityAdditionsText = settings.customProfanityWords.joined(separator: ", ")
+                                profanityRemovalsText = settings.customProfanityRemovals.joined(separator: ", ")
+                            }
+                            .onChange(of: profanityAdditionsText) { _, newVal in
+                                settings.customProfanityWords = newVal
+                                    .split(separator: ",")
+                                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                                    .filter { !$0.isEmpty }
+                            }
+                            .onChange(of: profanityRemovalsText) { _, newVal in
+                                settings.customProfanityRemovals = newVal
+                                    .split(separator: ",")
+                                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                                    .filter { !$0.isEmpty }
+                            }
+                        }
+
+                        Toggle(NSLocalizedString("Use Accessibility API for Insertion", comment: ""), isOn: $settings.useAccessibilityInsertion)
+                        Text(NSLocalizedString("Inserts text directly at the cursor via Accessibility API instead of Cmd+V. Falls back to clipboard paste if the focused app doesn't support it.", comment: ""))
+                            .font(.caption2).foregroundStyle(.white.opacity(0.5))
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.leading, 20).padding(.bottom, 2)
+
+                        HStack {
+                            Text(NSLocalizedString("Per-App Insertion Rules", comment: ""))
+                                .font(.caption).foregroundStyle(.white.opacity(0.8))
+                            Spacer()
+                            Button(NSLocalizedString("Manage...", comment: "")) {
+                                openPerAppInsertionWindow()
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                        }
 
                         Toggle(NSLocalizedString("Show Floating HUD", comment: ""), isOn: $settings.showFloatingHUD)
                     }
@@ -325,6 +383,7 @@ struct QuickSettingsView: View {
                             .labelsHidden().frame(width: 150).fixedSize()
                         }
 
+                        Toggle("Trim Leading/Trailing Silence", isOn: $settings.enableSilenceTrim)
                         Toggle("Trailing Trim Experiment", isOn: $settings.enableTrailingTrimExperiment)
                         Toggle("Accuracy Retry", isOn: $settings.enableAccuracyRetry)
                         Toggle("Correction Sheet", isOn: $settings.enableCorrectionSheet)
@@ -390,6 +449,21 @@ struct QuickSettingsView: View {
                             .labelsHidden().frame(width: 180).fixedSize()
                         }
 
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Text(NSLocalizedString("Silence Timeout:", comment: ""))
+                                    .font(.caption).foregroundStyle(.white.opacity(0.8))
+                                Spacer()
+                                Text(settings.silenceTimeout == 0
+                                     ? NSLocalizedString("Disabled", comment: "")
+                                     : "\(Int(settings.silenceTimeout))s")
+                                    .font(.caption.monospacedDigit())
+                                    .foregroundStyle(.white.opacity(0.6))
+                            }
+                            Slider(value: $settings.silenceTimeout, in: 0...15, step: 1)
+                                .tint(.cyan)
+                        }
+
                         Text(NSLocalizedString("Advanced end-of-utterance controls live in Benchmark optimization so the default surface stays honest.", comment: ""))
                             .font(.caption2).foregroundStyle(.white.opacity(0.5))
                             .fixedSize(horizontal: false, vertical: true)
@@ -402,16 +476,27 @@ struct QuickSettingsView: View {
                         }
                             
                         Divider().background(Color.white.opacity(0.3))
-                        
+
                         HStack {
-                             Text(NSLocalizedString("Custom Vocabulary", comment: ""))
-                                 .font(.caption).bold().foregroundStyle(.white.opacity(0.7))
-                             Spacer()
-                             Button(NSLocalizedString("Manage...", comment: "")) {
-                                 openVocabularyWindow()
-                             }
-                             .buttonStyle(.bordered)
-                             .controlSize(.small)
+                            Text(NSLocalizedString("Custom Vocabulary", comment: ""))
+                                .font(.caption).bold().foregroundStyle(.white.opacity(0.7))
+                            Spacer()
+                            Button(NSLocalizedString("Manage...", comment: "")) {
+                                openVocabularyWindow()
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                        }
+
+                        HStack {
+                            Text(NSLocalizedString("Voice Commands", comment: ""))
+                                .font(.caption).bold().foregroundStyle(.white.opacity(0.7))
+                            Spacer()
+                            Button(NSLocalizedString("Manage...", comment: "")) {
+                                openCustomCommandsWindow()
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
                         }
                     }
 
@@ -443,6 +528,8 @@ struct QuickSettingsView: View {
     
     // Retain the vocabulary window so we can reuse it instead of creating duplicates.
     @State private var vocabularyWindow: NSWindow?
+    @State private var customCommandsWindow: NSWindow?
+    @State private var perAppInsertionWindow: NSWindow?
 
     private func openVocabularyWindow() {
         if let existing = vocabularyWindow, existing.isVisible {
@@ -461,6 +548,44 @@ struct QuickSettingsView: View {
         window.makeKeyAndOrderFront(nil)
         NSApp.activate()
         vocabularyWindow = window
+    }
+
+    private func openPerAppInsertionWindow() {
+        if let existing = perAppInsertionWindow, existing.isVisible {
+            existing.makeKeyAndOrderFront(nil)
+            NSApp.activate()
+            return
+        }
+        let view = PerAppInsertionView(manager: engine.appInsertionOverridesManager)
+        let hosting = NSHostingController(rootView: view)
+        let window = NSWindow(contentViewController: hosting)
+        window.title = NSLocalizedString("Per-App Insertion Rules", comment: "")
+        window.setContentSize(NSSize(width: 500, height: 380))
+        window.styleMask = [.titled, .closable, .resizable, .miniaturizable]
+        window.center()
+        window.isReleasedWhenClosed = false
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate()
+        perAppInsertionWindow = window
+    }
+
+    private func openCustomCommandsWindow() {
+        if let existing = customCommandsWindow, existing.isVisible {
+            existing.makeKeyAndOrderFront(nil)
+            NSApp.activate()
+            return
+        }
+        let view = CustomCommandsView(manager: engine.customCommandsManager)
+        let hosting = NSHostingController(rootView: view)
+        let window = NSWindow(contentViewController: hosting)
+        window.title = NSLocalizedString("Voice Commands", comment: "")
+        window.setContentSize(NSSize(width: 460, height: 380))
+        window.styleMask = [.titled, .closable, .resizable, .miniaturizable]
+        window.center()
+        window.isReleasedWhenClosed = false
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate()
+        customCommandsWindow = window
     }
 }
 

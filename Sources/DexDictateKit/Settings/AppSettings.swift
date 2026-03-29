@@ -65,6 +65,22 @@ public class AppSettings: ObservableObject {
     /// When `true`, transcribed text is passed through `ProfanityFilter` before use.
     @AppStorage("profanityFilter") public var profanityFilter: Bool = false
 
+    /// JSON-encoded extra words to add to the profanity filter.
+    @AppStorage("customProfanityWords_v1") public var customProfanityWordsData: Data = Data()
+
+    /// JSON-encoded bundled words to exclude from the profanity filter.
+    @AppStorage("customProfanityRemovals_v1") public var customProfanityRemovalsData: Data = Data()
+
+    public var customProfanityWords: [String] {
+        get { (try? JSONDecoder().decode([String].self, from: customProfanityWordsData)) ?? [] }
+        set { customProfanityWordsData = (try? JSONEncoder().encode(newValue)) ?? Data() }
+    }
+
+    public var customProfanityRemovals: [String] {
+        get { (try? JSONDecoder().decode([String].self, from: customProfanityRemovalsData)) ?? [] }
+        set { customProfanityRemovalsData = (try? JSONEncoder().encode(newValue)) ?? Data() }
+    }
+
     /// When `true`, uses Accessibility API for text insertion; when `false`, uses keyboard simulation.
     @AppStorage("useAccessibilityInsertion") public var useAccessibilityInsertion: Bool = false
 
@@ -97,6 +113,15 @@ public class AppSettings: ObservableObject {
 
     /// Whether the flavor ticker may animate when content overflows and motion is allowed.
     @AppStorage("animateFlavorTicker_v1") public var animateFlavorTicker: Bool = true
+
+    /// Whether to show a second stats ticker (word count, duration, WPM) below the flavor ticker.
+    @AppStorage("showDictationStats_v1") public var showDictationStats: Bool = false
+
+    /// When `true`, transcription history is saved to disk and restored on next launch.
+    @AppStorage("persistHistory_v1") public var persistHistory: Bool = false
+
+    /// When `true`, leading and trailing silence is trimmed from recordings before transcription.
+    @AppStorage("enableSilenceTrim_v1") public var enableSilenceTrim: Bool = false
 
     /// Persisted selection for the Dex icon asset.
     @AppStorage("selectedMenuBarIconIdentifier_v2") public var selectedMenuBarIconIdentifier: String = ""
@@ -354,13 +379,16 @@ public class AppSettings: ObservableObject {
         playStartSound = false
         playStopSound = false
         showVisualHUD = false
-        
+        showFloatingHUD = false
+
         selectedStartSound = .none
         selectedStopSound = .none
         
         autoPaste = true
         copyOnlyInSensitiveFields = true
         profanityFilter = false
+        customProfanityWordsData = Data()
+        customProfanityRemovalsData = Data()
         useAccessibilityInsertion = false
         appendMode = false
         safeModeEnabled = false
@@ -384,6 +412,9 @@ public class AppSettings: ObservableObject {
         enableCorrectionSheet = true
         showFlavorTicker = true
         animateFlavorTicker = true
+        showDictationStats = false
+        persistHistory = false
+        enableSilenceTrim = false
         selectedMenuBarIconIdentifier = ""
         selectedMenuBarEmoji = "🐶"
         

@@ -4,19 +4,21 @@ import Foundation
 ///
 /// Wraps the transcribed text with a stable `UUID` identity so SwiftUI's `ForEach` can
 /// animate insertions and deletions correctly (unlike an index-based approach).
-public struct HistoryItem: Identifiable {
-    public let id = UUID()
+public struct HistoryItem: Identifiable, Codable {
+    public let id: UUID
     public let text: String
     public let createdAt: Date
     public let sourceHistoryItemID: UUID?
     public let isAccuracyRetry: Bool
-    
+
     public init(
+        id: UUID = UUID(),
         text: String,
         createdAt: Date = Date(),
         sourceHistoryItemID: UUID? = nil,
         isAccuracyRetry: Bool = false
     ) {
+        self.id = id
         self.text = text
         self.createdAt = createdAt
         self.sourceHistoryItemID = sourceHistoryItemID
@@ -27,7 +29,7 @@ public struct HistoryItem: Identifiable {
 /// An ordered, size-bounded list of ``HistoryItem`` values for the current session.
 ///
 /// Items are prepended (most-recent first) and the list is capped at 50 entries.
-/// History is **not** persisted to disk — it resets on every app launch.
+/// Persistence to disk is opt-in via `AppSettings.persistHistory` and managed externally.
 @MainActor
 public final class TranscriptionHistory: ObservableObject {
 
@@ -62,6 +64,16 @@ public final class TranscriptionHistory: ObservableObject {
             items.removeLast()
         }
         return item
+    }
+
+    /// Appends a pre-existing item (e.g. loaded from disk) to the end of the list,
+    /// trimming the oldest entry if the list exceeds `maxItems`.
+    /// Used only during session restore — not for new dictations.
+    public func insert(_ item: HistoryItem) {
+        items.append(item)
+        if items.count > maxItems {
+            items.removeLast()
+        }
     }
 
     public func clear() {
