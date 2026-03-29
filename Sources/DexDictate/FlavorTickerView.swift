@@ -6,6 +6,12 @@ struct FlavorTickerView: View {
 
     let text: String
     let animateWhenNeeded: Bool
+    var labelLine1: String = "DEX"
+    var labelLine2: String = "FEED"
+    var labelGradientColors: [Color] = [
+        Color(red: 0.83, green: 0.16, blue: 0.14),
+        Color(red: 0.57, green: 0.07, blue: 0.08)
+    ]
 
     @State private var containerWidth: CGFloat = 0
     @State private var textWidth: CGFloat = 0
@@ -24,7 +30,7 @@ struct FlavorTickerView: View {
     }
 
     private var shouldAnimate: Bool {
-        animateWhenNeeded && !reduceMotion && !displayText.isEmpty
+        animateWhenNeeded && !reduceMotion
     }
 
     var body: some View {
@@ -103,19 +109,16 @@ struct FlavorTickerView: View {
     private var labelStrip: some View {
         ZStack {
             LinearGradient(
-                colors: [
-                    Color(red: 0.83, green: 0.16, blue: 0.14),
-                    Color(red: 0.57, green: 0.07, blue: 0.08)
-                ],
+                colors: labelGradientColors,
                 startPoint: .top,
                 endPoint: .bottom
             )
 
             VStack(spacing: -1) {
-                Text("DEX")
+                Text(labelLine1)
                     .font(.system(size: 9, weight: .black, design: .monospaced))
                     .tracking(1)
-                Text("FEED")
+                Text(labelLine2)
                     .font(.system(size: 9, weight: .black, design: .monospaced))
                     .tracking(1)
             }
