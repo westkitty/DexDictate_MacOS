@@ -26,12 +26,16 @@ public enum AudioFileImporter {
 
     /// Reads an audio file and returns its samples as a `[Float]` array at the file's native sample rate.
     ///
-    /// The returned samples are already downmixed to mono (channel 0 only).
+    /// The returned samples are downmixed to mono float PCM.
     /// Pass the result directly to `AudioResampler.resampleToWhisper(_:fromRate:)`.
     public static func loadSamples(from url: URL) throws -> (samples: [Float], sampleRate: Double) {
         let audioFile: AVAudioFile
         do {
-            audioFile = try AVAudioFile(forReading: url)
+            audioFile = try AVAudioFile(
+                forReading: url,
+                commonFormat: .pcmFormatFloat32,
+                interleaved: false
+            )
         } catch {
             throw ImportError.unreadableFile
         }
@@ -56,7 +60,41 @@ public enum AudioFileImporter {
             throw ImportError.unsupportedFormat
         }
 
-        let samples = Array(UnsafeBufferPointer(start: floatData[0], count: Int(buffer.frameLength)))
+        let frameLength = Int(buffer.frameLength)
+        let channelCount = Int(format.channelCount)
+        guard frameLength > 0, channelCount > 0 else {
+            throw ImportError.noAudioData
+        }
+
+        let samples = downmixToMono(channelCount: channelCount, frameLength: frameLength) { channel, index in
+            floatData[channel][index]
+        }
+
         return (samples, format.sampleRate)
+    }
+
+    static func downmixToMono(
+        channelCount: Int,
+        frameLength: Int,
+        sampleAt: (Int, Int) -> Float
+    ) -> [Float] {
+        guard frameLength > 0, channelCount > 0 else {
+            return []
+        }
+
+        if channelCount == 1 {
+            return (0..<frameLength).map { sampleAt(0, $0) }
+        }
+
+        var mixed = [Float](repeating: 0, count: frameLength)
+        let scale = 1 / Float(channelCount)
+
+        for channel in 0..<channelCount {
+            for index in 0..<frameLength {
+                mixed[index] += sampleAt(channel, index) * scale
+            }
+        }
+
+        return mixed
     }
 }

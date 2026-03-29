@@ -57,7 +57,8 @@ struct EngineLifecycleStateMachine {
             return .listening
         case (.listening, .audioCaptureFailed):
             return .ready
-        case (.listening, .transcriptionStarted):
+        case (.ready, .transcriptionStarted),
+             (.listening, .transcriptionStarted):
             return .transcribing
         case (.transcribing, .transcriptionCompleted):
             return .ready
