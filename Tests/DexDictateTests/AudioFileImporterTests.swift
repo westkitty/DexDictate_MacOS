@@ -14,4 +14,13 @@ final class AudioFileImporterTests: XCTestCase {
         XCTAssertFalse(result.samples.isEmpty)
         XCTAssertGreaterThan(result.sampleRate, 0)
     }
+
+    func testDownmixToMonoAveragesStereoChannels() {
+        let samples = AudioFileImporter.downmixToMono(channelCount: 2, frameLength: 4) { channel, _ in
+            channel == 0 ? 1 : -1
+        }
+
+        XCTAssertEqual(samples.count, 4)
+        XCTAssertTrue(samples.allSatisfy { abs($0) < 0.0001 })
+    }
 }

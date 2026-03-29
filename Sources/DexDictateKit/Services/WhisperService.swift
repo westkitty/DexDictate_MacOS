@@ -1,6 +1,11 @@
 import Foundation
 import SwiftWhisper
 
+enum WhisperTranscriptionMode {
+    case liveDictation
+    case importedFile
+}
+
 @MainActor
 public class WhisperService: ObservableObject {
     private var whisper: Whisper?
@@ -9,6 +14,7 @@ public class WhisperService: ObservableObject {
     @Published public private(set) var loadedModelID: String?
     @Published public private(set) var loadedModelURL: URL?
     @Published public private(set) var loadedDecodeProfileName: String?
+    private var loadedDecodeProfile: ExperimentFlags.DecodeProfile = ExperimentFlags.whisperDecodeProfile
 
     /// Serialises transcription calls — cancels the previous task before starting a new one,
     /// preventing concurrent access to the non-thread-safe whisper.cpp C++ object.
@@ -62,7 +68,7 @@ public class WhisperService: ObservableObject {
 
             // Build speed-optimised params before loading the model.
             let resolvedProfile = decodeProfile ?? ExperimentFlags.whisperDecodeProfile
-            let params = Self.makeFastParams(for: resolvedProfile)
+            let params = Self.makeParams(for: resolvedProfile, mode: .liveDictation)
 
             // whisper.cpp will auto-load "<model>-encoder.mlmodelc" when present.
             // If absent, it falls back to CPU/Accelerate (still fully offline).
@@ -82,6 +88,7 @@ public class WhisperService: ObservableObject {
                 loadedModelID = modelID ?? url.deletingPathExtension().lastPathComponent
                 loadedModelURL = url
                 loadedDecodeProfileName = resolvedProfile.cliName
+                loadedDecodeProfile = resolvedProfile
                 Safety.log("Whisper model loaded successfully")
             } else {
                 Safety.log("ERROR: Whisper(fromFileURL:) returned nil — model load failed")
@@ -89,6 +96,7 @@ public class WhisperService: ObservableObject {
                 loadedModelID = nil
                 loadedModelURL = nil
                 loadedDecodeProfileName = nil
+                loadedDecodeProfile = ExperimentFlags.whisperDecodeProfile
             }
         } catch {
             Safety.log("ERROR: Exception during model load: \(error)")
@@ -96,6 +104,7 @@ public class WhisperService: ObservableObject {
             loadedModelID = nil
             loadedModelURL = nil
             loadedDecodeProfileName = nil
+            loadedDecodeProfile = ExperimentFlags.whisperDecodeProfile
         }
     }
 
@@ -120,7 +129,10 @@ public class WhisperService: ObservableObject {
     /// - `max_tokens = 128` — caps runaway decoding on noise while keeping normal dictation
     ///   lengths intact.
     /// - `suppress_non_speech_tokens = true` — reduces non-speech hallucinations and wasted decode.
-    private static func makeFastParams(for decodeProfile: ExperimentFlags.DecodeProfile) -> WhisperParams {
+    nonisolated static func makeParams(
+        for decodeProfile: ExperimentFlags.DecodeProfile,
+        mode: WhisperTranscriptionMode
+    ) -> WhisperParams {
         let params = WhisperParams(strategy: .greedy)
         
         switch decodeProfile {
@@ -143,20 +155,41 @@ public class WhisperService: ObservableObject {
         // Dictation does not need timestamps; keep timestamp features disabled.
         params.print_timestamps = false
         params.token_timestamps = false
-        // Disable carry-over prompt/context between calls for independent short utterances.
-        params.no_context = true
-        // Prevent pathological long decodes on noisy input.
-        params.max_tokens = 128
-        // Helps suppress non-speech artifacts in dictation-style input.
-        params.suppress_non_speech_tokens = true
         // Progress callback/UI is unused; disable extra progress work.
         params.print_progress = false
-        // One segment for short utterances — avoids multi-segment tokenisation overhead.
-        params.single_segment = true
         // Language already locked to English (model is tiny.en); set explicitly.
         params.language = .english
-        Safety.log("WhisperParams: best_of=1 speed_up=true retries=off max_tokens=128 n_threads=\(params.n_threads) single_segment=true")
+
+        switch mode {
+        case .liveDictation:
+            // Disable carry-over prompt/context between calls for independent short utterances.
+            params.no_context = true
+            // Prevent pathological long decodes on noisy input.
+            params.max_tokens = 128
+            // Helps suppress non-speech artifacts in dictation-style input.
+            params.suppress_non_speech_tokens = true
+            // One segment for short utterances — avoids multi-segment tokenisation overhead.
+            params.single_segment = true
+        case .importedFile:
+            // Full-file transcription needs segment breaks and decoder context across them.
+            params.no_context = false
+            params.max_tokens = 0
+            params.single_segment = false
+            // Imported files are not latency-sensitive; avoid the 2x phase-vocoder shortcut.
+            params.speed_up = false
+            params.suppress_non_speech_tokens = true
+        }
+
+        Safety.log(
+            "WhisperParams[\(mode == .liveDictation ? "live" : "file")]: best_of=\(params.greedy.best_of) " +
+            "speed_up=\(params.speed_up) no_context=\(params.no_context) max_tokens=\(params.max_tokens) " +
+            "single_segment=\(params.single_segment)"
+        )
         return params
+    }
+
+    private func configureParams(for mode: WhisperTranscriptionMode) {
+        whisper?.params = Self.makeParams(for: loadedDecodeProfile, mode: mode)
     }
 
     public func loadEmbeddedModel() {
@@ -185,6 +218,16 @@ public class WhisperService: ObservableObject {
     }
     
     public func transcribe(audioFrames: [Float]) -> Bool {
+        configureParams(for: .liveDictation)
+        return transcribeWithCurrentParams(audioFrames: audioFrames)
+    }
+
+    public func transcribeImportedFile(audioFrames: [Float]) -> Bool {
+        configureParams(for: .importedFile)
+        return transcribeWithCurrentParams(audioFrames: audioFrames)
+    }
+
+    private func transcribeWithCurrentParams(audioFrames: [Float]) -> Bool {
         guard let whisper = whisper, isModelLoaded else {
             Safety.log("transcribe() skipped — whisper=\(self.whisper == nil ? "nil" : "ok") isModelLoaded=\(isModelLoaded)")
             return false

@@ -464,7 +464,7 @@ public final class TranscriptionEngine: ObservableObject {
                 await MainActor.run { [weak self] in
                     guard let self else { return }
                     self.lastCapturedUtterance = (samples, sampleRate)
-                    if !self.whisperService.transcribe(audioFrames: whisperSamples) {
+                    if !self.whisperService.transcribeImportedFile(audioFrames: whisperSamples) {
                         Safety.log("transcribeAudioFile() — Whisper refused transcription; resetting to ready state")
                         _ = self.applyLifecycle(.transcriptionCompleted, context: "whisper unavailable (file)")
                         self.statusText = NSLocalizedString("Ready", comment: "Status: Ready to dictate")
