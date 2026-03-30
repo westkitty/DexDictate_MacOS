@@ -58,6 +58,8 @@ If you prefer a user-local install instead of a system-wide one, omit `INSTALL_D
 
 Download the latest pre-built application from the [Releases](https://github.com/WestKitty/DexDictate_MacOS/releases) page. Each release should include a `.dmg` and `.zip` artifact for the tagged version.
 
+> **Platform:** Release artifacts are currently Apple Silicon only and require macOS 14 or newer.
+
 > **Note:** If you encounter an "Unidentified Developer" warning, simply Right-Click the app and select **Open** to bypass the check.
 
 ### Option B: Build from Source
