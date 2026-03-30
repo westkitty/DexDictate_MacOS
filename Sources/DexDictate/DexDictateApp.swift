@@ -574,13 +574,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             existing.makeKeyAndOrderFront(nil)
             return
         }
-        let window = NSWindow()
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 520, height: 480),
+            styleMask: [.titled, .closable, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
         window.title = NSLocalizedString("Welcome to DexDictate", comment: "Onboarding window title")
-        window.styleMask = [.titled, .closable, .fullSizeContentView]
         window.isReleasedWhenClosed = false
+        window.setContentSize(NSSize(width: 520, height: 480))
         let onView = OnboardingView(settings: AppSettings.shared, onboardingWindow: window)
         window.contentViewController = NSHostingController(rootView: onView)
         window.center()
+        window.orderFrontRegardless()
         window.makeKeyAndOrderFront(nil)
         NSApp.activate()
         onboardingWindow = window
