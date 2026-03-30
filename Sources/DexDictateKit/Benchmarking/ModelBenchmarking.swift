@@ -312,6 +312,110 @@ public final class BenchmarkResultsStore: ObservableObject {
     }
 }
 
+struct BenchmarkCorpusLocator {
+    static func resolvePreferredCorpusDirectory(
+        fileManager: FileManager = .default,
+        resourceBundle: Bundle = Safety.resourceBundle,
+        appSupportURL: URL? = Safety.appSupportURL,
+        currentDirectoryURL: URL = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+    ) -> URL? {
+        if let capturedDirectory = latestStrictCapturedCorpusDirectory(
+            fileManager: fileManager,
+            appSupportURL: appSupportURL
+        ) {
+            return capturedDirectory
+        }
+
+        if let bundledDirectory = bundledCorpusDirectory(
+            fileManager: fileManager,
+            resourceBundle: resourceBundle
+        ) {
+            return bundledDirectory
+        }
+
+        let sourceCorpus = currentDirectoryURL.appendingPathComponent("sample_corpus", isDirectory: true)
+        return isCorpusDirectory(sourceCorpus, fileManager: fileManager) ? sourceCorpus : nil
+    }
+
+    static func latestStrictCapturedCorpusDirectory(
+        fileManager: FileManager = .default,
+        appSupportURL: URL? = Safety.appSupportURL
+    ) -> URL? {
+        guard let appSupportURL else { return nil }
+
+        let capturesRoot = appSupportURL.appendingPathComponent("BenchmarkCaptures", isDirectory: true)
+        guard let candidateURLs = try? fileManager.contentsOfDirectory(
+            at: capturesRoot,
+            includingPropertiesForKeys: [.isDirectoryKey, .contentModificationDateKey],
+            options: [.skipsHiddenFiles]
+        ) else {
+            return nil
+        }
+
+        let directories = candidateURLs.filter { url in
+            (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true
+        }
+        .sorted { lhs, rhs in
+            let lhsDate = (try? lhs.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
+            let rhsDate = (try? rhs.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
+            return lhsDate > rhsDate
+        }
+
+        return directories.first { isStrictCapturedCorpusDirectory($0, fileManager: fileManager) }
+    }
+
+    static func isStrictCapturedCorpusDirectory(
+        _ directory: URL,
+        fileManager: FileManager = .default
+    ) -> Bool {
+        guard let transcriptMap = loadTranscriptMap(from: directory),
+              transcriptMap == BenchmarkCorpus.strictTranscriptMap else {
+            return false
+        }
+
+        return BenchmarkCorpus.strictTranscriptMap.keys.allSatisfy { fileName in
+            fileManager.fileExists(atPath: directory.appendingPathComponent(fileName).path)
+        }
+    }
+
+    private static func bundledCorpusDirectory(
+        fileManager: FileManager,
+        resourceBundle: Bundle
+    ) -> URL? {
+        let candidates = [
+            resourceBundle.url(forResource: "BundledBenchmarkCorpus", withExtension: nil),
+            resourceBundle.resourceURL,
+            resourceBundle.bundleURL,
+        ]
+        .compactMap { $0 }
+
+        return candidates.first { isCorpusDirectory($0, fileManager: fileManager) }
+    }
+
+    private static func isCorpusDirectory(
+        _ directory: URL,
+        fileManager: FileManager = .default
+    ) -> Bool {
+        guard let transcriptMap = loadTranscriptMap(from: directory),
+              transcriptMap.isEmpty == false else {
+            return false
+        }
+
+        return transcriptMap.keys.allSatisfy { fileName in
+            fileManager.fileExists(atPath: directory.appendingPathComponent(fileName).path)
+        }
+    }
+
+    private static func loadTranscriptMap(from directory: URL) -> [String: String]? {
+        let transcriptsURL = directory.appendingPathComponent("transcripts.json")
+        guard let data = try? Data(contentsOf: transcriptsURL),
+              let transcriptMap = try? JSONDecoder().decode([String: String].self, from: data) else {
+            return nil
+        }
+        return transcriptMap
+    }
+}
+
 @MainActor
 public final class AdaptiveBenchmarkController: ObservableObject {
     @Published public private(set) var status: BenchmarkStatus = .idle
@@ -326,6 +430,7 @@ public final class AdaptiveBenchmarkController: ObservableObject {
     private let helperURLResolver: (() -> URL?)?
     private let catalogProvider: () -> WhisperModelCatalog
     private let resultsStoreProvider: () -> BenchmarkResultsStore
+    private let benchmarkCorpusDirectoryResolver: (() -> URL?)?
     private let initialDelayNs: UInt64
     private let postDictationDelayNs: UInt64
 
@@ -333,12 +438,14 @@ public final class AdaptiveBenchmarkController: ObservableObject {
         helperURLResolver: (() -> URL?)? = nil,
         catalogProvider: (() -> WhisperModelCatalog)? = nil,
         resultsStoreProvider: (() -> BenchmarkResultsStore)? = nil,
+        benchmarkCorpusDirectoryResolver: (() -> URL?)? = nil,
         initialDelayNs: UInt64 = 120_000_000_000,
         postDictationDelayNs: UInt64 = 30_000_000_000
     ) {
         self.helperURLResolver = helperURLResolver
         self.catalogProvider = catalogProvider ?? { WhisperModelCatalog.shared }
         self.resultsStoreProvider = resultsStoreProvider ?? { BenchmarkResultsStore.shared }
+        self.benchmarkCorpusDirectoryResolver = benchmarkCorpusDirectoryResolver
         self.initialDelayNs = initialDelayNs
         self.postDictationDelayNs = postDictationDelayNs
     }
@@ -632,8 +739,8 @@ public final class AdaptiveBenchmarkController: ObservableObject {
             throw DictationError.unknown("VerificationRunner helper unavailable.")
         }
 
-        guard let corpusDirectory = bundledCorpusDirectoryURL() else {
-            throw DictationError.unknown("Bundled benchmark corpus unavailable.")
+        guard let corpusDirectory = resolveBenchmarkCorpusDirectoryURL() else {
+            throw DictationError.unknown("No benchmark corpus is available. Record one in Benchmark Capture first.")
         }
 
         let tempDirectory = FileManager.default.temporaryDirectory
@@ -705,14 +812,12 @@ public final class AdaptiveBenchmarkController: ObservableObject {
         return candidates.first(where: { FileManager.default.isExecutableFile(atPath: $0.path) })
     }
 
-    private func bundledCorpusDirectoryURL() -> URL? {
-        if let resourceURL = Safety.resourceBundle.url(forResource: "BundledBenchmarkCorpus", withExtension: nil) {
-            return resourceURL
+    private func resolveBenchmarkCorpusDirectoryURL() -> URL? {
+        if let benchmarkCorpusDirectoryResolver {
+            return benchmarkCorpusDirectoryResolver()
         }
 
-        let cwd = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
-        let sourceCorpus = cwd.appendingPathComponent("sample_corpus")
-        return FileManager.default.fileExists(atPath: sourceCorpus.path) ? sourceCorpus : nil
+        return BenchmarkCorpusLocator.resolvePreferredCorpusDirectory()
     }
 
     private func modelsForCurrentRun() -> [String] {

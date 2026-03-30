@@ -30,20 +30,20 @@ Run this before each series:
 
 ### A. General Dictation (accuracy baseline)
 1. `DexDictate should transcribe this sentence exactly once.`
-2. `Please book a meeting for Tuesday at 3 PM with Dexter.`
-3. `I need the quarterly revenue report by end of day.`
+2. `Schedule a meeting for Tuesday at 3 PM with Dexter, reluctantly.`
+3. `I need the quarterly revenue report by end of day, not eventually.`
 4. `The architecture uses event taps and local inference only.`
-5. `Do not send data to any external service.`
+5. `Do not send data to any external service. Obviously.`
 
 ### B. Punctuation / Spacing
-1. `This is sentence one period`
-2. `This is sentence two period`
-3. `Add a comma after this phrase comma then continue.`
-4. `Question mark test question mark`
-5. `End this line with a period.`
+1. `This sentence ends with a period period`
+2. `Add a comma after Dexter comma then continue.`
+3. `Is this working yet question mark`
+4. `Open parenthesis local only close parenthesis period`
+5. `Quote unimpressed but correct quote period`
 
 ### C. Commands / Formatting
-1. `new line this should be on a new line`
+1. `new line this should move to a new line`
 2. `next line this should also break line`
 3. `scratch that`
 4. `this line all caps`
@@ -52,13 +52,21 @@ Run this before each series:
 ### D. Hard Words / Names
 1. `Kubernetes Istio Prometheus Grafana`
 2. `PostgreSQL Redis SQLite Cassandra`
-3. `Dexter WestKitty DexDictate`
-4. `ane transformer core ml encoder`
-5. `whisper cpp swift whisper`
+3. `Dexter DexGPT DexDictate`
+4. `A N E transformer Core ML encoder`
+5. `whisper C P P Swift Whisper`
 
-### E. Quiet Room Stability
-1. Read A1-A5 in a quiet room.
-2. Read A1-A5 again in the same quiet-room setup.
+### E. Operational Tone / Fixed Anchors
+1. `The microphone behaved today, which feels suspicious.`
+2. `Low latency, clean output, and no nonsense.`
+3. `Fix the last sentence and keep going.`
+4. `This transcript stays on device, as it should.`
+5. `Benchmark first, boast never.`
+6. `Anchor one DexDictate should get this right the first time.`
+7. `Anchor two Dexter remains unimpressed by sloppy latency.`
+8. `Anchor three local transcription means local, not adjacent to local.`
+9. `Anchor four punctuation should work without theatrical collapse.`
+10. `Anchor five accuracy is the minimum, not an achievement.`
 
 ## Series of Instructions
 

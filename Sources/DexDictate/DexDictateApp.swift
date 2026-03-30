@@ -540,6 +540,8 @@ struct CheckboxToggleStyle: ToggleStyle {
 /// Handles early app-lifecycle callbacks.
 class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
+        configureApplicationIcon()
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
             LaunchIntroController.shared.playIfNeeded()
         }
@@ -552,6 +554,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private var onboardingWindow: NSWindow?
+
+    private func configureApplicationIcon() {
+        let iconCandidates: [URL?] = [
+            Bundle.main.url(forResource: "AppIcon", withExtension: "icns"),
+            Bundle.main.resourceURL?.appendingPathComponent("AppIcon.icns"),
+        ]
+
+        for iconURL in iconCandidates.compactMap({ $0 }) {
+            guard let icon = NSImage(contentsOf: iconURL) else { continue }
+            NSApp.applicationIconImage = icon
+            return
+        }
+    }
 
     private func showOnboarding() {
         // Reuse existing window if already showing

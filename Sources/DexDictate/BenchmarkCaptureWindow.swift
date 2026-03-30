@@ -361,7 +361,7 @@ struct BenchmarkCaptureView: View {
                 .font(.largeTitle.weight(.bold))
                 .foregroundStyle(.white)
 
-            Text("Record the strict offline corpus one prompt at a time in your normal quiet-room setup. The app writes WAV files plus transcripts.json locally, ready for the benchmark scripts.")
+            Text("Record the strict offline corpus one prompt at a time in a consistent setup. The app writes WAV files plus transcripts.json locally, ready for the benchmark scripts.")
                 .font(.callout)
                 .foregroundStyle(.white.opacity(0.72))
         }
