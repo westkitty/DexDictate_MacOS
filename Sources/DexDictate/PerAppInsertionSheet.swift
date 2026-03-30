@@ -13,13 +13,31 @@ struct PerAppInsertionView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 10) {
                 Text("Per-App Insertion Rules")
                     .font(.headline)
                 Text("Override how DexDictate inserts text for specific apps.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Text("\"Add Current App\" reads the frontmost application automatically.")
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("How this works")
+                        .font(.caption.bold())
+                    Text("1. Set your global insertion behavior in Quick Settings first.")
+                        .font(.caption)
+                    Text("2. Bring the target app to the front and click \"Add Current App\" to capture it automatically, or use \"Add Manually\" if you already know the bundle ID.")
+                        .font(.caption)
+                    Text("3. Pick the insertion mode DexDictate should use only when that app is frontmost.")
+                        .font(.caption)
+                    Text("4. If you need to change a rule later, remove it and add it again with the new mode. This window is override-only, not inline-editable.")
+                        .font(.caption)
+                }
+                .foregroundStyle(.secondary)
+                .padding(10)
+                .background(Color.secondary.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                Text("Clipboard Paste uses the normal paste path. Accessibility API tries direct insertion at the cursor when the target app supports it.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -168,6 +186,6 @@ struct PerAppInsertionView: View {
 
             Spacer()
         }
-        .frame(width: 500, height: 380)
+        .frame(width: 540, height: 460)
     }
 }

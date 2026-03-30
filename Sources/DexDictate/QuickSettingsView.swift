@@ -265,6 +265,10 @@ struct QuickSettingsView: View {
                             .buttonStyle(.bordered)
                             .controlSize(.small)
                         }
+                        Text(NSLocalizedString("These rules only apply when that app is frontmost. Use \"Add Current App\" while the target app is active, then choose whether DexDictate should paste normally or try direct Accessibility insertion just for that app.", comment: ""))
+                            .font(.caption2).foregroundStyle(.white.opacity(0.5))
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.leading, 20).padding(.bottom, 2)
 
                         Toggle(NSLocalizedString("Show Floating HUD", comment: ""), isOn: $settings.showFloatingHUD)
                     }
@@ -435,6 +439,25 @@ struct QuickSettingsView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text(NSLocalizedString("Input", comment: ""))
                             .font(.caption).bold().foregroundStyle(.white.opacity(0.7))
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(NSLocalizedString("Trigger Mode", comment: ""))
+                                .font(.caption).foregroundStyle(.white.opacity(0.8))
+                            Picker("", selection: $settings.triggerMode) {
+                                Text("Hold").tag(AppSettings.TriggerMode.holdToTalk)
+                                Text("Toggle").tag(AppSettings.TriggerMode.toggle)
+                            }
+                            .pickerStyle(.segmented)
+                            .disabled(settings.safeModeEnabled)
+                        }
+
+                        Text(
+                            settings.safeModeEnabled
+                            ? NSLocalizedString("Safe Mode currently forces Hold to Talk. Turn Safe Mode off if you want click-to-toggle recording back.", comment: "")
+                            : NSLocalizedString("Hold records only while the trigger is pressed. Toggle starts on the first press and stops on the second.", comment: "")
+                        )
+                        .font(.caption2).foregroundStyle(.white.opacity(0.5))
+                        .fixedSize(horizontal: false, vertical: true)
 
                         HStack {
                             Text(NSLocalizedString("Input Device:", comment: ""))

@@ -37,15 +37,15 @@ public enum BenchmarkCorpus {
         BenchmarkPrompt(
             id: "A2",
             section: "General",
-            spokenPrompt: "Please book a meeting for Tuesday at 3 PM with Dexter.",
-            referenceText: "Please book a meeting for Tuesday at 3 PM with Dexter.",
+            spokenPrompt: "Schedule a meeting for Tuesday at 3 PM with Dexter, reluctantly.",
+            referenceText: "Schedule a meeting for Tuesday at 3 PM with Dexter, reluctantly.",
             fileName: "A2.wav"
         ),
         BenchmarkPrompt(
             id: "A3",
             section: "General",
-            spokenPrompt: "I need the quarterly revenue report by end of day.",
-            referenceText: "I need the quarterly revenue report by end of day.",
+            spokenPrompt: "I need the quarterly revenue report by end of day, not eventually.",
+            referenceText: "I need the quarterly revenue report by end of day, not eventually.",
             fileName: "A3.wav"
         ),
         BenchmarkPrompt(
@@ -58,50 +58,50 @@ public enum BenchmarkCorpus {
         BenchmarkPrompt(
             id: "A5",
             section: "General",
-            spokenPrompt: "Do not send data to any external service.",
-            referenceText: "Do not send data to any external service.",
+            spokenPrompt: "Do not send data to any external service. Obviously.",
+            referenceText: "Do not send data to any external service. Obviously.",
             fileName: "A5.wav"
         ),
         BenchmarkPrompt(
             id: "B1",
             section: "Punctuation",
-            spokenPrompt: "This is sentence one period",
-            referenceText: "This is sentence one period",
+            spokenPrompt: "This sentence ends with a period period",
+            referenceText: "This sentence ends with a period period",
             fileName: "B1.wav"
         ),
         BenchmarkPrompt(
             id: "B2",
             section: "Punctuation",
-            spokenPrompt: "This is sentence two period",
-            referenceText: "This is sentence two period",
+            spokenPrompt: "Add a comma after Dexter comma then continue.",
+            referenceText: "Add a comma after Dexter comma then continue.",
             fileName: "B2.wav"
         ),
         BenchmarkPrompt(
             id: "B3",
             section: "Punctuation",
-            spokenPrompt: "Add a comma after this phrase comma then continue.",
-            referenceText: "Add a comma after this phrase comma then continue.",
+            spokenPrompt: "Is this working yet question mark",
+            referenceText: "Is this working yet question mark",
             fileName: "B3.wav"
         ),
         BenchmarkPrompt(
             id: "B4",
             section: "Punctuation",
-            spokenPrompt: "Question mark test question mark",
-            referenceText: "Question mark test question mark",
+            spokenPrompt: "Open parenthesis local only close parenthesis period",
+            referenceText: "Open parenthesis local only close parenthesis period",
             fileName: "B4.wav"
         ),
         BenchmarkPrompt(
             id: "B5",
             section: "Punctuation",
-            spokenPrompt: "End this line with a period.",
-            referenceText: "End this line with a period.",
+            spokenPrompt: "Quote unimpressed but correct quote period",
+            referenceText: "Quote unimpressed but correct quote period",
             fileName: "B5.wav"
         ),
         BenchmarkPrompt(
             id: "C1",
             section: "Commands",
-            spokenPrompt: "new line this should be on a new line",
-            referenceText: "new line this should be on a new line",
+            spokenPrompt: "new line this should move to a new line",
+            referenceText: "new line this should move to a new line",
             fileName: "C1.wav"
         ),
         BenchmarkPrompt(
@@ -149,102 +149,92 @@ public enum BenchmarkCorpus {
         BenchmarkPrompt(
             id: "D3",
             section: "Hard Words",
-            spokenPrompt: "Dexter WestKitty DexDictate",
-            referenceText: "Dexter WestKitty DexDictate",
+            spokenPrompt: "Dexter DexGPT DexDictate",
+            referenceText: "Dexter DexGPT DexDictate",
             fileName: "D3.wav"
         ),
         BenchmarkPrompt(
             id: "D4",
             section: "Hard Words",
-            spokenPrompt: "ane transformer core ml encoder",
-            referenceText: "ane transformer core ml encoder",
+            spokenPrompt: "A N E transformer Core ML encoder",
+            referenceText: "A N E transformer Core ML encoder",
             fileName: "D4.wav"
         ),
         BenchmarkPrompt(
             id: "D5",
             section: "Hard Words",
-            spokenPrompt: "whisper cpp swift whisper",
-            referenceText: "whisper cpp swift whisper",
+            spokenPrompt: "whisper C P P Swift Whisper",
+            referenceText: "whisper C P P Swift Whisper",
             fileName: "D5.wav"
         ),
         BenchmarkPrompt(
             id: "N1A1",
-            section: "Quiet Room Stability",
-            instructionText: "Quiet room pass",
-            spokenPrompt: "DexDictate should transcribe this sentence exactly once.",
-            referenceText: "DexDictate should transcribe this sentence exactly once.",
+            section: "Operational Tone",
+            spokenPrompt: "The microphone behaved today, which feels suspicious.",
+            referenceText: "The microphone behaved today, which feels suspicious.",
             fileName: "N1A1.wav"
         ),
         BenchmarkPrompt(
             id: "N1A2",
-            section: "Quiet Room Stability",
-            instructionText: "Quiet room pass",
-            spokenPrompt: "Please book a meeting for Tuesday at 3 PM with Dexter.",
-            referenceText: "Please book a meeting for Tuesday at 3 PM with Dexter.",
+            section: "Operational Tone",
+            spokenPrompt: "Low latency, clean output, and no nonsense.",
+            referenceText: "Low latency, clean output, and no nonsense.",
             fileName: "N1A2.wav"
         ),
         BenchmarkPrompt(
             id: "N1A3",
-            section: "Quiet Room Stability",
-            instructionText: "Quiet room pass",
-            spokenPrompt: "I need the quarterly revenue report by end of day.",
-            referenceText: "I need the quarterly revenue report by end of day.",
+            section: "Operational Tone",
+            spokenPrompt: "Fix the last sentence and keep going.",
+            referenceText: "Fix the last sentence and keep going.",
             fileName: "N1A3.wav"
         ),
         BenchmarkPrompt(
             id: "N1A4",
-            section: "Quiet Room Stability",
-            instructionText: "Quiet room pass",
-            spokenPrompt: "The architecture uses event taps and local inference only.",
-            referenceText: "The architecture uses event taps and local inference only.",
+            section: "Operational Tone",
+            spokenPrompt: "This transcript stays on device, as it should.",
+            referenceText: "This transcript stays on device, as it should.",
             fileName: "N1A4.wav"
         ),
         BenchmarkPrompt(
             id: "N1A5",
-            section: "Quiet Room Stability",
-            instructionText: "Quiet room pass",
-            spokenPrompt: "Do not send data to any external service.",
-            referenceText: "Do not send data to any external service.",
+            section: "Operational Tone",
+            spokenPrompt: "Benchmark first, boast never.",
+            referenceText: "Benchmark first, boast never.",
             fileName: "N1A5.wav"
         ),
         BenchmarkPrompt(
             id: "N2A1",
-            section: "Quiet Room Stability",
-            instructionText: "Quiet room pass",
-            spokenPrompt: "DexDictate should transcribe this sentence exactly once.",
-            referenceText: "DexDictate should transcribe this sentence exactly once.",
+            section: "Fixed Anchors",
+            spokenPrompt: "Anchor one DexDictate should get this right the first time.",
+            referenceText: "Anchor one DexDictate should get this right the first time.",
             fileName: "N2A1.wav"
         ),
         BenchmarkPrompt(
             id: "N2A2",
-            section: "Quiet Room Stability",
-            instructionText: "Quiet room pass",
-            spokenPrompt: "Please book a meeting for Tuesday at 3 PM with Dexter.",
-            referenceText: "Please book a meeting for Tuesday at 3 PM with Dexter.",
+            section: "Fixed Anchors",
+            spokenPrompt: "Anchor two Dexter remains unimpressed by sloppy latency.",
+            referenceText: "Anchor two Dexter remains unimpressed by sloppy latency.",
             fileName: "N2A2.wav"
         ),
         BenchmarkPrompt(
             id: "N2A3",
-            section: "Quiet Room Stability",
-            instructionText: "Quiet room pass",
-            spokenPrompt: "I need the quarterly revenue report by end of day.",
-            referenceText: "I need the quarterly revenue report by end of day.",
+            section: "Fixed Anchors",
+            spokenPrompt: "Anchor three local transcription means local, not adjacent to local.",
+            referenceText: "Anchor three local transcription means local, not adjacent to local.",
             fileName: "N2A3.wav"
         ),
         BenchmarkPrompt(
             id: "N2A4",
-            section: "Quiet Room Stability",
-            instructionText: "Quiet room pass",
-            spokenPrompt: "The architecture uses event taps and local inference only.",
-            referenceText: "The architecture uses event taps and local inference only.",
+            section: "Fixed Anchors",
+            spokenPrompt: "Anchor four punctuation should work without theatrical collapse.",
+            referenceText: "Anchor four punctuation should work without theatrical collapse.",
             fileName: "N2A4.wav"
         ),
         BenchmarkPrompt(
             id: "N2A5",
-            section: "Quiet Room Stability",
-            instructionText: "Quiet room pass",
-            spokenPrompt: "Do not send data to any external service.",
-            referenceText: "Do not send data to any external service.",
+            section: "Fixed Anchors",
+            spokenPrompt: "Anchor five accuracy is the minimum, not an achievement.",
+            referenceText: "Anchor five accuracy is the minimum, not an achievement.",
             fileName: "N2A5.wav"
         )
     ]
