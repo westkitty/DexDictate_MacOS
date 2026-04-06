@@ -32,6 +32,7 @@ open /Applications/DexDictate.app
 That command path:
 
 - builds the release app bundle
+- fetches the local Whisper model if it is missing
 - installs it into `/Applications`
 - leaves the finished app at `/Applications/DexDictate.app`
 
@@ -101,19 +102,20 @@ Step-by-step:
     open /Applications/DexDictate.app
     ```
 
-There is also a thin wrapper script if you want a more obvious command name:
+`build.sh` is the canonical entry point. Useful variants:
 
 ```bash
-./install.sh
+./build.sh --user
+./build.sh --system
+./build.sh --release
 ```
-
-`./install.sh` just calls `./build.sh`, so `build.sh` remains the canonical path.
 
 ## Verify the Build
 
 From a fresh clone, these are the useful checks:
 
 ```bash
+./scripts/fetch_model.sh
 swift build
 swift test
 swift run VerificationRunner
@@ -124,6 +126,8 @@ Expected outcome:
 - the package builds successfully
 - the test suite passes
 - `VerificationRunner` reports a passing summary
+
+`./build.sh` already runs `./scripts/fetch_model.sh` automatically, so the explicit fetch step is only needed when you want to drive `swift build` / `swift test` / `swift run` directly.
 
 ## Build Outputs
 
@@ -140,12 +144,13 @@ Important generated paths:
 To create release artifacts and validate them:
 
 ```bash
-./scripts/build_release.sh
+./build.sh --release
 ```
 
-That script:
+That command:
 
 - builds the app bundle
+- fetches the Whisper model if it is missing
 - packages `.zip` and `.dmg` artifacts into `_releases/`
 - runs `./scripts/validate_release.sh`
 
@@ -186,10 +191,9 @@ If launch at login does not immediately turn on:
 The GitHub repository contains the files required to build and run the app from source, including:
 
 - `Package.swift` and `Package.resolved`
-- the bundled Whisper model at `Sources/DexDictateKit/Resources/tiny.en.bin`
 - app icon and resource assets
 - the canonical installer/build script `build.sh`
-- the wrapper installer `install.sh`
+- the model bootstrap script `scripts/fetch_model.sh`
 - release validation scripts in `scripts/`
 
 ## Governance 

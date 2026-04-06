@@ -50,8 +50,8 @@ Use this timeline to reason about regression origins. Dates are from git commits
 
 ### Build/Test status
 - `scripts/run_quality_paths.sh` passes.
-- `swift build` passes.
-- `swift run VerificationRunner` passes (45 checks).
+- `scripts/fetch_model.sh && swift build` passes.
+- `scripts/fetch_model.sh && swift run VerificationRunner` passes (45 checks).
 
 Important caveat:
 - Current tests are mostly logic/string checks and source-code presence checks.

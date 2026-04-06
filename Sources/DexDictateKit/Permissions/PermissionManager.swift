@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import AVFoundation
+import AppKit
 import ApplicationServices
 
 /// Polls the three macOS TCC permissions required by DexDictate and drives auto-recovery
@@ -10,6 +11,12 @@ import ApplicationServices
 /// polls every 2 seconds rather than using a notification-based approach because TCC
 /// changes are not reliably broadcast to the process that needs them.
 public class PermissionManager: ObservableObject {
+    public static let shared = PermissionManager()
+
+    private enum MonitoringRequester: Hashable {
+        case interface
+        case runtime
+    }
 
     /// Whether the app has been granted Accessibility (required for the event tap).
     @Published public var accessibilityGranted: Bool = false
@@ -32,15 +39,25 @@ public class PermissionManager: ObservableObject {
     /// Weak reference to the engine so the manager can trigger a monitor retry after
     /// accessibility is granted without creating a retain cycle.
     private weak var engine: TranscriptionEngine?
+    private var activeMonitoringRequesters = Set<MonitoringRequester>()
 
-    private var recoveryAttempts = 0
-    private let maxRecoveryAttempts = 3
+    var hasActivePollingTimer: Bool {
+        timer != nil
+    }
 
     public var settingsURL: URL? {
         if !inputMonitoringGranted {
             return URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent")
         }
         return URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
+    }
+
+    public var accessibilitySettingsURL: URL? {
+        URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
+    }
+
+    public var inputMonitoringSettingsURL: URL? {
+        URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent")
     }
     
     public init() {
@@ -53,27 +70,55 @@ public class PermissionManager: ObservableObject {
     
     /// Starts the 2-second polling loop and stores a reference to the engine for recovery.
     ///
-    /// - Parameter engine: The engine to retry when accessibility is newly granted.
+    /// This variant is used by UI surfaces such as onboarding that need live permission state.
     public func startMonitoring() {
-        timer?.invalidate()
-        timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
-            self?.checkPermissions()
-        }
+        activeMonitoringRequesters.insert(.interface)
+        ensureMonitoringTimer()
     }
 
+    /// Starts the 2-second polling loop and stores a reference to the engine for recovery.
+    ///
+    /// - Parameter engine: The engine to retry when accessibility is newly granted.
     public func startMonitoring(engine: TranscriptionEngine) {
         self.engine = engine
-        startMonitoring()
+        activeMonitoringRequesters.insert(.runtime)
+        ensureMonitoringTimer()
     }
     
+    /// Stops polling requested by UI surfaces such as onboarding.
     public func stopMonitoring() {
-        timer?.invalidate()
-        timer = nil
+        activeMonitoringRequesters.remove(.interface)
+        updateMonitoringTimerState()
+    }
+
+    /// Stops runtime-owned polling and clears the retained engine reference.
+    public func stopRuntimeMonitoring() {
+        activeMonitoringRequesters.remove(.runtime)
+        engine = nil
+        updateMonitoringTimerState()
     }
 
     /// Forces an immediate permission re-check, used when the UI opens.
     public func refreshPermissions() {
         checkPermissions()
+    }
+
+    private func ensureMonitoringTimer() {
+        checkPermissions()
+        updateMonitoringTimerState()
+    }
+
+    private func updateMonitoringTimerState() {
+        if activeMonitoringRequesters.isEmpty {
+            timer?.invalidate()
+            timer = nil
+            return
+        }
+
+        guard timer == nil else { return }
+        timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+            self?.checkPermissions()
+        }
     }
     
     private func checkPermissions() {
@@ -120,18 +165,13 @@ public class PermissionManager: ObservableObject {
     
     private func attemptRecovery() {
         guard let engine = engine else { return }
-        
-        // Reset recovery attempts if it's been a while (optional, implementation detail)
-        // Here we just check max attempts for this session of becoming trusted? 
-        // Actually, if we just became trusted, we should definitely try.
-        
-        // Delay slightly to ensure the system propagates the permission.
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
             #if DEBUG
             print("🔄 Triggering engine retry...")
             #endif
             engine.retryInputMonitor()
-            self?.recoveryAttempts += 1
+            self?.checkPermissions()
         }
     }
     
@@ -139,15 +179,30 @@ public class PermissionManager: ObservableObject {
     ///
     /// Microphone is requested separately via `requestMicrophoneIfNeeded()` on first dictation.
     public func requestPermissions() {
-        // Request Accessibility (via opening system prefs if needed)
+        requestAccessibilityIfNeeded()
+        requestInputMonitoringIfNeeded()
+    }
+
+    public func requestAccessibilityIfNeeded() {
+        guard !accessibilityGranted else { return }
         let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String : true]
         AXIsProcessTrustedWithOptions(options)
+    }
 
-        // Request Input Monitoring
+    public func requestInputMonitoringIfNeeded() {
         if !inputMonitoringGranted {
             CGRequestListenEventAccess()
         }
-        // NOTE: Microphone is NOT requested here — see requestMicrophoneIfNeeded()
+    }
+
+    public func openAccessibilitySettings() {
+        guard let url = accessibilitySettingsURL else { return }
+        NSWorkspace.shared.open(url)
+    }
+
+    public func openInputMonitoringSettings() {
+        guard let url = inputMonitoringSettingsURL else { return }
+        NSWorkspace.shared.open(url)
     }
 
     /// Requests microphone permission if not already granted.

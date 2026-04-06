@@ -3,6 +3,7 @@ import DexDictateKit
 
 struct OnboardingView: View {
     @ObservedObject var settings: AppSettings
+    @ObservedObject var permissionManager: PermissionManager
     var onboardingWindow: NSWindow?
     
     // We can use a TabView for pages
@@ -14,7 +15,7 @@ struct OnboardingView: View {
                 if currentPage == 0 {
                     WelcomePage().transition(.opacity)
                 } else if currentPage == 1 {
-                    PermissionsPage().transition(.opacity)
+                    PermissionsPage(permissionManager: permissionManager).transition(.opacity)
                 } else if currentPage == 2 {
                     ShortcutPage(settings: settings).transition(.opacity)
                 } else if currentPage == 3 {
@@ -85,9 +86,13 @@ struct WelcomePage: View {
 struct PermissionsPage: View {
     // Track whether the user has clicked the grant button (so we can show Input Monitoring steps)
     @State private var accessibilityRequested = false
-    @StateObject private var permissionManager = PermissionManager()
+    @ObservedObject var permissionManager: PermissionManager
     @StateObject private var microphoneHarness = MicrophoneValidationHarness()
     @State private var triggerValidationState: TriggerValidationState = .idle
+
+    private func syncPermissionSteps() {
+        accessibilityRequested = permissionManager.accessibilityGranted || permissionManager.inputMonitoringGranted
+    }
 
     var body: some View {
         ScrollView {
@@ -122,9 +127,7 @@ struct PermissionsPage: View {
                     description: NSLocalizedString("Required to detect your global hotkey.", comment: "")
                 ) {
                     Button(NSLocalizedString("Open Accessibility Settings", comment: "")) {
-                        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
-                            as CFDictionary
-                        AXIsProcessTrustedWithOptions(options)
+                        permissionManager.requestAccessibilityIfNeeded()
                         withAnimation { accessibilityRequested = true }
                     }
                     .buttonStyle(.borderedProminent)
@@ -156,9 +159,7 @@ struct PermissionsPage: View {
                             }
 
                             Button(NSLocalizedString("Open Input Monitoring Settings", comment: "")) {
-                                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent") {
-                                    NSWorkspace.shared.open(url)
-                                }
+                                permissionManager.openInputMonitoringSettings()
                             }
                             .buttonStyle(.borderedProminent)
                             .tint(.orange)
@@ -183,8 +184,15 @@ struct PermissionsPage: View {
             .padding(.vertical, 16)
         }
         .onAppear {
+            syncPermissionSteps()
             permissionManager.refreshPermissions()
             permissionManager.startMonitoring()
+        }
+        .onChange(of: permissionManager.accessibilityGranted) { _, _ in
+            syncPermissionSteps()
+        }
+        .onChange(of: permissionManager.inputMonitoringGranted) { _, _ in
+            syncPermissionSteps()
         }
         .onDisappear {
             permissionManager.stopMonitoring()

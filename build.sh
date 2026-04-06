@@ -1,15 +1,20 @@
 #!/bin/bash
 set -euo pipefail
 
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$ROOT_DIR"
+
 APP_NAME="DexDictate"
 EXECUTABLE_NAME="DexDictate"
 SWIFT_PRODUCT="DexDictate_MacOS"
 CERT_NAME="DexDictate Development"
 BUILD_DIR=".build"
 BUNDLE="$BUILD_DIR/$APP_NAME.app"
-DEFAULT_INSTALL_DIR="/Applications"
+SYSTEM_INSTALL_DIR="/Applications"
+USER_INSTALL_DIR="$HOME/Applications"
+DEFAULT_INSTALL_DIR="$SYSTEM_INSTALL_DIR"
 if [ ! -w "$DEFAULT_INSTALL_DIR" ]; then
-    DEFAULT_INSTALL_DIR="$HOME/Applications"
+    DEFAULT_INSTALL_DIR="$USER_INSTALL_DIR"
 fi
 INSTALL_DIR="${INSTALL_DIR:-$DEFAULT_INSTALL_DIR}"
 ENTITLEMENTS="Sources/DexDictate/DexDictate.entitlements"
@@ -17,84 +22,214 @@ ICON_SOURCE="Sources/DexDictate/AppIcon.icns"
 INFO_TEMPLATE="templates/Info.plist.template"
 VERSION_FILE="VERSION"
 BENCHMARK_BASELINE="benchmark_baseline.json"
+MODEL_FETCH_SCRIPT="scripts/fetch_model.sh"
+RELEASE_DIR="_releases"
+ZIP_NAME="DexDictate_MacOS.zip"
+DMG_NAME="DexDictate_MacOS.dmg"
 
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-echo -e "${BLUE}🔨 Building $APP_NAME...${NC}"
-echo -e "${BLUE}🚀 Compiling sources...${NC}"
-swift build -c release --disable-sandbox
-swift build -c release --disable-sandbox --product VerificationRunner
+WANTS_RELEASE=0
+INSTALL_TARGET_SET=0
 
-BIN_PATH="$(swift build -c release --show-bin-path)"
-BINARY="$BIN_PATH/$SWIFT_PRODUCT"
-HELPER_BINARY="$BIN_PATH/VerificationRunner"
-RESOURCE_BUNDLE="$BIN_PATH/${SWIFT_PRODUCT}_DexDictateKit.bundle"
+usage() {
+    cat <<EOF
+Usage: ./build.sh [--user | --system] [--release] [--help]
 
-if [ ! -f "$BINARY" ]; then
-    echo "❌ Missing binary: $BINARY"
+  --user      Install the built app into ~/Applications
+  --system    Install the built app into /Applications (fails if not writable)
+  --release   Package zip + dmg artifacts into _releases/ and run release validation
+  --help      Show this help text
+EOF
+}
+
+log_info() {
+    printf '%b%s%b\n' "$BLUE" "$1" "$NC"
+}
+
+log_warn() {
+    printf '%b%s%b\n' "$YELLOW" "$1" "$NC"
+}
+
+log_success() {
+    printf '%b%s%b\n' "$GREEN" "$1" "$NC"
+}
+
+fail() {
+    printf 'ERROR: %s\n' "$1" >&2
     exit 1
+}
+
+parse_args() {
+    while [ "$#" -gt 0 ]; do
+        case "$1" in
+            --user)
+                [ "$INSTALL_TARGET_SET" -eq 0 ] || fail "Choose only one install target: --user or --system."
+                INSTALL_DIR="$USER_INSTALL_DIR"
+                INSTALL_TARGET_SET=1
+                ;;
+            --system)
+                [ "$INSTALL_TARGET_SET" -eq 0 ] || fail "Choose only one install target: --user or --system."
+                INSTALL_DIR="$SYSTEM_INSTALL_DIR"
+                INSTALL_TARGET_SET=1
+                ;;
+            --release)
+                WANTS_RELEASE=1
+                ;;
+            --help|-h)
+                usage
+                exit 0
+                ;;
+            *)
+                fail "Unknown argument: $1"
+                ;;
+        esac
+        shift
+    done
+}
+
+check_host_architecture() {
+    local translated="0"
+    if translated="$(sysctl -in sysctl.proc_translated 2>/dev/null)"; then
+        if [ "$translated" = "1" ]; then
+            fail "Rosetta shell detected. Open a native arm64 terminal session and run ./build.sh again."
+        fi
+    fi
+
+    local machine_arch
+    machine_arch="$(uname -m)"
+    if [ "$machine_arch" != "arm64" ]; then
+        fail "Unsupported build architecture: $machine_arch. DexDictate_MacOS targets Apple Silicon (arm64) only."
+    fi
+}
+
+ensure_install_target() {
+    if [ "$INSTALL_DIR" = "$SYSTEM_INSTALL_DIR" ] && [ ! -w "$SYSTEM_INSTALL_DIR" ]; then
+        fail "/Applications is not writable for the current user. Re-run with sudo, or use --user."
+    fi
+}
+
+ensure_model() {
+    [ -x "$MODEL_FETCH_SCRIPT" ] || fail "Missing executable model bootstrap script: $MODEL_FETCH_SCRIPT"
+    "$MODEL_FETCH_SCRIPT"
+}
+
+build_products() {
+    log_info "Building $APP_NAME..."
+    swift build -c release --disable-sandbox
+    swift build -c release --disable-sandbox --product VerificationRunner
+}
+
+resolve_build_artifacts() {
+    BIN_PATH="$(swift build -c release --show-bin-path)"
+    BINARY="$BIN_PATH/$SWIFT_PRODUCT"
+    HELPER_BINARY="$BIN_PATH/VerificationRunner"
+    RESOURCE_BUNDLE="$BIN_PATH/${SWIFT_PRODUCT}_DexDictateKit.bundle"
+
+    [ -f "$BINARY" ] || fail "Missing binary: $BINARY"
+    [ -d "$RESOURCE_BUNDLE" ] || fail "Missing SwiftPM resource bundle: $RESOURCE_BUNDLE"
+    [ -f "$HELPER_BINARY" ] || fail "Missing helper binary: $HELPER_BINARY"
+}
+
+assemble_bundle() {
+    mkdir -p "$BUNDLE/Contents/MacOS" "$BUNDLE/Contents/Resources" "$BUNDLE/Contents/Helpers"
+    cp -f "$BINARY" "$BUNDLE/Contents/MacOS/$EXECUTABLE_NAME"
+    cp -f "$HELPER_BINARY" "$BUNDLE/Contents/Helpers/VerificationRunner"
+    chmod +x "$BUNDLE/Contents/Helpers/VerificationRunner"
+    rm -rf "$BUNDLE/Contents/Resources/$(basename "$RESOURCE_BUNDLE")"
+    cp -R "$RESOURCE_BUNDLE" "$BUNDLE/Contents/Resources/"
+    cp -f "$ICON_SOURCE" "$BUNDLE/Contents/Resources/AppIcon.icns"
+    cp -f "$BENCHMARK_BASELINE" "$BUNDLE/Contents/Resources/benchmark_baseline.json"
+
+    VERSION="$(cat "$VERSION_FILE")"
+    log_info "Generating Info.plist..."
+    sed -e "s/{{APP_NAME}}/$APP_NAME/g" \
+        -e "s/{{EXECUTABLE_NAME}}/$EXECUTABLE_NAME/g" \
+        -e "s/{{VERSION}}/$VERSION/g" \
+        "$INFO_TEMPLATE" > "$BUNDLE/Contents/Info.plist"
+
+    echo "APPL????" > "$BUNDLE/Contents/PkgInfo"
+}
+
+sign_bundle() {
+    if security find-identity -v -p codesigning | grep -q "$CERT_NAME"; then
+        log_info "Signing with '$CERT_NAME'..."
+        codesign --force --deep \
+            --sign "$CERT_NAME" \
+            --entitlements "$ENTITLEMENTS" \
+            --options runtime \
+            --timestamp=none \
+            "$BUNDLE"
+    else
+        log_warn "'$CERT_NAME' not found. Using ad-hoc signing (-)."
+        codesign --force --deep \
+            --sign - \
+            --entitlements "$ENTITLEMENTS" \
+            "$BUNDLE"
+    fi
+
+    CDHASH="$(codesign -dvv "$BUNDLE" 2>&1 | awk -F= '/CDHash=/{print $2; exit}')"
+    if [ -n "$CDHASH" ]; then
+        log_success "CDHash: $CDHASH"
+    fi
+}
+
+install_bundle() {
+    mkdir -p "$INSTALL_DIR"
+    rm -rf "$INSTALL_DIR/$APP_NAME.app"
+    ditto "$BUNDLE" "$INSTALL_DIR/$APP_NAME.app"
+
+    LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
+    if [ -x "$LSREGISTER" ]; then
+        "$LSREGISTER" -f "$INSTALL_DIR/$APP_NAME.app" >/dev/null 2>&1 || true
+    fi
+
+    log_success "Installed to $INSTALL_DIR/$APP_NAME.app"
+    printf 'Open with: open "%s/%s.app"\n' "$INSTALL_DIR" "$APP_NAME"
+}
+
+package_release() {
+    mkdir -p "$RELEASE_DIR"
+    rm -f "$RELEASE_DIR/$ZIP_NAME" "$RELEASE_DIR/$DMG_NAME"
+
+    log_info "Packaging release artifacts..."
+    (
+        cd "$BUILD_DIR"
+        zip -r -q "../$RELEASE_DIR/$ZIP_NAME" "$APP_NAME.app"
+    )
+
+    STAGING_DIR="$(mktemp -d)"
+    cleanup_release() {
+        rm -rf "$STAGING_DIR"
+    }
+    trap cleanup_release RETURN
+
+    cp -R "$BUNDLE" "$STAGING_DIR/"
+    ln -s /Applications "$STAGING_DIR/Applications"
+    hdiutil create \
+        -volname "$APP_NAME" \
+        -srcfolder "$STAGING_DIR" \
+        -ov \
+        -format UDZO \
+        "$RELEASE_DIR/$DMG_NAME" >/dev/null
+
+    ./scripts/validate_release.sh "$BUNDLE"
+    log_success "Release artifacts written to $RELEASE_DIR/"
+}
+
+parse_args "$@"
+check_host_architecture
+ensure_install_target
+ensure_model
+build_products
+resolve_build_artifacts
+assemble_bundle
+sign_bundle
+install_bundle
+
+if [ "$WANTS_RELEASE" -eq 1 ]; then
+    package_release
 fi
-
-if [ ! -d "$RESOURCE_BUNDLE" ]; then
-    echo "❌ Missing SwiftPM resource bundle: $RESOURCE_BUNDLE"
-    exit 1
-fi
-
-if [ ! -f "$HELPER_BINARY" ]; then
-    echo "❌ Missing helper binary: $HELPER_BINARY"
-    exit 1
-fi
-
-mkdir -p "$BUNDLE/Contents/MacOS" "$BUNDLE/Contents/Resources" "$BUNDLE/Contents/Helpers"
-cp -f "$BINARY" "$BUNDLE/Contents/MacOS/$EXECUTABLE_NAME"
-cp -f "$HELPER_BINARY" "$BUNDLE/Contents/Helpers/VerificationRunner"
-chmod +x "$BUNDLE/Contents/Helpers/VerificationRunner"
-rm -rf "$BUNDLE/Contents/Resources/$(basename "$RESOURCE_BUNDLE")"
-cp -R "$RESOURCE_BUNDLE" "$BUNDLE/Contents/Resources/"
-cp -f "$ICON_SOURCE" "$BUNDLE/Contents/Resources/AppIcon.icns"
-cp -f "$BENCHMARK_BASELINE" "$BUNDLE/Contents/Resources/benchmark_baseline.json"
-
-VERSION="$(cat "$VERSION_FILE")"
-echo "📄 Generating Info.plist..."
-sed -e "s/{{APP_NAME}}/$APP_NAME/g" \
-    -e "s/{{EXECUTABLE_NAME}}/$EXECUTABLE_NAME/g" \
-    -e "s/{{VERSION}}/$VERSION/g" \
-    "$INFO_TEMPLATE" > "$BUNDLE/Contents/Info.plist"
-
-echo "APPL????" > "$BUNDLE/Contents/PkgInfo"
-
-if security find-identity -v -p codesigning | grep -q "$CERT_NAME"; then
-    echo -e "${BLUE}🔐 Signing with '$CERT_NAME'...${NC}"
-    codesign --force --deep \
-        --sign "$CERT_NAME" \
-        --entitlements "$ENTITLEMENTS" \
-        --options runtime \
-        --timestamp=none \
-        "$BUNDLE"
-else
-    echo -e "${YELLOW}⚠️  '$CERT_NAME' not found. Using ad-hoc signing (-).${NC}"
-    codesign --force --deep \
-        --sign - \
-        --entitlements "$ENTITLEMENTS" \
-        "$BUNDLE"
-fi
-
-CDHASH="$(codesign -dvv "$BUNDLE" 2>&1 | awk -F= '/CDHash=/{print $2; exit}')"
-if [ -n "$CDHASH" ]; then
-    echo -e "${GREEN}CDHash: $CDHASH${NC}"
-fi
-
-mkdir -p "$INSTALL_DIR"
-rm -rf "$INSTALL_DIR/$APP_NAME.app"
-ditto "$BUNDLE" "$INSTALL_DIR/$APP_NAME.app"
-
-LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
-if [ -x "$LSREGISTER" ]; then
-    "$LSREGISTER" -f "$INSTALL_DIR/$APP_NAME.app" >/dev/null 2>&1 || true
-fi
-
-echo -e "${GREEN}✅ Installed to $INSTALL_DIR/$APP_NAME.app${NC}"
-echo "Open with: open \"$INSTALL_DIR/$APP_NAME.app\""

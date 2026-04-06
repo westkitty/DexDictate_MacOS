@@ -10,7 +10,7 @@ struct DexDictateApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     // Use shared engine to ensure Intents modify the same instance
     @StateObject private var engine = TranscriptionEngine.shared
-    @StateObject private var permissionManager = PermissionManager()
+    @StateObject private var permissionManager = PermissionManager.shared
     @StateObject private var scanner = AudioDeviceScanner()
     @StateObject private var profileManager = ProfileManager()
     @StateObject private var benchmarkCaptureController = BenchmarkCaptureWindowController()
@@ -583,7 +583,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         window.title = NSLocalizedString("Welcome to DexDictate", comment: "Onboarding window title")
         window.isReleasedWhenClosed = false
         window.setContentSize(NSSize(width: 520, height: 480))
-        let onView = OnboardingView(settings: AppSettings.shared, onboardingWindow: window)
+        let onView = OnboardingView(
+            settings: AppSettings.shared,
+            permissionManager: PermissionManager.shared,
+            onboardingWindow: window
+        )
         window.contentViewController = NSHostingController(rootView: onView)
         window.center()
         window.orderFrontRegardless()
