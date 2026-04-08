@@ -476,8 +476,26 @@ private struct OnboardingHeroAnimation: View {
     @State private var playbackDirection: Float = 1
     @State private var endObserver: NSObjectProtocol?
     @State private var timeObserver: Any?
-    private let rewindToForwardThresholdSeconds = 1.0 / 60.0
-    private let reverseStartNudgeSeconds = 1.0 / 120.0
+    
+    private var isWelcomeAnimation: Bool {
+        resource == .welcome
+    }
+
+    private var loopPlaybackRate: Float {
+        isWelcomeAnimation ? 0.92 : 1.0
+    }
+
+    private var rewindToForwardThresholdSeconds: Double {
+        isWelcomeAnimation ? (1.0 / 120.0) : (1.0 / 60.0)
+    }
+
+    private var reverseStartNudgeSeconds: Double {
+        isWelcomeAnimation ? (1.0 / 240.0) : (1.0 / 120.0)
+    }
+
+    private var reverseObserverIntervalSeconds: Double {
+        isWelcomeAnimation ? (1.0 / 240.0) : (1.0 / 120.0)
+    }
 
     var body: some View {
         ZStack {
@@ -505,6 +523,7 @@ private struct OnboardingHeroAnimation: View {
 
         if !isPrepared {
             let item = AVPlayerItem(url: url)
+            item.preferredForwardBufferDuration = isWelcomeAnimation ? 1.5 : 0.8
             player.replaceCurrentItem(with: item)
             player.isMuted = true
             player.volume = 0
@@ -560,7 +579,7 @@ private struct OnboardingHeroAnimation: View {
         }
 
         timeObserver = player.addPeriodicTimeObserver(
-            forInterval: CMTime(seconds: 1.0 / 120.0, preferredTimescale: 600),
+            forInterval: CMTime(seconds: reverseObserverIntervalSeconds, preferredTimescale: 600),
             queue: .main
         ) { currentTime in
             guard playbackDirection < 0 else {
@@ -585,7 +604,7 @@ private struct OnboardingHeroAnimation: View {
                 return
             }
 
-            player.playImmediately(atRate: 1)
+            player.playImmediately(atRate: loopPlaybackRate)
         }
     }
 
@@ -595,7 +614,7 @@ private struct OnboardingHeroAnimation: View {
         }
 
         playbackDirection = 1
-        player.playImmediately(atRate: 1)
+        player.playImmediately(atRate: loopPlaybackRate)
     }
 
     private func playReverseFromEnd() {
@@ -618,8 +637,14 @@ private struct OnboardingHeroAnimation: View {
             seconds: durationSeconds - reverseStartNudgeSeconds,
             preferredTimescale: 600
         )
+        let currentSeconds = player.currentTime().seconds
 
         playbackDirection = -1
+        if currentSeconds.isFinite && (durationSeconds - currentSeconds) <= (reverseStartNudgeSeconds * 2) {
+            player.playImmediately(atRate: -loopPlaybackRate)
+            return
+        }
+
         player.pause()
         player.seek(
             to: reverseStart,
@@ -630,7 +655,7 @@ private struct OnboardingHeroAnimation: View {
                 return
             }
 
-            player.playImmediately(atRate: -1)
+            player.playImmediately(atRate: -loopPlaybackRate)
         }
     }
 }

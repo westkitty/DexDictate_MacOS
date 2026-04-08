@@ -44,6 +44,9 @@ struct DexDictateApp: App {
                 benchmarkResultsStore: benchmarkResultsStore,
                 onDetachHistory: {
                     historyController.show()
+                },
+                onRequestOnboardingDebug: {
+                    appDelegate.presentOnboardingForDebug()
                 }
             )
             .onAppear {
@@ -362,6 +365,7 @@ struct AntiGravityMainView: View {
     @State private var isDroppingFile: Bool = false
 
     var onDetachHistory: (() -> Void)?
+    var onRequestOnboardingDebug: (() -> Void)?
 
     var body: some View {
         ZStack {
@@ -458,7 +462,12 @@ struct AntiGravityMainView: View {
 
                     Spacer(minLength: 0)
 
-                    FooterView(settings: settings)
+                    FooterView(
+                        settings: settings,
+                        onHiddenDebugTrigger: {
+                            onRequestOnboardingDebug?()
+                        }
+                    )
                 }
                 .padding(.vertical, 10)
                 .frame(maxWidth: .infinity)
@@ -594,5 +603,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         window.makeKeyAndOrderFront(nil)
         NSApp.activate()
         onboardingWindow = window
+    }
+
+    func presentOnboardingForDebug() {
+        showOnboarding()
     }
 }
