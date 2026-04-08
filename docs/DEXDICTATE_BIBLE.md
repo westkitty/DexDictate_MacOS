@@ -3930,7 +3930,7 @@ Rationale:
 - What succeeded:
   - repository validation completed without test or verification failures
   - release validation passed, with only the expected local Gatekeeper warning on the ad-hoc/dev-signed build
-  - identified and fixed a real runtime portability bug in `MenuBarIconController`: it previously loaded custom menu bar icons from `<bundled-assets>`, which would fail on a fresh machine
+  - identified and fixed a real runtime portability bug in `MenuBarIconController`: it previously loaded custom menu bar icons from a user-specific home-directory path, which would fail on a fresh machine
   - switched menu bar custom icon discovery to a bundle-manifest lookup so the installed app resolves its own packaged icons reliably
   - removed the user-specific home path from `scripts/parse_metrics.py` and replaced it with `Path.home()`
 - What failed:
@@ -3954,3 +3954,48 @@ Rationale:
   - the release validation warning is Gatekeeper assessment on a locally signed build, not a functional app failure
   - no automated UI-driving smoke test was run against the installed app before the upcoming uninstall/reinstall phase
 - Next step: commit the validated state, push it to GitHub, remove installed app instances, reinstall from a fresh GitHub clone, and launch the app for a clean-user smoke test.
+
+### 18.94 Ledger Entry B-0044
+
+- Entry ID: B-0044
+- Timestamp: 2026-04-07 America/Detroit
+- Improvement ID(s): GitHub privacy scrub and publish hardening
+- Goal: remove personal identifying information from the publishable repository state before any GitHub push, while preserving the functional fixes from the validation sweep.
+- Why now: the GitHub-bound state must not expose a real name, a local email address, or machine-specific filesystem paths beyond the allowed project personas.
+- Dependency context: follows B-0043 and tightens the repo for public publication.
+- Files likely or actually changed:
+  - `.gitignore`
+  - `BIBLE.md`
+  - `docs/AI_Handoff_Prompt_Speed_Accuracy_Recovery.md`
+  - `docs/DEXDICTATE_BIBLE.md`
+  - `SECURITY_AUDIT_REPORT.md`
+  - `Sources/DexDictate/VocabularySettingsView.swift`
+- Risk assessment: Low. The changes are documentation/example cleanups plus a defensive ignore rule for log files.
+- Invariant check:
+  - no runtime behavior changed except a placeholder example string in vocabulary settings
+  - the repository no longer depends on a specific home-directory path in the current tree
+  - publication-facing docs avoid embedding a personal machine username
+- What was attempted:
+  - searched the tracked tree for personal names, local email addresses, and `/Users/...` path leaks
+  - replaced publishable path examples with `<repo-root>` or `~/Library/...` placeholders
+  - normalized the vocabulary example string to a non-personal project persona
+  - added `*.log` to `.gitignore` to reduce the chance of log-based local data leaking into future commits
+- What succeeded:
+  - the current tree no longer contains the detected real-name, local-email, machine-hostname, or home-directory path references
+  - the repo documentation still conveys the same operating instructions without tying them to one local machine
+  - the GitHub publish path is now compatible with the allowed public identities: `Dexter`, `Dex`, and `WestKitty`
+- What failed:
+  - existing Git history still required author-metadata rewriting after the working-tree scrub
+- What was rolled back:
+  - nothing was rolled back
+- Tests run:
+  - none yet in this sub-step; behavior changes were non-functional
+- Metrics captured:
+  - tracked-tree PII search before scrub returned 12 matches across docs, one UI example string, and the latest commit metadata
+- Regressions checked:
+  - the vocabulary settings UI text remains valid after the example-string edit
+  - no executable code paths were altered by the documentation scrub
+- Remaining risks:
+  - historical Git commits authored under the old identity still need to be rewritten before the final push
+  - older remote branches must not be left behind if they still expose the previous author identity
+- Next step: rewrite commit metadata to the allowed GitHub persona, republish the cleaned history, then reinstall from a fresh clone for a true clean-user smoke test.
