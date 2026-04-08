@@ -10,6 +10,7 @@ REPORT_DIR="$RELEASE_DIR/validation"
 TIMESTAMP="$(date +"%Y%m%d-%H%M%S")"
 REPORT_PATH="$REPORT_DIR/release-validation-$TIMESTAMP.txt"
 APP_NAME="DexDictate"
+TARGET_ARCH="arm64"
 EXECUTABLE_PATH="$APP_PATH/Contents/MacOS/$APP_NAME"
 INFO_PLIST="$APP_PATH/Contents/Info.plist"
 RESOURCE_BUNDLE="$APP_PATH/Contents/Resources/DexDictate_MacOS_DexDictateKit.bundle"
@@ -97,6 +98,27 @@ check_path "$BASELINE_PATH" "Benchmark baseline"
 check_path "$RESOURCE_BUNDLE" "SwiftPM resource bundle"
 check_path "$MODEL_PATH" "Embedded Whisper model"
 
+section "Architecture"
+if file "$EXECUTABLE_PATH" >>"$REPORT_PATH" 2>&1; then
+    if file "$EXECUTABLE_PATH" | grep -q "$TARGET_ARCH"; then
+        pass "Main executable targets $TARGET_ARCH"
+    else
+        fail "Main executable does not target $TARGET_ARCH"
+    fi
+else
+    fail "Unable to inspect main executable architecture"
+fi
+
+if file "$HELPER_PATH" >>"$REPORT_PATH" 2>&1; then
+    if file "$HELPER_PATH" | grep -q "$TARGET_ARCH"; then
+        pass "VerificationRunner helper targets $TARGET_ARCH"
+    else
+        fail "VerificationRunner helper does not target $TARGET_ARCH"
+    fi
+else
+    fail "Unable to inspect VerificationRunner helper architecture"
+fi
+
 if [ -f "$INFO_PLIST" ]; then
     section "Bundle metadata"
     if /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$INFO_PLIST" >>"$REPORT_PATH" 2>&1; then
@@ -130,6 +152,12 @@ done
 
 if ! compgen -G "$RELEASE_DIR/*.zip" >/dev/null && ! compgen -G "$RELEASE_DIR/*.dmg" >/dev/null; then
     warn "No packaged release artifacts found in $RELEASE_DIR"
+fi
+
+if compgen -G "$RELEASE_DIR/*-SHA256SUMS.txt" >/dev/null; then
+    pass "Checksum manifest present in $RELEASE_DIR"
+else
+    warn "No checksum manifest found in $RELEASE_DIR"
 fi
 
 section "Summary"

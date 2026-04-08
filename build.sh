@@ -8,6 +8,7 @@ APP_NAME="DexDictate"
 EXECUTABLE_NAME="DexDictate"
 SWIFT_PRODUCT="DexDictate_MacOS"
 CERT_NAME="DexDictate Development"
+TARGET_ARCH="arm64"
 BUILD_DIR=".build"
 BUNDLE="$BUILD_DIR/$APP_NAME.app"
 SYSTEM_INSTALL_DIR="/Applications"
@@ -24,8 +25,6 @@ VERSION_FILE="VERSION"
 BENCHMARK_BASELINE="benchmark_baseline.json"
 MODEL_FETCH_SCRIPT="scripts/fetch_model.sh"
 RELEASE_DIR="_releases"
-ZIP_NAME="DexDictate_MacOS.zip"
-DMG_NAME="DexDictate_MacOS.dmg"
 
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -192,14 +191,17 @@ install_bundle() {
 }
 
 package_release() {
+    VERSION="$(cat "$VERSION_FILE")"
+    local release_stem="${APP_NAME}-${VERSION}-macos-${TARGET_ARCH}"
+    local zip_name="${release_stem}.zip"
+    local dmg_name="${release_stem}.dmg"
+    local checksum_name="${release_stem}-SHA256SUMS.txt"
+
     mkdir -p "$RELEASE_DIR"
-    rm -f "$RELEASE_DIR/$ZIP_NAME" "$RELEASE_DIR/$DMG_NAME"
+    rm -f "$RELEASE_DIR"/*.zip "$RELEASE_DIR"/*.dmg "$RELEASE_DIR"/*-SHA256SUMS.txt
 
     log_info "Packaging release artifacts..."
-    (
-        cd "$BUILD_DIR"
-        zip -r -q "../$RELEASE_DIR/$ZIP_NAME" "$APP_NAME.app"
-    )
+    ditto -c -k --sequesterRsrc --keepParent "$BUNDLE" "$RELEASE_DIR/$zip_name"
 
     STAGING_DIR="$(mktemp -d)"
     cleanup_release() {
@@ -214,7 +216,12 @@ package_release() {
         -srcfolder "$STAGING_DIR" \
         -ov \
         -format UDZO \
-        "$RELEASE_DIR/$DMG_NAME" >/dev/null
+        "$RELEASE_DIR/$dmg_name" >/dev/null
+
+    (
+        cd "$RELEASE_DIR"
+        shasum -a 256 "$zip_name" "$dmg_name" > "$checksum_name"
+    )
 
     ./scripts/validate_release.sh "$BUNDLE"
     log_success "Release artifacts written to $RELEASE_DIR/"

@@ -57,7 +57,11 @@ If you prefer a user-local install instead of a system-wide one, omit `INSTALL_D
 
 ### Option A: Download Release
 
-Download the latest pre-built application from the [Releases](https://github.com/WestKitty/DexDictate_MacOS/releases) page. Each release should include a `.dmg` and `.zip` artifact for the tagged version.
+Download the latest pre-built application from the [Releases](https://github.com/WestKitty/DexDictate_MacOS/releases) page. Each release should include:
+
+- a versioned Apple Silicon `.dmg`
+- a versioned Apple Silicon `.zip`
+- a matching `SHA256SUMS` manifest
 
 > **Platform:** Release artifacts are currently Apple Silicon only and require macOS 14 or newer.
 
@@ -152,6 +156,7 @@ That command:
 - builds the app bundle
 - fetches the Whisper model if it is missing
 - packages `.zip` and `.dmg` artifacts into `_releases/`
+- writes a versioned `SHA256SUMS` manifest into `_releases/`
 - runs `./scripts/validate_release.sh`
 
 ## First Run and Permissions

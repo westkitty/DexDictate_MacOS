@@ -3999,3 +3999,104 @@ Rationale:
   - historical Git commits authored under the old identity still need to be rewritten before the final push
   - older remote branches must not be left behind if they still expose the previous author identity
 - Next step: rewrite commit metadata to the allowed GitHub persona, republish the cleaned history, then reinstall from a fresh clone for a true clean-user smoke test.
+
+### 18.95 Ledger Entry B-0045
+
+- Entry ID: B-0045
+- Timestamp: 2026-04-08 America/Detroit
+- Improvement ID(s): Apple Silicon release hardening
+- Goal: make the release pipeline produce GitHub-ready Apple Silicon artifacts with explicit architecture labeling, checksum manifests, and stronger validation before publication.
+- Why now: a fresh public release is being cut from the sanitized repository state, and the packaging must be self-describing and auditable.
+- Dependency context: follows the GitHub privacy rewrite and local-repo realignment work.
+- Files likely or actually changed:
+  - `VERSION`
+  - `build.sh`
+  - `scripts/validate_release.sh`
+  - `README.md`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Low. The packaging flow changes are localized and improve release clarity without altering runtime code paths.
+- Invariant check:
+  - release builds remain Apple Silicon only
+  - the installed app bundle layout remains unchanged
+  - packaged artifacts remain `.zip` plus `.dmg`, with added checksum evidence
+- What was attempted:
+  - bumped the patch version for a new public release cut
+  - switched ZIP packaging to `ditto` so macOS app metadata is preserved correctly
+  - changed release artifact naming to include version and `arm64`
+  - added checksum manifest generation for the packaged release artifacts
+  - taught release validation to fail if the main executable or bundled helper are not `arm64`
+- What succeeded:
+  - the release pipeline is now explicit about version and target architecture
+  - Apple Silicon architecture is now verified, not merely assumed from the host machine
+  - release consumers can verify downloaded artifacts using the shipped checksum manifest
+- What failed:
+  - nothing failed in the implementation step
+- What was rolled back:
+  - nothing was rolled back
+- Tests run:
+  - pending in the next step
+- Metrics captured:
+  - none yet in this implementation step
+- Regressions checked:
+  - runtime bundle content and signing flow were left structurally intact
+  - release validation still hashes `.zip` and `.dmg` artifacts while now also checking for checksum-manifest presence
+- Remaining risks:
+  - Gatekeeper acceptance still depends on the existing signing/notarization state outside local packaging
+- Next step: build the new `1.5.1` Apple Silicon artifacts, validate them, publish them to GitHub, then reinstall locally from the published release asset.
+
+### 18.96 Ledger Entry B-0046
+
+- Entry ID: B-0046
+- Timestamp: 2026-04-08 America/Detroit
+- Improvement ID(s): `v1.5.1` Apple Silicon release cut
+- Goal: produce and validate a clean public release artifact set for macOS Apple Silicon, then publish and test it like a new user would consume it.
+- Why now: the hardened release pipeline from B-0045 needed to be exercised against a real release candidate, not left as an unproven script change.
+- Dependency context: follows the release hardening changes from B-0045.
+- Files likely or actually changed:
+  - `build.sh`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Low-to-medium. Packaging and distribution risk was reduced by validation, but Gatekeeper acceptance still depends on notarization policy outside the local release path.
+- Invariant check:
+  - packaged release artifacts are versioned and architecture-labeled
+  - only current-release artifacts remain in `_releases/` after packaging
+  - the built app bundle and bundled helper are both verified as `arm64`
+- What was attempted:
+  - ran `swift test`
+  - ran `swift run VerificationRunner`
+  - ran `./build.sh --release`
+  - inspected the release directory contents, checksum manifest, validation report, and installed app code-signing details
+  - found and fixed a release-directory bleed-through bug where stale older `.zip` and `.dmg` files remained in `_releases/` and polluted validation output
+- What succeeded:
+  - patch version `1.5.1` built successfully as an Apple Silicon release
+  - the release validator passed with 0 failures and 1 expected Gatekeeper warning
+  - the final artifact set was reduced to the current release only:
+    - `DexDictate-1.5.1-macos-arm64.zip`
+    - `DexDictate-1.5.1-macos-arm64.dmg`
+    - `DexDictate-1.5.1-macos-arm64-SHA256SUMS.txt`
+  - the final checksum manifest recorded:
+    - `accf51bf23014f644c136d144cdb42cae8dbe950bd66153763122048e25f14c0  DexDictate-1.5.1-macos-arm64.zip`
+    - `08612d6a829f7bca4ebdbdcd00bb581efeaf5befe2aba18c1379d1185dda9348  DexDictate-1.5.1-macos-arm64.dmg`
+  - installed-app signing inspection confirmed a thin `arm64` bundle signed with `DexDictate Development`
+- What failed:
+  - Gatekeeper assessment still rejected the local build with exit code `3`, which is expected for this local development-signed, non-notarized distribution path
+- What was rolled back:
+  - nothing was rolled back
+- Tests run:
+  - `swift test`
+  - `swift run VerificationRunner`
+  - `./build.sh --release`
+- Metrics captured:
+  - XCTest summary: 71 tests, 0 failures
+  - VerificationRunner summary: 62 checks, 0 failures
+  - release validation summary: 0 failures, 1 warning
+  - release validation report: `_releases/validation/release-validation-20260408-002018.txt`
+  - artifact sizes:
+    - ZIP: `225M`
+    - DMG: `228M`
+- Regressions checked:
+  - release packaging no longer reuses stale older artifacts from `_releases/`
+  - installed app bundle remains a thin `arm64` binary after packaging/install
+  - versioned checksum manifest exists alongside the release payloads
+- Remaining risks:
+  - a fully frictionless first-launch install experience on another machine still depends on whether the distributed build is notarized and stapled
+- Next step: commit the release-engineering changes, publish `v1.5.1` to GitHub Releases with the DMG/ZIP/checksum/validation assets, then uninstall and reinstall locally from the published release payload.
