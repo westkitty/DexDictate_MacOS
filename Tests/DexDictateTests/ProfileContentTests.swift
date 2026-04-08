@@ -24,7 +24,7 @@ final class ProfileContentTests: XCTestCase {
         XCTAssertEqual(profileManager.bundledVocabularyItems, BundledVocabularyPacks.pack(for: .canadian))
         XCTAssertEqual(profileManager.watermarkAssets(for: .canadian).count, 5)
         XCTAssertEqual(profileManager.watermarkAssets(for: .aussie).count, 2)
-        XCTAssertEqual(profileManager.watermarkAssets(for: .standard).count, 11)
+        XCTAssertEqual(profileManager.watermarkAssets(for: .standard).count, 57)
     }
 
     func testSynchronizeFromSettingsAppliesExternalProfileChanges() {
@@ -79,22 +79,15 @@ final class ProfileContentTests: XCTestCase {
     }
 
     func testWatermarkManifestMatchesExactPoolsAndExcludesSheets() {
-        XCTAssertEqual(WatermarkAssetProvider.filenames(for: .standard), [
-            "dexdictate-icon-standard-01.png",
-            "dexdictate-icon-standard-02.png",
-            "dexdictate-icon-standard-03.png",
-            "dexdictate-icon-standard-04.png",
-            "dexdictate-icon-standard-05.png",
-            "dexdictate-icon-standard-06.png",
-            "dexdictate-icon-standard-07.png",
-            "dexdictate-icon-standard-08.png",
-            "dexdictate-icon-standard-09.png",
-            "dexdictate-icon-standard-10.png",
-            "dexdictate-icon-standard-11.png"
-        ])
+        let standardFilenames = WatermarkAssetProvider.filenames(for: .standard)
+
+        XCTAssertEqual(standardFilenames.count, 57)
+        XCTAssertTrue(standardFilenames.contains("DexDictate_onboarding__welcome__variant_a.png"))
+        XCTAssertTrue(standardFilenames.contains("DexDictate_random_cycle__standing_pose__variant_c.jpg"))
+        XCTAssertFalse(standardFilenames.contains("dexdictate-icon-standard-11.png"))
         XCTAssertEqual(WatermarkAssetProvider.filenames(for: .canadian).count, 5)
         XCTAssertEqual(WatermarkAssetProvider.filenames(for: .aussie).count, 2)
-        XCTAssertFalse(WatermarkAssetProvider.filenames(for: .standard).contains("dexdictate-icon-standard-sheet-01.png"))
-        XCTAssertFalse(WatermarkAssetProvider.filenames(for: .standard).contains("dexdictate-icon-standard-sheet-02.png"))
+        XCTAssertFalse(standardFilenames.contains("dexdictate-icon-standard-sheet-01.png"))
+        XCTAssertFalse(standardFilenames.contains("dexdictate-icon-standard-sheet-02.png"))
     }
 }

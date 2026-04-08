@@ -3,6 +3,27 @@ import DexDictateKit
 
 @MainActor
 final class MenuBarIconController: ObservableObject {
+    private static let bundledIconFilenames: [String] = [
+        "dexdictate-icon-standard-01.png",
+        "dexdictate-icon-standard-02.png",
+        "dexdictate-icon-standard-03.png",
+        "dexdictate-icon-standard-04.png",
+        "dexdictate-icon-standard-05.png",
+        "dexdictate-icon-standard-06.png",
+        "dexdictate-icon-standard-07.png",
+        "dexdictate-icon-standard-08.png",
+        "dexdictate-icon-standard-09.png",
+        "dexdictate-icon-standard-10.png",
+        "dexdictate-icon-standard-11.png",
+        "dexdictate-icon-canada-01.png",
+        "dexdictate-icon-canada-02.png",
+        "dexdictate-icon-canada-03.png",
+        "dexdictate-icon-canada-04.png",
+        "dexdictate-icon-canada-05.png",
+        "dexdictate-icon-aussie-01.png",
+        "dexdictate-icon-aussie-02.png"
+    ]
+
     struct IconAsset: Identifiable, Equatable {
         let id: String
         let url: URL
@@ -15,18 +36,18 @@ final class MenuBarIconController: ObservableObject {
     static let shared = MenuBarIconController()
 
     @Published private(set) var icons: [IconAsset] = []
-    let assetDirectoryURL = URL(fileURLWithPath: "<bundled-assets>", isDirectory: true)
-
-    private let fileManager: FileManager
     private var sourceCache: [String: NSImage] = [:]
     private var previewCache: [String: NSImage] = [:]
     private var menuBarCache: [String: NSImage] = [:]
     private var appLogoPreviewCache: NSImage?
     private var appLogoMenuBarCache: NSImage?
 
-    init(fileManager: FileManager = .default) {
-        self.fileManager = fileManager
+    init() {
         refreshAssets()
+    }
+
+    var assetSourceDescription: String {
+        "the bundled DexDictate icon set"
     }
 
     func refreshAssets() {
@@ -102,19 +123,16 @@ final class MenuBarIconController: ObservableObject {
     }
 
     private func loadIcons() -> [IconAsset] {
-        guard let fileURLs = try? fileManager.contentsOfDirectory(
-            at: assetDirectoryURL,
-            includingPropertiesForKeys: nil,
-            options: [.skipsHiddenFiles]
-        ) else {
-            return []
-        }
-
-        let supportedExtensions = Set(["png", "pdf", "jpg", "jpeg"])
-
-        return fileURLs
-            .filter { supportedExtensions.contains($0.pathExtension.lowercased()) }
-            .sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
+        Self.bundledIconFilenames
+            .compactMap { filename in
+                let fileURL = URL(fileURLWithPath: filename)
+                let resourceName = fileURL.deletingPathExtension().lastPathComponent
+                let resourceExtension = fileURL.pathExtension
+                guard let url = Safety.resourceBundle.url(forResource: resourceName, withExtension: resourceExtension) else {
+                    return nil
+                }
+                return url
+            }
             .map { url in
                 IconAsset(id: url.lastPathComponent, url: url)
             }

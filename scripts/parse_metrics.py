@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 import sys
 import re
+from pathlib import Path
 
-LOG_FILE = "~/Library/Application Support/DexDictate/debug.log"
+LOG_FILE = str(Path.home() / "Library" / "Application Support" / "DexDictate" / "debug.log")
 CSV_OUT = "baseline.csv"
 
 # Example metric line we are looking for:

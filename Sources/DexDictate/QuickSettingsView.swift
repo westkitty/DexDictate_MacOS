@@ -679,7 +679,7 @@ private struct MenuBarSettingsSection: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             if menuBarIconController.icons.isEmpty {
-                Text("No Dex icons were found at \(menuBarIconController.assetDirectoryURL.path).")
+                Text("No Dex icons were found in \(menuBarIconController.assetSourceDescription).")
                     .font(.caption2)
                     .foregroundStyle(.orange.opacity(0.85))
                     .fixedSize(horizontal: false, vertical: true)

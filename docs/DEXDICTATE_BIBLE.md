@@ -3748,3 +3748,209 @@ Rationale:
 - Remaining risks:
   - perceived smoothness can still benefit from live visual tuning of speed and spacing, but the mechanical snap-back issue is removed from the implementation
 - Next step: if you still want the feed to feel more period-correct, tune crawl speed and spacing after a live look at the running app.
+
+### 18.90 Ledger Entry B-0040
+
+- Entry ID: B-0040
+- Timestamp: 2026-04-07 America/Detroit
+- Improvement ID(s): asset library normalization and random-cycle curation
+- Goal: rename the loose asset dump into a readable library, preserve intentional names, and prepare a clean random-cycle pool without changing app source.
+- Why now: a direct request was made to inspect the project, rename the asset folder intelligently, keep personal naming intact, identify the correct onboarding welcome asset, and append the rationale to the Bible.
+- Dependency context: follows the earlier intro-asset preparation work in B-0034/B-0035 but is intentionally scoped to the `assets/` library and documentation rather than runtime wiring.
+- Files likely or actually changed:
+  - `assets/`
+  - `assets/random_cycle/`
+  - `assets/archive_unused/duplicates/`
+  - `assets/ASSET_RENAME_AND_PLACEMENT_GUIDE.md`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Low. This is asset-library organization and documentation only. No runtime code paths were modified in this step.
+- Invariant check:
+  - personally named `dexter_*` assets were preserved without renaming
+  - existing icon packs and the illustration manifest were left intact
+  - exact duplicate files were isolated under `assets/archive_unused/duplicates/`
+  - the present-opening Dexter still is now explicitly identified as the canonical first onboarding welcome still
+  - no runtime source files were edited during this step
+- What was attempted:
+  - renamed timestamp exports, generator-default filenames, and ambiguous motion files into semantic DexDictate asset names
+  - normalized loose numbered variants into stable `__variant_a`, `__variant_b`, and similar suffixes
+  - renamed `assets/for randoms` into `assets/random_cycle`
+  - separated obvious exact duplicates from the active pool
+  - wrote an asset-side guide documenting what changed, why, and where each asset family should be used
+- What succeeded:
+  - the top-level asset library now reads like a maintained system instead of a pile of temporary exports
+  - the random open-cycle pool is now clearly located under `assets/random_cycle/`
+  - the canonical first-onboarding welcome still is now `assets/DexDictate_onboarding__welcome_giftbox_open_dexter.png`
+  - the supporting welcome motion pair is now `assets/DexDictate_onboarding__welcome_giftbox_reveal.mp4`
+  - the launch-intro source files now have stable, readable names
+- What failed:
+  - the app was not wired in code to consume `assets/random_cycle/` on each UI open during this step because the requested scope was asset-side organization plus documentation
+- What was rolled back:
+  - nothing was rolled back
+- Tests run:
+  - none; no source code changed
+- Regressions checked:
+  - post-rename inventory inspection confirmed the renamed files exist under their expected locations
+  - preserved-name spot checks confirmed the `dexter_*` onboarding illustration set remained unchanged
+  - duplicate exports were moved out of the active pool rather than silently deleted
+- Remaining risks:
+  - runtime code still needs a follow-up change if the menu/popover open path should actively cycle from `assets/random_cycle/`
+  - the `smiley_mask_splatter` random-cycle trio is tonally sharper than the rest of the pool and may belong behind an alternate flavor/theme rather than the default experience
+- Next step: if desired, wire the onboarding welcome screen to `DexDictate_onboarding__welcome_giftbox_open_dexter.png` and point the UI-open asset rotation logic at `assets/random_cycle/` while excluding `assets/archive_unused/duplicates/`.
+
+### 18.91 Ledger Entry B-0041
+
+- Entry ID: B-0041
+- Timestamp: 2026-04-07 America/Detroit
+- Improvement ID(s): onboarding one-shot animation wiring
+- Goal: replace the static onboarding icons with one-shot bundled motion assets that match the launch intro style and use the correct gift-box reveal on the welcome screen.
+- Why now: a direct correction was made that onboarding should use the prepared animations, not just stills, and that the welcome page specifically must use the dog popping out of the gift box.
+- Dependency context: builds directly on B-0040 asset normalization and reuses the earlier launch-intro visual language from B-0034/B-0035.
+- Files likely or actually changed:
+  - `Sources/DexDictate/OnboardingView.swift`
+  - `Sources/DexDictateKit/Resources/ProfileAssets/Onboarding/OnboardingWelcomeAnimation.mp4`
+  - `Sources/DexDictateKit/Resources/ProfileAssets/Onboarding/OnboardingPermissionsAnimation.mp4`
+  - `Sources/DexDictateKit/Resources/ProfileAssets/Onboarding/OnboardingShortcutAnimation.mp4`
+  - `Sources/DexDictateKit/Resources/ProfileAssets/Onboarding/OnboardingCompletionAnimation.mp4`
+  - `Tests/DexDictateTests/ResourceBundleTests.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Low to medium. This changes onboarding presentation behavior and adds bundled media, but stays isolated to onboarding UI and resource loading.
+- Invariant check:
+  - onboarding pages still advance through the same four-step flow
+  - each onboarding animation is muted and plays only once per page appearance
+  - the welcome page now uses the intended gift-box reveal asset
+  - no launch-intro behavior was changed in this step
+- What was attempted:
+  - copied the selected onboarding motion assets into bundle-stable resource names under `ProfileAssets/Onboarding`
+  - added a reusable circular one-shot onboarding player backed by `AVPlayer`
+  - replaced the welcome, shortcut, and completion static symbols with motion hero assets
+  - added the permissions page motion hero at the top of the scroll content
+  - extended the resource-bundle test to assert the new onboarding MP4s are packaged
+- What succeeded:
+  - the onboarding welcome page now plays the gift-box reveal animation one time
+  - onboarding now visually matches the launch intro style instead of dropping back to generic SF Symbols
+  - each onboarding page now has a dedicated one-shot hero animation:
+    - welcome: `OnboardingWelcomeAnimation`
+    - permissions: `OnboardingPermissionsAnimation`
+    - shortcut: `OnboardingShortcutAnimation`
+    - completion: `OnboardingCompletionAnimation`
+  - the package test suite confirmed the new resources are copied into the bundle
+- What failed:
+  - nothing failed in this step
+- What was rolled back:
+  - nothing was rolled back
+- Tests run:
+  - `swift test`
+- Metrics captured:
+  - XCTest summary after onboarding animation wiring: 71 tests, 0 failures
+- Regressions checked:
+  - package build output confirmed all four onboarding MP4 files were copied into the build bundle
+  - resource-bundle assertions passed for the new onboarding media
+  - the onboarding view and application target both recompiled successfully after the AV player integration
+- Remaining risks:
+  - the permissions animation is the best available setup-oriented motion asset from the current library, but it is less literal than the welcome, shortcut, and completion mappings
+  - final visual pacing may still benefit from a live pass in the running app
+- Next step: if desired, do a live visual pass and tune onboarding hero sizes, spacing, or clip assignments after watching the full onboarding flow end to end.
+
+### 18.92 Ledger Entry B-0042
+
+- Entry ID: B-0042
+- Timestamp: 2026-04-07 America/Detroit
+- Improvement ID(s): standard-profile random-cycle watermark activation
+- Goal: make the popover show a visibly random curated asset on open for the standard profile, while keeping Canadian and Aussie modes pinned to their dedicated regional assets.
+- Why now: a direct follow-up request specified that the random asset folder must be implemented at runtime, with Canadian and Australian modes explicitly excluded from that random behavior.
+- Dependency context: depends on the asset normalization from B-0040 and uses the existing `refreshDynamicContent()` open-cycle behavior already present in the app.
+- Files likely or actually changed:
+  - `Sources/DexDictateKit/Profiles/WatermarkAssetProvider.swift`
+  - `Sources/DexDictateKit/Resources/ProfileAssets/RandomCycle/`
+  - `Tests/DexDictateTests/ProfileContentTests.swift`
+  - `Tests/DexDictateTests/ResourceBundleTests.swift`
+  - `Sources/VerificationRunner/main.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Low to medium. This changes which visible watermark assets the standard profile draws from, but reuses the already-existing profile refresh path instead of introducing a second rendering system.
+- Invariant check:
+  - the main popover still refreshes `currentWatermarkAsset` when it opens
+  - the floating HUD still reads the provider-driven watermark state
+  - the standard profile now uses the curated `random_cycle` pool
+  - the Canadian profile still uses only the Canada asset set
+  - the Aussie profile still uses only the Aussie asset set
+- What was attempted:
+  - copied the curated `assets/random_cycle/` still assets into `ProfileAssets/RandomCycle/` so they are available in the runtime bundle
+  - replaced the standard watermark manifest in `WatermarkAssetProvider` with the curated random-cycle filenames
+  - left the Canadian and Aussie manifests unchanged
+  - updated bundle, profile, and verification tests to match the new standard-profile pool
+- What succeeded:
+  - opening the UI in standard mode now rotates through the curated random-cycle library because `refreshDynamicContent()` already selects a new watermark asset on every open
+  - Canadian mode remains restricted to the five Canada variants
+  - Aussie mode remains restricted to the two Aussie variants
+  - the standard random-cycle pool is now bundled and test-covered
+- What failed:
+  - nothing failed in this step
+- What was rolled back:
+  - nothing was rolled back
+- Tests run:
+  - `swift test`
+- Metrics captured:
+  - XCTest summary after random-cycle activation: 71 tests, 0 failures
+  - packaged random-cycle still assets copied into build resources: 57 files
+- Regressions checked:
+  - bundle tests confirmed representative random-cycle PNG and JPG assets resolve from the package bundle
+  - profile tests confirmed the standard pool now resolves to 57 curated assets while Canadian and Aussie counts remain stable
+  - verification checks confirmed the standard provider no longer points at the old standard icon pool
+- Remaining risks:
+  - some random-cycle assets are more eccentric than the previous standard icon set, so the visible tone of the standard popover will be broader by design
+  - no live visual pass was run in the installed app during this step; verification was source- and test-based
+- Next step: if desired, trim the standard random-cycle manifest down to a narrower mood band after a live look at the popover, but keep the Canadian and Aussie branches fixed to their own regional pools.
+
+### 18.93 Ledger Entry B-0043
+
+- Entry ID: B-0043
+- Timestamp: 2026-04-07 America/Detroit
+- Improvement ID(s): exhaustive validation sweep and portability repair
+- Goal: run a repository-wide bug sweep, fix anything concretely broken, and ensure the app can survive a clean-machine install path before publishing.
+- Why now: a full-project correctness sweep, GitHub publish, uninstall, and fresh reinstall flow was requested, which makes portability defects and packaging mistakes unacceptable.
+- Dependency context: follows the onboarding and random-cycle asset work from B-0040 through B-0042.
+- Files likely or actually changed:
+  - `Sources/DexDictate/MenuBarIconController.swift`
+  - `Sources/DexDictate/QuickSettingsView.swift`
+  - `scripts/parse_metrics.py`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Low. The fixes are localized and were validated by build, tests, verification runner, and release validation.
+- Invariant check:
+  - onboarding animation wiring remains intact
+  - standard profile random-cycle behavior remains intact
+  - Canadian and Aussie profile pools remain restricted to their regional assets
+  - custom menu bar icon selection no longer depends on a user-specific filesystem path
+- What was attempted:
+  - ran `swift test`
+  - ran `swift run VerificationRunner`
+  - ran `./build.sh`
+  - ran `./scripts/validate_release.sh /Applications/DexDictate.app`
+  - searched the source tree for hardcoded user paths and other portability hazards
+  - inspected the installed app bundle resource layout directly to verify the assumptions behind the icon-loading code
+- What succeeded:
+  - repository validation completed without test or verification failures
+  - release validation passed, with only the expected local Gatekeeper warning on the ad-hoc/dev-signed build
+  - identified and fixed a real runtime portability bug in `MenuBarIconController`: it previously loaded custom menu bar icons from `<bundled-assets>`, which would fail on a fresh machine
+  - switched menu bar custom icon discovery to a bundle-manifest lookup so the installed app resolves its own packaged icons reliably
+  - removed the user-specific home path from `scripts/parse_metrics.py` and replaced it with `Path.home()`
+- What failed:
+  - no additional functional failures were discovered by the validation sweep beyond the menu bar icon portability issue
+- What was rolled back:
+  - nothing was rolled back
+- Tests run:
+  - `swift test`
+  - `swift run VerificationRunner`
+  - `./build.sh`
+  - `./scripts/validate_release.sh /Applications/DexDictate.app`
+- Metrics captured:
+  - XCTest summary during final sweep: 71 tests, 0 failures
+  - VerificationRunner summary during final sweep: 62 checks, 0 failures
+  - release validation summary: 0 failures, 1 warning
+- Regressions checked:
+  - app target still compiled after the menu bar icon source change
+  - installed app bundle still contained the packaged icon and random-cycle assets needed by runtime lookups
+  - no diff whitespace or merge-marker issues were present
+- Remaining risks:
+  - the release validation warning is Gatekeeper assessment on a locally signed build, not a functional app failure
+  - no automated UI-driving smoke test was run against the installed app before the upcoming uninstall/reinstall phase
+- Next step: commit the validated state, push it to GitHub, remove installed app instances, reinstall from a fresh GitHub clone, and launch the app for a clean-user smoke test.

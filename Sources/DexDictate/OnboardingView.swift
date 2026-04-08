@@ -1,4 +1,5 @@
 import SwiftUI
+import AVFoundation
 import DexDictateKit
 
 struct OnboardingView: View {
@@ -67,10 +68,7 @@ struct OnboardingView: View {
 struct WelcomePage: View {
     var body: some View {
         VStack(spacing: 20) {
-            Image(systemName: "mic.circle.fill")
-                .resizable()
-                .frame(width: 80, height: 80)
-                .foregroundStyle(.blue)
+            OnboardingHeroAnimation(resource: .welcome)
             
             Text(NSLocalizedString("Welcome to DexDictate", comment: ""))
                 .font(.largeTitle)
@@ -97,6 +95,9 @@ struct PermissionsPage: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
+                OnboardingHeroAnimation(resource: .permissions, size: 132)
+                    .frame(maxWidth: .infinity, alignment: .center)
+
                 Text(NSLocalizedString("Permissions", comment: ""))
                     .font(.title).bold()
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -407,6 +408,8 @@ struct ShortcutPage: View {
     
     var body: some View {
         VStack(spacing: 20) {
+            OnboardingHeroAnimation(resource: .shortcut)
+
             Text(NSLocalizedString("Choose Your Trigger", comment: ""))
                 .font(.title)
             
@@ -427,10 +430,7 @@ struct CompletionPage: View {
     
     var body: some View {
         VStack(spacing: 20) {
-            Image(systemName: "checkmark.circle.fill")
-                .resizable()
-                .frame(width: 80, height: 80)
-                .foregroundStyle(.green)
+            OnboardingHeroAnimation(resource: .completion)
             
             Text(NSLocalizedString("You're All Set!", comment: ""))
                 .font(.title)
@@ -457,5 +457,134 @@ struct VisualEffectView: NSViewRepresentable {
     func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
         nsView.material = material
         nsView.blendingMode = blendingMode
+    }
+}
+
+private enum OnboardingAnimationResource: String {
+    case welcome = "OnboardingWelcomeAnimation"
+    case permissions = "OnboardingPermissionsAnimation"
+    case shortcut = "OnboardingShortcutAnimation"
+    case completion = "OnboardingCompletionAnimation"
+}
+
+private struct OnboardingHeroAnimation: View {
+    let resource: OnboardingAnimationResource
+    var size: CGFloat = 148
+
+    @State private var player = AVPlayer()
+    @State private var isPrepared = false
+    @State private var endObserver: NSObjectProtocol?
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(Color.white.opacity(0.08))
+                .overlay(
+                    Circle()
+                        .stroke(Color.white.opacity(0.16), lineWidth: 1)
+                )
+
+            OnboardingPlayerRepresentable(player: player)
+                .clipShape(Circle())
+                .padding(8)
+        }
+        .frame(width: size, height: size)
+        .background(Color.clear)
+        .onAppear(perform: prepareAndPlay)
+        .onDisappear(perform: stopPlayback)
+    }
+
+    private func prepareAndPlay() {
+        guard let url = Safety.resourceBundle.url(forResource: resource.rawValue, withExtension: "mp4") else {
+            return
+        }
+
+        if !isPrepared {
+            let item = AVPlayerItem(url: url)
+            player.replaceCurrentItem(with: item)
+            player.isMuted = true
+            player.volume = 0
+            player.actionAtItemEnd = .pause
+            installEndObserver(for: item)
+            isPrepared = true
+        } else if let currentItem = player.currentItem {
+            installEndObserver(for: currentItem)
+        }
+
+        player.seek(to: .zero)
+        player.play()
+    }
+
+    private func stopPlayback() {
+        player.pause()
+        player.seek(to: .zero)
+
+        if let endObserver {
+            NotificationCenter.default.removeObserver(endObserver)
+            self.endObserver = nil
+        }
+    }
+
+    private func installEndObserver(for item: AVPlayerItem) {
+        if let endObserver {
+            NotificationCenter.default.removeObserver(endObserver)
+        }
+
+        endObserver = NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemDidPlayToEndTime,
+            object: item,
+            queue: .main
+        ) { _ in
+            player.pause()
+            player.seek(to: .zero)
+        }
+    }
+}
+
+private struct OnboardingPlayerRepresentable: NSViewRepresentable {
+    let player: AVPlayer
+
+    func makeNSView(context: Context) -> OnboardingPlayerView {
+        let view = OnboardingPlayerView()
+        view.player = player
+        return view
+    }
+
+    func updateNSView(_ nsView: OnboardingPlayerView, context: Context) {
+        nsView.player = player
+    }
+}
+
+private final class OnboardingPlayerView: NSView {
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        wantsLayer = true
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        wantsLayer = true
+    }
+
+    override func makeBackingLayer() -> CALayer {
+        AVPlayerLayer()
+    }
+
+    override func layout() {
+        super.layout()
+        playerLayer?.frame = bounds
+    }
+
+    var player: AVPlayer? {
+        get { playerLayer?.player }
+        set {
+            playerLayer?.player = newValue
+            playerLayer?.videoGravity = .resizeAspectFill
+            playerLayer?.backgroundColor = NSColor.clear.cgColor
+        }
+    }
+
+    private var playerLayer: AVPlayerLayer? {
+        layer as? AVPlayerLayer
     }
 }

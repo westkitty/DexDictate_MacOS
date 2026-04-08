@@ -353,7 +353,9 @@ private func runWonderPath() {
     check(path, hudUI.contains("Text(\"DEX\")"), "floating HUD includes visible watermark text")
 
     let profileSource = readSource("Sources/DexDictateKit/Profiles/WatermarkAssetProvider.swift")
-    check(path, profileSource.contains("dexdictate-icon-standard-11.png"), "watermark provider includes full Standard runtime pool")
+    check(path, profileSource.contains("DexDictate_onboarding__welcome__variant_a.png"), "watermark provider includes the Standard random-cycle pool")
+    check(path, profileSource.contains("DexDictate_random_cycle__standing_pose__variant_c.jpg"), "watermark provider includes curated Standard JPG runtime assets")
+    check(path, !profileSource.contains("\"dexdictate-icon-standard-11.png\""), "watermark provider no longer uses the old Standard icon pool for the standard profile")
     check(path, !profileSource.contains("dexdictate-icon-standard-sheet-01.png"), "watermark provider excludes standard sheet source files")
     check(path, profileSource.contains("dexdictate-icon-aussie-02.png"), "watermark provider includes Aussie runtime pool")
 
