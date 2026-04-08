@@ -4100,3 +4100,39 @@ Rationale:
 - Remaining risks:
   - a fully frictionless first-launch install experience on another machine still depends on whether the distributed build is notarized and stapled
 - Next step: commit the release-engineering changes, publish `v1.5.1` to GitHub Releases with the DMG/ZIP/checksum/validation assets, then uninstall and reinstall locally from the published release payload.
+
+### 18.97 Ledger Entry B-0047
+
+- Entry ID: B-0047
+- Timestamp: 2026-04-08 America/Detroit
+- Improvement ID(s): onboarding-first startup gating
+- Goal: prevent the standard launch intro animation from playing on the user's first-ever launch, so onboarding owns the initial experience cleanly.
+- Why now: the first-launch UX was mixing two startup stories at once: the global intro animation and the onboarding flow.
+- Dependency context: follows the onboarding animation improvements and the recent release work.
+- Files likely or actually changed:
+  - `Sources/DexDictate/DexDictateApp.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Risk assessment: Low. The change is a narrow startup-condition gate.
+- Invariant check:
+  - onboarding still appears when `hasCompletedOnboarding` is false
+  - the standard launch intro still appears on later launches after onboarding completion
+  - microphone preflight request still occurs for returning users
+- What was attempted:
+  - audited startup ordering in `AppDelegate.applicationDidFinishLaunching`
+  - moved launch-intro playback behind the completed-onboarding branch
+- What succeeded:
+  - first launch now goes directly to onboarding without the normal intro animation competing for attention
+  - returning users still get the normal launch intro behavior
+- What failed:
+  - nothing failed in implementation
+- What was rolled back:
+  - nothing was rolled back
+- Tests run:
+  - pending in the next step
+- Metrics captured:
+  - none
+- Regressions checked:
+  - startup still branches cleanly between onboarding and returning-user initialization
+- Remaining risks:
+  - this was validated by build/test flow rather than a fully scripted UI launch sequence
+- Next step: run the standard verification pass and, if desired, manually launch once with onboarding reset and once with onboarding completed to visually confirm the branching behavior.

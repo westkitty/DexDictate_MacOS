@@ -542,14 +542,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         configureApplicationIcon()
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-            LaunchIntroController.shared.playIfNeeded()
-        }
-
         if !AppSettings.shared.hasCompletedOnboarding {
-             showOnboarding()
+            showOnboarding()
         } else {
-             AVCaptureDevice.requestAccess(for: .audio) { _ in }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                LaunchIntroController.shared.playIfNeeded()
+            }
+
+            AVCaptureDevice.requestAccess(for: .audio) { _ in }
         }
     }
     

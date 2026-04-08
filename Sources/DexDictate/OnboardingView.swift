@@ -473,7 +473,9 @@ private struct OnboardingHeroAnimation: View {
 
     @State private var player = AVPlayer()
     @State private var isPrepared = false
+    @State private var playbackDirection: Float = 1
     @State private var endObserver: NSObjectProtocol?
+    @State private var timeObserver: Any?
 
     var body: some View {
         ZStack {
@@ -506,22 +508,29 @@ private struct OnboardingHeroAnimation: View {
             player.volume = 0
             player.actionAtItemEnd = .pause
             installEndObserver(for: item)
+            installReverseLoopObserver()
             isPrepared = true
         } else if let currentItem = player.currentItem {
             installEndObserver(for: currentItem)
+            installReverseLoopObserver()
         }
 
-        player.seek(to: .zero)
-        player.play()
+        playForwardFromStart()
     }
 
     private func stopPlayback() {
         player.pause()
-        player.seek(to: .zero)
+        player.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero)
+        playbackDirection = 1
 
         if let endObserver {
             NotificationCenter.default.removeObserver(endObserver)
             self.endObserver = nil
+        }
+
+        if let timeObserver {
+            player.removeTimeObserver(timeObserver)
+            self.timeObserver = nil
         }
     }
 
@@ -535,8 +544,59 @@ private struct OnboardingHeroAnimation: View {
             object: item,
             queue: .main
         ) { _ in
-            player.pause()
-            player.seek(to: .zero)
+            playReverseFromEnd()
+        }
+    }
+
+    private func installReverseLoopObserver() {
+        guard timeObserver == nil else {
+            return
+        }
+
+        timeObserver = player.addPeriodicTimeObserver(
+            forInterval: CMTime(seconds: 0.05, preferredTimescale: 600),
+            queue: .main
+        ) { currentTime in
+            guard playbackDirection < 0 else {
+                return
+            }
+
+            if currentTime.seconds <= 0.05 {
+                playForwardFromStart()
+            }
+        }
+    }
+
+    private func playForwardFromStart() {
+        playbackDirection = 1
+        player.pause()
+        player.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero) { finished in
+            guard finished else {
+                return
+            }
+
+            player.playImmediately(atRate: 1)
+        }
+    }
+
+    private func playReverseFromEnd() {
+        guard
+            let item = player.currentItem,
+            item.status == .readyToPlay,
+            item.canPlayReverse
+        else {
+            playForwardFromStart()
+            return
+        }
+
+        playbackDirection = -1
+        player.pause()
+        player.seek(to: item.duration, toleranceBefore: .zero, toleranceAfter: .zero) { finished in
+            guard finished else {
+                return
+            }
+
+            player.playImmediately(atRate: -1)
         }
     }
 }
