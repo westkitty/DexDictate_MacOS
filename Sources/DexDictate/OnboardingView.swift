@@ -476,6 +476,8 @@ private struct OnboardingHeroAnimation: View {
     @State private var playbackDirection: Float = 1
     @State private var endObserver: NSObjectProtocol?
     @State private var timeObserver: Any?
+    private let rewindToForwardThresholdSeconds = 1.0 / 60.0
+    private let reverseStartNudgeSeconds = 1.0 / 120.0
 
     var body: some View {
         ZStack {
@@ -507,6 +509,7 @@ private struct OnboardingHeroAnimation: View {
             player.isMuted = true
             player.volume = 0
             player.actionAtItemEnd = .pause
+            player.automaticallyWaitsToMinimizeStalling = false
             installEndObserver(for: item)
             installReverseLoopObserver()
             isPrepared = true
@@ -544,6 +547,9 @@ private struct OnboardingHeroAnimation: View {
             object: item,
             queue: .main
         ) { _ in
+            guard playbackDirection >= 0 else {
+                return
+            }
             playReverseFromEnd()
         }
     }
@@ -554,15 +560,15 @@ private struct OnboardingHeroAnimation: View {
         }
 
         timeObserver = player.addPeriodicTimeObserver(
-            forInterval: CMTime(seconds: 0.05, preferredTimescale: 600),
+            forInterval: CMTime(seconds: 1.0 / 120.0, preferredTimescale: 600),
             queue: .main
         ) { currentTime in
             guard playbackDirection < 0 else {
                 return
             }
 
-            if currentTime.seconds <= 0.05 {
-                playForwardFromStart()
+            if currentTime.seconds <= rewindToForwardThresholdSeconds {
+                playForwardFromRewindBoundary()
             }
         }
     }
@@ -570,13 +576,26 @@ private struct OnboardingHeroAnimation: View {
     private func playForwardFromStart() {
         playbackDirection = 1
         player.pause()
-        player.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero) { finished in
+        player.seek(
+            to: .zero,
+            toleranceBefore: .zero,
+            toleranceAfter: CMTime(seconds: reverseStartNudgeSeconds, preferredTimescale: 600)
+        ) { finished in
             guard finished else {
                 return
             }
 
             player.playImmediately(atRate: 1)
         }
+    }
+
+    private func playForwardFromRewindBoundary() {
+        guard playbackDirection < 0 else {
+            return
+        }
+
+        playbackDirection = 1
+        player.playImmediately(atRate: 1)
     }
 
     private func playReverseFromEnd() {
@@ -589,9 +608,24 @@ private struct OnboardingHeroAnimation: View {
             return
         }
 
+        let durationSeconds = item.duration.seconds
+        guard durationSeconds.isFinite, durationSeconds > reverseStartNudgeSeconds else {
+            playForwardFromStart()
+            return
+        }
+
+        let reverseStart = CMTime(
+            seconds: durationSeconds - reverseStartNudgeSeconds,
+            preferredTimescale: 600
+        )
+
         playbackDirection = -1
         player.pause()
-        player.seek(to: item.duration, toleranceBefore: .zero, toleranceAfter: .zero) { finished in
+        player.seek(
+            to: reverseStart,
+            toleranceBefore: CMTime(seconds: reverseStartNudgeSeconds, preferredTimescale: 600),
+            toleranceAfter: .zero
+        ) { finished in
             guard finished else {
                 return
             }

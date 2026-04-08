@@ -15,7 +15,7 @@ final class ResourceBundleTests: XCTestCase {
         XCTAssertNotNil(bundle.url(forResource: "OnboardingShortcutAnimation", withExtension: "mp4"))
         XCTAssertNotNil(bundle.url(forResource: "OnboardingCompletionAnimation", withExtension: "mp4"))
         XCTAssertNotNil(bundle.url(forResource: "DexDictate_onboarding__welcome__variant_a", withExtension: "png"))
-        XCTAssertNotNil(bundle.url(forResource: "DexDictate_random_cycle__standing_pose__variant_a", withExtension: "jpg"))
+        XCTAssertNotNil(bundle.url(forResource: "DexDictate_random_cycle__standing_pose__variant_a", withExtension: "png"))
         XCTAssertNotNil(bundle.url(forResource: "dexdictate-icon-standard-11", withExtension: "png"))
         XCTAssertNotNil(bundle.url(forResource: "dexdictate-icon-canada-05", withExtension: "png"))
         XCTAssertNotNil(bundle.url(forResource: "dexdictate-icon-aussie-02", withExtension: "png"))

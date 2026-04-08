@@ -83,7 +83,7 @@ final class ProfileContentTests: XCTestCase {
 
         XCTAssertEqual(standardFilenames.count, 57)
         XCTAssertTrue(standardFilenames.contains("DexDictate_onboarding__welcome__variant_a.png"))
-        XCTAssertTrue(standardFilenames.contains("DexDictate_random_cycle__standing_pose__variant_c.jpg"))
+        XCTAssertTrue(standardFilenames.contains("DexDictate_random_cycle__standing_pose__variant_c.png"))
         XCTAssertFalse(standardFilenames.contains("dexdictate-icon-standard-11.png"))
         XCTAssertEqual(WatermarkAssetProvider.filenames(for: .canadian).count, 5)
         XCTAssertEqual(WatermarkAssetProvider.filenames(for: .aussie).count, 2)
