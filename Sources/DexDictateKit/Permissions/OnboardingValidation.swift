@@ -82,7 +82,7 @@ public enum MicrophoneValidationState: Equatable {
         case .ready:
             return "DexDictate saw live microphone input during the test window."
         case .permissionRequired:
-            return "Grant microphone access first. DexDictate keeps this request separate from other permissions."
+            return "Run the microphone test to trigger the macOS permission prompt now. If access was denied earlier, re-enable it in System Settings."
         case .noDevicesAvailable:
             return "macOS did not report any usable audio input devices."
         case .noInputDetected:
@@ -159,6 +159,22 @@ public final class MicrophoneValidationHarness: ObservableObject {
         maxObservedLevel = 0
 
         let micStatus = AVCaptureDevice.authorizationStatus(for: .audio)
+        if micStatus == .notDetermined {
+            state = .running
+            AVCaptureDevice.requestAccess(for: .audio) { [weak self] granted in
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    if granted {
+                        self.runTest(inputDeviceUID: inputDeviceUID, durationSeconds: durationSeconds)
+                    } else {
+                        self.state = .permissionRequired
+                        self.inputLevel = 0
+                    }
+                }
+            }
+            return
+        }
+
         guard micStatus == .authorized else {
             state = .permissionRequired
             return

@@ -108,16 +108,6 @@ struct PermissionsPage: View {
                     .frame(maxWidth: .infinity, alignment: .center)
 
                 LivePermissionChecklist(permissionManager: permissionManager)
-                OnboardingValidationPanel(
-                    triggerValidationState: triggerValidationState,
-                    microphoneHarness: microphoneHarness,
-                    onRunTriggerTest: {
-                        triggerValidationState = TriggerValidationProbe.runCheck()
-                    },
-                    onRunMicrophoneTest: {
-                        microphoneHarness.runTest()
-                    }
-                )
 
                 // ── Step 1: Accessibility ─────────────────────────────────────
                 PermissionStep(
@@ -177,9 +167,20 @@ struct PermissionsPage: View {
                     iconColor: .red,
                     title: NSLocalizedString("Microphone", comment: ""),
                     description: NSLocalizedString(
-                        "macOS will ask automatically when you first press your dictation shortcut. No action needed now.",
+                        "Use the microphone test below to trigger macOS microphone access now instead of waiting for your first dictation.",
                         comment: "")
                 ) { EmptyView() }
+
+                OnboardingValidationPanel(
+                    triggerValidationState: triggerValidationState,
+                    microphoneHarness: microphoneHarness,
+                    onRunTriggerTest: {
+                        triggerValidationState = TriggerValidationProbe.runCheck()
+                    },
+                    onRunMicrophoneTest: {
+                        microphoneHarness.runTest(inputDeviceUID: settings.inputDeviceUID)
+                    }
+                )
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 16)
@@ -313,7 +314,7 @@ private struct OnboardingValidationPanel: View {
                     Button(
                         microphoneHarness.state == .running
                         ? "Testing Microphone..."
-                        : "Test Microphone"
+                        : "Test or Request Microphone Access"
                     ) {
                         onRunMicrophoneTest()
                     }
@@ -362,6 +363,7 @@ private struct ValidationCard<Action: View>: View {
 
             action()
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
         .background(Color.black.opacity(0.18))
         .clipShape(RoundedRectangle(cornerRadius: 10))
@@ -393,10 +395,14 @@ private struct PermissionStep<Action: View>: View {
                 Text(description)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .multilineTextAlignment(.leading)
 
                 action()
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
         .background(Color.white.opacity(0.06))
         .clipShape(RoundedRectangle(cornerRadius: 10))
@@ -412,16 +418,20 @@ struct ShortcutPage: View {
 
             Text(NSLocalizedString("Choose Your Trigger", comment: ""))
                 .font(.title)
-            
-            Text(NSLocalizedString("Select a shortcut to start dictation. The default is the Middle Mouse Button.", comment: ""))
                 .multilineTextAlignment(.center)
-            
+
+            Text(NSLocalizedString("Select a shortcut to start dictation. The default is hold down on the middle mouse button.", comment: ""))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 30)
+
             ShortcutRecorder(shortcut: $settings.userShortcut)
                 .frame(width: 200)
                 .padding()
                 .background(Color.black.opacity(0.2))
                 .clipShape(RoundedRectangle(cornerRadius: 8))
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.horizontal, 24)
     }
 }
 
@@ -434,11 +444,30 @@ struct CompletionPage: View {
             
             Text(NSLocalizedString("You're All Set!", comment: ""))
                 .font(.title)
+                .multilineTextAlignment(.center)
             
             Text(NSLocalizedString("DexDictate runs in your menu bar. Click the icon or use your shortcut to start dictating.", comment: ""))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
+
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "questionmark.circle.fill")
+                    .font(.title3)
+                    .foregroundStyle(.cyan)
+                    .padding(.top, 1)
+
+                Text("Need extra support later? Click the question mark at the top-right of the DexDictate popover to open Help.")
+                    .font(.callout)
+                    .foregroundStyle(.white.opacity(0.88))
+                    .multilineTextAlignment(.leading)
+            }
+            .padding(14)
+            .background(Color.white.opacity(0.06))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .padding(.horizontal, 20)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.horizontal, 24)
     }
 }
 

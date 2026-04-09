@@ -904,33 +904,42 @@ private struct DiagnosticsContent: View {
 
 private struct AboutContent: View {
     var body: some View {
-        ZStack(alignment: .center) {
-            // Use the app icon as a centered watermark
-            Group {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top, spacing: 16) {
                 if let url = Safety.resourceBundle.url(
-                    forResource: "Assets.xcassets/AppIcon.appiconset/icon",
+                    forResource: "ProfileAssets/Icons/dexdictate-icon-standard-04",
                     withExtension: "png"
                 ), let nsImage = NSImage(contentsOf: url) {
                     Image(nsImage: nsImage)
                         .resizable()
+                        .interpolation(.high)
                         .scaledToFit()
-                        .frame(width: 180, height: 180)
-                        .opacity(0.08)
+                        .frame(width: 96, height: 96)
                 }
-            }
-            .allowsHitTesting(false)
 
-            VStack(alignment: .leading, spacing: 12) {
-                helpBody("DexDictate is a local-first macOS dictation app built for speed, privacy, and reliability on Apple Silicon.")
-                VStack(alignment: .leading, spacing: 6) {
-                    Label("All transcription runs on-device using OpenAI's open-source Whisper model", systemImage: "cpu")
-                    Label("No audio or text is sent to external servers", systemImage: "lock.shield")
-                    Label("Source code available on GitHub", systemImage: "chevron.left.forwardslash.chevron.right")
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Why Dexter?")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(.white)
+
+                    helpBody("Dexter is a small, tricolor Phalene dog with floppy ears and a perpetually unimpressed expression... ungovernable, sharp-nosed and convinced he’s the quality bar. Alert, picky, dependable and devoted to doing things exactly his way: if he’s staring at you, assume you’ve made a mistake. If he approves, it means it works.")
                 }
-                .font(.callout)
-                .foregroundStyle(.white.opacity(0.85))
-                helpBody("Version information is displayed in the footer of the main popover.")
             }
+            .padding(14)
+            .background(Color.white.opacity(0.05))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+
+            helpBody("DexDictate is a local-first macOS dictation app built for speed, privacy, and reliability on Apple Silicon.")
+
+            VStack(alignment: .leading, spacing: 6) {
+                Label("All transcription runs on-device using OpenAI's open-source Whisper model", systemImage: "cpu")
+                Label("No audio or text is sent to external servers", systemImage: "lock.shield")
+                Label("Source code available on GitHub", systemImage: "chevron.left.forwardslash.chevron.right")
+            }
+            .font(.callout)
+            .foregroundStyle(.white.opacity(0.85))
+
+            helpBody("Version information is displayed in the footer of the main popover.")
         }
     }
 }

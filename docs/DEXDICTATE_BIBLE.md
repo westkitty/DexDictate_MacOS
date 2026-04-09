@@ -4136,3 +4136,29 @@ Rationale:
 - Remaining risks:
   - this was validated by build/test flow rather than a fully scripted UI launch sequence
 - Next step: run the standard verification pass and, if desired, manually launch once with onboarding reset and once with onboarding completed to visually confirm the branching behavior.
+
+### 18.98 Ledger Entry B-0048
+
+- Entry ID: B-0048
+- Timestamp: 2026-04-09 America/Detroit
+- Improvement ID(s): `v1.5.2` — help screenshot update
+- Goal: Replace placeholder `help-welcome-overview.png` in the Help window Welcome section with a real app screenshot.
+- Why now: The Help window was showing a generic placeholder image; the real smiley-face screenshot was available in `assets/download.png`.
+- Files changed:
+  - `Sources/DexDictateKit/Resources/Assets.xcassets/Help/help-welcome-overview.png` — replaced with real screenshot
+  - `Sources/DexDictateKit/Resources/Assets.xcassets/Help/help-onboarding-permissions.png —.png` — deleted (malformed stray file)
+  - `VERSION` — 1.5.1 → 1.5.2
+  - `Sources/DexDictate/Info.plist` — CFBundleShortVersionString and CFBundleVersion 1.5 → 1.5.2 (correcting prior discrepancy)
+  - `BIBLE.md` — updated app_version, last_updated, added Entry 2
+  - `docs/DEXDICTATE_BIBLE.md` — this entry
+- What succeeded:
+  - Asset replacement and version bump completed cleanly
+  - Release build via `build.sh` succeeded
+  - `validate_release.sh` passed all checks
+  - GitHub release v1.5.2 published
+- What failed:
+  - nothing
+- Regressions checked:
+  - Help window Welcome section now shows real screenshot
+  - Version string correct in built app bundle
+- Next step: verify smiley-face screenshot renders correctly in Help window on next launch.

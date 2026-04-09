@@ -1,8 +1,9 @@
 ---
 title: DexDictate for macOS Bible
-version: 1.0.0
+version: 1.0.1
 status: Authoritative
-last_updated: 2026-03-31
+last_updated: 2026-04-09
+app_version: 1.5.2
 project_root: <repo-root>
 primary_language: Swift
 project_type: macOS Menu Bar Application
@@ -595,6 +596,17 @@ This Bible is strictly additive. It may never delete prior recorded steps or dec
 **Profanity Filter:** Uses a bundled word list; user can toggle but cannot customize the list in Phase 1. Future versions can allow user-defined filters.
 
 **No Daemon Mode:** DexDictate is a single-user foreground app. There is no background service or system extension. The app must be running for dictation to work.
+
+---
+
+### Entry 2: v1.5.2 — Help Screenshot Update (2026-04-09)
+- **Task:** Replace placeholder `help-welcome-overview.png` with real smiley-face app screenshot
+- **Changes:**
+  - Copied `assets/download.png` → `Sources/DexDictateKit/Resources/Assets.xcassets/Help/help-welcome-overview.png`
+  - Deleted malformed stray asset `help-onboarding-permissions.png —.png`
+  - Bumped version: `VERSION` 1.5.1 → 1.5.2, `Info.plist` 1.5 → 1.5.2 (correcting prior discrepancy)
+- **Verification:** Release build via `build.sh`; `validate_release.sh` passed; GitHub release v1.5.2 created
+- **Status:** Complete
 
 **Security Model:** All audio stays in user space (process memory). The clipboard manager uses NSPasteboard, which is protected by macOS's security model. No privileged daemon or system framework call is required for dictation.
 
