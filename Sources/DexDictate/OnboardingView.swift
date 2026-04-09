@@ -16,7 +16,7 @@ struct OnboardingView: View {
                 if currentPage == 0 {
                     WelcomePage().transition(.opacity)
                 } else if currentPage == 1 {
-                    PermissionsPage(permissionManager: permissionManager).transition(.opacity)
+                    PermissionsPage(settings: settings, permissionManager: permissionManager).transition(.opacity)
                 } else if currentPage == 2 {
                     ShortcutPage(settings: settings).transition(.opacity)
                 } else if currentPage == 3 {
@@ -84,6 +84,7 @@ struct WelcomePage: View {
 struct PermissionsPage: View {
     // Track whether the user has clicked the grant button (so we can show Input Monitoring steps)
     @State private var accessibilityRequested = false
+    @ObservedObject var settings: AppSettings
     @ObservedObject var permissionManager: PermissionManager
     @StateObject private var microphoneHarness = MicrophoneValidationHarness()
     @State private var triggerValidationState: TriggerValidationState = .idle
