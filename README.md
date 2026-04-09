@@ -20,6 +20,10 @@ DexDictate is a local-first macOS menu-bar dictation app for Apple Silicon Macs.
 
 It matters because the usual tradeoff is irritatingly familiar: convenience on one side, privacy and control on the other. DexDictate is built around keeping that tradeoff narrower. Audio stays on your Mac, the app lives in the menu bar, and the repository includes the surrounding tooling needed to build, package, verify, and benchmark the product instead of pretending the app exists in a vacuum.
 
+<p align="center">
+  <img src="docs/images/readme/dexdictate-demo.gif" alt="Silent demo of DexDictate showing the menu-bar workflow and onboarding flow" width="960" />
+</p>
+
 ## Install
 
 ### Packaged release
@@ -56,8 +60,6 @@ INSTALL_DIR=/Applications ./build.sh
 ## Project status
 
 DexDictate is published as-is, but it is not a dead shell. The repository still contains a working app target, tests, verification paths, benchmark tooling, release packaging, and documentation. What it does not promise is an active roadmap or guaranteed review cadence.
-
-No demo reel is embedded here for now. If the page actually needs one later, it can earn its spot.
 
 ## Highlights
 
@@ -186,8 +188,6 @@ Repository trust signals:
 ## Additional Documentation
 
 - [Feature inventory](docs/FEATURE_INVENTORY.md)
-- [Help content draft](docs/help/HELP_CONTENT.md)
-- [Help asset shot list](docs/help/HELP_ASSETS.md)
 - [Contributing guidance](CONTRIBUTING.md)
 
 ## Contributing
