@@ -15,6 +15,12 @@ struct ControlsView: View {
     @State private var isCorrectionSheetPresented = false
     @State private var correctionDraft = VocabularyCorrectionDraft()
 
+    // MARK: - Hover States
+    @State private var isStartHovered = false
+    @State private var isStopHovered = false
+    @State private var isImportHovered = false
+    @State private var isQuitHovered = false
+
     // MARK: - Derived
 
     /// Colour that reflects the current engine state.
@@ -28,28 +34,95 @@ struct ControlsView: View {
         }
     }
 
+    // MARK: - Sub-views
+
+    private var startDictationButton: some View {
+        Button(action: startDictation) {
+            HStack {
+                Image(systemName: "mic.fill")
+                Text(NSLocalizedString("Start Dictation", comment: "Button: Start Dictation"))
+            }
+            .font(.headline)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(Color.green.opacity(isStartHovered ? 0.55 : 0.4))
+            .foregroundStyle(.white.opacity(isStartHovered ? 1.0 : 0.9))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.green.opacity(isStartHovered ? 0.45 : 0.3), lineWidth: 1))
+            .shadow(color: .green.opacity(isStartHovered ? 0.45 : 0.3), radius: isStartHovered ? 8 : 5)
+            .animation(.easeInOut(duration: 0.15), value: isStartHovered)
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in withAnimation(.easeInOut(duration: 0.15)) { isStartHovered = hovering } }
+        .accessibilityLabel("Start dictation system")
+    }
+
+    private var stopDictationButton: some View {
+        Button(action: stopDictation) {
+            HStack {
+                Image(systemName: "stop.fill")
+                Text(NSLocalizedString("Turn Off Dictation", comment: ""))
+            }
+            .font(.headline)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
+            .background(Color.red.opacity(isStopHovered ? 0.65 : 0.5))
+            .foregroundStyle(.white.opacity(isStopHovered ? 1.0 : 0.9))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.red.opacity(isStopHovered ? 0.4 : 0.0), lineWidth: 1))
+            .shadow(color: .red.opacity(isStopHovered ? 0.45 : 0.3), radius: isStopHovered ? 8 : 5)
+            .animation(.easeInOut(duration: 0.15), value: isStopHovered)
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in withAnimation(.easeInOut(duration: 0.15)) { isStopHovered = hovering } }
+        .accessibilityLabel("Turn off dictation system")
+    }
+
+    private var importFileButton: some View {
+        Button(action: importAudioFile) {
+            HStack(spacing: 6) {
+                Image(systemName: "doc.badge.plus")
+                Text(NSLocalizedString("Transcribe File...", comment: "Button: Import audio file"))
+            }
+            .font(.subheadline)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .background(Color.cyan.opacity(isImportHovered ? 0.25 : 0.15))
+            .foregroundStyle(Color.cyan.opacity(isImportHovered ? 1.0 : 0.9))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.cyan.opacity(isImportHovered ? 0.45 : 0.3), lineWidth: 1))
+            .animation(.easeInOut(duration: 0.15), value: isImportHovered)
+        }
+        .buttonStyle(.plain)
+        .disabled(engine.state != .ready)
+        .onHover { hovering in withAnimation(.easeInOut(duration: 0.15)) { isImportHovered = hovering } }
+        .accessibilityLabel("Import audio file for transcription")
+    }
+
+    private var quitButton: some View {
+        Button(action: quitApp) {
+            Text(NSLocalizedString("Quit App", comment: ""))
+                .font(.subheadline).fontWeight(.medium)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(Color.black.opacity(isQuitHovered ? 0.55 : 0.4))
+                .foregroundStyle(.white.opacity(isQuitHovered ? 1.0 : 0.8))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(isQuitHovered ? 0.3 : 0.2), lineWidth: 1))
+                .animation(.easeInOut(duration: 0.15), value: isQuitHovered)
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in withAnimation(.easeInOut(duration: 0.15)) { isQuitHovered = hovering } }
+        .accessibilityLabel("Quit DexDictate")
+    }
+
     // MARK: - Body
 
     var body: some View {
         VStack(spacing: 12) {
             if engine.state == .stopped {
                 // ── Stopped: offer to start the dictation system ──────────────
-                Button(action: startDictation) {
-                    HStack {
-                        Image(systemName: "mic.fill")
-                        Text(NSLocalizedString("Start Dictation", comment: "Button: Start Dictation"))
-                    }
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(Color.green.opacity(0.4))
-                    .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.green.opacity(0.3), lineWidth: 1))
-                    .shadow(color: .green.opacity(0.3), radius: 5)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Start dictation system")
+                startDictationButton
             } else {
                 // ── Running: status + shortcut hint + stop button ─────────────
 
@@ -134,54 +207,14 @@ struct ControlsView: View {
                         .multilineTextAlignment(.center)
                 }
 
-                Button(action: importAudioFile) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "doc.badge.plus")
-                        Text(NSLocalizedString("Transcribe File...", comment: "Button: Import audio file"))
-                    }
-                    .font(.subheadline)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
-                    .background(Color.cyan.opacity(0.15))
-                    .foregroundStyle(.cyan.opacity(0.9))
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.cyan.opacity(0.3), lineWidth: 1))
-                }
-                .buttonStyle(.plain)
-                .disabled(engine.state != .ready)
-                .accessibilityLabel("Import audio file for transcription")
+                importFileButton
 
                 // Stop the whole dictation system (returns to .stopped)
-                Button(action: stopDictation) {
-                    HStack {
-                        Image(systemName: "stop.fill")
-                        Text(NSLocalizedString("Turn Off Dictation", comment: ""))
-                    }
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .background(Color.red.opacity(0.5))
-                    .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .shadow(color: .red.opacity(0.3), radius: 5)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Turn off dictation system")
+                stopDictationButton
             }
 
             // ── Always visible: Quit ──────────────────────────────────────────
-            Button(action: quitApp) {
-                Text(NSLocalizedString("Quit App", comment: ""))
-                    .font(.subheadline).fontWeight(.medium)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
-                    .background(Color.black.opacity(0.4))
-                    .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.2), lineWidth: 1))
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Quit DexDictate")
+            quitButton
         }
         .padding(SurfaceTokens.cardPadding)
         .background(Color.white.opacity(0.05))

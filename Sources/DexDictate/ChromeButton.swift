@@ -22,7 +22,9 @@ struct ChromeIconButton: View {
         }
         .buttonStyle(.plain)
         .onHover { hovering in
-            isHovered = hovering
+            withAnimation(.easeInOut(duration: 0.15)) {
+                isHovered = hovering
+            }
         }
         .accessibilityLabel(accessibilityText)
     }

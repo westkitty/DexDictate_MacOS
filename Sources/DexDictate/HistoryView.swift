@@ -9,6 +9,7 @@ import DexDictateKit
 struct HistoryView: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @ObservedObject var history: TranscriptionHistory
+    @State private var isHovered = false
     /// Shown as a placeholder when `history` is empty.
     let statusText: String
     /// Partial transcription while dictating.
@@ -148,13 +149,18 @@ struct HistoryView: View {
             .background(
                 reduceTransparency
                 ? AnyShapeStyle(Color.black.opacity(0.82))
-                : AnyShapeStyle(.ultraThinMaterial)
+                : isHovered
+                    ? AnyShapeStyle(.regularMaterial)
+                    : AnyShapeStyle(Color.white.opacity(0.06))
             )
+            .animation(.easeInOut(duration: 0.2), value: isHovered)
             .clipShape(RoundedRectangle(cornerRadius: SurfaceTokens.cornerRadius))
             .overlay(
                 RoundedRectangle(cornerRadius: SurfaceTokens.cornerRadius)
-                    .stroke(historyAccentColor.opacity(0.42), lineWidth: 1)
+                    .stroke(historyAccentColor.opacity(isHovered ? 0.42 : 0.18), lineWidth: 1)
+                    .animation(.easeInOut(duration: 0.2), value: isHovered)
             )
+            .onHover { isHovered = $0 }
         }
         .padding(.horizontal)
     }

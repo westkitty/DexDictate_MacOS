@@ -24,6 +24,8 @@ struct DexDictateApp: App {
     @StateObject private var hudController = FloatingHUDController()
     // History Controller
     @StateObject private var historyController = HistoryWindowController()
+    // Help Controller
+    @StateObject private var helpController = HelpWindowController()
 
     init() {
         Safety.setupDirectories()
@@ -44,6 +46,9 @@ struct DexDictateApp: App {
                 benchmarkResultsStore: benchmarkResultsStore,
                 onDetachHistory: {
                     historyController.show()
+                },
+                onOpenHelp: {
+                    helpController.show()
                 },
                 onRequestOnboardingDebug: {
                     appDelegate.presentOnboardingForDebug()
@@ -365,6 +370,7 @@ struct AntiGravityMainView: View {
     @State private var isDroppingFile: Bool = false
 
     var onDetachHistory: (() -> Void)?
+    var onOpenHelp: (() -> Void)?
     var onRequestOnboardingDebug: (() -> Void)?
 
     var body: some View {
@@ -409,11 +415,25 @@ struct AntiGravityMainView: View {
 
             ScrollView(.vertical, showsIndicators: true) {
                 VStack(spacing: 15) {
-                    // App title (logo is the large watermark behind the entire UI)
-                    Text("DexDictate")
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                        .padding(.top, 4)
+                    // App title with help button in top-right corner
+                    ZStack {
+                        Text("DexDictate")
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+
+                        HStack {
+                            Spacer()
+                            ChromeIconButton(
+                                systemName: "questionmark.circle",
+                                accessibilityText: "Open Help"
+                            ) {
+                                onOpenHelp?()
+                            }
+                            .padding(.trailing, 16)
+                        }
+                    }
+                    .padding(.top, 4)
 
                     if settings.showFlavorTicker {
                         FlavorTickerView(

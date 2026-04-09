@@ -599,3 +599,103 @@ This Bible is strictly additive. It may never delete prior recorded steps or dec
 **Security Model:** All audio stays in user space (process memory). The clipboard manager uses NSPasteboard, which is protected by macOS's security model. No privileged daemon or system framework call is required for dictation.
 
 **Testing Philosophy:** VerificationRunner is a standalone executable that can be run without the UI. It validates core services in isolation and is the canonical verification step before release.
+
+---
+
+## Help System (Added 2026-04-08)
+
+### Overview
+
+A native in-app Help / FAQ window was added. The system consists of:
+- `HelpWindowController` — NSWindow controller (mirrors `HistoryWindowController` pattern)
+- `HelpView` — SwiftUI `NavigationSplitView` with sidebar + content pane
+- A `?` button in the top-right of `AntiGravityMainView`'s header row
+- Two documentation files in `docs/help/`
+
+### Documentation Files
+
+| File | Purpose |
+|---|---|
+| `docs/help/HELP_CONTENT.md` | Full Help IA: 18 sections, draft user-facing copy, search aliases, screenshot placements, cross-links |
+| `docs/help/HELP_ASSETS.md` | Screenshot shot list: 17 captures, framing notes, annotation instructions, priority ratings |
+
+### Section List (18 sections, sidebar order)
+
+Welcome · Getting Started · Permissions · Trigger Setup · Recording & Audio · Transcription · Output & Pasting · Transcription History · Custom Vocabulary · Voice Commands · Profiles · Appearance & Menu Bar · Floating HUD · Safe Mode · Benchmarking & Models · Shortcuts & Siri · Diagnostics · About
+
+Each section has: draft copy, search aliases, screenshot references, related-section cross-links.
+
+### Screenshot Assets
+
+Captured screenshots should be stored as imagesets in:
+`Sources/DexDictateKit/Resources/Assets.xcassets/Help/`
+
+9 Required screenshots, 8 Recommended, 1 Optional. See `docs/help/HELP_ASSETS.md` for full shot list.
+
+### History Panel Hover Transparency (Added 2026-04-08)
+
+`HistoryView.swift` — added `@State private var isHovered = false` + `.onHover` modifier.
+
+**At rest:** Background is `Color.white.opacity(0.06)` — very glassy, lets the watermark show through.
+**On hover:** Background switches to `.regularMaterial` — noticeably darker/more elevated.
+**Border:** Stroke opacity animates `0.18` (rest) → `0.42` (hover) matching the accent color.
+**Animation:** `.easeInOut(duration: 0.2)` on both background and border.
+**Accessibility:** `reduceTransparency` env var preserves `Color.black.opacity(0.82)` in both states — transparency effect is suppressed entirely.
+
+### Help Window Implementation (Added 2026-04-08)
+
+**HelpWindowController** (`Sources/DexDictate/HelpWindowController.swift`)
+- `@MainActor class HelpWindowController: ObservableObject`
+- Same pattern as `HistoryWindowController`: lazy NSWindow, `isReleasedWhenClosed = false`, `makeKeyAndOrderFront` on repeated `show()` calls
+- Window: 720×540pt, min 520×400, `.titled .closable .resizable .miniaturizable`
+
+**HelpView** (`Sources/DexDictate/HelpView.swift`)
+- `NavigationSplitView` — sidebar (160–220pt) + detail ScrollView
+- Sidebar: `List(searchResults, selection: $selectedSection)` with search field at top
+- Search: plain-text filter against `HelpSection.matches()` (title + searchAliases)
+- Auto-selects first result when search text changes
+- Detail: `HelpContentView(section:onNavigate:)` — header icon+title, Divider, section body, Related links
+- Background: `LinearGradient` matching `FullHistoryView` (`black.opacity(0.88)` → `Color(0.11,0.12,0.16)`)
+
+**HelpSection enum** (18 cases, `CaseIterable, Identifiable, Hashable`)
+Cases: `welcome gettingStarted permissions triggerSetup recordingAudio transcription outputPasting history vocabulary voiceCommands profiles appearance floatingHUD safeMode benchmarking shortcuts diagnostics about`
+Each case has: `title`, `icon` (SF Symbol), `searchAliases: [String]`, `relatedSections: [HelpSection]`
+
+**Content helpers** (file-private): `helpBody()`, `helpHeading()`, `helpCallout()`, `helpWarning()`, `HelpRow` — reusable styled text blocks for all 18 section bodies.
+
+**Screenshot assets** will live in: `Sources/DexDictateKit/Resources/Assets.xcassets/Help/`
+
+### Help Button & App Wiring (Added 2026-04-08)
+
+**DexDictateApp.swift changes:**
+- Added `@StateObject private var helpController = HelpWindowController()` alongside hudController and historyController
+- Passed `onOpenHelp: { helpController.show() }` to `AntiGravityMainView`
+
+**AntiGravityMainView changes:**
+- Added `var onOpenHelp: (() -> Void)?` property
+- Replaced `Text("DexDictate")` header with a `ZStack`:
+  - `Text("DexDictate")` centered with `.frame(maxWidth: .infinity)`
+  - `ChromeIconButton(systemName: "questionmark.circle")` pinned to trailing edge via `HStack { Spacer(); button }.padding(.trailing, 16)`
+- The `?` button calls `onOpenHelp?()` on tap
+- All padding and layout preserved from the original `.padding(.top, 4)` wrapper
+
+### UI Tactile Polish — Hover States (Added 2026-04-08)
+
+**ChromeButton.swift**
+- Added `withAnimation(.easeInOut(duration: 0.15))` wrapper around `isHovered = hovering` in `.onHover`
+- Hover transitions for foreground opacity, background opacity, and border opacity are now smoothly animated instead of instant
+
+**ControlsView.swift** — four main button hover states
+- Added `@State` vars: `isStartHovered`, `isStopHovered`, `isImportHovered`, `isQuitHovered`
+- Extracted each button as a private computed property (`startDictationButton`, `stopDictationButton`, `importFileButton`, `quitButton`) to stay within Swift's type-checker complexity limit
+- **Start Dictation (green):** background `0.4→0.55` opacity, shadow radius `5→8`, border `0.3→0.45` opacity
+- **Turn Off Dictation (red):** background `0.5→0.65` opacity, adds visible border on hover, shadow radius `5→8`
+- **Transcribe File (cyan):** background `0.15→0.25` opacity, border `0.3→0.45` opacity, foreground fully opaque on hover
+- **Quit App:** background `0.4→0.55` opacity, text `0.8→1.0` opacity, border `0.2→0.3` opacity
+- All animations: `.easeInOut(duration: 0.15)`
+
+**HELP_CONTENT.md navigation path corrections (2026-04-08)**
+- "Quick Settings → Mode section" → "Quick Settings → Input section" for trigger/shortcut paths
+- "Quick Settings → Display" (non-existent section) → "Quick Settings → Mode" for Flavor Ticker, Stats, Persist History
+- "Quick Settings → Output → Custom Commands" → "Quick Settings → Input → Voice Commands → Manage Custom Commands"
+- "Quick Settings → System → Input Device" → "Quick Settings → Input → Input Device" (two occurrences)
