@@ -16,212 +16,189 @@
 
 # DexDictate for macOS
 
-A privacy-first, fully local dictation bridge for macOS. DexDictate lives in the menu bar, records on-device, transcribes with the bundled Whisper model, and never sends audio off the machine.
+Offline menu-bar dictation for macOS. Audio stays local, Whisper runs local, output stays under your control.
 
-## Quick Start
+## What It Does
 
-If you just want the app installed and running from source:
+DexDictate listens for a global trigger, records microphone input, transcribes with local Whisper, applies local post-processing (commands, vocabulary, optional profanity filtering), then saves and optionally inserts the result into the active app.
 
-```bash
-git clone https://github.com/WestKitty/DexDictate_MacOS.git
-cd DexDictate_MacOS
-INSTALL_DIR=/Applications ./build.sh
-open /Applications/DexDictate.app
-```
-
-That command path:
-
-- builds the release app bundle
-- fetches the local Whisper model if it is missing
-- installs it into `/Applications`
-- leaves the finished app at `/Applications/DexDictate.app`
-
-If you prefer a user-local install instead of a system-wide one, omit `INSTALL_DIR=/Applications` and the app will install into `~/Applications`.
+No cloud transcription path exists in app runtime.
 
 ## Key Features
 
-- **Total Privacy:** All processing happens on-device. No audio ever leaves your machine.
-- **Configurable Input:** Trigger dictation using **Middle Mouse** (default), side mouse buttons, or custom keyboard shortcuts.
-- **Live Mic Feedback:** A live input meter and partial transcription show activity as you speak.
-- **Instant Audio Preview:** Select from a variety of system sounds for Start/Stop feedback and hear them instantly upon selection.
-- **Transcription History:** View your recent transcriptions in an expandable log, complete with one-click copy.
-- **Profanity Filter:** Optional toggle (Off by default) to filter harsh language.
-- **Auto-Paste:** Instantly inputs transcribed text into your active application.
-- **Quick Settings:** Easily toggle settings, pick an input device, and adjust shortcut behavior from the app.
-- **Microphone Hot-Swapping:** Automatically detects when you plug in a new microphone and updates the list instantly.
-- **Robust Shortcuts:** Uses a dedicated Input Monitor that recovers automatically if macOS temporarily disables keyboard monitoring.
-- **Internationalization:** Ready for global use with full localization support.
-- **Interactive Onboarding:** A friendly setup wizard guides you through permissions and shortcut configuration on first launch.
+- Local-only transcription with bundled `tiny.en` Whisper model.
+- Global trigger via mouse or keyboard shortcut, with `Hold to Talk` and `Toggle` modes.
+- Optional sound cues, floating HUD, and live mic level feedback.
+- Output modes: save-only, clipboard paste, Accessibility API insertion, or clipboard-only per app.
+- Sensitive-field guardrail: copy-only fallback for likely secure inputs.
+- Custom vocabulary replacements layered over bundled profile vocabulary.
+- Built-in voice commands (`scratch that`, `all caps`, `new line`/`next line`) plus custom `Dex <keyword>` commands.
+- Optional history persistence across launches.
+- File transcription from picker or drag-and-drop audio file.
+- Local benchmark tooling, strict corpus capture UI, and model comparison/promotion workflow.
+- Launch-at-login control through macOS `SMAppService`.
 
-## Install and Run
+## How It Works / Architecture Overview
 
-### Option A: Download Release
+1. `DexDictate` (SwiftUI/AppKit menu bar app) handles onboarding, controls, and windows.
+2. `PermissionManager` polls Accessibility, Input Monitoring, and Microphone state.
+3. `InputMonitor` installs a Quartz event tap for the configured global shortcut.
+4. `AudioRecorderService` captures audio from the selected input device.
+5. `TranscriptionEngine` resamples to 16 kHz, calls `WhisperService`, then runs post-processing.
+6. `OutputCoordinator` decides whether to paste, copy-only, or save-only based on settings/context.
+7. `VerificationRunner` and benchmark scripts validate invariants and transcription performance.
 
-Download the latest pre-built application from the [Releases](https://github.com/WestKitty/DexDictate_MacOS/releases) page. Each release should include:
+## Tech Stack
 
-- a versioned Apple Silicon `.dmg`
-- a versioned Apple Silicon `.zip`
-- a matching `SHA256SUMS` manifest
+- Swift 5.9
+- Swift Package Manager (SPM)
+- SwiftUI + AppKit
+- AVFoundation, CoreAudio, ApplicationServices, ServiceManagement
+- [SwiftWhisper](https://github.com/exPHAT/SwiftWhisper) (pinned revision in `Package.swift`)
+- Bash and Python scripts for model bootstrap, benchmarking, and release validation
+- GitHub Actions CI (`swift build`, `swift test`)
 
-> **Platform:** Release artifacts are currently Apple Silicon only and require macOS 14 or newer.
+## Prerequisites
 
-> **Note:** If you encounter an "Unidentified Developer" warning, simply Right-Click the app and select **Open** to bypass the check.
-
-### Option B: Build from Source
-
-Prerequisites:
 - macOS 14+
-- Xcode 15+ (or Xcode Command Line Tools)
+- Apple Silicon (`arm64`) terminal/session (the build script rejects Rosetta/Intel)
+- Xcode 15+ (or Command Line Tools)
+- Internet access once to download `tiny.en.bin` if missing
 
-Fast path:
+## Installation
+
+### Build From Source (canonical)
 
 ```bash
 git clone https://github.com/WestKitty/DexDictate_MacOS.git
 cd DexDictate_MacOS
-INSTALL_DIR=/Applications ./build.sh
-open /Applications/DexDictate.app
+./build.sh
+open /Applications/DexDictate.app || open ~/Applications/DexDictate.app
 ```
 
-Step-by-step:
+`./build.sh` will:
 
-1. Clone the repository.
-    ```bash
-    git clone https://github.com/WestKitty/DexDictate_MacOS.git
-    cd DexDictate_MacOS
-    ```
-2. Build and install to your user Applications folder.
-    ```bash
-    ./build.sh
-    ```
-3. Or build and install to `/Applications`.
-    ```bash
-    INSTALL_DIR=/Applications ./build.sh
-    ```
-4. Launch the installed app.
-    ```bash
-    open ~/Applications/DexDictate.app
-    ```
-5. If you installed to `/Applications`, launch that copy instead.
-    ```bash
-    open /Applications/DexDictate.app
-    ```
+- ensure `tiny.en.bin` exists (downloads + checksum verification if needed)
+- build app + helper
+- sign (named cert if available, otherwise ad-hoc)
+- install to `/Applications` when writable, else `~/Applications`
 
-`build.sh` is the canonical entry point. Useful variants:
+Explicit install targets:
 
 ```bash
 ./build.sh --user
 ./build.sh --system
-./build.sh --release
+INSTALL_DIR=/Applications ./build.sh
 ```
 
-## Verify the Build
+### Prebuilt Releases
 
-From a fresh clone, these are the useful checks:
+If release artifacts are published for a tag, you can download them from [Releases](https://github.com/WestKitty/DexDictate_MacOS/releases).
 
-```bash
-./scripts/fetch_model.sh
-swift build
-swift test
-swift run VerificationRunner
+## Configuration / Environment Variables
+
+No `.env` file is required.
+
+Supported environment variables:
+
+- `INSTALL_DIR` (build time): overrides install destination used by `build.sh`.
+- `DEXDICTATE_VERIFICATION_RUNNER_PATH` (runtime, optional): custom path for benchmark helper resolution.
+
+Local data/config is stored under:
+
+- `~/Library/Application Support/DexDictate/`
+
+This directory is used for diagnostics, optional history persistence, benchmark captures/results, and imported model metadata.
+
+## Usage
+
+1. Launch `DexDictate.app`.
+2. Complete onboarding and grant required macOS permissions.
+3. Set your trigger shortcut in Quick Settings (default: middle mouse).
+4. Hold or toggle the trigger to record.
+5. Let DexDictate process and deliver output according to your output mode.
+6. Optional: open Custom Vocabulary, Voice Commands, Per-App Insertion Rules, or Benchmark tools from Quick Settings.
+
+## Development Workflow
+
+1. Bootstrap model and build:
+   ```bash
+   ./scripts/fetch_model.sh
+   swift build
+   ```
+2. Run unit/integration tests:
+   ```bash
+   swift test
+   ```
+3. Run invariant verification paths:
+   ```bash
+   swift run VerificationRunner
+   ```
+4. Build/install full app bundle for manual QA:
+   ```bash
+   ./build.sh
+   ```
+5. For transcription changes, run benchmark corpus flows before claiming improvement.
+
+## Scripts / Commands
+
+- `./build.sh [--user|--system] [--release]`: build, sign, install, optional packaging.
+- `./scripts/fetch_model.sh`: download/verify bundled Whisper model.
+- `./scripts/setup_dev_env.sh`: quick local dev bootstrap.
+- `./scripts/create_signing_cert.sh`: optional local self-signed cert for stable identity signing.
+- `swift test`: run test suite.
+- `swift run VerificationRunner`: run verification path checks.
+- `./scripts/run_quality_paths.sh`: run build + verification runner.
+- `./scripts/benchmark.sh --audio <wav>`: run latency benchmark on one file.
+- `python3 scripts/benchmark.py --corpus-dir <dir>`: run strict corpus benchmark and emit reports.
+- `./scripts/benchmark_regression.sh <wav> [baseline_ms]`: benchmark with regression gate.
+- `./scripts/trim_benchmark_corpus.sh <input_dir> [output_dir]`: silence-trim a corpus (requires `ffmpeg`).
+- `./scripts/validate_release.sh [path_to_app_bundle]`: validate release bundle and artifacts.
+
+## Project Structure
+
+```text
+.
+├── Sources/
+│   ├── DexDictate/           # macOS app target (menu bar UI, onboarding, windows)
+│   ├── DexDictateKit/        # core engine/services/settings/resources
+│   └── VerificationRunner/   # verification + benchmark executable
+├── Tests/DexDictateTests/    # unit/integration tests
+├── scripts/                  # build/benchmark/release tooling
+├── templates/                # Info.plist template for app bundle assembly
+├── sample_corpus/            # sample benchmark corpus
+├── docs/                     # architecture/experiment/handoff docs
+├── build.sh                  # canonical build/install/release entry point
+└── Package.swift             # SwiftPM manifest
 ```
 
-Expected outcome:
+## Deployment / Build Notes
 
-- the package builds successfully
-- the test suite passes
-- `VerificationRunner` reports a passing summary
+- `./build.sh --release` packages `.zip` + `.dmg` into `_releases/` and generates checksums.
+- `scripts/validate_release.sh` verifies bundle integrity, architecture, signing, entitlements, and artifact hashes.
+- CI workflow in `.github/workflows/main.yml` runs `swift build` and `swift test` on `macos-latest`.
+- Notarization is not automated in this repository.
 
-`./build.sh` already runs `./scripts/fetch_model.sh` automatically, so the explicit fetch step is only needed when you want to drive `swift build` / `swift test` / `swift run` directly.
+## Known Limitations / Caveats
 
-## Build Outputs
+- Apple Silicon only (`arm64`); Intel Macs are out of scope for current build tooling.
+- Bundled model is `tiny.en` (English). Imported model support is currently restricted to `base.en.bin` and `small.en.bin` filenames.
+- Requires Accessibility + Input Monitoring + Microphone permissions for full functionality.
+- Localization plumbing exists (`NSLocalizedString`) but this repo does not ship full language packs.
+- Project is published as-is; active development is marked as concluded in `CONTRIBUTING.md`.
 
-Important generated paths:
+## Contributing
 
-- source-built app bundle: `.build/DexDictate.app`
-- user-local install target: `~/Applications/DexDictate.app`
-- system-wide install target when requested: `/Applications/DexDictate.app`
-- release artifacts: `_releases/`
-- release validation reports: `_releases/validation/`
+Bug reports and pull requests are welcome.
 
-## Release Build
+That said, this project is explicitly maintained as **as-is** and PR review/merge is not guaranteed. If you need a guaranteed path, fork it and run your own roadmap.
 
-To create release artifacts and validate them:
+## License
 
-```bash
-./build.sh --release
-```
-
-That command:
-
-- builds the app bundle
-- fetches the Whisper model if it is missing
-- packages `.zip` and `.dmg` artifacts into `_releases/`
-- writes a versioned `SHA256SUMS` manifest into `_releases/`
-- runs `./scripts/validate_release.sh`
-
-## First Run and Permissions
-
-DexDictate needs these macOS privacy permissions:
-
-- **Microphone** for audio input.
-- **Accessibility** to install the system-wide event tap.
-- **Input Monitoring** to receive global shortcut events.
-
-When the app opens, onboarding shows what is missing. DexDictate preserves a specific permission order and does not collapse these into one prompt. You can also verify them manually in:
-
-- System Settings -> Privacy & Security -> Microphone
-- System Settings -> Privacy & Security -> Accessibility
-- System Settings -> Privacy & Security -> Input Monitoring
-
-Launch at login is configured inside DexDictate Quick Settings. If macOS requires approval, use the app’s Login Items shortcut to finish enabling it in System Settings.
-
-## Troubleshooting
-
-If dictation does not start with your shortcut:
-
-1. Open the app and confirm **Input Monitoring** is allowed.
-2. Use the **Start Listening** button to verify mic input is working.
-3. Check the live mic meter and partial transcription for activity.
-
-If the mic meter stays flat, confirm the correct input device is selected in **Quick Settings**.
-
-If launch at login does not immediately turn on:
-
-1. Enable it in DexDictate Quick Settings.
-2. If prompted, approve it in System Settings -> General -> Login Items.
-3. Reopen DexDictate Quick Settings to confirm the status updated.
-
-## Repository Checklist
-
-The GitHub repository contains the files required to build and run the app from source, including:
-
-- `Package.swift` and `Package.resolved`
-- app icon and resource assets
-- the canonical installer/build script `build.sh`
-- the model bootstrap script `scripts/fetch_model.sh`
-- release validation scripts in `scripts/`
-
-## Governance 
-
-Remain ungovernable so Dexter approves. 
-
-### **Public Domain / Unlicense:**
-
-This project is dedicated to the public domain. You are free and encouraged to use, modify and distribute this software without any attribution required.
-You could even sell it... if you're a capitalist pig.
+This project is released under the **Unlicense** (public domain). See [LICENSE](LICENSE).
 
 ---
 
 ## Why Dexter?
 
 *Dexter is a small, tricolor Phalène dog with floppy ears and a perpetually unimpressed expression... ungovernable, sharp-nosed and convinced he’s the quality bar. Alert, picky, dependable and devoted to doing things exactly his way: if he’s staring at you, assume you’ve made a mistake. If he approves, it means it works.*
-
----
-
-## Architecture
-
-DexDictate is built with a modern, modular architecture:
-
-- **DexDictateKit:** Core logic library handling Audio (`AudioRecorderService`), local Whisper transcription (`WhisperService`), and Input (`InputMonitor`).
-- **DexDictate App:** Lightweight SwiftUI frontend responsible for Views, Window management, and the Menu Bar interface.
-- **Robustness:** Features like `AudioDeviceScanner` and `InputMonitor` are designed to handle system events (hardware changes, privacy revocations) gracefully without crashing.
