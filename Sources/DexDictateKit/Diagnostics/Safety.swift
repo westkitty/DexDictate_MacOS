@@ -1,4 +1,3 @@
-import ServiceManagement
 import AppKit
 
 /// Filesystem and diagnostic utilities called at app startup.
