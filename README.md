@@ -1,21 +1,8 @@
 
-
- ## DexDictate (macOS)
-
+---
 [![DexDictate banner](docs/images/readme/banner.webp)](https://github.com/westkitty/DexDictate_MacOS)
 
-
-<p align="center">
-  Local, privacy-first voice dictation for macOS.
-</p>
-<p align="center">
-  No cloud. No telemetry. No nonsense.
-</p>
-
-<p align="center">
-  Dexter approves.<br>Barely.
-</p>
-
+---
 
 <div align="center">
 
@@ -30,7 +17,24 @@
 
 </div>
 
+<p align="center">
+Local, privacy-first voice dictation for macOS.
+</p>
+<p align="center">
+No cloud. No telemetry. No nonsense.
+</p>
+
 <div align="center"> <img src="assets/dexdictate-icon-standard-05.png" width="128" height="128" alt="DexDictate icon" /> </div>
+
+<p align="center">
+Dexter approves.</p> 
+<p align="center">
+Barely.</p>
+
+
+---
+
+<h2 align="center">DexDictate_MacOS</h2>
 
 ---
 
@@ -38,7 +42,9 @@
 
 DexDictate is a local-first macOS menu-bar dictation app for Apple Silicon Macs. It records from your microphone, transcribes on-device with Whisper, applies local post-processing such as voice commands and vocabulary correction, and then saves or inserts the result according to your output settings.
 
-This is not a cloud wrapper. It does not "phone home."
+This is not a cloud wrapper.
+
+It does not "phone home."
 
 ---
 
@@ -284,4 +290,11 @@ This passes.
 
 
 
-(Thanks to the Whisper team for developing such a useful tool.)
+
+---
+---
+---
+
+Thanks to the Whisper team for developing such a useful tool.
+
+---
