@@ -15,16 +15,16 @@
 
 </div>
 
-# DexDictate (macOS)
+<div align="center"> #DexDictate (macOS)
+
+<img src="assets/dexdictate-icon-standard-05.png" width="128" height="128" alt="DexDictate icon" />
 
 Local, privacy-first voice dictation for macOS.  
 No cloud. No telemetry. No nonsense.
 
-Dexter approves. Barely.
+Dexter approves. Barely.</div>
 
-<div align="center">
-  <img src="assets/dexdictate-icon-standard-05.png" width="128" height="128" alt="DexDictate icon" />
-</div>
+
 
 ---
 
