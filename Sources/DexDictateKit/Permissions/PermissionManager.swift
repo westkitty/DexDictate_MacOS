@@ -36,6 +36,10 @@ public class PermissionManager: ObservableObject {
     /// 2-second polling timer; retained here so it can be invalidated on `deinit`.
     private var timer: Timer?
 
+    /// Token returned by the block-based foreground-notification observer.
+    /// Stored so it can be unregistered in `deinit`.
+    private var foregroundObserver: NSObjectProtocol?
+
     /// Weak reference to the engine so the manager can trigger a monitor retry after
     /// accessibility is granted without creating a retain cycle.
     private weak var engine: TranscriptionEngine?
@@ -62,10 +66,27 @@ public class PermissionManager: ObservableObject {
     
     public init() {
         checkPermissions()
+        // Immediately re-check when the app comes to the foreground. This reduces the
+        // felt permission-grant latency from up to 2 seconds (polling interval) to near-zero
+        // in the common case where the user grants a permission in System Settings and
+        // immediately switches back to DexDictate.
+        //
+        // Uses block-based observation (not selector-based) so the observer token can be
+        // stored and explicitly unregistered in deinit without requiring NSObject inheritance.
+        foregroundObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.checkPermissions()
+        }
     }
 
     deinit {
         timer?.invalidate()
+        if let obs = foregroundObserver {
+            NotificationCenter.default.removeObserver(obs)
+        }
     }
     
     /// Starts the 2-second polling loop and stores a reference to the engine for recovery.

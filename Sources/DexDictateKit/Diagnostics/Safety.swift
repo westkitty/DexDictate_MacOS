@@ -117,14 +117,16 @@ public struct Safety {
 
     private static func appendLegacyLogLine(_ message: String, in directory: URL) {
         let logURL = directory.appendingPathComponent("debug.log")
-        let line = "\(Date()): \(message)\n"
+        // Sanitize embedded newlines so each log entry occupies exactly one line.
+        let sanitized = message.replacingOccurrences(of: "\n", with: " ↵ ")
+        let line = "\(Date()): \(sanitized)\n"
         guard let data = line.data(using: .utf8) else { return }
 
         if FileManager.default.fileExists(atPath: logURL.path) {
             if let handle = try? FileHandle(forWritingTo: logURL) {
+                defer { try? handle.close() }
                 handle.seekToEndOfFile()
                 handle.write(data)
-                try? handle.close()
             }
         } else {
             try? data.write(to: logURL, options: .atomic)

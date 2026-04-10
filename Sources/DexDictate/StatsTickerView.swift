@@ -15,8 +15,9 @@ struct StatsTickerView: View {
             return "\(words) word\(words == 1 ? "" : "s")"
         }
 
-        let earliest = items.last!.createdAt
-        let latest = items.first!.createdAt
+        guard let earliest = items.last?.createdAt, let latest = items.first?.createdAt else {
+            return "\(words) word\(words == 1 ? "" : "s")"
+        }
         let minutes = latest.timeIntervalSince(earliest) / 60
         let minuteCount = max(1, Int(minutes))
         let wordsPerMinute = minutes > 0 ? Int(Double(words) / minutes) : words
