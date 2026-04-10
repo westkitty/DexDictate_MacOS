@@ -16,11 +16,22 @@
 
 </div>
 
-# DexDictate for macOS
+# DexDictate (macOS)
+
+Local, privacy-first voice dictation for macOS.  
+No cloud. No telemetry. No nonsense.
+
+Dexter approves. Barely.
+
+---
+
+## What This Is
 
 DexDictate is a local-first macOS menu-bar dictation app for Apple Silicon Macs. It records from your microphone, transcribes on-device with Whisper, applies local post-processing such as voice commands and vocabulary correction, and then saves or inserts the result according to your output settings.
 
-Audio stays local. No cloud transcription path is used by the app runtime.
+This is not a cloud wrapper. It does not "phone home."
+
+---
 
 <p align="center">
   <img src="docs/images/readme/dexdictate-demo.gif" alt="Silent demo of DexDictate showing the menu-bar workflow and onboarding flow" width="960" />
@@ -68,13 +79,6 @@ Useful variants:
 INSTALL_DIR=/Applications ./build.sh
 ```
 
-## GIFs and Clips
-
-- [DexDictateDemo.mp4](assets/DexDictateDemo.mp4)
-- [DexDictate_shortcut__ready_tail_swipe.mp4](assets/DexDictate_shortcut__ready_tail_swipe.mp4)
-- [DexDictate_onboarding__welcome_giftbox_reveal.mp4](assets/DexDictate_onboarding__welcome_giftbox_reveal.mp4)
-- [DexDictate_completion__green_check.mp4](assets/DexDictate_completion__green_check.mp4)
-
 ## Requirements
 
 - macOS 14 or later
@@ -83,15 +87,20 @@ INSTALL_DIR=/Applications ./build.sh
 
 Intel Macs are not supported. The build script rejects x86_64 environments.
 
-## First Launch Permissions
+## First Launch (macOS Permissions)
 
-DexDictate needs:
+On first run, macOS will ask for:
 
 1. Microphone
 2. Accessibility
 3. Input Monitoring
 
-If these are not granted, dictation and insertion features will not work.
+Grant them.
+
+If you skip them, it won't work.  
+This is macOS, not a suggestion.
+
+---
 
 ## Full Feature List
 
@@ -105,7 +114,7 @@ If these are not granted, dictation and insertion features will not work.
 - Input device selection with system-default fallback
 - Live microphone level feedback
 - Silence timeout and utterance-end tuning controls
-- Floating HUD while recording/transcribing
+- Optional floating HUD while recording/transcribing
 - Optional sound cues
 
 ### Output and insertion controls
@@ -145,6 +154,30 @@ If these are not granted, dictation and insertion features will not work.
 - Release packaging for `.zip` and `.dmg`
 - Release validation for bundle integrity, architecture, signing, entitlements, and hashes
 - GitHub Actions CI for `swift build` and `swift test` on `main` pushes and pull requests
+
+---
+
+## Basic Usage
+
+1. Launch the app
+2. Trigger dictation via shortcut (default configured in-app)
+3. Speak
+4. Text appears where your cursor is
+
+That's the entire point.
+
+---
+
+## Security & Privacy
+
+- All audio is processed locally
+- No network calls for transcription
+- No analytics, tracking, or logging of user speech
+- No hidden services
+
+If something leaves your machine, it's because you explicitly added it.
+
+---
 
 ## Development Workflow
 
@@ -198,12 +231,40 @@ Useful commands:
 
 Issues and pull requests are welcome, but review and merge are not guaranteed. Keep changes specific, test-backed, and realistic about current project scope.
 
+---
+
+DexDictate is not trying to be everything.
+
+It is:
+
+- Local
+- Fast
+- Private
+- Minimal
+
+If you want cloud AI orchestration, this is the wrong tool.
+
+---
+
 ## License
 
+This repository is released under the Unlicense as public domain. You could use it in a mutual aid project, use it as a custom accessibility tool like I do or you could even sell it if you felt like embarrassing yourself in public.
+You can do whatever you want with it and you are encouraged to do so.
 Remain ungovernable so Dexter approves.
 
-This repository is released under the **Unlicense** (public domain). See [LICENSE](LICENSE).
+See [LICENSE](LICENSE).
+
+---
+
+## Final Note
+
+Dexter does not celebrate features.  
+Dexter tolerates correctness.
+
+This passes.
 
 ## Why Dexter?
 
 *Dexter is a small, tricolor Phalène dog with floppy ears and a perpetually unimpressed expression... ungovernable, sharp-nosed and convinced he is the quality bar. Alert, picky, dependable, and devoted to doing things exactly his way: if he is staring at you, assume you made a mistake. If he approves, it works.*
+
+(Thanks to the Whisper team for developing such a useful tool.)
