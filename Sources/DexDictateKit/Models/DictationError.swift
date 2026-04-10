@@ -2,13 +2,13 @@ import Foundation
 
 /// Structured errors for the dictation pipeline.
 /// DexDictate uses Whisper exclusively — speech recognition cases have been removed.
-enum DictationError: LocalizedError, Equatable {
+public enum DictationError: LocalizedError, Equatable {
     case microphoneAccessDenied
     case audioEngineSetupFailed(String)
     case inputDeviceError
     case unknown(String)
 
-    var errorDescription: String? {
+    public var errorDescription: String? {
         switch self {
         case .microphoneAccessDenied:
             return "Microphone access denied. Please enable it in System Settings."

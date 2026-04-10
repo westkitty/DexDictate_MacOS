@@ -23,6 +23,12 @@ final class AppSettingsRestoreDefaultsTests: XCTestCase {
         settings.localizationMode = .aussie
         settings.showFlavorTicker = false
         settings.animateFlavorTicker = false
+        settings.silverTongueEnabled = true
+        settings.silverTongueInstallPath = "/tmp/silvertongue"
+        settings.silverTongueNodePath = "/opt/homebrew/bin/node"
+        settings.silverTongueSelectedVoiceID = "en_US-lessac-medium"
+        settings.silverTongueSpeed = 1.35
+        settings.silverTongueAutoReadPreference = true
         settings.selectedMenuBarIconIdentifier = "Gemini_Generated_Image_9999b99999b99999.png"
         settings.selectedMenuBarEmoji = "🔥"
 
@@ -46,6 +52,12 @@ final class AppSettingsRestoreDefaultsTests: XCTestCase {
         XCTAssertEqual(settings.localizationMode, .standard)
         XCTAssertTrue(settings.showFlavorTicker)
         XCTAssertTrue(settings.animateFlavorTicker)
+        XCTAssertFalse(settings.silverTongueEnabled)
+        XCTAssertEqual(settings.silverTongueInstallPath, "")
+        XCTAssertEqual(settings.silverTongueNodePath, "")
+        XCTAssertEqual(settings.silverTongueSelectedVoiceID, "")
+        XCTAssertEqual(settings.silverTongueSpeed, 1.0)
+        XCTAssertFalse(settings.silverTongueAutoReadPreference)
         XCTAssertEqual(settings.selectedMenuBarIconIdentifier, "")
         XCTAssertEqual(settings.selectedMenuBarEmoji, "🐶")
         XCTAssertEqual(settings.userShortcut, .defaultMiddleMouse)

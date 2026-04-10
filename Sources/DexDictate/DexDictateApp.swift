@@ -26,6 +26,9 @@ struct DexDictateApp: App {
     @StateObject private var historyController = HistoryWindowController()
     // Help Controller
     @StateObject private var helpController = HelpWindowController()
+    // SilverTongue Extension
+    @StateObject private var silverTongueServiceManager = SilverTongueServiceManager.shared
+    @StateObject private var silverTongueWindowController = SilverTongueWindowController()
 
     init() {
         Safety.setupDirectories()
@@ -44,11 +47,20 @@ struct DexDictateApp: App {
                 modelCatalog: modelCatalog,
                 adaptiveBenchmarkController: adaptiveBenchmarkController,
                 benchmarkResultsStore: benchmarkResultsStore,
+                silverTongueServiceManager: silverTongueServiceManager,
                 onDetachHistory: {
                     historyController.show()
                 },
                 onOpenHelp: {
                     helpController.show()
+                },
+                onOpenSilverTongue: {
+                    silverTongueWindowController.show()
+                },
+                silverTongueEnabled: settings.silverTongueEnabled,
+                silverTongueReady: silverTongueServiceManager.isReady,
+                onReadBackHistoryItem: { text in
+                    silverTongueWindowController.showAndRead(text: text)
                 },
                 onRequestOnboardingDebug: {
                     appDelegate.presentOnboardingForDebug()
@@ -105,6 +117,11 @@ struct DexDictateApp: App {
                 // Configure HUD and History controllers (idempotent but guard anyway).
                 hudController.setup(engine: engine, profileManager: profileManager)
                 historyController.setup(engine: engine, vocabularyManager: engine.vocabularyManager)
+                silverTongueWindowController.setup(
+                    history: engine.history,
+                    settings: settings,
+                    serviceManager: silverTongueServiceManager
+                )
                 adaptiveBenchmarkController.start(engine: engine)
 
                 if settings.showFloatingHUD {
@@ -352,6 +369,50 @@ private struct MenuBarRecordingBadge: View {
     }
 }
 
+private struct SilverTongueLauncherButton: View {
+    let action: () -> Void
+    @State private var isHovered = false
+
+    private static let iconURL = Safety.resourceBundle.url(
+        forResource: "Assets.xcassets/silvertongue_launcher.imageset/dexdictate_speak",
+        withExtension: "png"
+    )
+    private static let iconImage = iconURL.flatMap(NSImage.init(contentsOf:))
+
+    var body: some View {
+        Button(action: action) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 7)
+                    .fill(Color.black.opacity(isHovered ? 0.96 : 0.9))
+
+                if let iconImage = Self.iconImage {
+                    Image(nsImage: iconImage)
+                        .resizable()
+                        .interpolation(.high)
+                        .scaledToFit()
+                        .padding(4.5)
+                } else {
+                    Image(systemName: "speaker.wave.2.fill")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white)
+                }
+            }
+            .frame(width: 28, height: 28)
+            .overlay(
+                RoundedRectangle(cornerRadius: 7)
+                    .stroke(Color.white.opacity(isHovered ? 1.0 : 0.9), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.15)) {
+                isHovered = hovering
+            }
+        }
+        .accessibilityLabel("Open SilverTongue")
+    }
+}
+
 // MARK: - Main View
 
 /// Root content view for the menu bar popover.
@@ -366,11 +427,16 @@ struct AntiGravityMainView: View {
     @ObservedObject var modelCatalog: WhisperModelCatalog
     @ObservedObject var adaptiveBenchmarkController: AdaptiveBenchmarkController
     @ObservedObject var benchmarkResultsStore: BenchmarkResultsStore
+    @ObservedObject var silverTongueServiceManager: SilverTongueServiceManager
     @State private var expandedHistory: Bool = false
     @State private var isDroppingFile: Bool = false
 
     var onDetachHistory: (() -> Void)?
     var onOpenHelp: (() -> Void)?
+    var onOpenSilverTongue: (() -> Void)?
+    var silverTongueEnabled: Bool = false
+    var silverTongueReady: Bool = false
+    var onReadBackHistoryItem: ((String) -> Void)?
     var onRequestOnboardingDebug: (() -> Void)?
 
     var body: some View {
@@ -415,23 +481,29 @@ struct AntiGravityMainView: View {
 
             ScrollView(.vertical, showsIndicators: true) {
                 VStack(spacing: 15) {
-                    // App title with help button in top-right corner
+                    // App title with SilverTongue launcher (top-left) and help (top-right).
                     ZStack {
                         Text("DexDictate")
                             .font(.headline)
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
 
-                        HStack {
+                        HStack(spacing: 8) {
+                            SilverTongueLauncherButton {
+                                onOpenSilverTongue?()
+                            }
+                            .help("Open SilverTongue")
+
                             Spacer()
+
                             ChromeIconButton(
                                 systemName: "questionmark.circle",
                                 accessibilityText: "Open Help"
                             ) {
                                 onOpenHelp?()
                             }
-                            .padding(.trailing, 16)
                         }
+                        .padding(.horizontal, 16)
                     }
                     .padding(.top, 4)
 
@@ -459,6 +531,9 @@ struct AntiGravityMainView: View {
                         isListening: engine.state == .listening || engine.state == .transcribing,
                         expanded: $expandedHistory,
                         onDetach: onDetachHistory,
+                        silverTongueEnabled: silverTongueEnabled,
+                        silverTongueReady: silverTongueReady,
+                        onReadBack: onReadBackHistoryItem,
                         silenceCountdown: engine.silenceCountdown
                     )
 
@@ -477,7 +552,9 @@ struct AntiGravityMainView: View {
                         menuBarIconController: menuBarIconController,
                         modelCatalog: modelCatalog,
                         adaptiveBenchmarkController: adaptiveBenchmarkController,
-                        benchmarkResultsStore: benchmarkResultsStore
+                        benchmarkResultsStore: benchmarkResultsStore,
+                        silverTongueServiceManager: silverTongueServiceManager,
+                        onOpenSilverTongue: onOpenSilverTongue
                     )
 
                     Spacer(minLength: 0)
@@ -567,6 +644,7 @@ struct CheckboxToggleStyle: ToggleStyle {
 }
 
 /// Handles early app-lifecycle callbacks.
+@MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         configureApplicationIcon()
@@ -580,6 +658,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
             AVCaptureDevice.requestAccess(for: .audio) { _ in }
         }
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        SilverTongueServiceManager.shared.shutdown()
     }
     
     private var onboardingWindow: NSWindow?

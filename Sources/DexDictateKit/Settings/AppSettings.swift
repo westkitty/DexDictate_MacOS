@@ -102,6 +102,24 @@ public class AppSettings: ObservableObject {
     /// Whether to show the floating dictation HUD.
     @AppStorage("showFloatingHUD") public var showFloatingHUD: Bool = false
 
+    /// Enables the non-invasive SilverTongue extension bridge.
+    @AppStorage("silverTongueEnabled_v1") public var silverTongueEnabled: Bool = false
+
+    /// Optional local path to the SilverTongue repository/install root.
+    @AppStorage("silverTongueInstallPath_v1") public var silverTongueInstallPath: String = ""
+
+    /// Optional explicit Node.js executable path for launching SilverTongue service.
+    @AppStorage("silverTongueNodePath_v1") public var silverTongueNodePath: String = ""
+
+    /// Persisted preferred SilverTongue voice identifier.
+    @AppStorage("silverTongueSelectedVoiceID_v1") public var silverTongueSelectedVoiceID: String = ""
+
+    /// Persisted SilverTongue synthesis speed.
+    @AppStorage("silverTongueSpeed_v1") public var silverTongueSpeed: Double = 1.0
+
+    /// Reserved for future auto-read behavior; stored only in V1.
+    @AppStorage("silverTongueAutoReadPreference_v1") public var silverTongueAutoReadPreference: Bool = false
+
     /// Controls how the primary menu bar item renders while idle.
     @AppStorage("menuBarDisplayMode_v1") public var menuBarDisplayMode: MenuBarDisplayMode = .micAndText
 
@@ -380,6 +398,12 @@ public class AppSettings: ObservableObject {
         playStopSound = false
         showVisualHUD = false
         showFloatingHUD = false
+        silverTongueEnabled = false
+        silverTongueInstallPath = ""
+        silverTongueNodePath = ""
+        silverTongueSelectedVoiceID = ""
+        silverTongueSpeed = 1.0
+        silverTongueAutoReadPreference = false
 
         selectedStartSound = .none
         selectedStopSound = .none

@@ -16,5 +16,17 @@ jobs:
       - name: Build
         run: swift build -v
 
+      - name: Lint
+        run: |
+          if command -v swiftlint &>/dev/null; then
+            swiftlint --strict
+          else
+            brew install swiftlint && swiftlint --strict
+          fi
+
+      - name: Fetch Whisper model
+        run: bash scripts/fetch_model.sh
+
       - name: Run tests
         run: swift test -v
+        # UI tests: not yet implemented. See DEXDICTATE_FIX_PLAN.md Issue 10.

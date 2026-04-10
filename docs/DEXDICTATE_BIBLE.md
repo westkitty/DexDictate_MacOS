@@ -4162,3 +4162,165 @@ Rationale:
   - Help window Welcome section now shows real screenshot
   - Version string correct in built app bundle
 - Next step: verify smiley-face screenshot renders correctly in Help window on next launch.
+
+### 18.99 Ledger Entry B-0049
+
+- Entry ID: B-0049
+- Timestamp: 2026-04-10 America/Detroit
+- Improvement ID(s): SilverTongue extension bridge V1 (modular, non-invasive, local-only)
+- Goal: implement a tightly scoped SilverTongue bridge for DexDictate with strict separation of concerns and fixed-port local loopback service usage.
+- Why now: DexDictate required read-back capability without invasive transcription-pipeline refactors.
+- Dependency context: consumes SilverTongue-side security and service prerequisites completed in the sibling repository.
+- Files changed:
+  - `Sources/DexDictate/SilverTongueClient.swift` (new)
+  - `Sources/DexDictate/SilverTongueServiceManager.swift` (new)
+  - `Sources/DexDictate/SilverTongueWindowController.swift` (new)
+  - `Sources/DexDictate/SilverTongueView.swift` (new)
+  - `Sources/DexDictate/DexDictateApp.swift`
+  - `Sources/DexDictate/HistoryView.swift`
+  - `Sources/DexDictate/QuickSettingsView.swift`
+  - `Sources/DexDictateKit/Settings/AppSettings.swift`
+  - `Tests/DexDictateTests/AppSettingsRestoreDefaultsTests.swift`
+- Risk assessment: Medium. New process lifecycle and local HTTP client surfaces were added, but changes were constrained to an extension seam.
+- Invariant check:
+  - dictation/transcription internals remain owned by `TranscriptionEngine` and are not reworked for TTS
+  - SilverTongue synthesis remains externalized to a dedicated extension layer
+  - service communications are loopback-only (`127.0.0.1:49152`)
+  - no dynamic port fallback and no idle-timeout shutdown were introduced in V1
+- What was attempted:
+  - implemented `SilverTongueServiceManager` for install/node resolution, child-process service launch, health polling, state publishing, and quit-time shutdown
+  - implemented a thin `SilverTongueClient` for `health`, `voices`, and `synthesize`
+  - implemented `SilverTongueWindowController` and `SilverTongueView` as a dedicated pop-out UX with read-last/replay, voice picker, speed, and playback controls
+  - added minimal host touchpoints:
+    - top-bar SilverTongue button
+    - history-row read-back button when enabled and ready
+    - Quick Settings SilverTongue section
+    - minimal SilverTongue settings persistence
+  - hardened post-implementation issues:
+    - made `AVAudioPlayerDelegate` callback thread-safe with explicit MainActor handoff
+    - improved external “Manage Voices” launch preflight and early failure surfacing
+- What succeeded:
+  - extension architecture compiles and integrates with existing DexDictate shell patterns
+  - new and existing tests pass
+  - service lifecycle and UI states are visible and reversible
+- What failed:
+  - no automated end-to-end UI smoke harness was added for the new window in this pass
+- What was rolled back:
+  - nothing was rolled back
+- Tests run:
+  - `swift build`
+  - `swift test` (71 tests, 0 failures)
+  - `swift test --filter AppSettingsRestoreDefaultsTests`
+  - SilverTongue sibling validation:
+    - `pnpm -C /Users/andrew/Projects/SilverTongue run build`
+    - `pnpm -C /Users/andrew/Projects/SilverTongue run test` (16 tests, 0 failures)
+    - live service checks on `127.0.0.1:49152` (`/health`, `/voices`, `/synthesize`)
+- Metrics captured:
+  - DexDictate XCTest summary: 71 tests, 0 failures
+  - SilverTongue Vitest summary: 16 tests, 0 failures
+- Regressions checked:
+  - DexDictate main app target still builds cleanly with extension files and UI hooks
+  - history/copy behavior remains intact; read-back action is additive and gated
+  - Quick Settings remains operational with added SilverTongue subsection
+- Deferred features (intentional):
+  - idle-timeout service shutdown
+  - auto-read callback integration into transcription completion
+  - dynamic port fallback/scanning
+  - embedded full native voice management
+  - deep `TranscriptionEngine` architecture surgery
+- Remaining risks:
+  - host-path and runtime availability on user machines still depends on correct Node/SilverTongue install resolution
+  - external Electron manage-voices flow is preflighted but not covered by automated UI tests
+- Next step: run manual UX smoke checks in-app (enable extension, open SilverTongue window, read last dictation, replay from history, launch manage voices) and then cut a reviewable commit sequence.
+
+### 19.00 Ledger Entry B-0050
+
+- Entry ID: B-0050
+- Timestamp: 2026-04-10 America/Detroit
+- Improvement ID(s): SilverTongue launcher discoverability and UI polish
+- Goal: align launcher placement and styling with request, and keep Speak Out Loud affordance generic in history rows.
+- Why now: runtime feedback indicated users could not locate SilverTongue entry points in current UI placement.
+- Files changed:
+  - `Sources/DexDictate/DexDictateApp.swift`
+  - `Sources/DexDictate/HistoryView.swift`
+  - `Sources/DexDictateKit/Resources/Assets.xcassets/silvertongue_launcher.imageset/Contents.json`
+  - `Sources/DexDictateKit/Resources/Assets.xcassets/silvertongue_launcher.imageset/dexdictate_speak.png`
+- Risk assessment: Low. Visual/layout-only launcher updates plus icon asset add; no service contract changes.
+- What was attempted:
+  - moved SilverTongue launcher to top-left position in the main popover header
+  - added custom launcher styling: black button body with white outline, transparent outside
+  - wired launcher icon to bundled `dexdictate_speak.png` asset with SF Symbol fallback
+  - switched history read-back icon to a generic filled speaker glyph (`speaker.wave.2.fill`)
+- What succeeded:
+  - full test suite passed after UI changes (`swift test`, 71 tests, 0 failures)
+  - icon resource confirmed in built bundle output
+- What failed:
+  - no automated visual snapshot test coverage exists for this header layout change
+- Regressions checked:
+  - build and tests pass with new resource packaging
+  - no changes to dictation engine, transcription flow, or SilverTongue service lifecycle
+- Next step: run app and visually confirm top-left launcher appearance in the menu-bar popover.
+
+### 19.01 Ledger Entry B-0051
+
+- Entry ID: B-0051
+- Timestamp: 2026-04-10 America/Detroit
+- Improvement ID(s): SilverTongue lifecycle binding on host app shutdown
+- Goal: ensure DexDictate termination also terminates externally launched SilverTongue Manage Voices window and local service process.
+- Why now: user explicitly required strict lifecycle coupling so SilverTongue does not outlive DexDictate.
+- Files changed:
+  - `Sources/DexDictate/SilverTongueServiceManager.swift`
+  - `Sources/DexDictate/DexDictateApp.swift`
+- Risk assessment: Low. Changes are isolated to extension-process lifecycle ownership.
+- What was attempted:
+  - added explicit tracking for external Manage Voices process in `SilverTongueServiceManager`
+  - added `stopManageVoices()` and `shutdown()` APIs
+  - updated manage-window launch path to open training-focused SilverTongue window (`--open-training`)
+  - switched fallback launch command to `pnpm run electron:start:training`
+  - changed app-termination hook from `stopService()` to `shutdown()` so both service and manage window are terminated on quit
+- What succeeded:
+  - host shutdown now covers all SilverTongue child processes launched by DexDictate
+  - full DexDictate test suite remains green
+- Tests run:
+  - `swift test` (71 tests, 0 failures)
+- Regressions checked:
+  - no changes to transcription engine internals
+  - no changes to core recording pipeline
+  - SilverTongue lifecycle control remains within extension seam
+- Next step: manual runtime smoke in DexDictate to verify that quitting DexDictate also closes active Manage Voices window.
+
+### 19.02 Ledger Entry B-0052
+
+- Entry ID: B-0052
+- Timestamp: 2026-04-10 America/Detroit
+- Improvement ID(s): hard shutdown guarantees for SilverTongue local service on app termination
+- Goal: ensure DexDictate quit reliably tears down SilverTongue loopback service even when process ownership state is stale or service was started from a relative CLI path.
+- Why now: runtime validation showed a persistent `node dist/src/cli/index.js service start --port 49152` process surviving app quit under specific launch shapes.
+- Files changed:
+  - `Sources/DexDictate/SilverTongueServiceManager.swift`
+  - `Sources/DexDictate/DexDictateApp.swift`
+- Risk assessment: Low-to-medium. Process cleanup logic is constrained to fixed loopback port and strict command matching.
+- What was attempted:
+  - added fallback stale-process termination in `stopService()` using fixed-port PID discovery (`lsof`) plus command verification (`ps`)
+  - tightened command filter to require:
+    - `dist/src/cli/index.js`
+    - `service`
+    - `start`
+    - `--port 49152`
+  - introduced shared singleton manager (`SilverTongueServiceManager.shared`) to keep lifecycle hooks stable independent of popover open state
+  - moved termination invocation to `AppDelegate.applicationWillTerminate` on main actor with direct synchronous shutdown call
+- What succeeded:
+  - external stale service process is now terminated when DexDictate quits in live validation
+  - no regressions in test suite
+- Tests run:
+  - `swift test` (71 tests, 0 failures)
+  - live runtime verification:
+    - started service manually: `node dist/src/cli/index.js service start --port 49152`
+    - launched `/Applications/DexDictate.app`
+    - quit DexDictate via AppleScript
+    - confirmed service PID no longer present
+- Regressions checked:
+  - extension remains loopback-only (`127.0.0.1` fixed port)
+  - no transcription pipeline modifications
+  - no changes to recording/audio capture internals
+- Next step: manual UX confirmation that Manage Voices child process also terminates with host app across normal user quit flows.

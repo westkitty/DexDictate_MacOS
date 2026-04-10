@@ -109,7 +109,17 @@ Decision rule:
   `Score = 0.55*Accuracy + 0.30*Latency + 0.15*Punctuation`
 
 ## Series 3: Silence/VAD Threshold Sweep
-Threshold sets:
+
+**Current shipping state (as of 2026-04-10):** Leading silence trim is **disabled**.
+- `ExperimentFlags.enableSilenceTrim = false` (see `Sources/DexDictateKit/ExperimentFlags.swift`)
+- Reason: The adaptive noise-floor estimator samples the first ~500ms of audio. In
+  hold-to-talk mode this window is speech, not silence, which inflates the threshold
+  and clips sentence onsets.
+- Prerequisite to re-enable: Redesign with a pre-trigger calibration window (captured
+  before the hotkey press) so the estimator has genuine ambient noise to measure against.
+- Trailing silence trim (`enableTrailingTrim`) remains opt-in and is separately gated.
+
+Threshold sets to test once the calibration window redesign is complete:
 - S3A Conservative trim
 - S3B Medium trim
 - S3C Aggressive trim
