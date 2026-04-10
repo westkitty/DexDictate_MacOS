@@ -68,15 +68,7 @@ Useful variants:
 INSTALL_DIR=/Applications ./build.sh
 ```
 
-## Screenshots, GIFs, and Clips
-
-| Main popover | Trigger setup |
-| --- | --- |
-| ![Main popover](docs/images/readme/help-welcome-overview.png) | ![Trigger settings](docs/images/readme/help-trigger-settings.png) |
-| History window | Output controls |
-| ![History window](docs/images/readme/help-history-window.png) | ![Output settings](docs/images/readme/help-output-settings.png) |
-
-Additional repo-local clips:
+## GIFs and Clips
 
 - [DexDictateDemo.mp4](assets/DexDictateDemo.mp4)
 - [DexDictate_shortcut__ready_tail_swipe.mp4](assets/DexDictate_shortcut__ready_tail_swipe.mp4)
