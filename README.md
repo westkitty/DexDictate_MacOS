@@ -11,6 +11,7 @@
 ![Arch](https://img.shields.io/badge/Arch-Apple%20Silicon-orange.svg)
 ![Swift](https://img.shields.io/badge/Swift-5.x-orange.svg)
 ![Release](https://img.shields.io/github/v/release/westkitty/DexDictate_MacOS)
+
 [![Sponsor](https://img.shields.io/badge/Sponsor-pink?style=flat-square&logo=github-sponsors)](https://github.com/sponsors/westkitty)
 [![Ko-Fi](https://img.shields.io/badge/Ko--fi-Support%20My%20Work-FF5E5B?style=flat-square&logo=ko-fi&logoColor=white)](https://ko-fi.com/westkitty)
 
@@ -175,7 +176,7 @@ That's the entire point.
 - No analytics, tracking, or logging of user speech
 - No hidden services
 
-If something leaves your machine, it's because you explicitly added it.
+If something leaves your machine it's because you explicitly added it.
 
 ---
 
@@ -229,7 +230,7 @@ Useful commands:
 
 ## Contributing
 
-Issues and pull requests are welcome, but review and merge are not guaranteed. Keep changes specific, test-backed, and realistic about current project scope.
+Issues and pull requests are welcome, but review and merge are not guaranteed. Keep changes specific, test-backed and realistic about current project scope.
 
 ---
 
@@ -242,14 +243,18 @@ It is:
 - Private
 - Minimal
 
-If you want cloud AI orchestration, this is the wrong tool.
+If you want cloud AI orchestration this is the wrong tool.
 
 ---
 
 ## License
 
-This repository is released under the Unlicense as public domain. You could use it in a mutual aid project, use it as a custom accessibility tool like I do or you could even sell it if you felt like embarrassing yourself in public.
+This repository is released under the Unlicense as public domain.
+You could use it in a mutual aid project.
+You could use it as a custom accessibility tool like I do.
+Or you could even sell it if you felt like embarrassing yourself in public.
 You can do whatever you want with it and you are encouraged to do so.
+
 Remain ungovernable so Dexter approves.
 
 See [LICENSE](LICENSE).
@@ -266,5 +271,9 @@ This passes.
 ## Why Dexter?
 
 *Dexter is a small, tricolor Phalène dog with floppy ears and a perpetually unimpressed expression... ungovernable, sharp-nosed and convinced he is the quality bar. Alert, picky, dependable, and devoted to doing things exactly his way: if he is staring at you, assume you made a mistake. If he approves, it works.*
+
+
+
+
 
 (Thanks to the Whisper team for developing such a useful tool.)
