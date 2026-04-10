@@ -1,8 +1,6 @@
 [![DexDictate banner](docs/images/readme/banner.webp)](https://github.com/westkitty/DexDictate_MacOS)
 
-<div align="center">
-  <img src="assets/dexdictate-icon-standard-05.png" width="128" height="128" alt="DexDictate icon" />
-</div>
+
 
 <div align="center">
 
@@ -23,6 +21,10 @@ Local, privacy-first voice dictation for macOS.
 No cloud. No telemetry. No nonsense.
 
 Dexter approves. Barely.
+
+<div align="center">
+  <img src="assets/dexdictate-icon-standard-05.png" width="128" height="128" alt="DexDictate icon" />
+</div>
 
 ---
 
