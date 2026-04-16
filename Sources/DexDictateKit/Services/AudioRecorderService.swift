@@ -185,9 +185,47 @@ public final class AudioRecorderService: ObservableObject {
 
         capturedSampleRate = finalFormat.sampleRate
 
-        // ── Step 6: Start ──────────────────────────────────────────────────────────
+        // ── Step 6: Start — with automatic fallback to system default ──────────────
+        //
+        // engine.start() can fail with kAudioOutputUnitErr_InvalidDevice (-10868) even
+        // after a successful prepare() when a specific device UID is in use that:
+        //   • exists in CoreAudio's device list (so deviceID(forUID:) returned non-nil), BUT
+        //   • cannot actually open an input stream right now (AirPods mic suspended by
+        //     another app, USB mic in degraded power state, Bluetooth SCO hand-off, etc.).
+        //
+        // When this happens with a specific device selected, we tear down, reset, and
+        // restart WITHOUT calling applyInputDevice — falling back to the system default
+        // input device.  If the fallback also fails, the error propagates normally.
         Safety.log("startRecordingInternal() — calling engine.start()")
-        try engine.start()
+        do {
+            try engine.start()
+        } catch where !inputDeviceUID.isEmpty {
+            // Preferred device failed to start — retry with system default.
+            Safety.log("startRecordingInternal() — engine.start() failed for preferred device (\(inputDeviceUID)); falling back to system default input device")
+            teardownEngineUnsafe()
+            engine.reset()
+            // No applyInputDevice — system default is used by omission.
+            let fallbackNode = engine.inputNode
+            bufferQueue.sync { _accumulatedSamples = [] }
+            fallbackNode.removeTap(onBus: 0)
+            fallbackNode.installTap(onBus: 0, bufferSize: 4096, format: nil) { [weak self] buffer, _ in
+                self?.processAudioBuffer(buffer)
+            }
+            engine.prepare()
+            let fallbackFormat = fallbackNode.outputFormat(forBus: 0)
+            Safety.log("startRecordingInternal() — fallback format: \(fallbackFormat.sampleRate) Hz, \(fallbackFormat.channelCount) ch")
+            guard fallbackFormat.sampleRate > 0, fallbackFormat.channelCount > 0 else {
+                fallbackNode.removeTap(onBus: 0)
+                throw NSError(
+                    domain: "AudioRecorderService",
+                    code: 1,
+                    userInfo: [NSLocalizedDescriptionKey:
+                        "Neither the selected microphone nor the system default input device is available."]
+                )
+            }
+            capturedSampleRate = fallbackFormat.sampleRate
+            try engine.start()  // if system default also fails, the error propagates
+        }
         Safety.log("startRecordingInternal() — engine.start() succeeded; capturedSampleRate=\(capturedSampleRate)")
     }
 

@@ -22,6 +22,16 @@ public enum AudioDeviceManager {
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
+    /// Returns the CoreAudio `AudioDeviceID` for a device with the given UID, **only
+    /// if that device has at least one input channel in the input scope**.
+    ///
+    /// Searching `kAudioHardwarePropertyDevices` enumerates all CoreAudio devices —
+    /// both input-capable and output-only.  Passing an output-only device ID to
+    /// `AudioUnitSetProperty(kAudioOutputUnitProperty_CurrentDevice, ...)` succeeds
+    /// silently but causes `AVAudioEngine.start()` to fail with
+    /// `kAudioOutputUnitErr_InvalidDevice` (-10868) because the AUHAL cannot open an
+    /// input stream on a device that has no input channels.  This guard prevents that
+    /// by only returning device IDs for devices that report ≥ 1 input channel.
     static func deviceID(forUID uid: String) -> AudioDeviceID? {
         var address = AudioObjectPropertyAddress(
             mSelector: kAudioHardwarePropertyDevices,
@@ -60,10 +70,42 @@ public enum AudioDeviceManager {
             if uidStatus == noErr,
                let deviceUID = unmanagedUID?.takeRetainedValue() as String?,
                deviceUID == uid {
+                // Found a UID match — verify the device actually has input channels
+                // before returning it.  Output-only devices cause engine.start() to
+                // fail with kAudioOutputUnitErr_InvalidDevice (-10868).
+                guard Self.hasInputChannels(deviceID: deviceID) else {
+                    return nil
+                }
                 return deviceID
             }
         }
 
         return nil
+    }
+
+    /// Returns `true` if the CoreAudio device with `deviceID` reports at least one
+    /// channel in `kAudioObjectPropertyScopeInput`.
+    private static func hasInputChannels(deviceID: AudioDeviceID) -> Bool {
+        var streamAddress = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyStreamConfiguration,
+            mScope: kAudioObjectPropertyScopeInput,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var dataSize: UInt32 = 0
+        let sizeStatus = AudioObjectGetPropertyDataSize(deviceID, &streamAddress, 0, nil, &dataSize)
+        guard sizeStatus == noErr, dataSize > 0 else { return false }
+
+        let bufferList = UnsafeMutablePointer<AudioBufferList>.allocate(capacity: Int(dataSize))
+        defer { bufferList.deallocate() }
+        let dataStatus = AudioObjectGetPropertyData(deviceID, &streamAddress, 0, nil, &dataSize, bufferList)
+        guard dataStatus == noErr else { return false }
+
+        // AudioBufferList.mBuffers is a C flexible array member; use withUnsafePointer
+        // to obtain a valid, scoped pointer to the first element before iterating.
+        let count = Int(bufferList.pointee.mNumberBuffers)
+        return withUnsafePointer(to: &bufferList.pointee.mBuffers) { firstBuffer in
+            UnsafeBufferPointer(start: firstBuffer, count: count)
+                .contains { $0.mNumberChannels > 0 }
+        }
     }
 }
