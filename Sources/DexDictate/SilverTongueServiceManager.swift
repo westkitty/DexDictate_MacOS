@@ -44,14 +44,21 @@ final class SilverTongueServiceManager: ObservableObject {
         if case .ready = state { return }
         if case .starting = state { return }
 
+        // If a service is already running on this port (e.g. started by WestCat Overlay),
+        // adopt it directly rather than treating the occupied port as an error.
+        if await client.health() {
+            state = .ready
+            return
+        }
+
         guard Self.isPortAvailable(port) else {
-            state = .error("SilverTongue fixed port \(port) is already in use.")
+            state = .error("SilverTongue port \(port) is in use but not responding to health checks.")
             return
         }
 
         do {
             state = .starting
-            try launchServiceProcess()
+            try await launchServiceProcess()
             let ready = await waitUntilHealthy(maxAttempts: 40, delayNanoseconds: 250_000_000)
             guard ready else {
                 let suffix = latestServiceErrorSuffix()
@@ -137,9 +144,31 @@ final class SilverTongueServiceManager: ObservableObject {
         self.manageVoicesProcess = process
     }
 
-    private func launchServiceProcess() throws {
+    // MARK: - Service process lifecycle
+
+    /// Launches the SilverTongue Node.js service.
+    ///
+    /// Made `async` so that the `which node` subprocess — a `Process.waitUntilExit()` call
+    /// that can block for milliseconds to seconds — runs on a background thread via
+    /// `Task.detached` instead of occupying the @MainActor thread.  Blocking the main actor
+    /// prevents `Task { @MainActor in ... }` callbacks (including the Whisper transcription
+    /// completion callback) from executing, causing "stuck at Processing…" in the menu bar.
+    private func launchServiceProcess() async throws {
         let (installURL, serviceEntryURL) = try resolveServiceEntrypoint()
-        let nodeURL = try resolveNodeExecutable()
+
+        // Snapshot @MainActor-isolated settings before crossing to the background thread.
+        let configuredNodePath = settings.silverTongueNodePath
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let envNodePath = ProcessInfo.processInfo.environment["DEXDICTATE_NODE_PATH"]
+
+        // Resolve the node executable on a background thread.  `which node` is fast in
+        // practice but can block on slow or network-backed PATH entries.
+        let nodeURL: URL = try await Task.detached(priority: .userInitiated) {
+            try SilverTongueServiceManager.resolveNodeExecutableStatic(
+                configuredNodePath: configuredNodePath,
+                envNodePath: envNodePath
+            )
+        }.value
 
         cleanupProcess(resetStderr: true)
         expectedTermination = false
@@ -239,6 +268,8 @@ final class SilverTongueServiceManager: ObservableObject {
         return " \(singleLine)"
     }
 
+    // MARK: - Path resolution
+
     private func resolveServiceEntrypoint() throws -> (URL, URL) {
         let installURL = try resolveInstallDirectory()
         let serviceEntryURL = installURL.appendingPathComponent("dist/src/cli/index.js")
@@ -285,19 +316,36 @@ final class SilverTongueServiceManager: ObservableObject {
         )
     }
 
-    private func resolveNodeExecutable() throws -> URL {
-        if let configuredNode = configuredNodeURL() {
-            guard FileManager.default.isExecutableFile(atPath: configuredNode.path) else {
+    /// Resolves the node executable path.  Accepts pre-read settings values so it can
+    /// be called from a `static` (nonisolated) context without touching @MainActor state.
+    private nonisolated static func resolveNodeExecutableStatic(
+        configuredNodePath: String,
+        envNodePath: String?
+    ) throws -> URL {
+        // 1. Explicit user-configured path.
+        if !configuredNodePath.isEmpty {
+            let url = URL(fileURLWithPath: (configuredNodePath as NSString).expandingTildeInPath)
+            guard FileManager.default.isExecutableFile(atPath: url.path) else {
                 throw NSError(
                     domain: "SilverTongueServiceManager",
                     code: 4,
                     userInfo: [NSLocalizedDescriptionKey:
-                        "Configured Node path is not executable: \(configuredNode.path)"]
+                        "Configured Node path is not executable: \(url.path)"]
                 )
             }
-            return configuredNode
+            return url
         }
 
+        // 2. Environment-variable override.
+        if let envRaw = envNodePath,
+           !envRaw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            let url = URL(fileURLWithPath: (envRaw as NSString).expandingTildeInPath)
+            if FileManager.default.isExecutableFile(atPath: url.path) {
+                return url
+            }
+        }
+
+        // 3. Well-known installation paths (no subprocess needed — fast).
         let commonNodePaths = [
             "/opt/homebrew/bin/node",
             "/usr/local/bin/node",
@@ -309,7 +357,10 @@ final class SilverTongueServiceManager: ObservableObject {
             }
         }
 
-        if let discovered = resolveNodeViaPATH() {
+        // 4. Last resort: `which node`.  This is a subprocess call and can block,
+        //    which is why this method is `static` — callers must dispatch it to a
+        //    background thread (see launchServiceProcess).
+        if let discovered = resolveExecutableViaPATH("node") {
             return discovered
         }
 
@@ -321,11 +372,11 @@ final class SilverTongueServiceManager: ObservableObject {
         )
     }
 
-    private func resolveNodeViaPATH() -> URL? {
-        resolveExecutableViaPATH("node")
-    }
-
-    private func resolveExecutableViaPATH(_ name: String) -> URL? {
+    /// Runs `which <name>` to find an executable on PATH.
+    ///
+    /// This is `static` (nonisolated) and intentionally calls `waitUntilExit()`.
+    /// It must only be called from a background thread — never from the @MainActor.
+    private nonisolated static func resolveExecutableViaPATH(_ name: String) -> URL? {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/which")
         process.arguments = [name]
@@ -368,20 +419,6 @@ final class SilverTongueServiceManager: ObservableObject {
         return URL(fileURLWithPath: (raw as NSString).expandingTildeInPath)
     }
 
-    private func configuredNodeURL() -> URL? {
-        let raw = settings.silverTongueNodePath.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !raw.isEmpty {
-            return URL(fileURLWithPath: (raw as NSString).expandingTildeInPath)
-        }
-
-        if let envRaw = ProcessInfo.processInfo.environment["DEXDICTATE_NODE_PATH"],
-           !envRaw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return URL(fileURLWithPath: (envRaw as NSString).expandingTildeInPath)
-        }
-
-        return nil
-    }
-
     private func fallbackInstallURLs() -> [URL] {
         let fileManager = FileManager.default
         let cwd = URL(fileURLWithPath: fileManager.currentDirectoryPath)
@@ -405,26 +442,40 @@ final class SilverTongueServiceManager: ObservableObject {
         return FileManager.default.fileExists(atPath: packageJSON.path)
     }
 
-    private func terminateStaleServiceOnFixedPort() {
-        let pids = pidsListening(on: Int(port))
-        guard !pids.isEmpty else { return }
+    // MARK: - Stale process cleanup
 
-        for pid in pids {
-            guard let command = processCommand(pid: pid) else { continue }
-            let normalized = command.lowercased()
-            guard
-                normalized.contains("dist/src/cli/index.js"),
-                normalized.contains("service"),
-                normalized.contains("start"),
-                normalized.contains("--port \(port)")
-            else {
-                continue
+    /// Sends SIGTERM to any SilverTongue service process that DexDictate previously started
+    /// and that may have outlived its managed `serviceProcess` reference.
+    ///
+    /// Runs entirely on a background thread via `Task.detached` because both `lsof` and
+    /// `ps` call `Process.waitUntilExit()`, which can block for 1–10+ seconds on a loaded
+    /// macOS system or hang indefinitely when network file systems are mounted.  Running
+    /// them on the @MainActor thread would prevent `Task { @MainActor in ... }` callbacks
+    /// — including the Whisper transcription completion callback — from executing.
+    private func terminateStaleServiceOnFixedPort() {
+        let port = self.port
+        Task.detached(priority: .utility) {
+            let pids = SilverTongueServiceManager.pidsListening(on: Int(port))
+            for pid in pids {
+                guard let command = SilverTongueServiceManager.processCommand(pid: pid) else { continue }
+                let normalized = command.lowercased()
+                guard
+                    normalized.contains("dist/src/cli/index.js"),
+                    normalized.contains("service"),
+                    normalized.contains("start"),
+                    normalized.contains("--port \(port)")
+                else {
+                    continue
+                }
+                _ = Darwin.kill(pid_t(pid), SIGTERM)
             }
-            _ = Darwin.kill(pid_t(pid), SIGTERM)
         }
     }
 
-    private func pidsListening(on port: Int) -> [Int32] {
+    /// Returns PIDs of processes listening on `port` by running `/usr/sbin/lsof`.
+    ///
+    /// `static` (nonisolated) — must only be called from a background thread.
+    private nonisolated static func pidsListening(on port: Int) -> [Int32] {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/sbin/lsof")
         process.arguments = ["-nP", "-iTCP:\(port)", "-sTCP:LISTEN", "-t"]
@@ -454,7 +505,10 @@ final class SilverTongueServiceManager: ObservableObject {
             .compactMap { Int32($0.trimmingCharacters(in: .whitespacesAndNewlines)) }
     }
 
-    private func processCommand(pid: Int32) -> String? {
+    /// Returns the full command string for a PID by running `/bin/ps`.
+    ///
+    /// `static` (nonisolated) — must only be called from a background thread.
+    private nonisolated static func processCommand(pid: Int32) -> String? {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/ps")
         process.arguments = ["-p", String(pid), "-o", "command="]
@@ -475,7 +529,9 @@ final class SilverTongueServiceManager: ObservableObject {
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private static func isPortAvailable(_ port: UInt16) -> Bool {
+    // MARK: - Port utilities
+
+    private nonisolated static func isPortAvailable(_ port: UInt16) -> Bool {
         let fd = socket(AF_INET, SOCK_STREAM, 0)
         guard fd >= 0 else { return false }
         defer { close(fd) }

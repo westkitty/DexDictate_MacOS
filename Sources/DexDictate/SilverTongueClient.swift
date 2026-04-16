@@ -68,7 +68,7 @@ actor SilverTongueClient {
             voiceId: voiceID,
             speed: speed
         )
-        let payload: SilverTongueSynthesisPayload = try await request(path: "synthesize", method: "POST", body: body)
+        let payload: SilverTongueSynthesisPayload = try await request(path: "synthesize", method: "POST", body: body, timeoutInterval: 120)
         guard !payload.audioPath.isEmpty else {
             throw SilverTongueClientError.invalidAudioPath(payload.audioPath)
         }
@@ -78,11 +78,12 @@ actor SilverTongueClient {
     private func request<Response: Decodable, Body: Encodable>(
         path: String,
         method: String,
-        body: Body?
+        body: Body?,
+        timeoutInterval: TimeInterval = 10
     ) async throws -> Response {
         var request = URLRequest(url: baseURL.appendingPathComponent(path))
         request.httpMethod = method
-        request.timeoutInterval = 10
+        request.timeoutInterval = timeoutInterval
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         if let body {
             request.httpBody = try JSONEncoder().encode(body)
