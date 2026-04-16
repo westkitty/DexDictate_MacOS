@@ -60,7 +60,9 @@ final class SilverTongueWindowController: ObservableObject {
 
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate()
-        Task { await coordinator.prepare() }
+        // Do NOT call coordinator.prepare() here — SilverTongueView.onAppear already calls it
+        // via the hasPrepared guard.  A second call here causes double-prepare every time the
+        // window is shown (two concurrent startIfNeeded + listVoices round-trips to the service).
     }
 
     func showAndRead(text: String) {

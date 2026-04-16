@@ -20,6 +20,12 @@ public class WhisperService: ObservableObject {
     /// preventing concurrent access to the non-thread-safe whisper.cpp C++ object.
     private var transcriptionTask: Task<Void, Never>?
 
+    /// Monotonically-increasing generation counter.  Each new transcription increments this
+    /// before launching its Task.  The Task captures its own generation value and only clears
+    /// `isTranscribing` when its generation still matches — preventing a cancelled task's
+    /// deferred cleanup from resetting the flag for a newly-started transcription.
+    private var transcriptionGeneration: Int = 0
+
     // Callback closure to pass text back to the engine (marked Sendable for thread-safe access)
     public var ontranscriptionComplete: (@Sendable (String) -> Void)?
 
@@ -236,7 +242,13 @@ public class WhisperService: ObservableObject {
         // whisper.cpp is not thread-safe; concurrent calls cause undefined behaviour.
         transcriptionTask?.cancel()
         isTranscribing = true
+
+        // Bump the generation counter so the cancelled task's cleanup block can detect
+        // that a newer transcription has taken over and must NOT clear isTranscribing.
+        transcriptionGeneration &+= 1
+        let myGeneration = transcriptionGeneration
         let startedAt = Date()
+
         transcriptionTask = Task {
             do {
                 _ = try await whisper.transcribe(audioFrames: audioFrames)
@@ -247,7 +259,12 @@ public class WhisperService: ObservableObject {
                     Safety.log("ERROR: Whisper transcription failed: \(error)")
                 }
             }
-            self.isTranscribing = false
+            // Only clear isTranscribing if this task is still the active one.
+            // A cancelled task must not reset the flag for a newer transcription that
+            // set isTranscribing = true and bumped transcriptionGeneration after us.
+            if self.transcriptionGeneration == myGeneration {
+                self.isTranscribing = false
+            }
         }
         return true
     }
@@ -256,6 +273,9 @@ public class WhisperService: ObservableObject {
     public func cancelTranscription() {
         transcriptionTask?.cancel()
         transcriptionTask = nil
+        // Bump generation so the cancelled task's cleanup block won't clear isTranscribing
+        // after we set it to false here — avoiding a spurious double-write.
+        transcriptionGeneration &+= 1
         isTranscribing = false
     }
 }

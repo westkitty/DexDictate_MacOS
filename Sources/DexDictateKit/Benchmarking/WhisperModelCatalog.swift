@@ -181,9 +181,33 @@ public final class WhisperModelCatalog: ObservableObject {
         refresh()
     }
 
+    /// Computes the SHA-256 digest of the file at `url` using a streaming approach so
+    /// that large model files (potentially hundreds of MB) are never fully loaded into RAM.
+    /// Reads the file in 64 KB chunks, which keeps the memory footprint essentially flat
+    /// regardless of file size.
     public static func sha256(for url: URL) throws -> String {
-        let data = try Data(contentsOf: url)
-        let digest = SHA256.hash(data: data)
+        guard let stream = InputStream(url: url) else {
+            throw DictationError.unknown("Cannot open model file for hashing: \(url.lastPathComponent)")
+        }
+        stream.open()
+        defer { stream.close() }
+
+        var hasher = SHA256()
+        let bufferSize = 65_536
+        var buffer = [UInt8](repeating: 0, count: bufferSize)
+
+        while stream.hasBytesAvailable {
+            let bytesRead = stream.read(&buffer, maxLength: bufferSize)
+            if bytesRead < 0 {
+                throw DictationError.unknown(
+                    "Read error while hashing \(url.lastPathComponent): \(stream.streamError?.localizedDescription ?? "unknown")"
+                )
+            }
+            if bytesRead == 0 { break }
+            hasher.update(data: Data(buffer[..<bytesRead]))
+        }
+
+        let digest = hasher.finalize()
         return digest.map { String(format: "%02x", $0) }.joined()
     }
 

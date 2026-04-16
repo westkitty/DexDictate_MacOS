@@ -15,11 +15,15 @@ public struct VocabularyItem: Identifiable, Codable, Equatable {
 public class VocabularyManager: ObservableObject {
     @Published public var items: [VocabularyItem] = [] {
         didSet {
-            save()
+            if !isLoading { save() }
         }
     }
 
     @Published public private(set) var bundledItems: [VocabularyItem] = []
+
+    /// Set to `true` during `load()` to prevent the `items` `didSet` observer from
+    /// writing data back to `UserDefaults` immediately after reading it.
+    private var isLoading = false
 
     public var effectiveItems: [VocabularyItem] {
         var mergedByOriginal: [String: VocabularyItem] = [:]
@@ -104,9 +108,10 @@ public class VocabularyManager: ObservableObject {
     }
     
     private func load() {
-        if let data = UserDefaults.standard.data(forKey: storageKey),
-           let decoded = try? JSONDecoder().decode([VocabularyItem].self, from: data) {
-            items = decoded
-        }
+        guard let data = UserDefaults.standard.data(forKey: storageKey),
+              let decoded = try? JSONDecoder().decode([VocabularyItem].self, from: data) else { return }
+        isLoading = true
+        defer { isLoading = false }
+        items = decoded
     }
 }
