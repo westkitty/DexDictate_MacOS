@@ -112,23 +112,9 @@ public final class AudioRecorderService: ObservableObject {
 
     private func startRecordingInternal(inputDeviceUID: String) throws {
         // Always called on audioQueue.
-        Safety.log("startRecordingInternal() — mic authorizationStatus=\(AVCaptureDevice.authorizationStatus(for: .audio).rawValue), beginning audio engine setup")
+        Safety.log("startRecordingInternal() — mic authorizationStatus=\(AVCaptureDevice.authorizationStatus(for: .audio).rawValue), inputDeviceUID='\(inputDeviceUID)', engine.isRunning=\(engine.isRunning)")
 
         // ── Step 1: Bring the engine to a clean stopped state ─────────────────────
-        //
-        // We must reset() the engine before installing a new tap, for two reasons:
-        //
-        //   a) Format-mismatch crash: applyInputDevice() calls AudioUnitSetProperty
-        //      to change the hardware device. AVAudioEngine caches the input node's
-        //      format in its internal graph. If that cached format doesn't match the
-        //      format of the newly selected device, installTap throws an NSException
-        //      ("IsFormatSampleRateAndChannelCountValid"), which Swift cannot catch,
-        //      aborting the process. engine.reset() flushes the cached graph state so
-        //      AVAudioEngine re-negotiates the format on the next prepare()/start().
-        //
-        //   b) Running-engine crash: calling installTap while the engine is running
-        //      (e.g. rapid trigger presses where stop hasn't finished) can throw an
-        //      NSException. stop() + reset() ensure we start from a clean slate.
         teardownEngineUnsafe()
         engine.reset()
 
@@ -137,42 +123,72 @@ public final class AudioRecorderService: ObservableObject {
         // initialized audio unit rather than one with stale cached state.
         try applyInputDevice(uid: inputDeviceUID)
 
-        // ── Step 3: Fetch hardware format ──────────────────────────────────────────
-        let inputNode = engine.inputNode  // triggers hardware init — safe here on audioQueue
+        // ── Step 3: Install tap with nil format ────────────────────────────────────
+        //
+        // WHY nil FORMAT — this is the architecturally correct fix for the
+        // "IsFormatSampleRateAndChannelCountValid" NSException (EXC_CRASH/SIGABRT):
+        //
+        //   outputFormat(forBus:) called BEFORE engine.prepare() returns a
+        //   pre-negotiation estimate.  After reset() + AudioUnitSetProperty
+        //   (applyInputDevice), the AudioUnit has been told about the new device
+        //   but has not yet committed its final stream format — that happens inside
+        //   engine.prepare() when AVAudioEngine fully initialises the audio graph.
+        //   Passing that pre-prepare format explicitly to installTap means AVAudioEngine
+        //   validates it against the post-prepare committed format, and when they differ
+        //   (e.g. device switched from 44.1 kHz to 48 kHz, or channel count changed)
+        //   it raises an NSException that Swift's do/try/catch cannot intercept.
+        //
+        //   Passing nil tells AVAudioEngine "use whatever format you decide is correct
+        //   for this node."  The engine then uses its own internally-negotiated format,
+        //   which is by definition always compatible with itself.  Format mismatch
+        //   becomes structurally impossible, eliminating the entire crash class.
+        //
+        //   We capture the ACTUAL sample rate from outputFormat(forBus:) AFTER
+        //   engine.prepare() (Step 5), where the format is finalized and reliable.
+        let inputNode = engine.inputNode  // triggers hardware init — safe on audioQueue
 
-        // Use the hardware's native format for the tap to avoid format-mismatch crashes
-        // ("IsFormatSampleRateAndChannelCountValid" exception). We resample to 16 kHz in
-        // TranscriptionEngine.resampleToWhisper() after collection.
-        let nativeFormat = inputNode.outputFormat(forBus: 0)
-        Safety.log("startRecordingInternal() — native format: \(nativeFormat.sampleRate) Hz, \(nativeFormat.channelCount) ch")
+        // Pre-prepare diagnostic log (for post-mortem correlation; not used for tap format).
+        let prePrepareFormat = inputNode.outputFormat(forBus: 0)
+        Safety.log("startRecordingInternal() — pre-prepare format: \(prePrepareFormat.sampleRate) Hz, \(prePrepareFormat.channelCount) ch")
 
-        // Guard against an invalid format — can occur if the microphone is not yet ready,
-        // TCC permission was just granted, or the hardware returned a degenerate format.
-        guard nativeFormat.sampleRate > 0, nativeFormat.channelCount > 0 else {
-            throw NSError(
-                domain: "AudioRecorderService",
-                code: 1,
-                userInfo: [NSLocalizedDescriptionKey:
-                    "Audio input returned an invalid format (sampleRate=\(nativeFormat.sampleRate), channels=\(nativeFormat.channelCount)). The microphone may not be available yet."]
-            )
-        }
-
-        // ── Step 4: Install tap and start engine ───────────────────────────────────
         bufferQueue.sync { _accumulatedSamples = [] }
-        capturedSampleRate = nativeFormat.sampleRate
 
         // removeTap is defensive — safe to call even when no tap is installed.
         // engine.reset() above should have already cleared it, but belt-and-suspenders.
         inputNode.removeTap(onBus: 0)
-        inputNode.installTap(onBus: 0, bufferSize: 4096, format: nativeFormat) { [weak self] buffer, _ in
+        inputNode.installTap(onBus: 0, bufferSize: 4096, format: nil) { [weak self] buffer, _ in
             self?.processAudioBuffer(buffer)
         }
-        Safety.log("startRecordingInternal() — tap installed, calling engine.prepare()")
+        Safety.log("startRecordingInternal() — tap installed (nil format), calling engine.prepare()")
 
+        // ── Step 4: Prepare engine (finalises audio graph and commits formats) ─────
         engine.prepare()
-        Safety.log("startRecordingInternal() — engine.prepare() done, calling engine.start()")
+
+        // ── Step 5: Read FINALIZED format after prepare ────────────────────────────
+        //
+        // outputFormat(forBus:) is reliable only AFTER prepare() has run.  Before
+        // prepare(), the format is a pre-negotiation estimate that may not reflect the
+        // actual committed stream format for the selected device.
+        let finalFormat = inputNode.outputFormat(forBus: 0)
+        Safety.log("startRecordingInternal() — post-prepare format: \(finalFormat.sampleRate) Hz, \(finalFormat.channelCount) ch")
+
+        guard finalFormat.sampleRate > 0, finalFormat.channelCount > 0 else {
+            // Remove the tap so the next start attempt begins from a clean state.
+            inputNode.removeTap(onBus: 0)
+            throw NSError(
+                domain: "AudioRecorderService",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey:
+                    "Audio input returned an invalid format after prepare() (sampleRate=\(finalFormat.sampleRate), channels=\(finalFormat.channelCount)). The microphone may not be available."]
+            )
+        }
+
+        capturedSampleRate = finalFormat.sampleRate
+
+        // ── Step 6: Start ──────────────────────────────────────────────────────────
+        Safety.log("startRecordingInternal() — calling engine.start()")
         try engine.start()
-        Safety.log("startRecordingInternal() — engine.start() succeeded")
+        Safety.log("startRecordingInternal() — engine.start() succeeded; capturedSampleRate=\(capturedSampleRate)")
     }
 
     /// Stops the engine and returns all accumulated samples atomically.
