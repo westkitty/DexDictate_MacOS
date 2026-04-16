@@ -711,3 +711,31 @@ Each case has: `title`, `icon` (SF Symbol), `searchAliases: [String]`, `relatedS
 - "Quick Settings → Display" (non-existent section) → "Quick Settings → Mode" for Flavor Ticker, Stats, Persist History
 - "Quick Settings → Output → Custom Commands" → "Quick Settings → Input → Voice Commands → Manage Custom Commands"
 - "Quick Settings → System → Input Device" → "Quick Settings → Input → Input Device" (two occurrences)
+
+---
+
+### Entry 3: CoreAudio Daemon Reset — The Actual Fix for -10868 (2026-04-16)
+
+**Symptom:** DexDictate displayed `"The operation couldn't be completed. (com.apple.coreaudio.avfaudio error -10868.)"` on every dictation attempt. `engine.start()` failed with `kAudioOutputUnitErr_InvalidDevice`. The app could not open an input stream on any device, including the system default microphone.
+
+**What AI tried (did not work):**
+- Filtering output-only CoreAudio devices via `kAudioDevicePropertyStreamConfiguration` / `kAudioObjectPropertyScopeInput` in `AudioDeviceManager`
+- Automatic fallback: tear down, reset, skip `applyInputDevice`, retry with system default on start failure
+- Passing `nil` format to `installTap` to avoid format negotiation race
+- Reading `capturedSampleRate` after `engine.prepare()` instead of before
+- Multiple `teardownEngineUnsafe()` + `engine.reset()` orderings
+
+None of these fixed the error. The failure was not in app code — it was in the macOS CoreAudio daemon itself, which had entered a corrupted state.
+
+**What actually fixed it:**
+```bash
+sudo killall coreaudiod
+```
+
+This restarts the macOS CoreAudio daemon (`coreaudiod`). macOS automatically relaunches it within ~1 second. All audio apps (DexDictate, Zoom, etc.) reconnect cleanly. No reboot required.
+
+**When to use this:** Any time a macOS app fails with `-10868 / kAudioOutputUnitErr_InvalidDevice` and the device appears healthy in System Settings → Sound. If the mic shows up in the device list but `engine.start()` refuses to open it, `coreaudiod` is the likely culprit, not the app.
+
+**Root cause:** `coreaudiod` is the system-wide audio session broker. When it gets into a bad state (after system sleep/wake, Bluetooth audio hand-off, USB mic plug/unplug, or system update), it can deny stream-open requests to all processes even though device enumeration still works. No amount of AVAudioEngine reset/teardown on the app side can fix this — it requires restarting the daemon itself.
+
+**Lesson:** Before spending any session time debugging `-10868` in Swift code, run `sudo killall coreaudiod` first. If the error goes away, the problem was never in the app.
