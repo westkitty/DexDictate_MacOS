@@ -24,15 +24,6 @@ struct HistoryView: View {
     /// Action to perform when the detach button is clicked.
     var onDetach: (() -> Void)? = nil
 
-    /// Whether the SilverTongue extension is enabled in settings.
-    var silverTongueEnabled: Bool = false
-
-    /// Whether the SilverTongue local service is ready for synthesis.
-    var silverTongueReady: Bool = false
-
-    /// Action for speaking a specific history item via SilverTongue.
-    var onReadBack: ((String) -> Void)? = nil
-
     /// Seconds remaining until silence auto-stop; `nil` when inactive.
     var silenceCountdown: Double? = nil
 
@@ -136,23 +127,12 @@ struct HistoryView: View {
                                     }
                                 }
                                 Spacer()
-                                VStack(spacing: 6) {
-                                    ChromeIconButton(
-                                        systemName: "doc.on.doc",
-                                        accessibilityText: "Copy history item"
-                                    ) {
-                                        NSPasteboard.general.clearContents()
-                                        NSPasteboard.general.setString(item.text, forType: .string)
-                                    }
-
-                                    if silverTongueEnabled && silverTongueReady {
-                                        ChromeIconButton(
-                                            systemName: "speaker.wave.2.fill",
-                                            accessibilityText: "Speak out loud"
-                                        ) {
-                                            onReadBack?(item.text)
-                                        }
-                                    }
+                                ChromeIconButton(
+                                    systemName: "doc.on.doc",
+                                    accessibilityText: "Copy history item"
+                                ) {
+                                    NSPasteboard.general.clearContents()
+                                    NSPasteboard.general.setString(item.text, forType: .string)
                                 }
                             }
                             .padding(6)

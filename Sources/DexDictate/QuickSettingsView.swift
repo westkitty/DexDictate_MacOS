@@ -14,8 +14,6 @@ struct QuickSettingsView: View {
     @ObservedObject var modelCatalog: WhisperModelCatalog
     @ObservedObject var adaptiveBenchmarkController: AdaptiveBenchmarkController
     @ObservedObject var benchmarkResultsStore: BenchmarkResultsStore
-    @ObservedObject var silverTongueServiceManager: SilverTongueServiceManager
-    var onOpenSilverTongue: (() -> Void)? = nil
     @State private var isExpanded = false
     @StateObject private var launchAtLoginController = LaunchAtLoginController()
     @State private var profanityAdditionsText: String = ""
@@ -37,7 +35,7 @@ struct QuickSettingsView: View {
                         Text(NSLocalizedString("Quick Settings", comment: ""))
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.white)
-                        Text(isExpanded ? "Tuning, device, output, and SilverTongue controls are open." : "Show tuning, device, output, and SilverTongue controls.")
+                        Text(isExpanded ? "Tuning, device, and output controls are open." : "Show tuning, device, and output controls.")
                             .font(.caption2)
                             .foregroundStyle(.white.opacity(0.55))
                     }
@@ -273,63 +271,6 @@ struct QuickSettingsView: View {
                             .padding(.leading, 20).padding(.bottom, 2)
 
                         Toggle(NSLocalizedString("Show Floating HUD", comment: ""), isOn: $settings.showFloatingHUD)
-                    }
-
-                    Divider().background(Color.white.opacity(0.3))
-
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("SilverTongue")
-                            .font(.caption).bold().foregroundStyle(.white.opacity(0.7))
-
-                        Toggle("Enable SilverTongue", isOn: $settings.silverTongueEnabled)
-
-                        HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            Text("Install Path:")
-                                .font(.caption)
-                                .foregroundStyle(.white.opacity(0.8))
-                            TextField("Auto-detect", text: $settings.silverTongueInstallPath)
-                                .textFieldStyle(.roundedBorder)
-                                .font(.caption2)
-                        }
-
-                        HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            Text("Node Path:")
-                                .font(.caption)
-                                .foregroundStyle(.white.opacity(0.8))
-                            TextField("Auto-detect", text: $settings.silverTongueNodePath)
-                                .textFieldStyle(.roundedBorder)
-                                .font(.caption2)
-                        }
-
-                        HStack {
-                            Text(silverTongueStatusText)
-                                .font(.caption2.monospaced())
-                                .foregroundStyle(silverTongueStatusColor)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 3)
-                                .background(silverTongueStatusColor.opacity(0.16))
-                                .clipShape(Capsule())
-
-                            Spacer()
-
-                            Button("Open") {
-                                onOpenSilverTongue?()
-                            }
-                            .buttonStyle(.bordered)
-                            .controlSize(.small)
-
-                            Button("Stop Service") {
-                                silverTongueServiceManager.stopService()
-                            }
-                            .buttonStyle(.bordered)
-                            .controlSize(.small)
-                            .disabled(!silverTongueCanStop)
-                        }
-
-                        Text("SilverTongue stays local-only and binds to 127.0.0.1 for read-back.")
-                            .font(.caption2)
-                            .foregroundStyle(.white.opacity(0.5))
-                            .fixedSize(horizontal: false, vertical: true)
                     }
 
                     Divider().background(Color.white.opacity(0.3))
@@ -606,48 +547,8 @@ struct QuickSettingsView: View {
         .onChange(of: settings.inputDeviceUID) { _, _ in
             scanner.refreshDevices()
         }
-        .onChange(of: settings.silverTongueEnabled) { _, enabled in
-            if !enabled {
-                silverTongueServiceManager.stopService()
-            }
-        }
     }
 
-    private var silverTongueStatusText: String {
-        switch silverTongueServiceManager.state {
-        case .dormant:
-            return "dormant"
-        case .starting:
-            return "starting"
-        case .ready:
-            return "ready"
-        case .error:
-            return "error"
-        }
-    }
-
-    private var silverTongueStatusColor: Color {
-        switch silverTongueServiceManager.state {
-        case .dormant:
-            return .white.opacity(0.8)
-        case .starting:
-            return .yellow
-        case .ready:
-            return .green
-        case .error:
-            return .red
-        }
-    }
-
-    private var silverTongueCanStop: Bool {
-        switch silverTongueServiceManager.state {
-        case .starting, .ready:
-            return true
-        case .dormant, .error:
-            return false
-        }
-    }
-    
     // Retain the vocabulary window so we can reuse it instead of creating duplicates.
     @State private var vocabularyWindow: NSWindow?
     @State private var customCommandsWindow: NSWindow?
