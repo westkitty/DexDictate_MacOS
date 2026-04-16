@@ -112,6 +112,21 @@ public final class TranscriptionEngine: ObservableObject {
                 self?.liveTranscript = text
             }
         }
+
+        // Handle AVAudioEngineConfigurationChange (route change, device added/removed).
+        // AVAudioEngine stops itself when this fires — we abort the recording gracefully
+        // so the lifecycle doesn't get stuck at .listening with a dead audio engine.
+        audioService.onEngineInterrupted = { [weak self] in
+            guard let self else { return }
+            Safety.log("TranscriptionEngine — audio engine interrupted by hardware route change")
+            guard self.state == .listening else { return }
+            self.silenceTimeoutTask?.cancel()
+            self.silenceTimeoutTask = nil
+            self.silenceCountdown = nil
+            _ = self.applyLifecycle(.audioCaptureFailed, context: "engineInterrupted")
+            self.statusText = NSLocalizedString("Audio device changed. Ready to record.", comment: "Status: Route change")
+            self.inputLevel = 0
+        }
     }
 
     // MARK: - System Lifecycle
