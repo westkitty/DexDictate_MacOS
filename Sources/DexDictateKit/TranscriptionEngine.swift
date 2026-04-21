@@ -149,6 +149,7 @@ public final class TranscriptionEngine: ObservableObject {
                 self.silenceTimeoutTask?.cancel()
                 self.silenceTimeoutTask = nil
                 self.silenceCountdown = nil
+                self.resultFeedback = .idle
                 _ = self.applyLifecycle(.audioCaptureFailed, context: "routeRecoveryFailed")
                 self.statusText = failure.recoveryNotice
                     ?? NSLocalizedString("Audio device changed. Ready to record.", comment: "Status: Route change")
@@ -333,6 +334,7 @@ public final class TranscriptionEngine: ObservableObject {
         }
         statusText = NSLocalizedString("Listening...", comment: "Status: Listening")
         liveTranscript = ""
+        resultFeedback = .idle
         inputLevel = 0
         activityPhase = .listening
 
@@ -356,6 +358,7 @@ public final class TranscriptionEngine: ObservableObject {
                 } else {
                     self.statusText = error.localizedDescription
                 }
+                self.resultFeedback = .idle
                 _ = self.applyLifecycle(.audioCaptureFailed, context: "audio start failure")
             case .success(let report):
                 Safety.log(

@@ -35,7 +35,7 @@ public struct AudioRecorderStartReport: Equatable {
     }
 }
 
-public struct AudioRecorderRecoveryFailure: Error {
+public struct AudioRecorderRecoveryFailure: Error, LocalizedError {
     let reason: AudioRecorderStartReason
     let requestedPreferredUID: String
     let preferredInputDeviceID: AudioDeviceID?
@@ -43,6 +43,19 @@ public struct AudioRecorderRecoveryFailure: Error {
     let recoveryNotice: String?
     let shouldClearStoredPreferredUID: Bool
     let underlyingError: Error
+
+    public var errorDescription: String? {
+        if let recoveryNotice, !recoveryNotice.isEmpty {
+            return recoveryNotice
+        }
+
+        switch reason {
+        case .initialStart:
+            return "DexDictate could not open the selected microphone. \(underlyingError.localizedDescription)"
+        case .routeRecovery:
+            return "DexDictate could not recover audio after the route changed. \(underlyingError.localizedDescription)"
+        }
+    }
 }
 
 struct AudioRecorderRecoveryPlanner {
