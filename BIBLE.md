@@ -783,3 +783,65 @@ This restarts the macOS CoreAudio daemon (`coreaudiod`). macOS automatically rel
 - `Tests/DexDictateTests/AudioDeviceManagerTests.swift`
 - `Tests/DexDictateTests/AudioRecorderRecoveryPlannerTests.swift`
 - `Tests/DexDictateTests/EngineLifecycleStateMachineTests.swift`
+
+---
+
+### Entry 6: Route-Recovery Session Finalized (2026-04-21)
+
+**Exact files changed:**
+- `BIBLE.md`
+- `Sources/DexDictate/BenchmarkCaptureWindow.swift`
+- `Sources/DexDictateKit/Capture/AudioDeviceManager.swift`
+- `Sources/DexDictateKit/Capture/AudioDeviceScanner.swift`
+- `Sources/DexDictateKit/Capture/AudioInputSelectionPolicy.swift`
+- `Sources/DexDictateKit/Permissions/OnboardingValidation.swift`
+- `Sources/DexDictateKit/Services/AudioRecorderRecoverySupport.swift`
+- `Sources/DexDictateKit/Services/AudioRecorderService.swift`
+- `Sources/DexDictateKit/TranscriptionEngine.swift`
+- `Tests/DexDictateTests/AudioDeviceManagerTests.swift`
+- `Tests/DexDictateTests/AudioInputSelectionPolicyTests.swift`
+- `Tests/DexDictateTests/AudioRecorderRecoveryPlannerTests.swift`
+- `Tests/DexDictateTests/EngineLifecycleStateMachineTests.swift`
+
+**Architectural decisions:**
+- Keep all AVAudioEngine lifecycle work on the existing serial `audioQueue`; recovery is serialized there rather than moved to the main thread.
+- Preserve the user's preferred input UID through bounded route-recovery retries, but clear the stored selection only when the preferred device is confirmed missing or unusable as an input.
+- Keep fallback-to-system-default behavior, but make it the terminal recovery branch rather than the first branch.
+- Treat `AVAudioEngineConfigurationChange` as a recovery trigger with explicit success/failure reporting back to `TranscriptionEngine`, instead of an automatic abort.
+
+**Recovery behavior added:**
+- Re-resolve the preferred CoreAudio device UID after configuration changes and on startup.
+- Distinguish `available`, `missing`, and `unavailableAsInput` device states so output-only devices are rejected before AUHAL start.
+- Retry the preferred input path with short bounded delays before falling back to the system default input device.
+- Preserve buffered audio across successful in-session route recovery so a fast recovery can continue the current dictation.
+- Surface explicit fallback notices when DexDictate had to move to system default input.
+- Keep the next trigger usable after a failed recovery by returning the engine lifecycle to `.ready`.
+
+**Tests added or updated:**
+- Added `AudioDeviceManagerTests` for available/missing/output-only CoreAudio resolution.
+- Added `AudioRecorderRecoveryPlannerTests` for preferred-input persistence, temporary unavailability, true missing-device fallback, repeated route recoveries, and fallback without clearing a still-valid preference.
+- Updated `AudioInputSelectionPolicyTests` for grace-period retention before fallback.
+- Updated `EngineLifecycleStateMachineTests` to assert listening can restart after an audio-capture failure.
+
+**Limitations still remaining:**
+- Recovery still cannot override a system-wide CoreAudio daemon failure; a broken `coreaudiod` state can still require `sudo killall coreaudiod`.
+- A route change can still drop a small slice of live audio while the engine rebuilds; successful recovery preserves already-buffered audio, not the frames lost during the route transition itself.
+- Scanner-side temporary-retention uses a short grace interval, not a full hardware-state machine; if macOS stops emitting device-change notifications entirely, normalization still depends on the next refresh.
+
+**Exact commands run:**
+- `git branch --show-current`
+- `git status --short`
+- `wc -l BIBLE.md`
+- `sed -n '1,220p' BIBLE.md`
+- `tail -n 120 BIBLE.md`
+- `rg -n "AVAudioEngineConfigurationChange|InvalidDevice|-10868|interrupted|engine.start|AudioRecorderService|AudioInputSelectionPolicy|AudioDeviceScanner|AudioDeviceManager" Sources Tests`
+- `sed -n ...` inspections across the recorder, engine, device-manager, scanner, selection-policy, lifecycle, settings, onboarding, benchmark, quick-settings, and test files
+- `swift test --filter AudioInputSelectionPolicyTests`
+- `swift test --filter AudioDeviceManagerTests`
+- `swift test --filter AudioRecorderRecoveryPlannerTests`
+- `swift test --filter EngineLifecycleStateMachineTests`
+- `swift test`
+- `git add ...`
+- `git commit -m "feat: harden audio route recovery"`
+
+**Git status:** `git status --short` was clean immediately before this final documentation entry, at commit `ca99c50`.
