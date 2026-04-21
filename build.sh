@@ -9,6 +9,7 @@ EXECUTABLE_NAME="DexDictate"
 SWIFT_PRODUCT="DexDictate_MacOS"
 CERT_NAME="DexDictate Development"
 TARGET_ARCH="arm64"
+BUNDLE_IDENTIFIER="com.westkitty.dexdictate.macos"
 BUILD_DIR=".build"
 BUNDLE="$BUILD_DIR/$APP_NAME.app"
 SYSTEM_INSTALL_DIR="/Applications"
@@ -21,6 +22,7 @@ INSTALL_DIR="${INSTALL_DIR:-$DEFAULT_INSTALL_DIR}"
 ENTITLEMENTS="Sources/DexDictate/DexDictate.entitlements"
 ICON_SOURCE="Sources/DexDictate/AppIcon.icns"
 INFO_TEMPLATE="templates/Info.plist.template"
+SOURCE_INFO_PLIST="Sources/DexDictate/Info.plist"
 VERSION_FILE="VERSION"
 BENCHMARK_BASELINE="benchmark_baseline.json"
 MODEL_FETCH_SCRIPT="scripts/fetch_model.sh"
@@ -116,6 +118,17 @@ ensure_model() {
     "$MODEL_FETCH_SCRIPT"
 }
 
+validate_bundle_metadata() {
+    [ -f "$SOURCE_INFO_PLIST" ] || fail "Missing source Info.plist: $SOURCE_INFO_PLIST"
+    local source_bundle_id
+    source_bundle_id="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$SOURCE_INFO_PLIST" 2>/dev/null)" \
+        || fail "Unable to read CFBundleIdentifier from $SOURCE_INFO_PLIST"
+
+    if [ "$source_bundle_id" != "$BUNDLE_IDENTIFIER" ]; then
+        fail "Bundle identifier mismatch. build.sh expects '$BUNDLE_IDENTIFIER' but $SOURCE_INFO_PLIST contains '$source_bundle_id'."
+    fi
+}
+
 build_products() {
     log_info "Building $APP_NAME..."
     swift build -c release --disable-sandbox
@@ -133,7 +146,30 @@ resolve_build_artifacts() {
     [ -f "$HELPER_BINARY" ] || fail "Missing helper binary: $HELPER_BINARY"
 }
 
+stop_running_instances() {
+    local app_path
+    for app_path in "$INSTALL_DIR/$APP_NAME.app" "$SYSTEM_INSTALL_DIR/$APP_NAME.app" "$USER_INSTALL_DIR/$APP_NAME.app" "$BUNDLE"; do
+        if [ -d "$app_path" ]; then
+            osascript -e "tell application \"$app_path\" to quit" >/dev/null 2>&1 || true
+        fi
+    done
+    osascript -e "tell application id \"$BUNDLE_IDENTIFIER\" to quit" >/dev/null 2>&1 || true
+
+    local waited=0
+    while pgrep -x "$EXECUTABLE_NAME" >/dev/null 2>&1 && [ "$waited" -lt 20 ]; do
+        sleep 0.25
+        waited=$((waited + 1))
+    done
+
+    if pgrep -x "$EXECUTABLE_NAME" >/dev/null 2>&1; then
+        log_warn "DexDictate is still running; terminating remaining processes before install."
+        pkill -x "$EXECUTABLE_NAME" >/dev/null 2>&1 || true
+        sleep 1
+    fi
+}
+
 assemble_bundle() {
+    rm -rf "$BUNDLE"
     mkdir -p "$BUNDLE/Contents/MacOS" "$BUNDLE/Contents/Resources" "$BUNDLE/Contents/Helpers"
     cp -f "$BINARY" "$BUNDLE/Contents/MacOS/$EXECUTABLE_NAME"
     cp -f "$HELPER_BINARY" "$BUNDLE/Contents/Helpers/VerificationRunner"
@@ -147,6 +183,7 @@ assemble_bundle() {
     log_info "Generating Info.plist..."
     sed -e "s/{{APP_NAME}}/$APP_NAME/g" \
         -e "s/{{EXECUTABLE_NAME}}/$EXECUTABLE_NAME/g" \
+        -e "s/{{BUNDLE_IDENTIFIER}}/$BUNDLE_IDENTIFIER/g" \
         -e "s/{{VERSION}}/$VERSION/g" \
         "$INFO_TEMPLATE" > "$BUNDLE/Contents/Info.plist"
 
@@ -231,8 +268,10 @@ parse_args "$@"
 check_host_architecture
 ensure_install_target
 ensure_model
+validate_bundle_metadata
 build_products
 resolve_build_artifacts
+stop_running_instances
 assemble_bundle
 sign_bundle
 install_bundle

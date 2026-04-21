@@ -7,7 +7,7 @@
     <key>CFBundleExecutable</key>
     <string>DexDictate</string>
     <key>CFBundleIdentifier</key>
-    <string>com.dexdictate.app</string>
+    <string>com.westkitty.dexdictate.macos</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
