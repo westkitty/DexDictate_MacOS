@@ -9,6 +9,25 @@ public struct AudioInputDevice: Identifiable, Hashable {
     public var id: String { uid }
 }
 
+public struct AudioInputDeviceMatch: Equatable {
+    public let uid: String
+    public let deviceID: AudioDeviceID
+    public let hasInputChannels: Bool
+}
+
+public enum AudioInputDeviceResolution: Equatable {
+    case systemDefault
+    case available(AudioInputDeviceMatch)
+    case missing(uid: String)
+    case unavailableAsInput(uid: String, deviceID: AudioDeviceID?)
+}
+
+struct AudioHardwareDeviceRecord: Equatable {
+    let deviceID: AudioDeviceID
+    let uid: String
+    let hasInputChannels: Bool
+}
+
 public enum AudioDeviceManager {
     public static func inputDevices() -> [AudioInputDevice] {
         // .microphone and .external are available on all supported targets (macOS 14+).
@@ -33,6 +52,35 @@ public enum AudioDeviceManager {
     /// input stream on a device that has no input channels.  This guard prevents that
     /// by only returning device IDs for devices that report ≥ 1 input channel.
     static func deviceID(forUID uid: String) -> AudioDeviceID? {
+        if case .available(let match) = resolveInputDevice(forUID: uid) {
+            return match.deviceID
+        }
+        return nil
+    }
+
+    static func resolveInputDevice(forUID uid: String) -> AudioInputDeviceResolution {
+        guard !uid.isEmpty else { return .systemDefault }
+
+        let deviceRecords = enumerateCoreAudioDevices()
+        return resolveInputDevice(forUID: uid, deviceRecords: deviceRecords)
+    }
+
+    static func resolveInputDevice(forUID uid: String, deviceRecords: [AudioHardwareDeviceRecord]) -> AudioInputDeviceResolution {
+        guard !uid.isEmpty else { return .systemDefault }
+
+        for record in deviceRecords where record.uid == uid {
+            if record.hasInputChannels {
+                return .available(
+                    AudioInputDeviceMatch(uid: record.uid, deviceID: record.deviceID, hasInputChannels: true)
+                )
+            }
+            return .unavailableAsInput(uid: record.uid, deviceID: record.deviceID)
+        }
+
+        return .missing(uid: uid)
+    }
+
+    private static func enumerateCoreAudioDevices() -> [AudioHardwareDeviceRecord] {
         var address = AudioObjectPropertyAddress(
             mSelector: kAudioHardwarePropertyDevices,
             mScope: kAudioObjectPropertyScopeGlobal,
@@ -43,16 +91,17 @@ public enum AudioDeviceManager {
         let systemObject = AudioObjectID(kAudioObjectSystemObject)
         let sizeStatus = AudioObjectGetPropertyDataSize(systemObject, &address, 0, nil, &dataSize)
         if sizeStatus != noErr || dataSize == 0 {
-            return nil
+            return []
         }
 
         let deviceCount = Int(dataSize) / MemoryLayout<AudioDeviceID>.size
         var deviceIDs = [AudioDeviceID](repeating: 0, count: deviceCount)
         let listStatus = AudioObjectGetPropertyData(systemObject, &address, 0, nil, &dataSize, &deviceIDs)
         if listStatus != noErr {
-            return nil
+            return []
         }
 
+        var records: [AudioHardwareDeviceRecord] = []
         for deviceID in deviceIDs {
             var uidAddress = AudioObjectPropertyAddress(
                 mSelector: kAudioDevicePropertyDeviceUID,
@@ -68,19 +117,18 @@ public enum AudioDeviceManager {
                                           UnsafeMutableRawPointer(ptr))
             }
             if uidStatus == noErr,
-               let deviceUID = unmanagedUID?.takeRetainedValue() as String?,
-               deviceUID == uid {
-                // Found a UID match — verify the device actually has input channels
-                // before returning it.  Output-only devices cause engine.start() to
-                // fail with kAudioOutputUnitErr_InvalidDevice (-10868).
-                guard Self.hasInputChannels(deviceID: deviceID) else {
-                    return nil
-                }
-                return deviceID
+               let deviceUID = unmanagedUID?.takeRetainedValue() as String? {
+                records.append(
+                    AudioHardwareDeviceRecord(
+                        deviceID: deviceID,
+                        uid: deviceUID,
+                        hasInputChannels: Self.hasInputChannels(deviceID: deviceID)
+                    )
+                )
             }
         }
 
-        return nil
+        return records
     }
 
     /// Returns `true` if the CoreAudio device with `deviceID` reports at least one

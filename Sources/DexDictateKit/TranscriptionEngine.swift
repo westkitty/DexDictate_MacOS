@@ -113,19 +113,47 @@ public final class TranscriptionEngine: ObservableObject {
             }
         }
 
-        // Handle AVAudioEngineConfigurationChange (route change, device added/removed).
-        // AVAudioEngine stops itself when this fires — we abort the recording gracefully
-        // so the lifecycle doesn't get stuck at .listening with a dead audio engine.
-        audioService.onEngineInterrupted = { [weak self] in
+        audioService.onRouteRecoveryResult = { [weak self] result in
             guard let self else { return }
-            Safety.log("TranscriptionEngine — audio engine interrupted by hardware route change")
-            guard self.state == .listening else { return }
-            self.silenceTimeoutTask?.cancel()
-            self.silenceTimeoutTask = nil
-            self.silenceCountdown = nil
-            _ = self.applyLifecycle(.audioCaptureFailed, context: "engineInterrupted")
-            self.statusText = NSLocalizedString("Audio device changed. Ready to record.", comment: "Status: Route change")
-            self.inputLevel = 0
+            switch result {
+            case .success(let report):
+                Safety.log(
+                    "TranscriptionEngine — route recovery succeeded; finalDecision=\(report.finalDecisionDescription), retries=\(report.retryCount), usedSystemDefault=\(report.usedSystemDefault)",
+                    category: .audio
+                )
+                if report.shouldClearStoredPreferredUID {
+                    AppSettings.shared.inputDeviceUID = ""
+                }
+                guard self.state == .listening else {
+                    Safety.log("TranscriptionEngine — route recovery completed while state=\(self.state); leaving UI untouched", category: .audio)
+                    return
+                }
+                if report.usedSystemDefault {
+                    self.statusText = report.recoveryNotice
+                        ?? NSLocalizedString("Listening on System Default input.", comment: "Status: Fallback input")
+                } else {
+                    self.statusText = NSLocalizedString("Listening...", comment: "Status: Listening")
+                }
+            case .failure(let failure):
+                Safety.log(
+                    "TranscriptionEngine — route recovery failed; retries=\(failure.retryCount), error=\(failure.underlyingError)",
+                    category: .audio
+                )
+                if failure.shouldClearStoredPreferredUID {
+                    AppSettings.shared.inputDeviceUID = ""
+                }
+                guard self.state == .listening else {
+                    Safety.log("TranscriptionEngine — route recovery failure arrived after listening ended; ignoring ready-state reset", category: .audio)
+                    return
+                }
+                self.silenceTimeoutTask?.cancel()
+                self.silenceTimeoutTask = nil
+                self.silenceCountdown = nil
+                _ = self.applyLifecycle(.audioCaptureFailed, context: "routeRecoveryFailed")
+                self.statusText = failure.recoveryNotice
+                    ?? NSLocalizedString("Audio device changed. Ready to record.", comment: "Status: Route change")
+                self.inputLevel = 0
+            }
         }
     }
 
@@ -316,9 +344,10 @@ public final class TranscriptionEngine: ObservableObject {
         // internal audioQueue — fully off the main actor. The completion block fires back on
         // @MainActor so we can update state without re-entering the main thread.
         let uid = AppSettings.shared.inputDeviceUID
-        audioService.startRecordingAsync(inputDeviceUID: uid) { [weak self] error in
+        audioService.startRecordingAsync(inputDeviceUID: uid) { [weak self] result in
             guard let self else { return }
-            if let error {
+            switch result {
+            case .failure(let error):
                 Safety.log("ERROR: startListening() — audio engine failed: \(error) — resetting state to .ready")
                 let desc = error.localizedDescription.lowercased()
                 if desc.contains("permission") || desc.contains("unauthorized") {
@@ -328,7 +357,18 @@ public final class TranscriptionEngine: ObservableObject {
                     self.statusText = error.localizedDescription
                 }
                 _ = self.applyLifecycle(.audioCaptureFailed, context: "audio start failure")
-            } else {
+            case .success(let report):
+                Safety.log(
+                    "Audio engine started successfully — finalDecision=\(report.finalDecisionDescription), retries=\(report.retryCount), usedSystemDefault=\(report.usedSystemDefault)",
+                    category: .audio
+                )
+                if report.shouldClearStoredPreferredUID {
+                    AppSettings.shared.inputDeviceUID = ""
+                }
+                if report.usedSystemDefault {
+                    self.statusText = report.recoveryNotice
+                        ?? NSLocalizedString("Listening on System Default input.", comment: "Status: Fallback input")
+                }
                 Safety.log("Audio engine started successfully — accumulating audio until trigger release")
                 self.startSilenceCountdownIfNeeded()
             }

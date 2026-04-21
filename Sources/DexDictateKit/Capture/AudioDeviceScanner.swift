@@ -7,31 +7,49 @@ import Combine
 ///
 /// Use this class to support hot-swapping of microphones.
 public class AudioDeviceScanner: ObservableObject {
-    
     @Published public private(set) var availableDevices: [AudioInputDevice] = []
     @Published public private(set) var recoveryNotice: String?
-    
+
     private var listenerBlock: AudioObjectPropertyListenerBlock?
-    
+    private var pendingPreferredFallbackWorkItem: DispatchWorkItem?
+    private var pendingMissingPreferredUID: String?
+    private let missingPreferredGraceInterval: TimeInterval = 1.5
+
     public init() {
         refreshDevices()
         startMonitoring()
     }
-    
+
     deinit {
+        cancelPendingPreferredFallback()
         stopMonitoring()
     }
-    
+
     /// Forces a refresh of the device list.
     public func refreshDevices() {
+        refreshDevices(missingPreferredGraceExpired: false)
+    }
+
+    private func refreshDevices(missingPreferredGraceExpired: Bool) {
         Task { @MainActor in
             let devices = AudioDeviceManager.inputDevices()
+            let currentPreferredUID = AppSettings.shared.inputDeviceUID
+            let graceExpiredForCurrentPreferred =
+                missingPreferredGraceExpired && currentPreferredUID == pendingMissingPreferredUID
             let decision = AudioInputSelectionPolicy.resolve(
-                preferredUID: AppSettings.shared.inputDeviceUID,
-                availableDevices: devices
+                preferredUID: currentPreferredUID,
+                availableDevices: devices,
+                missingPreferredGraceExpired: graceExpiredForCurrentPreferred
             )
 
             self.availableDevices = devices
+
+            switch decision.status {
+            case .systemDefault, .preferredAvailable, .fellBackToSystemDefault:
+                cancelPendingPreferredFallback()
+            case .preferredTemporarilyUnavailable:
+                schedulePreferredFallbackRecheck(for: currentPreferredUID)
+            }
 
             if AppSettings.shared.inputDeviceUID != decision.normalizedUID {
                 AppSettings.shared.inputDeviceUID = decision.normalizedUID
@@ -45,7 +63,7 @@ public class AudioDeviceScanner: ObservableObject {
             }
         }
     }
-    
+
     private func startMonitoring() {
         var address = AudioObjectPropertyAddress(
             mSelector: kAudioHardwarePropertyDevices,
@@ -65,7 +83,32 @@ public class AudioDeviceScanner: ObservableObject {
         
         AudioObjectAddPropertyListenerBlock(AudioObjectID(kAudioObjectSystemObject), &address, DispatchQueue.main, listener)
     }
-    
+
+    private func schedulePreferredFallbackRecheck(for preferredUID: String) {
+        guard !preferredUID.isEmpty else {
+            cancelPendingPreferredFallback()
+            return
+        }
+        guard pendingMissingPreferredUID != preferredUID || pendingPreferredFallbackWorkItem == nil else {
+            return
+        }
+
+        cancelPendingPreferredFallback()
+        pendingMissingPreferredUID = preferredUID
+
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.refreshDevices(missingPreferredGraceExpired: true)
+        }
+        pendingPreferredFallbackWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + missingPreferredGraceInterval, execute: workItem)
+    }
+
+    private func cancelPendingPreferredFallback() {
+        pendingPreferredFallbackWorkItem?.cancel()
+        pendingPreferredFallbackWorkItem = nil
+        pendingMissingPreferredUID = nil
+    }
+
     private func stopMonitoring() {
         var address = AudioObjectPropertyAddress(
             mSelector: kAudioHardwarePropertyDevices,

@@ -25,13 +25,22 @@ public final class AudioRecorderService: ObservableObject {
     private let audioQueue = DispatchQueue(label: "com.dexdictate.audioEngine", qos: .userInitiated)
 
     /// Called on the main actor when AVAudioEngine stops itself due to a hardware
-    /// configuration change (route switch, device added/removed, etc.).
-    /// TranscriptionEngine uses this to abort the in-progress recording cleanly.
+    /// configuration change and recovery ultimately fails.
     @MainActor public var onEngineInterrupted: (() -> Void)?
+
+    /// Called on the main actor when a hardware-route recovery attempt succeeds or fails.
+    @MainActor public var onRouteRecoveryResult: ((Result<AudioRecorderStartReport, AudioRecorderRecoveryFailure>) -> Void)?
 
     private var sleepObserver: NSObjectProtocol?
     private var wakeObserver: NSObjectProtocol?
     private var configChangeObserver: NSObjectProtocol?
+
+    // Accessed only on audioQueue.
+    nonisolated(unsafe) private var isCaptureSessionActive = false
+    nonisolated(unsafe) private var activePreferredInputUID = ""
+    nonisolated(unsafe) private var activeInputUID = ""
+
+    private let preferredInputRetryDelays: [TimeInterval] = [0, 0.15, 0.35]
 
     public init() {
         setupSleepWakeNotifications()
@@ -39,8 +48,8 @@ public final class AudioRecorderService: ObservableObject {
     }
 
     deinit {
-        if let obs = sleepObserver      { NSWorkspace.shared.notificationCenter.removeObserver(obs) }
-        if let obs = wakeObserver       { NSWorkspace.shared.notificationCenter.removeObserver(obs) }
+        if let obs = sleepObserver { NSWorkspace.shared.notificationCenter.removeObserver(obs) }
+        if let obs = wakeObserver { NSWorkspace.shared.notificationCenter.removeObserver(obs) }
         if let obs = configChangeObserver { NotificationCenter.default.removeObserver(obs) }
     }
 
@@ -48,11 +57,14 @@ public final class AudioRecorderService: ObservableObject {
         sleepObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.willSleepNotification,
             object: nil,
-            queue: nil   // delivery queue doesn't matter — we dispatch to audioQueue ourselves
+            queue: nil
         ) { [weak self] _ in
             self?.audioQueue.async { [weak self] in
                 guard let self else { return }
                 self.teardownEngineUnsafe()
+                self.isCaptureSessionActive = false
+                self.activePreferredInputUID = ""
+                self.activeInputUID = ""
                 Task { @MainActor in self.inputLevel = 0 }
             }
         }
@@ -66,8 +78,8 @@ public final class AudioRecorderService: ObservableObject {
     /// Observes AVAudioEngineConfigurationChange, which fires when the hardware route
     /// changes (headphones plugged/unplugged, USB mic added/removed, etc.).
     /// AVAudioEngine stops itself and removes all taps automatically when this fires.
-    /// We still call teardownEngineUnsafe() for belt-and-suspenders cleanup, then
-    /// notify the UI layer so it can abort the in-progress dictation gracefully.
+    /// We still call teardownEngineUnsafe() for belt-and-suspenders cleanup, then try a
+    /// bounded recovery on audioQueue before notifying the UI layer.
     private func setupEngineConfigChangeObserver() {
         configChangeObserver = NotificationCenter.default.addObserver(
             forName: .AVAudioEngineConfigurationChange,
@@ -75,16 +87,10 @@ public final class AudioRecorderService: ObservableObject {
             queue: nil
         ) { [weak self] _ in
             guard let self else { return }
-            Safety.log("AVAudioEngineConfigurationChange — hardware route changed, tearing down engine")
+            Safety.log("AVAudioEngineConfigurationChange — hardware route changed, scheduling recovery", category: .audio)
             self.audioQueue.async { [weak self] in
                 guard let self else { return }
-                // engine has already been stopped by AVAudioEngine; cleanup our side
-                self.teardownEngineUnsafe()
-                Task { @MainActor [weak self] in
-                    guard let self else { return }
-                    self.inputLevel = 0
-                    self.onEngineInterrupted?()
-                }
+                self.handleEngineConfigurationChange()
             }
         }
     }
@@ -96,137 +102,68 @@ public final class AudioRecorderService: ObservableObject {
     /// All AVAudioEngine operations (inputNode, outputFormat, installTap, prepare, start)
     /// run serially on audioQueue, keeping the main actor free throughout.
     /// `completion` is called back on the main actor.
-    public func startRecordingAsync(inputDeviceUID: String, completion: @escaping @MainActor (Error?) -> Void) {
-        Safety.log("startRecordingAsync() — dispatching audio setup to audioQueue")
+    public func startRecordingAsync(
+        inputDeviceUID: String,
+        completion: @escaping @MainActor (Result<AudioRecorderStartReport, Error>) -> Void
+    ) {
+        Safety.log("startRecordingAsync() — dispatching audio setup to audioQueue", category: .audio)
         audioQueue.async { [weak self] in
             guard let self else { return }
             do {
-                try self.startRecordingInternal(inputDeviceUID: inputDeviceUID)
-                DispatchQueue.main.async { Task { @MainActor in completion(nil) } }
+                let report = try self.startRecordingInternal(
+                    inputDeviceUID: inputDeviceUID,
+                    reason: .initialStart,
+                    preserveBufferedAudio: false
+                )
+                DispatchQueue.main.async { Task { @MainActor in completion(.success(report)) } }
             } catch {
-                Safety.log("startRecordingInternal() FAILED: \(error)")
-                DispatchQueue.main.async { Task { @MainActor in completion(error) } }
+                Safety.log("startRecordingInternal() FAILED: \(error)", category: .audio)
+                DispatchQueue.main.async { Task { @MainActor in completion(.failure(error)) } }
             }
         }
     }
 
-    private func startRecordingInternal(inputDeviceUID: String) throws {
-        // Always called on audioQueue.
-        Safety.log("startRecordingInternal() — mic authorizationStatus=\(AVCaptureDevice.authorizationStatus(for: .audio).rawValue), inputDeviceUID='\(inputDeviceUID)', engine.isRunning=\(engine.isRunning)")
+    private func startRecordingInternal(
+        inputDeviceUID: String,
+        reason: AudioRecorderStartReason,
+        preserveBufferedAudio: Bool
+    ) throws -> AudioRecorderStartReport {
+        Safety.log(
+            "startRecordingInternal() — reason=\(reason.rawValue), micAuthorizationStatus=\(AVCaptureDevice.authorizationStatus(for: .audio).rawValue), preferredUID='\(inputDeviceUID)', engine.isRunning=\(engine.isRunning), preserveBufferedAudio=\(preserveBufferedAudio)",
+            category: .audio
+        )
 
-        // ── Step 1: Bring the engine to a clean stopped state ─────────────────────
-        teardownEngineUnsafe()
-        engine.reset()
-
-        // ── Step 2: Apply input device selection ───────────────────────────────────
-        // Must happen AFTER reset() so AudioUnitSetProperty writes to a freshly
-        // initialized audio unit rather than one with stale cached state.
-        try applyInputDevice(uid: inputDeviceUID)
-
-        // ── Step 3: Install tap with nil format ────────────────────────────────────
-        //
-        // WHY nil FORMAT — this is the architecturally correct fix for the
-        // "IsFormatSampleRateAndChannelCountValid" NSException (EXC_CRASH/SIGABRT):
-        //
-        //   outputFormat(forBus:) called BEFORE engine.prepare() returns a
-        //   pre-negotiation estimate.  After reset() + AudioUnitSetProperty
-        //   (applyInputDevice), the AudioUnit has been told about the new device
-        //   but has not yet committed its final stream format — that happens inside
-        //   engine.prepare() when AVAudioEngine fully initialises the audio graph.
-        //   Passing that pre-prepare format explicitly to installTap means AVAudioEngine
-        //   validates it against the post-prepare committed format, and when they differ
-        //   (e.g. device switched from 44.1 kHz to 48 kHz, or channel count changed)
-        //   it raises an NSException that Swift's do/try/catch cannot intercept.
-        //
-        //   Passing nil tells AVAudioEngine "use whatever format you decide is correct
-        //   for this node."  The engine then uses its own internally-negotiated format,
-        //   which is by definition always compatible with itself.  Format mismatch
-        //   becomes structurally impossible, eliminating the entire crash class.
-        //
-        //   We capture the ACTUAL sample rate from outputFormat(forBus:) AFTER
-        //   engine.prepare() (Step 5), where the format is finalized and reliable.
-        let inputNode = engine.inputNode  // triggers hardware init — safe on audioQueue
-
-        // Pre-prepare diagnostic log (for post-mortem correlation; not used for tap format).
-        let prePrepareFormat = inputNode.outputFormat(forBus: 0)
-        Safety.log("startRecordingInternal() — pre-prepare format: \(prePrepareFormat.sampleRate) Hz, \(prePrepareFormat.channelCount) ch")
-
-        bufferQueue.sync { _accumulatedSamples = [] }
-
-        // removeTap is defensive — safe to call even when no tap is installed.
-        // engine.reset() above should have already cleared it, but belt-and-suspenders.
-        inputNode.removeTap(onBus: 0)
-        inputNode.installTap(onBus: 0, bufferSize: 4096, format: nil) { [weak self] buffer, _ in
-            self?.processAudioBuffer(buffer)
-        }
-        Safety.log("startRecordingInternal() — tap installed (nil format), calling engine.prepare()")
-
-        // ── Step 4: Prepare engine (finalises audio graph and commits formats) ─────
-        engine.prepare()
-
-        // ── Step 5: Read FINALIZED format after prepare ────────────────────────────
-        //
-        // outputFormat(forBus:) is reliable only AFTER prepare() has run.  Before
-        // prepare(), the format is a pre-negotiation estimate that may not reflect the
-        // actual committed stream format for the selected device.
-        let finalFormat = inputNode.outputFormat(forBus: 0)
-        Safety.log("startRecordingInternal() — post-prepare format: \(finalFormat.sampleRate) Hz, \(finalFormat.channelCount) ch")
-
-        guard finalFormat.sampleRate > 0, finalFormat.channelCount > 0 else {
-            // Remove the tap so the next start attempt begins from a clean state.
-            inputNode.removeTap(onBus: 0)
-            throw NSError(
-                domain: "AudioRecorderService",
-                code: 1,
-                userInfo: [NSLocalizedDescriptionKey:
-                    "Audio input returned an invalid format after prepare() (sampleRate=\(finalFormat.sampleRate), channels=\(finalFormat.channelCount)). The microphone may not be available."]
-            )
-        }
-
-        capturedSampleRate = finalFormat.sampleRate
-
-        // ── Step 6: Start — with automatic fallback to system default ──────────────
-        //
-        // engine.start() can fail with kAudioOutputUnitErr_InvalidDevice (-10868) even
-        // after a successful prepare() when a specific device UID is in use that:
-        //   • exists in CoreAudio's device list (so deviceID(forUID:) returned non-nil), BUT
-        //   • cannot actually open an input stream right now (AirPods mic suspended by
-        //     another app, USB mic in degraded power state, Bluetooth SCO hand-off, etc.).
-        //
-        // When this happens with a specific device selected, we tear down, reset, and
-        // restart WITHOUT calling applyInputDevice — falling back to the system default
-        // input device.  If the fallback also fails, the error propagates normally.
-        Safety.log("startRecordingInternal() — calling engine.start()")
-        do {
-            try engine.start()
-        } catch where !inputDeviceUID.isEmpty {
-            // Preferred device failed to start — retry with system default.
-            Safety.log("startRecordingInternal() — engine.start() failed for preferred device (\(inputDeviceUID)); falling back to system default input device")
-            teardownEngineUnsafe()
-            engine.reset()
-            // No applyInputDevice — system default is used by omission.
-            let fallbackNode = engine.inputNode
-            bufferQueue.sync { _accumulatedSamples = [] }
-            fallbackNode.removeTap(onBus: 0)
-            fallbackNode.installTap(onBus: 0, bufferSize: 4096, format: nil) { [weak self] buffer, _ in
-                self?.processAudioBuffer(buffer)
-            }
-            engine.prepare()
-            let fallbackFormat = fallbackNode.outputFormat(forBus: 0)
-            Safety.log("startRecordingInternal() — fallback format: \(fallbackFormat.sampleRate) Hz, \(fallbackFormat.channelCount) ch")
-            guard fallbackFormat.sampleRate > 0, fallbackFormat.channelCount > 0 else {
-                fallbackNode.removeTap(onBus: 0)
-                throw NSError(
-                    domain: "AudioRecorderService",
-                    code: 1,
-                    userInfo: [NSLocalizedDescriptionKey:
-                        "Neither the selected microphone nor the system default input device is available."]
+        let planner = AudioRecorderRecoveryPlanner(
+            retryDelays: preferredInputRetryDelays,
+            sleep: { Thread.sleep(forTimeInterval: $0) },
+            log: { Safety.log($0, category: .audio) },
+            resolvePreferredInput: { AudioDeviceManager.resolveInputDevice(forUID: $0) },
+            startAttempt: { [weak self] selection, startReason, attemptIndex in
+                guard let self else {
+                    throw DictationError.audioEngineSetupFailed("Audio recorder service was released before startup completed.")
+                }
+                return try self.performStartAttempt(
+                    selection: selection,
+                    reason: startReason,
+                    attemptIndex: attemptIndex,
+                    preserveBufferedAudio: preserveBufferedAudio
                 )
             }
-            capturedSampleRate = fallbackFormat.sampleRate
-            try engine.start()  // if system default also fails, the error propagates
+        )
+
+        let report = try planner.execute(preferredUID: inputDeviceUID, reason: reason)
+        isCaptureSessionActive = true
+        activePreferredInputUID = inputDeviceUID
+        activeInputUID = report.activeInputUID
+
+        Safety.log(
+            "startRecordingInternal() — reason=\(reason.rawValue), finalDecision=\(report.finalDecisionDescription), preferredUID='\(report.requestedPreferredUID)', activeInputUID='\(report.activeInputUID)', activeDeviceID=\(String(describing: report.activeInputDeviceID)), preferredDeviceID=\(String(describing: report.preferredInputDeviceID)), retries=\(report.retryCount), usedSystemDefault=\(report.usedSystemDefault)",
+            category: .audio
+        )
+        if let recoveryNotice = report.recoveryNotice {
+            Safety.log("startRecordingInternal() — recoveryNotice=\(recoveryNotice)", category: .audio)
         }
-        Safety.log("startRecordingInternal() — engine.start() succeeded; capturedSampleRate=\(capturedSampleRate)")
+        return report
     }
 
     /// Stops the engine and returns all accumulated samples atomically.
@@ -235,18 +172,15 @@ public final class AudioRecorderService: ObservableObject {
     public func stopAndCollect() -> (samples: [Float], sampleRate: Double) {
         audioQueue.sync { [weak self] in
             guard let self else { return ([], 44100) }
-            // Remove tap unconditionally — NOT just when engine.isRunning.
-            // AVAudioEngine can auto-stop on a configuration change (route switch,
-            // device removed) while a tap is still registered. If we skip removal
-            // here, the stale tap causes a "tap already installed" NSException on
-            // the next startRecordingInternal() even though engine.isRunning == false.
             teardownEngineUnsafe()
+            isCaptureSessionActive = false
+            activePreferredInputUID = ""
+            activeInputUID = ""
             Task { @MainActor in self.inputLevel = 0 }
-            // Drain the buffer under bufferQueue while still on audioQueue.
             return self.bufferQueue.sync {
-                let s = self._accumulatedSamples
+                let samples = self._accumulatedSamples
                 self._accumulatedSamples = []
-                return (s, self.capturedSampleRate)
+                return (samples, self.capturedSampleRate)
             }
         }
     }
@@ -255,15 +189,15 @@ public final class AudioRecorderService: ObservableObject {
     public func stopRecording() {
         audioQueue.async { [weak self] in
             guard let self else { return }
-            // Remove tap unconditionally — see stopAndCollect() for rationale.
             self.teardownEngineUnsafe()
+            self.isCaptureSessionActive = false
+            self.activePreferredInputUID = ""
+            self.activeInputUID = ""
             Task { @MainActor in self.inputLevel = 0 }
         }
     }
 
-    /// Removes the tap and stops the engine.  Safe to call from any state:
-    ///   - removeTap(onBus:) is a no-op when no tap is installed
-    ///   - engine.stop() is a no-op when the engine is already stopped
+    /// Removes the tap and stops the engine. Safe to call from any state.
     /// Must be called on audioQueue.
     private func teardownEngineUnsafe() {
         engine.inputNode.removeTap(onBus: 0)
@@ -272,17 +206,146 @@ public final class AudioRecorderService: ObservableObject {
         }
     }
 
-    private func applyInputDevice(uid: String) throws {
-        // Called on audioQueue.
-        guard !uid.isEmpty else { return }
+    private func handleEngineConfigurationChange() {
+        let wasCaptureSessionActive = isCaptureSessionActive
+        let preferredUID = activePreferredInputUID
+        let activeUID = activeInputUID
 
-        guard let deviceID = AudioDeviceManager.deviceID(forUID: uid) else {
-            Safety.log("Preferred input device is unavailable. Falling back to the system default input device.", category: .audio)
+        teardownEngineUnsafe()
+        Task { @MainActor in self.inputLevel = 0 }
+
+        guard wasCaptureSessionActive else {
+            Safety.log("handleEngineConfigurationChange() — no active capture session; cleanup only", category: .audio)
             return
         }
 
-        guard let audioUnit = engine.inputNode.audioUnit else { return }
-        var id = deviceID
+        Safety.log(
+            "handleEngineConfigurationChange() — attempting recovery for preferredUID='\(preferredUID)', previouslyActiveInputUID='\(activeUID)'",
+            category: .audio
+        )
+
+        do {
+            let report = try startRecordingInternal(
+                inputDeviceUID: preferredUID,
+                reason: .routeRecovery,
+                preserveBufferedAudio: true
+            )
+            DispatchQueue.main.async {
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    self.onRouteRecoveryResult?(.success(report))
+                }
+            }
+        } catch {
+            let failure = makeRecoveryFailure(error, reason: .routeRecovery, preferredUID: preferredUID)
+            Safety.log(
+                "handleEngineConfigurationChange() — recovery FAILED for preferredUID='\(preferredUID)', retries=\(failure.retryCount), fallbackNotice=\(failure.recoveryNotice ?? "nil"), error=\(failure.underlyingError)",
+                category: .audio
+            )
+            isCaptureSessionActive = false
+            activePreferredInputUID = ""
+            activeInputUID = ""
+            DispatchQueue.main.async {
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    self.inputLevel = 0
+                    self.onRouteRecoveryResult?(.failure(failure))
+                    self.onEngineInterrupted?()
+                }
+            }
+        }
+    }
+
+    private func performStartAttempt(
+        selection: AudioRecorderSelectedInput,
+        reason: AudioRecorderStartReason,
+        attemptIndex: Int,
+        preserveBufferedAudio: Bool
+    ) throws -> AudioRecorderStartedInput {
+        teardownEngineUnsafe()
+        engine.reset()
+
+        let selectionDescription = describeSelection(selection)
+        Safety.log(
+            "performStartAttempt() — reason=\(reason.rawValue), attempt=\(attemptIndex + 1), selection=\(selectionDescription), preserveBufferedAudio=\(preserveBufferedAudio)",
+            category: .audio
+        )
+
+        if !preserveBufferedAudio {
+            bufferQueue.sync { _accumulatedSamples = [] }
+        } else {
+            let bufferedSampleCount = bufferQueue.sync { _accumulatedSamples.count }
+            Safety.log("performStartAttempt() — preserving \(bufferedSampleCount) buffered samples across recovery", category: .audio)
+        }
+
+        switch selection {
+        case .systemDefault:
+            break
+        case .preferred(let match):
+            try applyInputDevice(match: match)
+        }
+
+        let inputNode = engine.inputNode
+        let prePrepareFormat = inputNode.outputFormat(forBus: 0)
+        Safety.log(
+            "performStartAttempt() — pre-prepare format: \(prePrepareFormat.sampleRate) Hz, \(prePrepareFormat.channelCount) ch",
+            category: .audio
+        )
+
+        inputNode.removeTap(onBus: 0)
+        inputNode.installTap(onBus: 0, bufferSize: 4096, format: nil) { [weak self] buffer, _ in
+            self?.processAudioBuffer(buffer)
+        }
+
+        engine.prepare()
+
+        let finalFormat = inputNode.outputFormat(forBus: 0)
+        Safety.log(
+            "performStartAttempt() — post-prepare format: \(finalFormat.sampleRate) Hz, \(finalFormat.channelCount) ch",
+            category: .audio
+        )
+
+        guard finalFormat.sampleRate > 0, finalFormat.channelCount > 0 else {
+            inputNode.removeTap(onBus: 0)
+            throw DictationError.audioEngineSetupFailed(
+                "Audio input returned an invalid format after prepare() (sampleRate=\(finalFormat.sampleRate), channels=\(finalFormat.channelCount))."
+            )
+        }
+
+        capturedSampleRate = finalFormat.sampleRate
+
+        do {
+            Safety.log("performStartAttempt() — calling engine.start()", category: .audio)
+            try engine.start()
+        } catch {
+            throw wrapAudioStartError(error, selection: selection, reason: reason, attemptIndex: attemptIndex)
+        }
+
+        let startedInput: AudioRecorderStartedInput
+        switch selection {
+        case .systemDefault:
+            startedInput = AudioRecorderStartedInput(uid: "", deviceID: nil)
+        case .preferred(let match):
+            startedInput = AudioRecorderStartedInput(uid: match.uid, deviceID: match.deviceID)
+        }
+
+        Safety.log(
+            "performStartAttempt() — engine.start() succeeded for selection=\(selectionDescription), capturedSampleRate=\(capturedSampleRate)",
+            category: .audio
+        )
+        return startedInput
+    }
+
+    private func applyInputDevice(match: AudioInputDeviceMatch) throws {
+        Safety.log(
+            "applyInputDevice() — preferredUID='\(match.uid)', deviceID=\(match.deviceID), hasInputChannels=\(match.hasInputChannels)",
+            category: .audio
+        )
+        guard let audioUnit = engine.inputNode.audioUnit else {
+            throw DictationError.audioEngineSetupFailed("Audio input node could not provide an audio unit for device selection.")
+        }
+
+        var id = match.deviceID
         let status = AudioUnitSetProperty(
             audioUnit,
             kAudioOutputUnitProperty_CurrentDevice,
@@ -291,7 +354,69 @@ public final class AudioRecorderService: ObservableObject {
             &id,
             UInt32(MemoryLayout<AudioDeviceID>.size)
         )
-        if status != noErr { throw DictationError.inputDeviceError }
+        if status != noErr {
+            throw DictationError.audioEngineSetupFailed(
+                "AudioUnitSetProperty failed for preferred input device '\(match.uid)' (deviceID=\(match.deviceID), status=\(status))."
+            )
+        }
+    }
+
+    private func wrapAudioStartError(
+        _ error: Error,
+        selection: AudioRecorderSelectedInput,
+        reason: AudioRecorderStartReason,
+        attemptIndex: Int
+    ) -> Error {
+        let stage: String
+        switch selection {
+        case .systemDefault:
+            stage = reason == .routeRecovery ? "route-recovery fallback start" : "system-default fallback start"
+        case .preferred:
+            stage = reason == .routeRecovery ? "route-recovery preferred start" : "initial preferred start"
+        }
+
+        let errorDescription = error.localizedDescription
+        let nsError = error as NSError
+        Safety.log(
+            "wrapAudioStartError() — stage=\(stage), attempt=\(attemptIndex + 1), domain=\(nsError.domain), code=\(nsError.code), description=\(errorDescription)",
+            category: .audio
+        )
+
+        if let recoveryFailure = error as? AudioRecorderRecoveryFailure {
+            return recoveryFailure
+        }
+        if let dictationError = error as? DictationError {
+            return dictationError
+        }
+        return DictationError.audioEngineSetupFailed("\(stage): \(errorDescription)")
+    }
+
+    private func makeRecoveryFailure(
+        _ error: Error,
+        reason: AudioRecorderStartReason,
+        preferredUID: String
+    ) -> AudioRecorderRecoveryFailure {
+        if let failure = error as? AudioRecorderRecoveryFailure {
+            return failure
+        }
+        return AudioRecorderRecoveryFailure(
+            reason: reason,
+            requestedPreferredUID: preferredUID,
+            preferredInputDeviceID: nil,
+            retryCount: 0,
+            recoveryNotice: nil,
+            shouldClearStoredPreferredUID: false,
+            underlyingError: error
+        )
+    }
+
+    private func describeSelection(_ selection: AudioRecorderSelectedInput) -> String {
+        switch selection {
+        case .systemDefault:
+            return "systemDefault"
+        case .preferred(let match):
+            return "preferred(uid=\(match.uid), deviceID=\(match.deviceID), hasInputChannels=\(match.hasInputChannels))"
+        }
     }
 
     // MARK: - Audio Accumulation
@@ -302,9 +427,9 @@ public final class AudioRecorderService: ObservableObject {
 
     func collectRecording() -> [Float] {
         bufferQueue.sync {
-            let s = _accumulatedSamples
+            let samples = _accumulatedSamples
             _accumulatedSamples = []
-            return s
+            return samples
         }
     }
 
@@ -315,11 +440,15 @@ public final class AudioRecorderService: ObservableObject {
         if frameLength == 0 { return }
 
         var sumSquares: Float = 0
-        for i in 0..<frameLength { sumSquares += channelData[i] * channelData[i] }
+        for i in 0..<frameLength {
+            sumSquares += channelData[i] * channelData[i]
+        }
 
         bufferQueue.sync {
             _accumulatedSamples.reserveCapacity(_accumulatedSamples.count + frameLength)
-            for i in 0..<frameLength { _accumulatedSamples.append(channelData[i]) }
+            for i in 0..<frameLength {
+                _accumulatedSamples.append(channelData[i])
+            }
         }
 
         let rms = sqrt(sumSquares / Float(frameLength))

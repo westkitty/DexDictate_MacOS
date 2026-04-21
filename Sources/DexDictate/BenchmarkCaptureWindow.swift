@@ -222,20 +222,20 @@ final class BenchmarkCaptureWindowController: NSObject, ObservableObject, NSWind
         statusMessage = "Starting \(prompt.id)..."
         lastErrorMessage = nil
 
-        recorder.startRecordingAsync(inputDeviceUID: AppSettings.shared.inputDeviceUID) { [weak self] error in
+        recorder.startRecordingAsync(inputDeviceUID: AppSettings.shared.inputDeviceUID) { [weak self] result in
             guard let self else { return }
             let shouldActivateRecording = self.isStarting
             self.isStarting = false
             guard shouldActivateRecording else { return }
-            if let error {
+            switch result {
+            case .failure(let error):
                 self.lastErrorMessage = error.localizedDescription
                 self.statusMessage = "Benchmark recording failed to start."
                 self.isRecording = false
-                return
+            case .success:
+                self.isRecording = true
+                self.statusMessage = "Recording \(prompt.id). Speak the prompt, then stop."
             }
-
-            self.isRecording = true
-            self.statusMessage = "Recording \(prompt.id). Speak the prompt, then stop."
         }
     }
 

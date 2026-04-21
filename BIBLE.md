@@ -739,3 +739,47 @@ This restarts the macOS CoreAudio daemon (`coreaudiod`). macOS automatically rel
 **Root cause:** `coreaudiod` is the system-wide audio session broker. When it gets into a bad state (after system sleep/wake, Bluetooth audio hand-off, USB mic plug/unplug, or system update), it can deny stream-open requests to all processes even though device enumeration still works. No amount of AVAudioEngine reset/teardown on the app side can fix this — it requires restarting the daemon itself.
 
 **Lesson:** Before spending any session time debugging `-10868` in Swift code, run `sudo killall coreaudiod` first. If the error goes away, the problem was never in the app.
+
+---
+
+### Entry 4: Route-Recovery Hardening Session Start (2026-04-21)
+
+**Goal of session:** Implement a general audio-route resilience improvement so DexDictate keeps using the user's preferred microphone across route churn, retries cleanly after `AVAudioEngineConfigurationChange`, and only falls back to system default input when the preferred microphone is actually unavailable.
+
+**Problem being solved:** The current recorder tears the engine down on configuration change and `TranscriptionEngine` immediately aborts the session. When a selected microphone still exists but `engine.start()` temporarily fails with `kAudioOutputUnitErr_InvalidDevice` (`-10868`) during Bluetooth output churn or multi-app CoreAudio contention, DexDictate becomes brittle and drops back to a non-recovering state too eagerly.
+
+**Safety snapshot:** No pre-change safety snapshot commit was created because `git status --short` was clean on branch `main` and there was nothing to commit.
+
+**Files expected to inspect:** 
+- `Sources/DexDictateKit/Services/AudioRecorderService.swift`
+- `Sources/DexDictateKit/TranscriptionEngine.swift`
+- `Sources/DexDictateKit/Capture/AudioDeviceManager.swift`
+- `Sources/DexDictateKit/Capture/AudioDeviceScanner.swift`
+- `Sources/DexDictateKit/Capture/AudioInputSelectionPolicy.swift`
+- `Tests/DexDictateTests/AudioInputSelectionPolicyTests.swift`
+
+---
+
+### Entry 5: Route-Recovery Implementation Complete (2026-04-21)
+
+**Completed work unit:** Replaced the recorder's immediate-abort behavior with a bounded recovery pipeline. `AudioRecorderService` now serializes route-change recovery on `audioQueue`, preserves buffered samples across successful recovery, retries the preferred input UID through short bounded delays, logs preferred UID/device ID/input-channel state for each attempt, and only falls back to system default after the preferred path is either still missing, output-only, or repeatedly fails to open.
+
+**Architectural decisions:**
+- Added `AudioRecorderRecoverySupport.swift` to isolate retry/fallback planning from the AVAudioEngine wiring so route-recovery policy is testable without real hardware.
+- Expanded `AudioDeviceManager` to distinguish `available`, `missing`, and `unavailableAsInput` CoreAudio resolutions instead of exposing only a nullable device ID.
+- Expanded `AudioInputSelectionPolicy` + `AudioDeviceScanner` to retain a missing preferred input briefly before normalizing to system default, which avoids clearing user intent during transient route churn.
+- Updated `TranscriptionEngine` to react to explicit recovery success/failure results instead of treating every `AVAudioEngineConfigurationChange` as terminal.
+
+**Files changed in this work unit:**
+- `Sources/DexDictateKit/Services/AudioRecorderService.swift`
+- `Sources/DexDictateKit/Services/AudioRecorderRecoverySupport.swift`
+- `Sources/DexDictateKit/TranscriptionEngine.swift`
+- `Sources/DexDictateKit/Capture/AudioDeviceManager.swift`
+- `Sources/DexDictateKit/Capture/AudioDeviceScanner.swift`
+- `Sources/DexDictateKit/Capture/AudioInputSelectionPolicy.swift`
+- `Sources/DexDictate/BenchmarkCaptureWindow.swift`
+- `Sources/DexDictateKit/Permissions/OnboardingValidation.swift`
+- `Tests/DexDictateTests/AudioInputSelectionPolicyTests.swift`
+- `Tests/DexDictateTests/AudioDeviceManagerTests.swift`
+- `Tests/DexDictateTests/AudioRecorderRecoveryPlannerTests.swift`
+- `Tests/DexDictateTests/EngineLifecycleStateMachineTests.swift`

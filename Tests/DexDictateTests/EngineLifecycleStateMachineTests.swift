@@ -26,6 +26,14 @@ final class EngineLifecycleStateMachineTests: XCTestCase {
         XCTAssertEqual(machine.apply(.audioCaptureFailed)?.to, .ready)
     }
 
+    func testListeningCanRestartAfterAudioCaptureFailure() {
+        var machine = EngineLifecycleStateMachine(state: .ready)
+
+        XCTAssertEqual(machine.apply(.listeningStarted)?.to, .listening)
+        XCTAssertEqual(machine.apply(.audioCaptureFailed)?.to, .ready)
+        XCTAssertEqual(machine.apply(.listeningStarted)?.to, .listening)
+    }
+
     func testImportedFileTranscriptionCanStartFromReady() {
         var machine = EngineLifecycleStateMachine(state: .ready)
 

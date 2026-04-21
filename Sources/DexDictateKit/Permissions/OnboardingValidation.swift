@@ -187,19 +187,19 @@ public final class MicrophoneValidationHarness: ObservableObject {
         }
 
         state = .running
-        audioService.startRecordingAsync(inputDeviceUID: inputDeviceUID) { [weak self] error in
+        audioService.startRecordingAsync(inputDeviceUID: inputDeviceUID) { [weak self] result in
             guard let self else { return }
-            if let error {
+            switch result {
+            case .failure(let error):
                 self.state = .recorderFailed(error.localizedDescription)
-                return
-            }
-
-            self.pendingTask = Task { @MainActor [weak self] in
-                guard let self else { return }
-                try? await Task.sleep(nanoseconds: UInt64(durationSeconds * 1_000_000_000))
-                _ = self.audioService.stopAndCollect()
-                self.inputLevel = 0
-                self.state = self.maxObservedLevel > 0.05 ? .ready : .noInputDetected
+            case .success:
+                self.pendingTask = Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    try? await Task.sleep(nanoseconds: UInt64(durationSeconds * 1_000_000_000))
+                    _ = self.audioService.stopAndCollect()
+                    self.inputLevel = 0
+                    self.state = self.maxObservedLevel > 0.05 ? .ready : .noInputDetected
+                }
             }
         }
     }
