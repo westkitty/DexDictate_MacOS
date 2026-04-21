@@ -845,3 +845,38 @@ This restarts the macOS CoreAudio daemon (`coreaudiod`). macOS automatically rel
 - `git commit -m "feat: harden audio route recovery"`
 
 **Git status:** `git status --short` was clean immediately before this final documentation entry, at commit `ca99c50`.
+
+---
+
+### Entry 7: Recovery Message Cleanup (2026-04-21)
+
+**Goal:**
+- Fix the post-recovery UI so audio-route failures do not dump raw `com.apple.coreaudio.avfaudio error -10868` detail into the main window.
+
+**Problem solved:**
+- After the route-recovery work landed, fallback-to-system-default was still surfacing the underlying Core Audio startup error in user-facing status text and the empty-history placeholder. The diagnostics were useful in logs, but the UI became noisy and misleading.
+
+**Files changed in this work unit:**
+- `BIBLE.md`
+- `Sources/DexDictateKit/Services/AudioRecorderRecoverySupport.swift`
+- `Sources/DexDictateKit/TranscriptionEngine.swift`
+- `Tests/DexDictateTests/AudioRecorderRecoveryFailureTests.swift`
+
+**Decisions:**
+- Keep detailed startup and recovery failure context in logs, but collapse UI-facing recovery failures to stable concise messages.
+- Map `-10868` / invalid-device startup failures to a short operator message in `TranscriptionEngine` instead of reusing raw `localizedDescription` directly.
+- Remove the underlying-error dump from the fallback notice when DexDictate switches to system default input.
+
+**Tests and verification:**
+- `swift test --filter AudioRecorderRecoveryFailureTests`
+- `swift test --filter AudioRecorderRecoveryPlannerTests`
+- `swift test`
+- `./build.sh`
+
+**Install verification:**
+- Reinstalled `/Applications/DexDictate.app` after the message cleanup build.
+
+**Git status after implementation:**
+- Modified: `Sources/DexDictateKit/Services/AudioRecorderRecoverySupport.swift`
+- Modified: `Sources/DexDictateKit/TranscriptionEngine.swift`
+- Modified: `Tests/DexDictateTests/AudioRecorderRecoveryFailureTests.swift`

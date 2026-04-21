@@ -351,12 +351,13 @@ public final class TranscriptionEngine: ObservableObject {
             switch result {
             case .failure(let error):
                 Safety.log("ERROR: startListening() — audio engine failed: \(error) — resetting state to .ready")
-                let desc = error.localizedDescription.lowercased()
+                let userFacingMessage = userFacingAudioStartFailureMessage(for: error)
+                let desc = userFacingMessage.lowercased()
                 if desc.contains("permission") || desc.contains("unauthorized") {
                     self.statusText = NSLocalizedString("Microphone access lost. Please check system preferences.", comment: "Status: Permission revoked during recording")
                     self.permissionManager?.refreshPermissions()
                 } else {
-                    self.statusText = error.localizedDescription
+                    self.statusText = userFacingMessage
                 }
                 self.resultFeedback = .idle
                 _ = self.applyLifecycle(.audioCaptureFailed, context: "audio start failure")
@@ -376,6 +377,24 @@ public final class TranscriptionEngine: ObservableObject {
                 self.startSilenceCountdownIfNeeded()
             }
         }
+    }
+
+    private func userFacingAudioStartFailureMessage(for error: Error) -> String {
+        if let recoveryFailure = error as? AudioRecorderRecoveryFailure,
+           let description = recoveryFailure.errorDescription,
+           !description.isEmpty {
+            return description
+        }
+
+        if case let DictationError.audioEngineSetupFailed(message) = error,
+           message.contains("-10868")
+                || message.contains("kAudioOutputUnitErr_InvalidDevice")
+                || message.contains("coreaudio.avfaudio error -10868")
+        {
+            return "DexDictate could not open the microphone. If this keeps happening, restart macOS audio and try again."
+        }
+
+        return error.localizedDescription
     }
 
     private func startSilenceCountdownIfNeeded() {

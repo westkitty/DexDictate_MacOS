@@ -32,7 +32,33 @@ final class AudioRecorderRecoveryFailureTests: XCTestCase {
 
         XCTAssertEqual(
             failure.localizedDescription,
-            "DexDictate could not open the selected microphone. Audio engine setup failed: coreaudio.avfaudio error -10868\n\nThis is usually a macOS Core Audio problem, not a DexDictate settings problem.\nFix: open Terminal and run:\nsudo killall -9 coreaudiod\n\nThen try DexDictate again."
+            "DexDictate could not open the selected microphone. Try again."
+        )
+    }
+
+    func testRecoveryNoticeOmitsUnderlyingErrorDump() {
+        let planner = AudioRecorderRecoveryPlanner(
+            retryDelays: [0],
+            sleep: { _ in },
+            log: { _ in },
+            resolvePreferredInput: { _ in
+                .available(AudioInputDeviceMatch(uid: "mic-a", deviceID: 1, hasInputChannels: true))
+            },
+            startAttempt: { selection, _, _ in
+                switch selection {
+                case .preferred:
+                    throw DictationError.audioEngineSetupFailed("coreaudio.avfaudio error -10868")
+                case .systemDefault:
+                    return AudioRecorderStartedInput(uid: "", deviceID: nil)
+                }
+            }
+        )
+
+        let report = try? planner.execute(preferredUID: "mic-a", reason: .initialStart)
+
+        XCTAssertEqual(
+            report?.recoveryNotice,
+            "Preferred microphone could not be opened. DexDictate switched to System Default input."
         )
     }
 }

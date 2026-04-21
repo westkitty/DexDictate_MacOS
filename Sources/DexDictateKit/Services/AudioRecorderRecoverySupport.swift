@@ -51,9 +51,9 @@ public struct AudioRecorderRecoveryFailure: Error, LocalizedError {
 
         switch reason {
         case .initialStart:
-            return "DexDictate could not open the selected microphone. \(underlyingError.localizedDescription)"
+            return "DexDictate could not open the selected microphone. Try again."
         case .routeRecovery:
-            return "DexDictate could not recover audio after the route changed. \(underlyingError.localizedDescription)"
+            return "DexDictate could not recover audio after the route changed. Ready to record again."
         }
     }
 }
@@ -188,9 +188,7 @@ struct AudioRecorderRecoveryPlanner {
         case .unavailableAsInput:
             return "Selected device is not usable as an input. DexDictate switched to System Default input."
         case .available:
-            if let lastPreferredStartError {
-                return "\(prefix) DexDictate switched to System Default input. Last error: \(lastPreferredStartError.localizedDescription)"
-            }
+            _ = lastPreferredStartError
             return "\(prefix) DexDictate switched to System Default input."
         }
     }
