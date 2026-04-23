@@ -103,7 +103,7 @@ struct HistoryView: View {
                                 .foregroundStyle(.white.opacity(0.82))
                             Text(statusText)
                                 .font(.caption)
-                                .foregroundStyle(.white.opacity(0.58))
+                                .foregroundStyle(.white.opacity(0.5))
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         .padding(8)
@@ -116,7 +116,7 @@ struct HistoryView: View {
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text(item.createdAt.formatted(date: .omitted, time: .shortened))
                                         .font(.caption2)
-                                        .foregroundStyle(.white.opacity(0.52))
+                                        .foregroundStyle(.white.opacity(0.45))
 
                                     Text(item.text)
                                         .font(.caption)

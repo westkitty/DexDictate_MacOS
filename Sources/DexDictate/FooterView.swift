@@ -9,18 +9,10 @@ struct FooterView: View {
 
     var body: some View {
         VStack(spacing: 6) {
-            Button(action: { NSApplication.shared.terminate(nil) }) {
-                Text(NSLocalizedString("Quit App", comment: ""))
-                    .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.45))
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Quit DexDictate")
-
             Button(action: { settings.restoreDefaults() }) {
                 Text(NSLocalizedString("Restore Defaults", comment: ""))
                     .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.58))
+                    .foregroundStyle(.white.opacity(0.5))
             }
             .buttonStyle(.plain)
 
@@ -40,7 +32,7 @@ struct FooterView: View {
                 Text(String(format: NSLocalizedString("DexDictate macOS v%@", comment: ""),
                              Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"))
                     .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.38))
+                    .foregroundStyle(.white.opacity(0.3))
                     .fixedSize()
                     .padding(.bottom, 10)
             }

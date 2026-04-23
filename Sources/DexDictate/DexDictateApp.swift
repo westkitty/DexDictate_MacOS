@@ -386,15 +386,14 @@ struct AntiGravityMainView: View {
                     .ignoresSafeArea()
             }
 
-            // Large app-icon watermark — pinned to top half so it stays out of the controls zone.
+            // Large app-icon watermark behind all content (visible on every theme).
             if let assetURL = profileManager.currentWatermarkAsset?.url,
                let nsImage = NSImage(contentsOf: assetURL) {
                 Image(nsImage: nsImage)
                     .resizable()
                     .scaledToFit()
                     .frame(width: 200, height: 200)
-                    .opacity(0.06)
-                    .frame(maxHeight: .infinity, alignment: .top)
+                    .opacity(0.12)
                     .allowsHitTesting(false)
             } else if let url = Safety.resourceBundle.url(forResource: "Assets.xcassets/AppIcon.appiconset/icon", withExtension: "png"),
                let nsImage = NSImage(contentsOf: url) {
@@ -402,8 +401,7 @@ struct AntiGravityMainView: View {
                     .resizable()
                     .scaledToFit()
                     .frame(width: 200, height: 200)
-                    .opacity(0.06)
-                    .frame(maxHeight: .infinity, alignment: .top)
+                    .opacity(0.12)
                     .allowsHitTesting(false)
             }
             Text("DEXDICTATE")
@@ -411,11 +409,10 @@ struct AntiGravityMainView: View {
                 .tracking(4)
                 .foregroundStyle(
                     settings.appearanceTheme == .minimalist
-                    ? Color.black.opacity(0.06)
-                    : Color.white.opacity(0.06)
+                    ? Color.black.opacity(0.12)
+                    : Color.white.opacity(0.12)
                 )
                 .rotationEffect(.degrees(-18))
-                .frame(maxHeight: .infinity, alignment: .top)
                 .allowsHitTesting(false)
 
             ScrollView(.vertical, showsIndicators: true) {
@@ -440,6 +437,20 @@ struct AntiGravityMainView: View {
                     }
                     .padding(.top, 4)
 
+                    if settings.showFlavorTicker {
+                        FlavorTickerView(
+                            text: profileManager.currentFlavorLine?.text ?? "",
+                            animateWhenNeeded: settings.animateFlavorTicker
+                        )
+                    }
+
+                    if settings.showDictationStats {
+                        StatsTickerView(
+                            history: engine.history,
+                            animateWhenNeeded: settings.animateFlavorTicker
+                        )
+                    }
+
                     PermissionBannerView(permissionManager: permissionManager)
 
                     HistoryView(
@@ -457,20 +468,6 @@ struct AntiGravityMainView: View {
                         engine: engine,
                         adaptiveBenchmarkController: adaptiveBenchmarkController
                     )
-
-                    if settings.showFlavorTicker {
-                        FlavorTickerView(
-                            text: profileManager.currentFlavorLine?.text ?? "",
-                            animateWhenNeeded: settings.animateFlavorTicker
-                        )
-                    }
-
-                    if settings.showDictationStats {
-                        StatsTickerView(
-                            history: engine.history,
-                            animateWhenNeeded: settings.animateFlavorTicker
-                        )
-                    }
 
                     QuickSettingsView(
                         engine: engine,

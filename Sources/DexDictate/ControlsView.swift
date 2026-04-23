@@ -19,6 +19,7 @@ struct ControlsView: View {
     @State private var isStartHovered = false
     @State private var isStopHovered = false
     @State private var isImportHovered = false
+    @State private var isQuitHovered = false
 
     // MARK: - Derived
 
@@ -98,6 +99,23 @@ struct ControlsView: View {
         .accessibilityLabel("Import audio file for transcription")
     }
 
+    private var quitButton: some View {
+        Button(action: quitApp) {
+            Text(NSLocalizedString("Quit App", comment: ""))
+                .font(.subheadline).fontWeight(.medium)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(Color.black.opacity(isQuitHovered ? 0.55 : 0.4))
+                .foregroundStyle(.white.opacity(isQuitHovered ? 1.0 : 0.8))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(isQuitHovered ? 0.3 : 0.2), lineWidth: 1))
+                .animation(.easeInOut(duration: 0.15), value: isQuitHovered)
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in withAnimation(.easeInOut(duration: 0.15)) { isQuitHovered = hovering } }
+        .accessibilityLabel("Quit DexDictate")
+    }
+
     // MARK: - Body
 
     var body: some View {
@@ -120,7 +138,7 @@ struct ControlsView: View {
                 VStack(spacing: 6) {
                     Text("Trigger")
                         .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.62))
+                        .foregroundStyle(.white.opacity(0.55))
                         .textCase(.uppercase)
                         .tracking(0.8)
 
@@ -194,6 +212,9 @@ struct ControlsView: View {
                 // Stop the whole dictation system (returns to .stopped)
                 stopDictationButton
             }
+
+            // ── Always visible: Quit ──────────────────────────────────────────
+            quitButton
         }
         .padding(SurfaceTokens.cardPadding)
         .background(Color.white.opacity(0.05))
@@ -260,6 +281,10 @@ struct ControlsView: View {
         panel.message = NSLocalizedString("Select an audio file to transcribe", comment: "Open panel message")
         guard panel.runModal() == .OK, let url = panel.url else { return }
         engine.transcribeAudioFile(url: url)
+    }
+
+    private func quitApp() {
+        NSApplication.shared.terminate(nil)
     }
 
     private func undoLastHistoryRemoval() {
