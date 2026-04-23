@@ -2,6 +2,26 @@ import XCTest
 @testable import DexDictateKit
 
 final class OutputCoordinatorTests: XCTestCase {
+    func testDefaultPasteDeliveryProfileWaitsBrieflyForStandardApps() {
+        let profile = PasteDeliveryProfile.resolve(for: nil)
+
+        XCTAssertEqual(profile.initialDelay, 0.12)
+        XCTAssertEqual(profile.activationTimeout, 0.20)
+        XCTAssertEqual(profile.activationPollInterval, 0.02)
+        XCTAssertTrue(profile.postsToTargetProcess)
+    }
+
+    func testZoomPasteDeliveryProfileAllowsExtraActivationTime() {
+        let target = OutputTargetApplication(bundleIdentifier: "us.zoom.xos", processIdentifier: 99)
+
+        let profile = PasteDeliveryProfile.resolve(for: target)
+
+        XCTAssertEqual(profile.initialDelay, 0.22)
+        XCTAssertEqual(profile.activationTimeout, 0.45)
+        XCTAssertEqual(profile.activationPollInterval, 0.02)
+        XCTAssertTrue(profile.postsToTargetProcess)
+    }
+
     func testSavedOnlyWhenAutoPasteDisabled() {
         let writer = MockOutputWriter()
         let coordinator = OutputCoordinator(
