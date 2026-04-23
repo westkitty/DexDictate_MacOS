@@ -46,13 +46,19 @@ struct DexDictateApp: App {
                 adaptiveBenchmarkController: adaptiveBenchmarkController,
                 benchmarkResultsStore: benchmarkResultsStore,
                 onDetachHistory: {
-                    historyController.show()
+                    MainActorAction.run {
+                        historyController.show()
+                    }
                 },
                 onOpenHelp: {
-                    helpController.show()
+                    MainActorAction.run {
+                        helpController.show()
+                    }
                 },
                 onRequestOnboardingDebug: {
-                    appDelegate.presentOnboardingForDebug()
+                    MainActorAction.run {
+                        appDelegate.presentOnboardingForDebug()
+                    }
                 }
             )
             .onAppear {
@@ -508,7 +514,9 @@ struct AntiGravityMainView: View {
         )
         .sheet(item: importedFileResultBinding) { result in
             ImportedFileTranscriptionSheet(result: result) {
-                engine.dismissImportedFileResult()
+                MainActorAction.run {
+                    engine.dismissImportedFileResult()
+                }
             }
         }
         .onDrop(of: [.fileURL], isTargeted: $isDroppingFile) { providers in

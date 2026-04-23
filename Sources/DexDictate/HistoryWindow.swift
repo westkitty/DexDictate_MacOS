@@ -118,7 +118,9 @@ struct FullHistoryView: View {
                     .disabled(filteredItems.isEmpty)
 
                     ChromeIconButton(systemName: "trash", accessibilityText: "Clear history") {
-                        history.clear()
+                        MainActorAction.run {
+                            history.clear()
+                        }
                     }
                     .help(NSLocalizedString("Clear History", comment: ""))
                 }

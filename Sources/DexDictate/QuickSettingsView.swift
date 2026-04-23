@@ -303,13 +303,13 @@ struct QuickSettingsView: View {
 
                                     HStack {
                                         Button("Open Benchmark Capture") {
-                                            benchmarkCaptureController.show(engine: engine)
+                                            openBenchmarkCapture()
                                         }
                                         .buttonStyle(.bordered)
                                         .controlSize(.small)
 
                                         Button("Import Model") {
-                                            _ = modelCatalog.importModelFromOpenPanel()
+                                            importModel()
                                         }
                                         .buttonStyle(.bordered)
                                         .controlSize(.small)
@@ -317,7 +317,7 @@ struct QuickSettingsView: View {
 
                                     HStack {
                                         Button("Run Benchmarks Now") {
-                                            adaptiveBenchmarkController.runBenchmarksNow()
+                                            runBenchmarksNow()
                                         }
                                         .buttonStyle(.bordered)
                                         .controlSize(.small)
@@ -390,9 +390,7 @@ struct QuickSettingsView: View {
 
                             if profileManager.activeProfile != .standard {
                                 Button("Return to Standard") {
-                                    profileManager.returnToStandard()
-                                    profileManager.synchronizeBundledVocabulary(with: vocabularyManager)
-                                    profileManager.refreshDynamicContent()
+                                    returnToStandardProfile()
                                 }
                                 .buttonStyle(.bordered)
                                 .controlSize(.small)
@@ -472,7 +470,7 @@ struct QuickSettingsView: View {
 
                             if launchAtLoginController.needsSystemApproval {
                                 Button("Open Login Items Settings") {
-                                    launchAtLoginController.openSystemSettings()
+                                    openLoginItemsSettings()
                                 }
                                 .buttonStyle(.bordered)
                                 .controlSize(.small)
@@ -526,9 +524,11 @@ struct QuickSettingsView: View {
         Binding(
             get: { profileManager.activeProfile },
             set: { newValue in
-                profileManager.selectProfile(newValue)
-                profileManager.synchronizeBundledVocabulary(with: vocabularyManager)
-                profileManager.refreshDynamicContent()
+                MainActorAction.run {
+                    profileManager.selectProfile(newValue)
+                    profileManager.synchronizeBundledVocabulary(with: vocabularyManager)
+                    profileManager.refreshDynamicContent()
+                }
             }
         )
     }
@@ -550,8 +550,10 @@ struct QuickSettingsView: View {
         Binding(
             get: { launchAtLoginController.isEnabled },
             set: { newValue in
-                launchAtLoginController.setEnabled(newValue)
-                launchAtLoginController.syncStoredPreference(into: settings)
+                MainActorAction.run {
+                    launchAtLoginController.setEnabled(newValue)
+                    launchAtLoginController.syncStoredPreference(into: settings)
+                }
             }
         )
     }
@@ -667,60 +669,98 @@ struct QuickSettingsView: View {
     @State private var perAppInsertionWindow: NSWindow?
 
     private func openVocabularyWindow() {
-        if let existing = vocabularyWindow, existing.isVisible {
-            existing.makeKeyAndOrderFront(nil)
+        MainActorAction.run {
+            if let existing = vocabularyWindow, existing.isVisible {
+                existing.makeKeyAndOrderFront(nil)
+                NSApp.activate()
+                return
+            }
+            let view = VocabularySettingsView(vocabularyManager: vocabularyManager)
+            let hosting = NSHostingController(rootView: view)
+            let window = NSWindow(contentViewController: hosting)
+            window.title = NSLocalizedString("Custom Vocabulary", comment: "")
+            window.setContentSize(NSSize(width: 400, height: 300))
+            window.styleMask = [.titled, .closable, .resizable, .miniaturizable]
+            window.center()
+            window.isReleasedWhenClosed = false
+            window.makeKeyAndOrderFront(nil)
             NSApp.activate()
-            return
+            vocabularyWindow = window
         }
-        let view = VocabularySettingsView(vocabularyManager: vocabularyManager)
-        let hosting = NSHostingController(rootView: view)
-        let window = NSWindow(contentViewController: hosting)
-        window.title = NSLocalizedString("Custom Vocabulary", comment: "")
-        window.setContentSize(NSSize(width: 400, height: 300))
-        window.styleMask = [.titled, .closable, .resizable, .miniaturizable]
-        window.center()
-        window.isReleasedWhenClosed = false
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate()
-        vocabularyWindow = window
     }
 
     private func openPerAppInsertionWindow() {
-        if let existing = perAppInsertionWindow, existing.isVisible {
-            existing.makeKeyAndOrderFront(nil)
+        MainActorAction.run {
+            if let existing = perAppInsertionWindow, existing.isVisible {
+                existing.makeKeyAndOrderFront(nil)
+                NSApp.activate()
+                return
+            }
+            let view = PerAppInsertionView(manager: engine.appInsertionOverridesManager)
+            let hosting = NSHostingController(rootView: view)
+            let window = NSWindow(contentViewController: hosting)
+            window.title = NSLocalizedString("Per-App Insertion Rules", comment: "")
+            window.setContentSize(NSSize(width: 500, height: 380))
+            window.styleMask = [.titled, .closable, .resizable, .miniaturizable]
+            window.center()
+            window.isReleasedWhenClosed = false
+            window.makeKeyAndOrderFront(nil)
             NSApp.activate()
-            return
+            perAppInsertionWindow = window
         }
-        let view = PerAppInsertionView(manager: engine.appInsertionOverridesManager)
-        let hosting = NSHostingController(rootView: view)
-        let window = NSWindow(contentViewController: hosting)
-        window.title = NSLocalizedString("Per-App Insertion Rules", comment: "")
-        window.setContentSize(NSSize(width: 500, height: 380))
-        window.styleMask = [.titled, .closable, .resizable, .miniaturizable]
-        window.center()
-        window.isReleasedWhenClosed = false
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate()
-        perAppInsertionWindow = window
     }
 
     private func openCustomCommandsWindow() {
-        if let existing = customCommandsWindow, existing.isVisible {
-            existing.makeKeyAndOrderFront(nil)
+        MainActorAction.run {
+            if let existing = customCommandsWindow, existing.isVisible {
+                existing.makeKeyAndOrderFront(nil)
+                NSApp.activate()
+                return
+            }
+            let view = CustomCommandsView(manager: engine.customCommandsManager)
+            let hosting = NSHostingController(rootView: view)
+            let window = NSWindow(contentViewController: hosting)
+            window.title = NSLocalizedString("Voice Commands", comment: "")
+            window.setContentSize(NSSize(width: 460, height: 380))
+            window.styleMask = [.titled, .closable, .resizable, .miniaturizable]
+            window.center()
+            window.isReleasedWhenClosed = false
+            window.makeKeyAndOrderFront(nil)
             NSApp.activate()
-            return
+            customCommandsWindow = window
         }
-        let view = CustomCommandsView(manager: engine.customCommandsManager)
-        let hosting = NSHostingController(rootView: view)
-        let window = NSWindow(contentViewController: hosting)
-        window.title = NSLocalizedString("Voice Commands", comment: "")
-        window.setContentSize(NSSize(width: 460, height: 380))
-        window.styleMask = [.titled, .closable, .resizable, .miniaturizable]
-        window.center()
-        window.isReleasedWhenClosed = false
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate()
-        customCommandsWindow = window
+    }
+
+    private func openBenchmarkCapture() {
+        MainActorAction.run {
+            benchmarkCaptureController.show(engine: engine)
+        }
+    }
+
+    private func importModel() {
+        MainActorAction.run {
+            _ = modelCatalog.importModelFromOpenPanel()
+        }
+    }
+
+    private func runBenchmarksNow() {
+        MainActorAction.run {
+            adaptiveBenchmarkController.runBenchmarksNow()
+        }
+    }
+
+    private func returnToStandardProfile() {
+        MainActorAction.run {
+            profileManager.returnToStandard()
+            profileManager.synchronizeBundledVocabulary(with: vocabularyManager)
+            profileManager.refreshDynamicContent()
+        }
+    }
+
+    private func openLoginItemsSettings() {
+        MainActorAction.run {
+            launchAtLoginController.openSystemSettings()
+        }
     }
 }
 

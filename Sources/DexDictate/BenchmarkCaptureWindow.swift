@@ -450,27 +450,27 @@ struct BenchmarkCaptureView: View {
     private var controlRow: some View {
         HStack(spacing: 10) {
             Button(controller.isRecording ? "Stop & Save" : "Record") {
-                controller.startRecordingOrStop()
+                startRecordingOrStop()
             }
             .buttonStyle(.borderedProminent)
             .tint(controller.isRecording ? .orange : .green)
             .disabled(controller.isStarting || (!controller.isRecording && controller.currentPrompt == nil))
 
             Button("Previous") {
-                controller.previousPrompt()
+                showPreviousPrompt()
             }
             .buttonStyle(.bordered)
             .disabled(controller.isRecording || controller.currentIndex == 0)
 
             Button("Restart Session") {
-                controller.restartSession()
+                restartSession()
             }
             .buttonStyle(.bordered)
 
             Spacer()
 
             Button("Copy Path") {
-                controller.copyCorpusPath()
+                copyCorpusPath()
             }
             .buttonStyle(.bordered)
             .disabled(controller.sessionDirectory == nil)
@@ -481,13 +481,13 @@ struct BenchmarkCaptureView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Button("Open Corpus Folder") {
-                    controller.openCorpusFolder()
+                    openCorpusFolder()
                 }
                 .buttonStyle(.bordered)
                 .disabled(controller.sessionDirectory == nil)
 
                 Button("Copy Benchmark Command") {
-                    controller.copyBenchmarkCommand()
+                    copyBenchmarkCommand()
                 }
                 .buttonStyle(.bordered)
                 .disabled(controller.sessionDirectory == nil)
@@ -514,5 +514,41 @@ struct BenchmarkCaptureView: View {
                 .stroke(.white.opacity(0.08), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 18))
+    }
+
+    private func startRecordingOrStop() {
+        MainActorAction.run {
+            controller.startRecordingOrStop()
+        }
+    }
+
+    private func showPreviousPrompt() {
+        MainActorAction.run {
+            controller.previousPrompt()
+        }
+    }
+
+    private func restartSession() {
+        MainActorAction.run {
+            controller.restartSession()
+        }
+    }
+
+    private func copyCorpusPath() {
+        MainActorAction.run {
+            controller.copyCorpusPath()
+        }
+    }
+
+    private func openCorpusFolder() {
+        MainActorAction.run {
+            controller.openCorpusFolder()
+        }
+    }
+
+    private func copyBenchmarkCommand() {
+        MainActorAction.run {
+            controller.copyBenchmarkCommand()
+        }
     }
 }

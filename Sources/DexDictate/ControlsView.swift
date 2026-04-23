@@ -263,24 +263,28 @@ struct ControlsView: View {
     /// when `engine` is `@MainActor`-isolated. This applies to ALL buttons that call
     /// methods on `@MainActor` types, including synchronous ones like `stopSystem()`.
     private func startDictation() {
-        Task { @MainActor in
+        MainActorAction.run {
             await engine.startSystem()
         }
     }
 
     private func stopDictation() {
-        engine.stopSystem()
+        MainActorAction.run {
+            engine.stopSystem()
+        }
     }
 
     private func importAudioFile() {
-        let panel = NSOpenPanel()
-        panel.canChooseDirectories = false
-        panel.allowsMultipleSelection = false
-        panel.allowedContentTypes = [.audio]
-        panel.prompt = NSLocalizedString("Transcribe", comment: "Open panel button label")
-        panel.message = NSLocalizedString("Select an audio file to transcribe", comment: "Open panel message")
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        engine.transcribeAudioFile(url: url)
+        MainActorAction.run {
+            let panel = NSOpenPanel()
+            panel.canChooseDirectories = false
+            panel.allowsMultipleSelection = false
+            panel.allowedContentTypes = [.audio]
+            panel.prompt = NSLocalizedString("Transcribe", comment: "Open panel button label")
+            panel.message = NSLocalizedString("Select an audio file to transcribe", comment: "Open panel message")
+            guard panel.runModal() == .OK, let url = panel.url else { return }
+            engine.transcribeAudioFile(url: url)
+        }
     }
 
     private func quitApp() {
@@ -288,26 +292,34 @@ struct ControlsView: View {
     }
 
     private func undoLastHistoryRemoval() {
-        engine.undoLastHistoryRemoval()
+        MainActorAction.run {
+            engine.undoLastHistoryRemoval()
+        }
     }
 
     private func retryLastUtterance() {
-        engine.retryLastUtteranceInAccuracyMode()
+        MainActorAction.run {
+            engine.retryLastUtteranceInAccuracyMode()
+        }
     }
 
     private func openCorrectionSheet() {
-        correctionDraft = VocabularyCorrectionDraft(
-            incorrectPhrase: engine.latestHistoryItem?.text ?? "",
-            correctPhrase: ""
-        )
-        isCorrectionSheetPresented = true
+        MainActorAction.run {
+            correctionDraft = VocabularyCorrectionDraft(
+                incorrectPhrase: engine.latestHistoryItem?.text ?? "",
+                correctPhrase: ""
+            )
+            isCorrectionSheetPresented = true
+        }
     }
 
     private func saveCorrection() {
-        let incorrect = correctionDraft.incorrectPhrase.trimmingCharacters(in: .whitespacesAndNewlines)
-        let corrected = correctionDraft.correctPhrase.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !incorrect.isEmpty, !corrected.isEmpty else { return }
-        engine.vocabularyManager.add(original: incorrect, replacement: corrected)
-        isCorrectionSheetPresented = false
+        MainActorAction.run {
+            let incorrect = correctionDraft.incorrectPhrase.trimmingCharacters(in: .whitespacesAndNewlines)
+            let corrected = correctionDraft.correctPhrase.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !incorrect.isEmpty, !corrected.isEmpty else { return }
+            engine.vocabularyManager.add(original: incorrect, replacement: corrected)
+            isCorrectionSheetPresented = false
+        }
     }
 }
