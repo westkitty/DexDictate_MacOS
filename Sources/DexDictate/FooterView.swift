@@ -9,6 +9,14 @@ struct FooterView: View {
 
     var body: some View {
         VStack(spacing: 6) {
+            Button(action: { NSApplication.shared.terminate(nil) }) {
+                Text(NSLocalizedString("Quit App", comment: ""))
+                    .font(.caption2)
+                    .foregroundStyle(.white.opacity(0.45))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Quit DexDictate")
+
             Button(action: { settings.restoreDefaults() }) {
                 Text(NSLocalizedString("Restore Defaults", comment: ""))
                     .font(.caption2)
