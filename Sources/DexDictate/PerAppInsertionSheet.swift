@@ -5,6 +5,7 @@ import DexDictateKit
 /// Modal window content for configuring per-application text insertion modes.
 struct PerAppInsertionView: View {
     @ObservedObject var manager: AppInsertionOverridesManager
+    @ObservedObject private var appTracker = ApplicationContextTracker.shared
 
     @State private var newBundleID: String = ""
     @State private var newDisplayName: String = ""
@@ -40,6 +41,34 @@ struct PerAppInsertionView: View {
                 Text("Clipboard Paste uses the normal paste path. Accessibility API tries direct insertion at the cursor when the target app supports it.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Recommended presets")
+                        .font(.caption.bold())
+                    Text("Use these after capturing the target app once. Chat and code editors lean on Accessibility insertion. Terminal and browser flows keep the clipboard path.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    if let suggestedApplication = resolvedSuggestedApplication() {
+                        Text("Current target: \(suggestedApplication.displayName)")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("No recent non-Dex app is available yet. Activate the target app once, then return here.")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    HStack(spacing: 8) {
+                        presetButton(title: "Chat", mode: .accessibilityAPI)
+                        presetButton(title: "Code Editor", mode: .accessibilityAPI)
+                        presetButton(title: "Terminal", mode: .clipboardPaste)
+                        presetButton(title: "Browser", mode: .clipboardPaste)
+                    }
+                }
+                .padding(10)
+                .background(Color.secondary.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
             }
             .padding()
 
@@ -47,12 +76,8 @@ struct PerAppInsertionView: View {
 
             HStack {
                 Button("Add Current App") {
-                    if let app = NSWorkspace.shared.frontmostApplication,
-                       let bundleID = app.bundleIdentifier {
-                        newBundleID = bundleID
-                        newDisplayName = app.localizedName ?? bundleID
-                        showAddRow = true
-                    }
+                    appTracker.refresh()
+                    prefillWithSuggestedApplication()
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
@@ -187,5 +212,68 @@ struct PerAppInsertionView: View {
             Spacer()
         }
         .frame(width: 540, height: 460)
+    }
+
+    private func presetButton(title: String, mode: InsertionModeOverride) -> some View {
+        Button(title) {
+            applyPreset(title: title, mode: mode)
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.small)
+    }
+
+    private func applyPreset(title: String, mode: InsertionModeOverride) {
+        newMode = mode
+        showAddRow = true
+
+        if newBundleID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            prefillWithSuggestedApplication()
+        }
+
+        guard !newBundleID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return
+        }
+
+        let displayName = newDisplayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        manager.add(
+            AppInsertionOverride(
+                bundleID: newBundleID.trimmingCharacters(in: .whitespacesAndNewlines),
+                displayName: displayName.isEmpty ? title : displayName,
+                mode: mode
+            )
+        )
+        showAddRow = false
+        newBundleID = ""
+        newDisplayName = ""
+        newMode = .clipboardPaste
+    }
+
+    private func prefillWithSuggestedApplication() {
+        guard let suggestedApplication = resolvedSuggestedApplication() else { return }
+        newBundleID = suggestedApplication.bundleIdentifier
+        newDisplayName = suggestedApplication.displayName
+        showAddRow = true
+    }
+
+    private func resolvedSuggestedApplication() -> ExternalApplicationContext? {
+        if let app = appTracker.recentExternalApplication() {
+            return app
+        }
+
+        guard let app = NSWorkspace.shared.frontmostApplication,
+              let bundleID = app.bundleIdentifier else {
+            return nil
+        }
+
+        let ownBundleIdentifier = Bundle.main.bundleIdentifier ?? "com.westkitty.dexdictate.macos"
+        guard bundleID != ownBundleIdentifier else {
+            return nil
+        }
+
+        return ExternalApplicationContext(
+            bundleIdentifier: bundleID,
+            displayName: app.localizedName ?? bundleID,
+            processIdentifier: app.processIdentifier
+        )
     }
 }

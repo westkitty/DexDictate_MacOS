@@ -16,6 +16,53 @@ public final class TranscriptionEngine: ObservableObject {
         case retryingAccuracy
     }
 
+    public struct RouteHealthSnapshot: Equatable {
+        public let activeInputLabel: String
+        public let recoveryCount: Int
+        public let lastRecoverySucceeded: Bool?
+        public let isUsingSystemDefault: Bool
+        public let detail: String
+        public let updatedAt: Date
+
+        public init(
+            activeInputLabel: String,
+            recoveryCount: Int,
+            lastRecoverySucceeded: Bool?,
+            isUsingSystemDefault: Bool,
+            detail: String,
+            updatedAt: Date
+        ) {
+            self.activeInputLabel = activeInputLabel
+            self.recoveryCount = recoveryCount
+            self.lastRecoverySucceeded = lastRecoverySucceeded
+            self.isUsingSystemDefault = isUsingSystemDefault
+            self.detail = detail
+            self.updatedAt = updatedAt
+        }
+    }
+
+    public struct PerformanceSnapshot: Equatable {
+        public let captureStopMs: Int
+        public let resampleMs: Int
+        public let transcriptionMs: Int
+        public let totalMs: Int
+        public let createdAt: Date
+
+        public init(
+            captureStopMs: Int,
+            resampleMs: Int,
+            transcriptionMs: Int,
+            totalMs: Int,
+            createdAt: Date
+        ) {
+            self.captureStopMs = captureStopMs
+            self.resampleMs = resampleMs
+            self.transcriptionMs = transcriptionMs
+            self.totalMs = totalMs
+            self.createdAt = createdAt
+        }
+    }
+
     /// Current lifecycle phase of the engine.
     @Published public var state: EngineState = .stopped
 
@@ -36,6 +83,15 @@ public final class TranscriptionEngine: ObservableObject {
     @Published public private(set) var latestHistoryItem: HistoryItem?
     @Published public private(set) var importedFileResult: ImportedFileTranscriptionResult?
     @Published public private(set) var lastDictationCompletionAt: Date?
+    @Published public private(set) var routeHealthSnapshot = RouteHealthSnapshot(
+        activeInputLabel: "System Default",
+        recoveryCount: 0,
+        lastRecoverySucceeded: nil,
+        isUsingSystemDefault: true,
+        detail: "Waiting for microphone activity.",
+        updatedAt: Date()
+    )
+    @Published public private(set) var performanceSnapshot: PerformanceSnapshot?
 
     /// Seconds remaining until auto-stop due to silence; `nil` when inactive.
     @Published public private(set) var silenceCountdown: Double? = nil
@@ -73,6 +129,10 @@ public final class TranscriptionEngine: ObservableObject {
     private var lastCapturedUtterance: (samples: [Float], sampleRate: Double)?
     private var pendingImportedFileName: String?
     private var pendingOutputTargetApplication: OutputTargetApplication?
+    private var pendingDictationDomain: DictationDomain = .general
+    private var currentRecordingStartedAt: Date?
+    private var recentCommittedOutputs: [String] = []
+    private var automaticRetryOriginalText: String?
 
     // MARK: - Metrics
     private struct MetricsSession {
@@ -122,6 +182,7 @@ public final class TranscriptionEngine: ObservableObject {
                     "TranscriptionEngine — route recovery succeeded; finalDecision=\(report.finalDecisionDescription), retries=\(report.retryCount), usedSystemDefault=\(report.usedSystemDefault)",
                     category: .audio
                 )
+                self.recordRouteRecoverySuccess(report)
                 if report.shouldClearStoredPreferredUID {
                     AppSettings.shared.inputDeviceUID = ""
                 }
@@ -140,6 +201,7 @@ public final class TranscriptionEngine: ObservableObject {
                     "TranscriptionEngine — route recovery failed; retries=\(failure.retryCount), error=\(failure.underlyingError)",
                     category: .audio
                 )
+                self.recordRouteRecoveryFailure(failure)
                 if failure.shouldClearStoredPreferredUID {
                     AppSettings.shared.inputDeviceUID = ""
                 }
@@ -190,6 +252,11 @@ public final class TranscriptionEngine: ObservableObject {
         activityPhase = .idle
         pendingImportedFileName = nil
         importedFileResult = nil
+        pendingOutputTargetApplication = nil
+        pendingDictationDomain = .general
+        currentRecordingStartedAt = nil
+        automaticRetryOriginalText = nil
+        whisperService.setInitialPrompt(nil)
     }
     
     /// True once the Whisper model has been successfully loaded into memory.
@@ -283,8 +350,19 @@ public final class TranscriptionEngine: ObservableObject {
 
     private func scheduleStop() {
         // Keep a short tail to avoid clipping final phonemes while minimizing perceived latency.
-        let stopDelayMs: UInt64 = ExperimentFlags.stopTailDelayMs
-        Safety.log("scheduleStop() — scheduling stop after \(stopDelayMs)ms")
+        let baseDelayMs = ExperimentFlags.stopTailDelayMs
+        let recordingDurationMs = currentRecordingStartedAt.map { Int(Date().timeIntervalSince($0) * 1000) }
+        let stopDelayMs: UInt64
+        if AppSettings.shared.adaptiveTailDelayEnabled {
+            stopDelayMs = AdaptiveTailDelayHeuristic.resolvedDelayMs(
+                baseDelayMs: baseDelayMs,
+                recordingDurationMs: recordingDurationMs,
+                recentOutputs: recentCommittedOutputs
+            )
+        } else {
+            stopDelayMs = baseDelayMs
+        }
+        Safety.log("scheduleStop() — scheduling stop after \(stopDelayMs)ms (base=\(baseDelayMs)ms)")
         stopTask?.cancel()
         let sessionId = currentSessionId
 
@@ -339,6 +417,12 @@ public final class TranscriptionEngine: ObservableObject {
         inputLevel = 0
         activityPhase = .listening
         pendingOutputTargetApplication = captureOutputTargetApplication()
+        pendingDictationDomain = DictationDomainBias.resolvedDomain(
+            mode: AppSettings.shared.dictationDomainMode,
+            bundleIdentifier: pendingOutputTargetApplication?.bundleIdentifier
+        )
+        currentRecordingStartedAt = Date()
+        automaticRetryOriginalText = nil
 
         if AppSettings.shared.playStartSound {
             SoundPlayer.play(AppSettings.shared.selectedStartSound)
@@ -363,12 +447,14 @@ public final class TranscriptionEngine: ObservableObject {
                 }
                 self.resultFeedback = .idle
                 self.pendingOutputTargetApplication = nil
+                self.currentRecordingStartedAt = nil
                 _ = self.applyLifecycle(.audioCaptureFailed, context: "audio start failure")
             case .success(let report):
                 Safety.log(
                     "Audio engine started successfully — finalDecision=\(report.finalDecisionDescription), retries=\(report.retryCount), usedSystemDefault=\(report.usedSystemDefault)",
                     category: .audio
                 )
+                self.recordAudioStart(report)
                 if report.shouldClearStoredPreferredUID {
                     AppSettings.shared.inputDeviceUID = ""
                 }
@@ -455,12 +541,14 @@ public final class TranscriptionEngine: ObservableObject {
         // audioQueue never dispatches back to main synchronously.
         recognitionTask?.cancel()
         recognitionTask = nil
+        automaticRetryOriginalText = nil
 
         let (rawSamples, sourceSampleRate) = audioService.stopAndCollect()
         currentMetrics.t_audio_stop = Date()
         currentMetrics.raw_samples = rawSamples.count
         lastCapturedUtterance = (rawSamples, sourceSampleRate)
         activityPhase = .captured
+        currentRecordingStartedAt = nil
         
         Safety.log("stopListening() — collected \(rawSamples.count) samples @ \(sourceSampleRate) Hz")
 
@@ -496,6 +584,7 @@ public final class TranscriptionEngine: ObservableObject {
         currentMetrics.resample_samples = whisperSamples.count
         
         Safety.log("Submitting \(whisperSamples.count) samples @ 16000 Hz to Whisper")
+        whisperService.setInitialPrompt(DictationDomainBias.initialPrompt(for: pendingDictationDomain))
 
         // Wire up result handler before calling transcribe.
         whisperService.ontranscriptionComplete = { [weak self] text in
@@ -528,6 +617,9 @@ public final class TranscriptionEngine: ObservableObject {
         guard applyLifecycle(.transcriptionStarted, context: "transcribeAudioFile") else { return }
         pendingImportedFileName = url.lastPathComponent
         importedFileResult = nil
+        pendingDictationDomain = .general
+        automaticRetryOriginalText = nil
+        whisperService.setInitialPrompt(DictationDomainBias.initialPrompt(for: .general))
         statusText = NSLocalizedString("Processing file...", comment: "Status: Processing audio file")
         activityPhase = .transcribing
 
@@ -579,11 +671,23 @@ public final class TranscriptionEngine: ObservableObject {
             activityPhase = .ready
             lastDictationCompletionAt = Date()
             pendingOutputTargetApplication = nil
+            automaticRetryOriginalText = nil
+            whisperService.setInitialPrompt(nil)
         } else {
+            if importedFileName == nil,
+               automaticRetryOriginalText == nil,
+               shouldAutomaticallyRetrySuspiciousResult(trimmed) {
+                automaticRetryOriginalText = trimmed
+                if startAutomaticAccuracyRetry(for: trimmed) {
+                    return
+                }
+                automaticRetryOriginalText = nil
+            }
+
             if let importedFileName {
                 finalizeImportedFileTranscription(trimmed, fileName: importedFileName)
             } else {
-                finalizeTranscription(trimmed)
+                finalizeTranscription(trimmed, isAccuracyRetry: false, sourceHistoryItemID: nil)
             }
         }
     }
@@ -603,13 +707,22 @@ public final class TranscriptionEngine: ObservableObject {
         return settings.useAccessibilityInsertion ? .accessibilityAPI : .clipboardPaste
     }
 
-    private func finalizeTranscription(_ text: String) {
+    private func finalizeTranscription(
+        _ text: String,
+        isAccuracyRetry: Bool,
+        sourceHistoryItemID: UUID?,
+        completesLifecycle: Bool = true
+    ) {
         // Any path through this method completes the transcription cycle.
         // Without this, early returns (e.g. command-only utterances) can leave state
         // stuck at .transcribing and block the next trigger press.
         defer {
             pendingOutputTargetApplication = nil
-            _ = applyLifecycle(.transcriptionCompleted, context: "finalizeTranscription")
+            automaticRetryOriginalText = nil
+            whisperService.setInitialPrompt(nil)
+            if completesLifecycle {
+                _ = applyLifecycle(.transcriptionCompleted, context: "finalizeTranscription")
+            }
             emitMetricsCSV()
             activityPhase = .ready
             lastDictationCompletionAt = Date()
@@ -618,11 +731,20 @@ public final class TranscriptionEngine: ObservableObject {
         guard let preparedResult = prepareTranscriptionResult(from: text) else { return }
 
         let finalText = preparedResult.finalText
-        let addedItem = history.add(finalText)
-        let doneFormat = NSLocalizedString("Done: %@", comment: "Status: Transcription complete")
-        statusText = String(format: doneFormat, finalText)
+        let addedItem = history.add(
+            finalText,
+            sourceHistoryItemID: sourceHistoryItemID,
+            isAccuracyRetry: isAccuracyRetry
+        )
+        if isAccuracyRetry {
+            statusText = NSLocalizedString("Saved retried result", comment: "")
+        } else {
+            let doneFormat = NSLocalizedString("Done: %@", comment: "Status: Transcription complete")
+            statusText = String(format: doneFormat, finalText)
+        }
         liveTranscript = ""
         latestHistoryItem = addedItem
+        recordCommittedOutput(finalText)
         if let captured = lastCapturedUtterance {
             lastUtteranceSnapshot = LastUtteranceSnapshot(
                 rawSamples: captured.samples,
@@ -653,6 +775,8 @@ public final class TranscriptionEngine: ObservableObject {
     private func finalizeImportedFileTranscription(_ text: String, fileName: String) {
         defer {
             pendingOutputTargetApplication = nil
+            automaticRetryOriginalText = nil
+            whisperService.setInitialPrompt(nil)
             _ = applyLifecycle(.transcriptionCompleted, context: "finalizeImportedFileTranscription")
             emitMetricsCSV()
             activityPhase = .ready
@@ -665,6 +789,7 @@ public final class TranscriptionEngine: ObservableObject {
         statusText = String(format: NSLocalizedString("Imported %@", comment: "Status: Imported file name"), fileName)
         liveTranscript = ""
         latestHistoryItem = addedItem
+        recordCommittedOutput(preparedResult.finalText)
         if let captured = lastCapturedUtterance {
             lastUtteranceSnapshot = LastUtteranceSnapshot(
                 rawSamples: captured.samples,
@@ -683,19 +808,17 @@ public final class TranscriptionEngine: ObservableObject {
     }
 
     private func captureOutputTargetApplication() -> OutputTargetApplication? {
-        guard let app = NSWorkspace.shared.frontmostApplication else {
-            return nil
-        }
-
         let ownBundleIdentifier = Bundle.main.bundleIdentifier ?? "com.westkitty.dexdictate.macos"
-        guard app.bundleIdentifier != ownBundleIdentifier else {
-            return nil
+        if let app = NSWorkspace.shared.frontmostApplication,
+           let bundleIdentifier = app.bundleIdentifier,
+           bundleIdentifier != ownBundleIdentifier {
+            return OutputTargetApplication(
+                bundleIdentifier: bundleIdentifier,
+                processIdentifier: app.processIdentifier
+            )
         }
 
-        return OutputTargetApplication(
-            bundleIdentifier: app.bundleIdentifier ?? "",
-            processIdentifier: app.processIdentifier
-        )
+        return ApplicationContextTracker.shared.recentOutputTargetApplication()
     }
 
     private struct PreparedTranscriptionResult {
@@ -736,7 +859,10 @@ public final class TranscriptionEngine: ObservableObject {
         }
 
         let preProcessingText = finalText
-        finalText = vocabularyManager.applyEffective(to: finalText)
+        finalText = vocabularyManager.applyEffective(
+            to: finalText,
+            additionalItems: DictationDomainBias.vocabularyItems(for: pendingDictationDomain)
+        )
         if AppSettings.shared.profanityFilter {
             finalText = ProfanityFilter.filter(
                 finalText,
@@ -777,8 +903,10 @@ public final class TranscriptionEngine: ObservableObject {
         statusText = NSLocalizedString("Retrying last utterance...", comment: "Status: retrying last utterance")
         liveTranscript = NSLocalizedString("Retrying in accuracy mode...", comment: "Retry progress")
         resultFeedback = .idle
+        automaticRetryOriginalText = nil
 
-        whisperService.ensureModelLoaded(descriptor: descriptor, decodeProfile: .accuracy)
+        whisperService.ensureModelLoaded(descriptor: descriptor)
+        whisperService.setInitialPrompt(DictationDomainBias.initialPrompt(for: .general))
         let whisperSamples = AudioResampler.resampleToWhisper(snapshot.rawSamples, fromRate: snapshot.sourceSampleRate)
 
         whisperService.ontranscriptionComplete = { [weak self] text in
@@ -791,7 +919,7 @@ public final class TranscriptionEngine: ObservableObject {
         }
 
         activityPhase = .transcribing
-        if !whisperService.transcribe(audioFrames: whisperSamples) {
+        if !whisperService.transcribe(audioFrames: whisperSamples, decodeProfile: .accuracy) {
             statusText = NSLocalizedString("Retry unavailable", comment: "")
             liveTranscript = ""
             activityPhase = .ready
@@ -808,33 +936,123 @@ public final class TranscriptionEngine: ObservableObject {
             return
         }
 
-        var finalText = vocabularyManager.applyEffective(to: trimmed)
-        if AppSettings.shared.profanityFilter {
-            finalText = ProfanityFilter.filter(
-                finalText,
-                additions: AppSettings.shared.customProfanityWords,
-                removals: AppSettings.shared.customProfanityRemovals
-            )
+        finalizeTranscription(
+            trimmed,
+            isAccuracyRetry: true,
+            sourceHistoryItemID: sourceHistoryItemID,
+            completesLifecycle: false
+        )
+    }
+
+    private func shouldAutomaticallyRetrySuspiciousResult(_ text: String) -> Bool {
+        guard AppSettings.shared.enableAccuracyRetry,
+              AppSettings.shared.autoRetrySuspiciousResults,
+              let snapshot = lastCapturedUtterance else {
+            return false
         }
 
-        latestHistoryItem = history.add(
-            finalText,
-            sourceHistoryItemID: sourceHistoryItemID,
-            isAccuracyRetry: true
-        )
-        if let snapshot = lastUtteranceSnapshot {
-            lastUtteranceSnapshot = LastUtteranceSnapshot(
-                rawSamples: snapshot.rawSamples,
-                sourceSampleRate: snapshot.sourceSampleRate,
-                originalTranscript: finalText,
-                sourceHistoryItemID: latestHistoryItem?.id
-            )
+        let audioDurationSeconds = Double(snapshot.samples.count) / snapshot.sampleRate
+        guard let reason = SuspiciousTranscriptionHeuristic.reason(
+            for: text,
+            audioDurationSeconds: audioDurationSeconds
+        ) else {
+            return false
         }
-        statusText = NSLocalizedString("Saved retried result", comment: "")
-        liveTranscript = ""
-        resultFeedback = .savedToHistory(modified: finalText != trimmed)
-        activityPhase = .ready
-        lastDictationCompletionAt = Date()
+
+        Safety.log("Automatic accuracy retry armed — reason=\(reason), duration=\(String(format: "%.2f", audioDurationSeconds))s", category: .transcription)
+        return true
+    }
+
+    private func startAutomaticAccuracyRetry(for originalText: String) -> Bool {
+        guard let snapshot = lastCapturedUtterance,
+              let descriptor = WhisperModelCatalog.shared.activeDescriptor() else {
+            return false
+        }
+
+        activityPhase = .retryingAccuracy
+        statusText = NSLocalizedString("Retrying suspicious result...", comment: "Status: automatic retry")
+        liveTranscript = NSLocalizedString("Running a focused retry...", comment: "Automatic retry progress")
+        resultFeedback = .idle
+
+        whisperService.ensureModelLoaded(descriptor: descriptor)
+        whisperService.setInitialPrompt(DictationDomainBias.initialPrompt(for: pendingDictationDomain))
+        let whisperSamples = AudioResampler.resampleToWhisper(snapshot.samples, fromRate: snapshot.sampleRate)
+        currentMetrics.t_whisper_submit = Date()
+
+        whisperService.ontranscriptionComplete = { [weak self] text in
+            Task { @MainActor in
+                self?.currentMetrics.t_whisper_done = Date()
+                self?.handleAutomaticAccuracyRetryResult(
+                    text: text,
+                    originalText: originalText
+                )
+            }
+        }
+
+        activityPhase = .transcribing
+        return whisperService.transcribe(audioFrames: whisperSamples, decodeProfile: .accuracy)
+    }
+
+    private func handleAutomaticAccuracyRetryResult(text: String, originalText: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            Safety.log("Automatic accuracy retry returned empty output; keeping original transcription", category: .transcription)
+            finalizeTranscription(originalText, isAccuracyRetry: false, sourceHistoryItemID: nil)
+            return
+        }
+
+        finalizeTranscription(trimmed, isAccuracyRetry: true, sourceHistoryItemID: nil)
+    }
+
+    private func recordCommittedOutput(_ text: String) {
+        recentCommittedOutputs.append(text)
+        if recentCommittedOutputs.count > 8 {
+            recentCommittedOutputs.removeFirst(recentCommittedOutputs.count - 8)
+        }
+    }
+
+    private func recordAudioStart(_ report: AudioRecorderStartReport) {
+        routeHealthSnapshot = RouteHealthSnapshot(
+            activeInputLabel: labelForActiveInput(from: report),
+            recoveryCount: routeHealthSnapshot.recoveryCount,
+            lastRecoverySucceeded: routeHealthSnapshot.lastRecoverySucceeded,
+            isUsingSystemDefault: report.usedSystemDefault,
+            detail: report.recoveryNotice ?? "Input route is stable.",
+            updatedAt: Date()
+        )
+    }
+
+    private func recordRouteRecoverySuccess(_ report: AudioRecorderStartReport) {
+        routeHealthSnapshot = RouteHealthSnapshot(
+            activeInputLabel: labelForActiveInput(from: report),
+            recoveryCount: routeHealthSnapshot.recoveryCount + 1,
+            lastRecoverySucceeded: true,
+            isUsingSystemDefault: report.usedSystemDefault,
+            detail: report.recoveryNotice ?? "Recovered on the preferred input.",
+            updatedAt: Date()
+        )
+    }
+
+    private func recordRouteRecoveryFailure(_ failure: AudioRecorderRecoveryFailure) {
+        routeHealthSnapshot = RouteHealthSnapshot(
+            activeInputLabel: "Unavailable",
+            recoveryCount: routeHealthSnapshot.recoveryCount + 1,
+            lastRecoverySucceeded: false,
+            isUsingSystemDefault: false,
+            detail: failure.recoveryNotice ?? failure.localizedDescription,
+            updatedAt: Date()
+        )
+    }
+
+    private func labelForActiveInput(from report: AudioRecorderStartReport) -> String {
+        if report.usedSystemDefault {
+            return "System Default"
+        }
+
+        let knownDevices = AudioDeviceManager.inputDevices()
+        return knownDevices.first(where: { $0.uid == report.activeInputUID })?.name
+            ?? knownDevices.first(where: { $0.uid == report.requestedPreferredUID })?.name
+            ?? (report.activeInputUID.isEmpty ? "Preferred Input" : report.activeInputUID)
     }
 
     private func emitMetricsCSV() {
@@ -844,8 +1062,19 @@ public final class TranscriptionEngine: ObservableObject {
               let t_sub = currentMetrics.t_whisper_submit,
               let t_done = currentMetrics.t_whisper_done else { return }
         let ms = { (d1: Date, d2: Date) -> Int in Int(d2.timeIntervalSince(d1) * 1000) }
-        let csv = "\(Date().timeIntervalSince1970),\(currentMetrics.raw_samples),\(currentMetrics.trim_samples),\(currentMetrics.resample_samples),\(ms(t_up, t_aud)),\(ms(t_aud, t_res)),\(ms(t_sub, t_done)),\(ms(t_up, t_done))"
+        let captureStopMs = ms(t_up, t_aud)
+        let resampleMs = ms(t_aud, t_res)
+        let transcriptionMs = ms(t_sub, t_done)
+        let totalMs = ms(t_up, t_done)
+        let csv = "\(Date().timeIntervalSince1970),\(currentMetrics.raw_samples),\(currentMetrics.trim_samples),\(currentMetrics.resample_samples),\(captureStopMs),\(resampleMs),\(transcriptionMs),\(totalMs)"
         Safety.log("METRIC_CSV: \(csv)")
+        performanceSnapshot = PerformanceSnapshot(
+            captureStopMs: captureStopMs,
+            resampleMs: resampleMs,
+            transcriptionMs: transcriptionMs,
+            totalMs: totalMs,
+            createdAt: Date()
+        )
     }
 
     @discardableResult

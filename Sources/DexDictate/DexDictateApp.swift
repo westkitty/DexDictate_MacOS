@@ -29,6 +29,7 @@ struct DexDictateApp: App {
 
     init() {
         Safety.setupDirectories()
+        _ = ApplicationContextTracker.shared
     }
 
     var body: some Scene {
@@ -481,6 +482,11 @@ struct AntiGravityMainView: View {
                         benchmarkResultsStore: benchmarkResultsStore
                     )
 
+                    QuickSettingsStatusStrip(
+                        engine: engine,
+                        settings: settings
+                    )
+
                     Spacer(minLength: 0)
 
                     FooterView(
@@ -531,6 +537,84 @@ struct AntiGravityMainView: View {
 }
 
 // MARK: - Custom Views
+
+private struct QuickSettingsStatusStrip: View {
+    @ObservedObject var engine: TranscriptionEngine
+    @ObservedObject var settings: AppSettings
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Quick Settings Status")
+                .font(.caption.bold())
+                .foregroundStyle(.white.opacity(0.7))
+
+            HStack(spacing: 8) {
+                statusPill(
+                    title: "Route",
+                    value: engine.routeHealthSnapshot.activeInputLabel,
+                    detail: "Recoveries \(engine.routeHealthSnapshot.recoveryCount)"
+                )
+                statusPill(
+                    title: "Latency",
+                    value: latencyValue,
+                    detail: latencyDetail
+                )
+            }
+
+            HStack(spacing: 8) {
+                statusPill(
+                    title: "Model",
+                    value: settings.activeWhisperModelID,
+                    detail: settings.utteranceEndPreset.rawValue
+                )
+                statusPill(
+                    title: "Retry",
+                    value: settings.autoRetrySuspiciousResults ? "Smart" : "Manual",
+                    detail: settings.adaptiveTailDelayEnabled ? "Adaptive tail on" : "Adaptive tail off"
+                )
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(Color.white.opacity(0.04))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .padding(.horizontal)
+    }
+
+    private var latencyValue: String {
+        guard let snapshot = engine.performanceSnapshot else { return "No run yet" }
+        return "\(snapshot.totalMs)ms"
+    }
+
+    private var latencyDetail: String {
+        guard let snapshot = engine.performanceSnapshot else { return "Capture and transcribe timing appears here" }
+        return "Cap \(snapshot.captureStopMs) · Res \(snapshot.resampleMs) · Tx \(snapshot.transcriptionMs)"
+    }
+
+    private func statusPill(title: String, value: String, detail: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(.caption2)
+                .foregroundStyle(.white.opacity(0.45))
+            Text(value)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.88))
+                .lineLimit(1)
+            Text(detail)
+                .font(.caption2)
+                .foregroundStyle(.white.opacity(0.5))
+                .lineLimit(2)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(Color.black.opacity(0.22))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+}
 
 /// A single segment of a custom segmented control.
 struct TriggerSegment: View {

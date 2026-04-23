@@ -26,10 +26,23 @@ public class VocabularyManager: ObservableObject {
     private var isLoading = false
 
     public var effectiveItems: [VocabularyItem] {
+        effectiveItems(additionalItems: [])
+    }
+
+    public func effectiveItems(additionalItems: [VocabularyItem]) -> [VocabularyItem] {
         var mergedByOriginal: [String: VocabularyItem] = [:]
         var orderedKeys: [String] = []
 
         for item in bundledItems {
+            let key = item.original.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            guard !key.isEmpty else { continue }
+            if mergedByOriginal[key] == nil {
+                orderedKeys.append(key)
+            }
+            mergedByOriginal[key] = item
+        }
+
+        for item in additionalItems {
             let key = item.original.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
             guard !key.isEmpty else { continue }
             if mergedByOriginal[key] == nil {
@@ -70,7 +83,11 @@ public class VocabularyManager: ObservableObject {
     }
 
     public func applyEffective(to text: String) -> String {
-        apply(text, using: effectiveItems)
+        applyEffective(to: text, additionalItems: [])
+    }
+
+    public func applyEffective(to text: String, additionalItems: [VocabularyItem]) -> String {
+        apply(text, using: effectiveItems(additionalItems: additionalItems))
     }
 
     public func setBundledItems(_ items: [VocabularyItem]) {

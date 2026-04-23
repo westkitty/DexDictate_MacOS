@@ -31,6 +31,7 @@ public class WhisperService: ObservableObject {
 
     /// Cached initial prompt as C string for whisper.cpp
     private var _initialPromptCString: UnsafeMutablePointer<CChar>?
+    private var currentInitialPrompt: String?
 
     public init() {}
 
@@ -90,6 +91,7 @@ public class WhisperService: ObservableObject {
             whisper = Whisper(fromFileURL: url, withParams: params)
             if whisper != nil {
                 whisper?.delegate = self
+                applyCurrentInitialPrompt()
                 isModelLoaded = true
                 loadedModelID = modelID ?? url.deletingPathExtension().lastPathComponent
                 loadedModelURL = url
@@ -194,8 +196,13 @@ public class WhisperService: ObservableObject {
         return params
     }
 
-    private func configureParams(for mode: WhisperTranscriptionMode) {
-        whisper?.params = Self.makeParams(for: loadedDecodeProfile, mode: mode)
+    private func configureParams(
+        for mode: WhisperTranscriptionMode,
+        decodeProfile overrideProfile: ExperimentFlags.DecodeProfile? = nil
+    ) {
+        let resolvedProfile = overrideProfile ?? loadedDecodeProfile
+        whisper?.params = Self.makeParams(for: resolvedProfile, mode: mode)
+        applyCurrentInitialPrompt()
     }
 
     public func loadEmbeddedModel() {
@@ -222,14 +229,26 @@ public class WhisperService: ObservableObject {
 
         loadModel(url: descriptor.url, modelID: descriptor.id, decodeProfile: decodeProfile)
     }
+
+    public func setInitialPrompt(_ prompt: String?) {
+        let trimmed = prompt?.trimmingCharacters(in: .whitespacesAndNewlines)
+        currentInitialPrompt = (trimmed?.isEmpty == false) ? trimmed : nil
+        applyCurrentInitialPrompt()
+    }
     
-    public func transcribe(audioFrames: [Float]) -> Bool {
-        configureParams(for: .liveDictation)
+    public func transcribe(
+        audioFrames: [Float],
+        decodeProfile: ExperimentFlags.DecodeProfile? = nil
+    ) -> Bool {
+        configureParams(for: .liveDictation, decodeProfile: decodeProfile)
         return transcribeWithCurrentParams(audioFrames: audioFrames)
     }
 
-    public func transcribeImportedFile(audioFrames: [Float]) -> Bool {
-        configureParams(for: .importedFile)
+    public func transcribeImportedFile(
+        audioFrames: [Float],
+        decodeProfile: ExperimentFlags.DecodeProfile? = nil
+    ) -> Bool {
+        configureParams(for: .importedFile, decodeProfile: decodeProfile)
         return transcribeWithCurrentParams(audioFrames: audioFrames)
     }
 
@@ -277,6 +296,26 @@ public class WhisperService: ObservableObject {
         // after we set it to false here — avoiding a spurious double-write.
         transcriptionGeneration &+= 1
         isTranscribing = false
+    }
+
+    private func applyCurrentInitialPrompt() {
+        if let ptr = _initialPromptCString {
+            free(ptr)
+            _initialPromptCString = nil
+        }
+
+        guard let prompt = currentInitialPrompt, !prompt.isEmpty else {
+            whisper?.params.initial_prompt = nil
+            return
+        }
+
+        let duplicated = strdup(prompt)
+        _initialPromptCString = duplicated
+        if let duplicated {
+            whisper?.params.initial_prompt = UnsafePointer(duplicated)
+        } else {
+            whisper?.params.initial_prompt = nil
+        }
     }
 }
 

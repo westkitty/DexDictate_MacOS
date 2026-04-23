@@ -22,8 +22,10 @@ enum ClipboardManager {
     static func copyAndPaste(_ text: String, targetApplication: OutputTargetApplication?) {
         let pasteboard = NSPasteboard.general
 
-        // Store original clipboard content to restore it
-        let originalContent = pasteboard.string(forType: .string)
+        // Preserve the full pasteboard payload instead of flattening it to plain text.
+        let originalItems = pasteboard.pasteboardItems?.compactMap { item in
+            item.copy() as? NSPasteboardItem
+        }
 
         copy(text)
         let dictationChangeCount = pasteboard.changeCount
@@ -46,8 +48,8 @@ enum ClipboardManager {
             }
 
             pasteboard.clearContents()
-            if let original = originalContent {
-                pasteboard.setString(original, forType: .string)
+            if let originalItems, !originalItems.isEmpty {
+                pasteboard.writeObjects(originalItems)
             }
         }
     }

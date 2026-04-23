@@ -147,6 +147,16 @@ public class AppSettings: ObservableObject {
         public var id: String { rawValue }
     }
 
+    public enum DictationDomainMode: String, CaseIterable, Identifiable {
+        case automatic = "Automatic"
+        case general = "General"
+        case coding = "Coding"
+        case email = "Email"
+        case chat = "Chat"
+
+        public var id: String { rawValue }
+    }
+
     public enum UtteranceEndPreset: String, CaseIterable, Identifiable {
         case stable = "Stable"
         case fast = "Fast"
@@ -195,6 +205,9 @@ public class AppSettings: ObservableObject {
     @AppStorage("allowAutoModelPromotion_v1") public var allowAutoModelPromotion: Bool = true
     @AppStorage("enableTrailingTrimExperiment_v1") public var enableTrailingTrimExperiment: Bool = false
     @AppStorage("enableAccuracyRetry_v1") public var enableAccuracyRetry: Bool = true
+    @AppStorage("adaptiveTailDelayEnabled_v1") public var adaptiveTailDelayEnabled: Bool = true
+    @AppStorage("autoRetrySuspiciousResults_v1") public var autoRetrySuspiciousResults: Bool = true
+    @AppStorage("dictationDomainMode_v1") public var dictationDomainMode: DictationDomainMode = .automatic
     @AppStorage("enableCorrectionSheet_v1") public var enableCorrectionSheet: Bool = true
     
     public enum SoundTheme: String, CaseIterable, Identifiable {
@@ -409,6 +422,9 @@ public class AppSettings: ObservableObject {
         allowAutoModelPromotion = true
         enableTrailingTrimExperiment = false
         enableAccuracyRetry = true
+        adaptiveTailDelayEnabled = true
+        autoRetrySuspiciousResults = true
+        dictationDomainMode = .automatic
         enableCorrectionSheet = true
         showFlavorTicker = true
         animateFlavorTicker = true
@@ -426,6 +442,9 @@ public class AppSettings: ObservableObject {
         utteranceEndPreset = .stable
         enableTrailingTrimExperiment = false
         enableAccuracyRetry = true
+        adaptiveTailDelayEnabled = true
+        autoRetrySuspiciousResults = true
+        dictationDomainMode = .automatic
         enableCorrectionSheet = true
     }
 
