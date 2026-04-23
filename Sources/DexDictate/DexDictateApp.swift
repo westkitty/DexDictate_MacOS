@@ -440,20 +440,6 @@ struct AntiGravityMainView: View {
                     }
                     .padding(.top, 4)
 
-                    if settings.showFlavorTicker {
-                        FlavorTickerView(
-                            text: profileManager.currentFlavorLine?.text ?? "",
-                            animateWhenNeeded: settings.animateFlavorTicker
-                        )
-                    }
-
-                    if settings.showDictationStats {
-                        StatsTickerView(
-                            history: engine.history,
-                            animateWhenNeeded: settings.animateFlavorTicker
-                        )
-                    }
-
                     PermissionBannerView(permissionManager: permissionManager)
 
                     HistoryView(
@@ -471,6 +457,20 @@ struct AntiGravityMainView: View {
                         engine: engine,
                         adaptiveBenchmarkController: adaptiveBenchmarkController
                     )
+
+                    if settings.showFlavorTicker {
+                        FlavorTickerView(
+                            text: profileManager.currentFlavorLine?.text ?? "",
+                            animateWhenNeeded: settings.animateFlavorTicker
+                        )
+                    }
+
+                    if settings.showDictationStats {
+                        StatsTickerView(
+                            history: engine.history,
+                            animateWhenNeeded: settings.animateFlavorTicker
+                        )
+                    }
 
                     QuickSettingsView(
                         engine: engine,
