@@ -4324,3 +4324,76 @@ Rationale:
   - no transcription pipeline modifications
   - no changes to recording/audio capture internals
 - Next step: manual UX confirmation that Manage Voices child process also terminates with host app across normal user quit flows.
+
+### 19.03 Pre-Implementation Note P-0020
+
+- Entry ID: P-0020
+- Timestamp: 2026-04-23 America/Detroit
+- Improvement ID(s): design-polish-round-1
+- Goal: Apply five targeted UX/visual improvements identified in a full design critique of the main popover.
+- Why now: Design critique pass revealed critical usability risk (Quit App adjacent to Stop), accessibility contrast failures, and visual hierarchy inversion (decorative ticker outranking functional controls).
+- Dependency context: No runtime or permission changes. Pure SwiftUI layout/style work.
+- Changes planned:
+  1. Move "Quit App" from ControlsView into FooterView — eliminates accidental-quit risk.
+  2. Reduce watermark opacity 12% → 6%, restrict vertical presence to top half of popover — frees the controls zone from visual interference.
+  3. Reorder main popover VStack: FlavorTicker + StatsTicker move below ControlsView — decorative elements should follow functional ones.
+  4. Raise minimum secondary text opacity 50% → 58% across all views — brings caption-level labels to WCAG AA contrast.
+  5. Grow ChromeIconButton tap targets 28×28 → 32×32 — matches Apple HIG guidance.
+- Files to touch:
+  - `Sources/DexDictate/ControlsView.swift`
+  - `Sources/DexDictate/FooterView.swift`
+  - `Sources/DexDictate/DexDictateApp.swift`
+  - `Sources/DexDictate/ChromeButton.swift`
+  - `Sources/DexDictate/HistoryView.swift`
+  - `Sources/DexDictate/QuickSettingsView.swift`
+- Risk assessment: Low. All changes are confined to SwiftUI view layer. No engine, permission, audio, or persistence code is touched.
+- Invariant check:
+  - no changes to TranscriptionEngine, permission model, audio pipeline, or settings keys
+  - no new state introduced
+  - no networking added
+  - build must remain clean after each task
+- What was attempted: Pending.
+- What succeeded: Pending.
+- What failed: Pending.
+- Tests run: Pending.
+- Next step: execute plan tasks in order, build-verify after each, then write B-0053 ledger entry.
+
+### 19.04 Ledger Entry B-0053
+
+- Entry ID: B-0053
+- Timestamp: 2026-04-23 America/Detroit
+- Improvement ID(s): design-polish-round-1
+- Goal: Apply five design-critique UX improvements to the main popover without touching engine, permission, or persistence code.
+- Why now: Full design critique identified critical usability risk (Quit App adjacent to Stop) and several contrast/hierarchy issues.
+- Dependency context: Follows P-0020. No engine or permission changes.
+- Files changed:
+  - `Sources/DexDictate/ControlsView.swift` — removed quitButton, isQuitHovered, quitApp(), and the always-visible call site
+  - `Sources/DexDictate/FooterView.swift` — added understated Quit button at top, raised Restore Defaults opacity 50→58%, raised version string 30→38%
+  - `Sources/DexDictate/DexDictateApp.swift` — lowered watermark image opacity 12→6%, added frame(maxHeight:.infinity, alignment:.top) to pin watermarks to top half; did same for DEXDICTATE rotated text; reordered VStack so FlavorTicker and StatsTicker appear after ControlsView
+  - `Sources/DexDictate/ChromeButton.swift` — frame 28×28→32×32, cornerRadius 7→8
+  - `Sources/DexDictate/HistoryView.swift` — statusText placeholder 0.5→0.58, timestamp 0.45→0.52
+  - `Sources/DexDictate/QuickSettingsView.swift` — all 15 instances of .white.opacity(0.5) on foregroundStyle replaced with 0.58
+  - `Sources/DexDictate/ControlsView.swift` — TRIGGER label 0.55→0.62
+- Risk assessment: Low. All changes are SwiftUI view layer only.
+- Invariant check:
+  - TranscriptionEngine: no changes
+  - Permission model: no changes
+  - Audio pipeline: no changes
+  - Settings keys: no changes
+  - Networking: none added
+- What was attempted:
+  - 5 tasks executed sequentially with build verification after each
+  - All commits atomic and independently buildable
+- What succeeded:
+  - All 5 tasks completed cleanly
+  - Build clean after every task (./build.sh)
+  - 5 atomic commits pushed to main
+- What failed: nothing
+- What was rolled back: nothing
+- Tests run: build.sh (full release build + sign + install)
+- Regressions checked:
+  - No changes to dictation engine, audio capture, transcription, output delivery, or settings persistence
+  - ChromeButton is used in HistoryView (detach, collapse), DexDictateApp (help), QuickSettingsView (vocabulary, commands) — all visually verified as same button larger frame
+  - Quit App functionality intact, moved to FooterView
+- Commits: 51229ae, c296034, 753b5c0, d07c362, 1890e5c
+- Next step: visual smoke test with the running app — open popover, expand Quick Settings, verify Quit is in footer and not in controls, confirm tickers appear below controls, confirm watermark does not interfere with controls zone.
