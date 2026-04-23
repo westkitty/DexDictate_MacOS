@@ -78,18 +78,40 @@ final class OutputCoordinatorTests: XCTestCase {
         XCTAssertEqual(writer.copiedTexts, ["hello"])
         XCTAssertEqual(writer.pastedTexts, [])
     }
+
+    func testTargetApplicationIsPassedToPasteWriter() {
+        let writer = MockOutputWriter()
+        let coordinator = OutputCoordinator(
+            writer: writer,
+            contextInspector: MockFocusedContextInspector(context: .standard)
+        )
+        let target = OutputTargetApplication(bundleIdentifier: "com.example.chat", processIdentifier: 4242)
+
+        let decision = coordinator.deliver(
+            text: "hello",
+            autoPaste: true,
+            protectSensitiveContexts: true,
+            insertionMode: .clipboardPaste,
+            targetApplication: target
+        )
+
+        XCTAssertEqual(decision.delivery, .pastedToActiveApp)
+        XCTAssertEqual(writer.lastPasteTargetApplication, target)
+    }
 }
 
 private final class MockOutputWriter: OutputWriting {
     var copiedTexts: [String] = []
     var pastedTexts: [String] = []
+    var lastPasteTargetApplication: OutputTargetApplication?
 
     func copy(_ text: String) {
         copiedTexts.append(text)
     }
 
-    func copyAndPaste(_ text: String) {
+    func copyAndPaste(_ text: String, targetApplication: OutputTargetApplication?) {
         pastedTexts.append(text)
+        lastPasteTargetApplication = targetApplication
     }
 }
 

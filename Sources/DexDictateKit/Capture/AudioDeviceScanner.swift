@@ -13,7 +13,7 @@ public class AudioDeviceScanner: ObservableObject {
     private var listenerBlock: AudioObjectPropertyListenerBlock?
     private var pendingPreferredFallbackWorkItem: DispatchWorkItem?
     private var pendingMissingPreferredUID: String?
-    private let missingPreferredGraceInterval: TimeInterval = 1.5
+    private let missingPreferredGraceInterval: TimeInterval = 3.0
 
     public init() {
         refreshDevices()

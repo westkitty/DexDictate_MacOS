@@ -72,6 +72,7 @@ public final class TranscriptionEngine: ObservableObject {
     private var lifecycle = EngineLifecycleStateMachine()
     private var lastCapturedUtterance: (samples: [Float], sampleRate: Double)?
     private var pendingImportedFileName: String?
+    private var pendingOutputTargetApplication: OutputTargetApplication?
 
     // MARK: - Metrics
     private struct MetricsSession {
@@ -337,6 +338,7 @@ public final class TranscriptionEngine: ObservableObject {
         resultFeedback = .idle
         inputLevel = 0
         activityPhase = .listening
+        pendingOutputTargetApplication = captureOutputTargetApplication()
 
         if AppSettings.shared.playStartSound {
             SoundPlayer.play(AppSettings.shared.selectedStartSound)
@@ -360,6 +362,7 @@ public final class TranscriptionEngine: ObservableObject {
                     self.statusText = userFacingMessage
                 }
                 self.resultFeedback = .idle
+                self.pendingOutputTargetApplication = nil
                 _ = self.applyLifecycle(.audioCaptureFailed, context: "audio start failure")
             case .success(let report):
                 Safety.log(
@@ -575,6 +578,7 @@ public final class TranscriptionEngine: ObservableObject {
             resultFeedback = .noSpeechDetected
             activityPhase = .ready
             lastDictationCompletionAt = Date()
+            pendingOutputTargetApplication = nil
         } else {
             if let importedFileName {
                 finalizeImportedFileTranscription(trimmed, fileName: importedFileName)
@@ -588,9 +592,11 @@ public final class TranscriptionEngine: ObservableObject {
     
     /// Resolves the effective text insertion mode by checking per-app overrides first,
     /// then the global `useAccessibilityInsertion` setting.
-    private func resolvedInsertionMode() -> InsertionModeOverride {
+    private func resolvedInsertionMode(for targetApplication: OutputTargetApplication?) -> InsertionModeOverride {
         let settings = AppSettings.shared
-        if let bundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
+        let bundleID = targetApplication?.bundleIdentifier
+            ?? NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+        if let bundleID,
            let perAppMode = appInsertionOverridesManager.effectiveMode(for: bundleID) {
             return perAppMode
         }
@@ -602,6 +608,7 @@ public final class TranscriptionEngine: ObservableObject {
         // Without this, early returns (e.g. command-only utterances) can leave state
         // stuck at .transcribing and block the next trigger press.
         defer {
+            pendingOutputTargetApplication = nil
             _ = applyLifecycle(.transcriptionCompleted, context: "finalizeTranscription")
             emitMetricsCSV()
             activityPhase = .ready
@@ -629,7 +636,8 @@ public final class TranscriptionEngine: ObservableObject {
             text: finalText,
             autoPaste: AppSettings.shared.autoPaste,
             protectSensitiveContexts: AppSettings.shared.copyOnlyInSensitiveFields,
-            insertionMode: resolvedInsertionMode()
+            insertionMode: resolvedInsertionMode(for: pendingOutputTargetApplication),
+            targetApplication: pendingOutputTargetApplication
         )
 
         switch deliveryDecision.delivery {
@@ -644,6 +652,7 @@ public final class TranscriptionEngine: ObservableObject {
 
     private func finalizeImportedFileTranscription(_ text: String, fileName: String) {
         defer {
+            pendingOutputTargetApplication = nil
             _ = applyLifecycle(.transcriptionCompleted, context: "finalizeImportedFileTranscription")
             emitMetricsCSV()
             activityPhase = .ready
@@ -671,6 +680,22 @@ public final class TranscriptionEngine: ObservableObject {
             wasModified: preparedResult.wasModified
         )
         resultFeedback = .savedToHistory(modified: preparedResult.wasModified)
+    }
+
+    private func captureOutputTargetApplication() -> OutputTargetApplication? {
+        guard let app = NSWorkspace.shared.frontmostApplication else {
+            return nil
+        }
+
+        let ownBundleIdentifier = Bundle.main.bundleIdentifier ?? "com.westkitty.dexdictate.macos"
+        guard app.bundleIdentifier != ownBundleIdentifier else {
+            return nil
+        }
+
+        return OutputTargetApplication(
+            bundleIdentifier: app.bundleIdentifier ?? "",
+            processIdentifier: app.processIdentifier
+        )
     }
 
     private struct PreparedTranscriptionResult {

@@ -6,6 +6,9 @@ import AppKit
 /// - Important: Requires the Accessibility entitlement and user approval so that
 ///   `CGEvent.post(tap:)` is permitted to inject synthetic keyboard events.
 enum ClipboardManager {
+    private static let targetActivationDelay: TimeInterval = 0.08
+    private static let clipboardRestoreDelay: TimeInterval = 1.0
+
     static func copy(_ text: String) {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
@@ -16,19 +19,33 @@ enum ClipboardManager {
     /// The clipboard is automatically cleared after paste to prevent data leakage.
     ///
     /// - Parameter text: The string to copy and paste.
-    static func copyAndPaste(_ text: String) {
+    static func copyAndPaste(_ text: String, targetApplication: OutputTargetApplication?) {
         let pasteboard = NSPasteboard.general
 
         // Store original clipboard content to restore it
         let originalContent = pasteboard.string(forType: .string)
 
         copy(text)
-        simulatePaste()
+        let dictationChangeCount = pasteboard.changeCount
 
-        // Clear clipboard after paste completes (with slight delay to ensure paste succeeds)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+        if let targetApplication,
+           targetApplication.processIdentifier != ProcessInfo.processInfo.processIdentifier,
+           let app = NSRunningApplication(processIdentifier: targetApplication.processIdentifier) {
+            _ = app.activate(options: [])
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + targetActivationDelay) {
+            simulatePaste()
+        }
+
+        // Restore the clipboard only if DexDictate still owns the current string payload.
+        DispatchQueue.main.asyncAfter(deadline: .now() + targetActivationDelay + clipboardRestoreDelay) {
+            guard pasteboard.changeCount == dictationChangeCount,
+                  pasteboard.string(forType: .string) == text else {
+                return
+            }
+
             pasteboard.clearContents()
-            // Restore original clipboard content if it existed
             if let original = originalContent {
                 pasteboard.setString(original, forType: .string)
             }

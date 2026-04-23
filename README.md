@@ -210,6 +210,7 @@ Useful commands:
 - `./scripts/setup_dev_env.sh`
 - `./scripts/fetch_model.sh`
 - `./scripts/run_quality_paths.sh`
+- `./scripts/verify_audio_route_recovery.sh`
 - `./scripts/benchmark.sh --audio <wav>`
 - `python3 scripts/benchmark.py --corpus-dir <dir>`
 - `./scripts/benchmark_regression.sh <wav> [baseline_ms]`

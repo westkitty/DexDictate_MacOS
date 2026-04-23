@@ -40,7 +40,7 @@ public final class AudioRecorderService: ObservableObject {
     nonisolated(unsafe) private var activePreferredInputUID = ""
     nonisolated(unsafe) private var activeInputUID = ""
 
-    private let preferredInputRetryDelays: [TimeInterval] = [0, 0.15, 0.35]
+    private let preferredInputRetryDelays: [TimeInterval] = [0, 0.2, 0.5, 1.0]
 
     public init() {
         setupSleepWakeNotifications()
