@@ -386,14 +386,15 @@ struct AntiGravityMainView: View {
                     .ignoresSafeArea()
             }
 
-            // Large app-icon watermark behind all content (visible on every theme).
+            // Large app-icon watermark — pinned to top half so it stays out of the controls zone.
             if let assetURL = profileManager.currentWatermarkAsset?.url,
                let nsImage = NSImage(contentsOf: assetURL) {
                 Image(nsImage: nsImage)
                     .resizable()
                     .scaledToFit()
                     .frame(width: 200, height: 200)
-                    .opacity(0.12)
+                    .opacity(0.06)
+                    .frame(maxHeight: .infinity, alignment: .top)
                     .allowsHitTesting(false)
             } else if let url = Safety.resourceBundle.url(forResource: "Assets.xcassets/AppIcon.appiconset/icon", withExtension: "png"),
                let nsImage = NSImage(contentsOf: url) {
@@ -401,7 +402,8 @@ struct AntiGravityMainView: View {
                     .resizable()
                     .scaledToFit()
                     .frame(width: 200, height: 200)
-                    .opacity(0.12)
+                    .opacity(0.06)
+                    .frame(maxHeight: .infinity, alignment: .top)
                     .allowsHitTesting(false)
             }
             Text("DEXDICTATE")
@@ -409,10 +411,11 @@ struct AntiGravityMainView: View {
                 .tracking(4)
                 .foregroundStyle(
                     settings.appearanceTheme == .minimalist
-                    ? Color.black.opacity(0.12)
-                    : Color.white.opacity(0.12)
+                    ? Color.black.opacity(0.06)
+                    : Color.white.opacity(0.06)
                 )
                 .rotationEffect(.degrees(-18))
+                .frame(maxHeight: .infinity, alignment: .top)
                 .allowsHitTesting(false)
 
             ScrollView(.vertical, showsIndicators: true) {
