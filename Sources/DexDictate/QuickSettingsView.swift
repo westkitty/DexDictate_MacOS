@@ -584,6 +584,7 @@ struct QuickSettingsView: View {
                         Text("Toggle").tag(AppSettings.TriggerMode.toggle)
                     }
                     .pickerStyle(.segmented)
+                    .fixedSize(horizontal: false, vertical: true)
                     .disabled(settings.safeModeEnabled)
                 }
 

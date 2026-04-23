@@ -14,7 +14,7 @@ struct DexDictateApp: App {
     @StateObject private var scanner = AudioDeviceScanner()
     @StateObject private var profileManager = ProfileManager()
     @StateObject private var benchmarkCaptureController = BenchmarkCaptureWindowController()
-    @ObservedObject var settings = AppSettings.shared
+    @StateObject private var settings = AppSettings.shared
     @StateObject private var menuBarIconController = MenuBarIconController.shared
     @StateObject private var modelCatalog = WhisperModelCatalog.shared
     @StateObject private var adaptiveBenchmarkController = AdaptiveBenchmarkController()

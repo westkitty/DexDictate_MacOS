@@ -33,6 +33,9 @@ struct HistoryView: View {
                 Text("Transcription History")
                     .font(.headline)
                     .foregroundStyle(.white.opacity(0.9))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .layoutPriority(-1)
                 if isListening {
                     HStack(spacing: 4) {
                         Circle()

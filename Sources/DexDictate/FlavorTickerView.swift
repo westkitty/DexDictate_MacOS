@@ -118,13 +118,18 @@ struct FlavorTickerView: View {
                 Text(labelLine1)
                     .font(.system(size: 9, weight: .black, design: .monospaced))
                     .tracking(1)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
                 Text(labelLine2)
                     .font(.system(size: 9, weight: .black, design: .monospaced))
                     .tracking(1)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
             }
             .foregroundStyle(.white)
+            .padding(.horizontal, 4)
         }
-        .frame(width: 58, height: tickerHeight)
+        .frame(width: 64, height: tickerHeight)
         .overlay(
             Rectangle()
                 .fill(Color.white.opacity(0.16))
