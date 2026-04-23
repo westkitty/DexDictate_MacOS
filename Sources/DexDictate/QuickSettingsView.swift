@@ -105,7 +105,7 @@ struct QuickSettingsView: View {
 
                             Text("Hold records only while the trigger is pressed. Toggle starts on the first press and stops on the second.")
                                 .font(.caption2)
-                                .foregroundStyle(.white.opacity(0.5))
+                                .foregroundStyle(.white.opacity(0.58))
                                 .fixedSize(horizontal: false, vertical: true)
 
                             DisclosureGroup("Route Health", isExpanded: $routeHealthExpanded) {
@@ -132,7 +132,7 @@ struct QuickSettingsView: View {
 
                                     Text(engine.routeHealthSnapshot.detail)
                                         .font(.caption2)
-                                        .foregroundStyle(.white.opacity(0.5))
+                                        .foregroundStyle(.white.opacity(0.58))
                                         .fixedSize(horizontal: false, vertical: true)
                                 }
                                 .padding(.top, 8)
@@ -178,7 +178,7 @@ struct QuickSettingsView: View {
                                     let custom = settings.customProfanityWords.count
                                     Text("Filtering \(bundled + custom) words (\(bundled) bundled + \(custom) custom)")
                                         .font(.caption2)
-                                        .foregroundStyle(.white.opacity(0.5))
+                                        .foregroundStyle(.white.opacity(0.58))
 
                                     Text("Add words to filter (comma-separated)")
                                         .font(.caption2)
@@ -205,7 +205,7 @@ struct QuickSettingsView: View {
                                         .foregroundStyle(.white.opacity(0.82))
                                     Text("Use app-specific presets and insertion overrides without bloating the main surface.")
                                         .font(.caption2)
-                                        .foregroundStyle(.white.opacity(0.5))
+                                        .foregroundStyle(.white.opacity(0.58))
                                 }
 
                                 Spacer()
@@ -286,7 +286,7 @@ struct QuickSettingsView: View {
 
                                     Text("Automatic maps coding, email, and chat apps into lighter domain-specific prompts and vocabulary. It stays tucked here because this is assistance, not theater.")
                                         .font(.caption2)
-                                        .foregroundStyle(.white.opacity(0.5))
+                                        .foregroundStyle(.white.opacity(0.58))
                                         .fixedSize(horizontal: false, vertical: true)
                                 }
                                 .padding(.top, 8)
@@ -298,7 +298,7 @@ struct QuickSettingsView: View {
                                 VStack(alignment: .leading, spacing: 8) {
                                     Text("Open the local capture tool to record the strict corpus, then benchmark it with the existing scripts.")
                                         .font(.caption2)
-                                        .foregroundStyle(.white.opacity(0.5))
+                                        .foregroundStyle(.white.opacity(0.58))
                                         .fixedSize(horizontal: false, vertical: true)
 
                                     HStack {
@@ -346,7 +346,7 @@ struct QuickSettingsView: View {
 
                                     Text(adaptiveBenchmarkController.status.description)
                                         .font(.caption2)
-                                        .foregroundStyle(.white.opacity(0.5))
+                                        .foregroundStyle(.white.opacity(0.58))
                                         .fixedSize(horizontal: false, vertical: true)
 
                                     if let importError = modelCatalog.lastImportError {
@@ -405,7 +405,7 @@ struct QuickSettingsView: View {
 
                             Text("Ticker motion still yields to macOS Reduce Motion even when animation stays enabled here. Stats show word count, session duration, and words per minute for the current session.")
                                 .font(.caption2)
-                                .foregroundStyle(.white.opacity(0.5))
+                                .foregroundStyle(.white.opacity(0.58))
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                     }
@@ -578,7 +578,7 @@ struct QuickSettingsView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Trigger Mode")
                         .font(.caption2)
-                        .foregroundStyle(.white.opacity(0.5))
+                        .foregroundStyle(.white.opacity(0.58))
                     Picker("", selection: $settings.triggerMode) {
                         Text("Hold").tag(AppSettings.TriggerMode.holdToTalk)
                         Text("Toggle").tag(AppSettings.TriggerMode.toggle)
@@ -633,7 +633,7 @@ struct QuickSettingsView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
                 .font(.caption2)
-                .foregroundStyle(.white.opacity(0.5))
+                .foregroundStyle(.white.opacity(0.58))
             content()
         }
         .frame(width: width, alignment: .leading)
@@ -766,7 +766,7 @@ private struct QuickSettingsDisclosureCard<Content: View>: View {
                         .foregroundStyle(.white)
                     Text(subtitle)
                         .font(.caption2)
-                        .foregroundStyle(.white.opacity(0.5))
+                        .foregroundStyle(.white.opacity(0.58))
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -789,7 +789,7 @@ private struct QuickSettingsSummaryValue: View {
         HStack {
             Text(label)
                 .font(.caption2)
-                .foregroundStyle(.white.opacity(0.5))
+                .foregroundStyle(.white.opacity(0.58))
             Spacer()
             Text(value)
                 .font(.caption2.weight(.semibold))
@@ -810,7 +810,7 @@ private struct MenuBarSettingsSection: View {
 
             Text("Default is the native microphone plus \"DexDictate.\" Switch to mic-only, a Dex icon, or an emoji icon. Dex icons now render larger and pulse with a recording badge while listening.")
                 .font(.caption2)
-                .foregroundStyle(.white.opacity(0.5))
+                .foregroundStyle(.white.opacity(0.58))
                 .fixedSize(horizontal: false, vertical: true)
 
             HStack(spacing: 10) {
@@ -1086,7 +1086,7 @@ private struct BenchmarkResultsSection: View {
             } else {
                 Text("No cached benchmark results for the current preset yet.")
                     .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.5))
+                    .foregroundStyle(.white.opacity(0.58))
                     .fixedSize(horizontal: false, vertical: true)
             }
 

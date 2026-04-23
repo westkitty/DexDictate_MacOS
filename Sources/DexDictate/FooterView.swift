@@ -20,7 +20,7 @@ struct FooterView: View {
             Button(action: { settings.restoreDefaults() }) {
                 Text(NSLocalizedString("Restore Defaults", comment: ""))
                     .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.5))
+                    .foregroundStyle(.white.opacity(0.58))
             }
             .buttonStyle(.plain)
 
@@ -40,7 +40,7 @@ struct FooterView: View {
                 Text(String(format: NSLocalizedString("DexDictate macOS v%@", comment: ""),
                              Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"))
                     .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.3))
+                    .foregroundStyle(.white.opacity(0.38))
                     .fixedSize()
                     .padding(.bottom, 10)
             }

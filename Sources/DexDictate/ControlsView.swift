@@ -120,7 +120,7 @@ struct ControlsView: View {
                 VStack(spacing: 6) {
                     Text("Trigger")
                         .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.55))
+                        .foregroundStyle(.white.opacity(0.62))
                         .textCase(.uppercase)
                         .tracking(0.8)
 
