@@ -13,7 +13,7 @@ import AVFoundation
 ///     property. Route-change recovery must also go through this queue.
 ///   - `bufferQueue` protects `_accumulatedSamples` between the tap callback thread and
 ///     the main thread (collectRecording).
-///   - UI-visible state (@Published) is always updated on the main actor via Task { @MainActor }.
+///   - UI-visible state (@Published) is always updated on the main actor via `MainActorDispatch`.
 public final class AudioRecorderService: ObservableObject {
     // nonisolated(unsafe): engine is accessed exclusively on audioQueue.
     // The compiler can't verify this statically, so we assert it manually.
@@ -65,7 +65,9 @@ public final class AudioRecorderService: ObservableObject {
                 self.isCaptureSessionActive = false
                 self.activePreferredInputUID = ""
                 self.activeInputUID = ""
-                Task { @MainActor in self.inputLevel = 0 }
+                MainActorDispatch.async { [weak self] in
+                    self?.inputLevel = 0
+                }
             }
         }
         wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
@@ -115,10 +117,14 @@ public final class AudioRecorderService: ObservableObject {
                     reason: .initialStart,
                     preserveBufferedAudio: false
                 )
-                DispatchQueue.main.async { Task { @MainActor in completion(.success(report)) } }
+                MainActorDispatch.async {
+                    completion(.success(report))
+                }
             } catch {
                 Safety.log("startRecordingInternal() FAILED: \(error)", category: .audio)
-                DispatchQueue.main.async { Task { @MainActor in completion(.failure(error)) } }
+                MainActorDispatch.async {
+                    completion(.failure(error))
+                }
             }
         }
     }
@@ -176,7 +182,9 @@ public final class AudioRecorderService: ObservableObject {
             isCaptureSessionActive = false
             activePreferredInputUID = ""
             activeInputUID = ""
-            Task { @MainActor in self.inputLevel = 0 }
+            MainActorDispatch.async { [weak self] in
+                self?.inputLevel = 0
+            }
             return self.bufferQueue.sync {
                 let samples = self._accumulatedSamples
                 self._accumulatedSamples = []
@@ -193,7 +201,9 @@ public final class AudioRecorderService: ObservableObject {
             self.isCaptureSessionActive = false
             self.activePreferredInputUID = ""
             self.activeInputUID = ""
-            Task { @MainActor in self.inputLevel = 0 }
+            MainActorDispatch.async { [weak self] in
+                self?.inputLevel = 0
+            }
         }
     }
 
@@ -212,7 +222,9 @@ public final class AudioRecorderService: ObservableObject {
         let activeUID = activeInputUID
 
         teardownEngineUnsafe()
-        Task { @MainActor in self.inputLevel = 0 }
+        MainActorDispatch.async { [weak self] in
+            self?.inputLevel = 0
+        }
 
         guard wasCaptureSessionActive else {
             Safety.log("handleEngineConfigurationChange() — no active capture session; cleanup only", category: .audio)
@@ -230,11 +242,9 @@ public final class AudioRecorderService: ObservableObject {
                 reason: .routeRecovery,
                 preserveBufferedAudio: true
             )
-            DispatchQueue.main.async {
-                Task { @MainActor [weak self] in
-                    guard let self else { return }
-                    self.onRouteRecoveryResult?(.success(report))
-                }
+            MainActorDispatch.async { [weak self] in
+                guard let self else { return }
+                self.onRouteRecoveryResult?(.success(report))
             }
         } catch {
             let failure = makeRecoveryFailure(error, reason: .routeRecovery, preferredUID: preferredUID)
@@ -245,13 +255,11 @@ public final class AudioRecorderService: ObservableObject {
             isCaptureSessionActive = false
             activePreferredInputUID = ""
             activeInputUID = ""
-            DispatchQueue.main.async {
-                Task { @MainActor [weak self] in
-                    guard let self else { return }
-                    self.inputLevel = 0
-                    self.onRouteRecoveryResult?(.failure(failure))
-                    self.onEngineInterrupted?()
-                }
+            MainActorDispatch.async { [weak self] in
+                guard let self else { return }
+                self.inputLevel = 0
+                self.onRouteRecoveryResult?(.failure(failure))
+                self.onEngineInterrupted?()
             }
         }
     }
@@ -454,6 +462,8 @@ public final class AudioRecorderService: ObservableObject {
         let rms = sqrt(sumSquares / Float(frameLength))
         let avgPower = rms == 0 ? -100 : 20 * log10(rms)
         let normalized = min(max((Double(avgPower) + 50) / 50, 0), 1)
-        Task { @MainActor in self.inputLevel = normalized }
+        MainActorDispatch.async { [weak self] in
+            self?.inputLevel = normalized
+        }
     }
 }

@@ -2,31 +2,12 @@ import XCTest
 @testable import DexDictateKit
 
 final class OutputCoordinatorTests: XCTestCase {
-    func testDefaultPasteDeliveryProfileWaitsBrieflyForStandardApps() {
-        let profile = PasteDeliveryProfile.resolve(for: nil)
-
-        XCTAssertEqual(profile.initialDelay, 0.12)
-        XCTAssertEqual(profile.activationTimeout, 0.20)
-        XCTAssertEqual(profile.activationPollInterval, 0.02)
-        XCTAssertTrue(profile.postsToTargetProcess)
-    }
-
-    func testZoomPasteDeliveryProfileAllowsExtraActivationTime() {
-        let target = OutputTargetApplication(bundleIdentifier: "us.zoom.xos", processIdentifier: 99)
-
-        let profile = PasteDeliveryProfile.resolve(for: target)
-
-        XCTAssertEqual(profile.initialDelay, 0.22)
-        XCTAssertEqual(profile.activationTimeout, 0.45)
-        XCTAssertEqual(profile.activationPollInterval, 0.02)
-        XCTAssertTrue(profile.postsToTargetProcess)
-    }
-
     func testSavedOnlyWhenAutoPasteDisabled() {
         let writer = MockOutputWriter()
         let coordinator = OutputCoordinator(
             writer: writer,
-            contextInspector: MockFocusedContextInspector(context: .standard)
+            contextInspector: MockFocusedContextInspector(context: .standard),
+            applicationActivator: MockApplicationActivator()
         )
 
         let decision = coordinator.deliver(text: "hello", autoPaste: false, protectSensitiveContexts: true)
@@ -40,7 +21,8 @@ final class OutputCoordinatorTests: XCTestCase {
         let writer = MockOutputWriter()
         let coordinator = OutputCoordinator(
             writer: writer,
-            contextInspector: MockFocusedContextInspector(context: .sensitive(reason: "Detected likely secure input context (password)."))
+            contextInspector: MockFocusedContextInspector(context: .sensitive(reason: "Detected likely secure input context (password).")),
+            applicationActivator: MockApplicationActivator()
         )
 
         let decision = coordinator.deliver(text: "secret", autoPaste: true, protectSensitiveContexts: true)
@@ -54,7 +36,8 @@ final class OutputCoordinatorTests: XCTestCase {
         let writer = MockOutputWriter()
         let coordinator = OutputCoordinator(
             writer: writer,
-            contextInspector: MockFocusedContextInspector(context: .standard)
+            contextInspector: MockFocusedContextInspector(context: .standard),
+            applicationActivator: MockApplicationActivator()
         )
 
         let decision = coordinator.deliver(text: "hello", autoPaste: true, protectSensitiveContexts: true)
@@ -84,7 +67,8 @@ final class OutputCoordinatorTests: XCTestCase {
         let writer = MockOutputWriter()
         let coordinator = OutputCoordinator(
             writer: writer,
-            contextInspector: MockFocusedContextInspector(context: .standard)
+            contextInspector: MockFocusedContextInspector(context: .standard),
+            applicationActivator: MockApplicationActivator()
         )
 
         let decision = coordinator.deliver(
@@ -103,7 +87,8 @@ final class OutputCoordinatorTests: XCTestCase {
         let writer = MockOutputWriter()
         let coordinator = OutputCoordinator(
             writer: writer,
-            contextInspector: MockFocusedContextInspector(context: .standard)
+            contextInspector: MockFocusedContextInspector(context: .standard),
+            applicationActivator: MockApplicationActivator()
         )
         let target = OutputTargetApplication(bundleIdentifier: "com.example.chat", processIdentifier: 4242)
 
@@ -116,6 +101,51 @@ final class OutputCoordinatorTests: XCTestCase {
         )
 
         XCTAssertEqual(decision.delivery, .pastedToActiveApp)
+        XCTAssertEqual(writer.lastPasteTargetApplication, target)
+    }
+
+    func testAlreadyFrontmostTargetDoesNotActivateAgain() {
+        let writer = MockOutputWriter()
+        let activator = MockApplicationActivator(frontmostProcessIdentifier: 4242)
+        let coordinator = OutputCoordinator(
+            writer: writer,
+            contextInspector: MockFocusedContextInspector(context: .standard),
+            applicationActivator: activator
+        )
+        let target = OutputTargetApplication(bundleIdentifier: "com.example.chat", processIdentifier: 4242)
+
+        let decision = coordinator.deliver(
+            text: "hello",
+            autoPaste: true,
+            protectSensitiveContexts: true,
+            insertionMode: .clipboardPaste,
+            targetApplication: target
+        )
+
+        XCTAssertEqual(decision.delivery, .pastedToActiveApp)
+        XCTAssertTrue(activator.activatedApplications.isEmpty)
+    }
+
+    func testBackgroundTargetActivatesOnceBeforePaste() {
+        let writer = MockOutputWriter()
+        let activator = MockApplicationActivator(frontmostProcessIdentifier: 9001)
+        let coordinator = OutputCoordinator(
+            writer: writer,
+            contextInspector: MockFocusedContextInspector(context: .standard),
+            applicationActivator: activator
+        )
+        let target = OutputTargetApplication(bundleIdentifier: "com.example.chat", processIdentifier: 4242)
+
+        let decision = coordinator.deliver(
+            text: "hello",
+            autoPaste: true,
+            protectSensitiveContexts: true,
+            insertionMode: .clipboardPaste,
+            targetApplication: target
+        )
+
+        XCTAssertEqual(decision.delivery, .pastedToActiveApp)
+        XCTAssertEqual(activator.activatedApplications, [target])
         XCTAssertEqual(writer.lastPasteTargetApplication, target)
     }
 }
@@ -140,5 +170,18 @@ private struct MockFocusedContextInspector: FocusedContextInspecting {
 
     func inspectFocusedContext() -> OutputTargetContext {
         context
+    }
+}
+
+private final class MockApplicationActivator: OutputApplicationActivating {
+    let frontmostProcessIdentifier: pid_t?
+    private(set) var activatedApplications: [OutputTargetApplication] = []
+
+    init(frontmostProcessIdentifier: pid_t? = nil) {
+        self.frontmostProcessIdentifier = frontmostProcessIdentifier
+    }
+
+    func activate(_ targetApplication: OutputTargetApplication) {
+        activatedApplications.append(targetApplication)
     }
 }

@@ -26,8 +26,8 @@ public class WhisperService: ObservableObject {
     /// deferred cleanup from resetting the flag for a newly-started transcription.
     private var transcriptionGeneration: Int = 0
 
-    // Callback closure to pass text back to the engine (marked Sendable for thread-safe access)
-    public var ontranscriptionComplete: (@Sendable (String) -> Void)?
+    // Callback closure to pass text back to the engine on the main actor.
+    public var ontranscriptionComplete: (@MainActor @Sendable (String) -> Void)?
 
     /// Cached initial prompt as C string for whisper.cpp
     private var _initialPromptCString: UnsafeMutablePointer<CChar>?
@@ -332,8 +332,8 @@ extension WhisperService: WhisperDelegate {
         let text = segments.map { $0.text }.joined(separator: " ")
         Safety.log("Whisper output: [REDACTED — \(text.count) chars]")
 
-        Task { @MainActor in
-            self.ontranscriptionComplete?(text)
+        MainActorDispatch.async { [weak self] in
+            self?.ontranscriptionComplete?(text)
         }
     }
 

@@ -44,8 +44,8 @@ final class InputMonitor {
 
         if !isTrusted {
             Safety.log("WARNING: Accessibility not granted — event tap will likely fail. Grant in System Settings > Privacy > Accessibility.", category: .permissions)
-            Task { @MainActor in
-                self.engine?.statusText = "Waiting for Accessibility Permission..."
+            MainActorDispatch.async { [weak self] in
+                self?.engine?.statusText = "Waiting for Accessibility Permission..."
             }
         }
 
@@ -110,14 +110,19 @@ final class InputMonitor {
 
                 if match {
                     let mode = AppSettings.shared.triggerMode
+                    let triggerIsDown = isDown
                     Safety.log("Trigger matched — mode=\(mode) isDown=\(isDown)", category: .input)
 
                     if mode == .holdToTalk {
-                        Task { @MainActor in monitor.engine?.handleTrigger(down: isDown) }
+                        MainActorDispatch.async {
+                            monitor.engine?.handleTrigger(down: triggerIsDown)
+                        }
                         return nil // Consume event
                     } else if mode == .toggle {
-                        if isDown {
-                            Task { @MainActor in monitor.engine?.toggleListening() }
+                        if triggerIsDown {
+                            MainActorDispatch.async {
+                                monitor.engine?.toggleListening()
+                            }
                         }
                         return nil // Consume event
                     }
@@ -128,8 +133,8 @@ final class InputMonitor {
             userInfo: UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())
         ) else {
             Safety.log("CRITICAL: CGEvent.tapCreate failed — accessibility permission required", category: .permissions)
-            Task { @MainActor in
-                self.engine?.handleInputMonitorFailure()
+            MainActorDispatch.async { [weak self] in
+                self?.engine?.handleInputMonitorFailure()
             }
 
             // Automatic retry after 5 seconds if permission granted.

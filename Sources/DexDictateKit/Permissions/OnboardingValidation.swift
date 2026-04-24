@@ -162,7 +162,7 @@ public final class MicrophoneValidationHarness: ObservableObject {
         if micStatus == .notDetermined {
             state = .running
             AVCaptureDevice.requestAccess(for: .audio) { [weak self] granted in
-                Task { @MainActor [weak self] in
+                MainActorDispatch.async { [weak self] in
                     guard let self else { return }
                     if granted {
                         self.runTest(inputDeviceUID: inputDeviceUID, durationSeconds: durationSeconds)

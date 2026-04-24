@@ -36,8 +36,19 @@ public final class ApplicationContextTracker: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] notification in
-            Task { @MainActor [weak self] in
-                self?.handleActivation(notification)
+            guard let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+                  let bundleIdentifier = app.bundleIdentifier else {
+                return
+            }
+
+            let displayName = app.localizedName ?? bundleIdentifier
+            let processIdentifier = app.processIdentifier
+            MainActorDispatch.async { [weak self] in
+                self?.updateLastExternalApplication(
+                    bundleIdentifier: bundleIdentifier,
+                    displayName: displayName,
+                    processIdentifier: processIdentifier
+                )
             }
         }
     }
@@ -75,16 +86,31 @@ public final class ApplicationContextTracker: ObservableObject {
     }
 
     private func updateLastExternalApplication(from app: NSRunningApplication) {
+        guard let bundleIdentifier = app.bundleIdentifier else {
+            return
+        }
+
+        updateLastExternalApplication(
+            bundleIdentifier: bundleIdentifier,
+            displayName: app.localizedName ?? bundleIdentifier,
+            processIdentifier: app.processIdentifier
+        )
+    }
+
+    private func updateLastExternalApplication(
+        bundleIdentifier: String,
+        displayName: String,
+        processIdentifier: pid_t
+    ) {
         let ownBundleIdentifier = Bundle.main.bundleIdentifier ?? "com.westkitty.dexdictate.macos"
-        guard let bundleIdentifier = app.bundleIdentifier,
-              bundleIdentifier != ownBundleIdentifier else {
+        guard bundleIdentifier != ownBundleIdentifier else {
             return
         }
 
         lastExternalApplication = ExternalApplicationContext(
             bundleIdentifier: bundleIdentifier,
-            displayName: app.localizedName ?? bundleIdentifier,
-            processIdentifier: app.processIdentifier
+            displayName: displayName,
+            processIdentifier: processIdentifier
         )
     }
 }

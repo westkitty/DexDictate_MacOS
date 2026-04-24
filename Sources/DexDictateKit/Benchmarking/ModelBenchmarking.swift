@@ -763,7 +763,7 @@ public final class AdaptiveBenchmarkController: ObservableObject {
             ]
 
             process.terminationHandler = { [weak self] process in
-                Task { @MainActor in
+                MainActorDispatch.async { [weak self] in
                     self?.helperProcess = nil
                     let terminationWasRequested = self?.helperTerminationWasRequested == true
                     self?.helperTerminationWasRequested = false

@@ -62,16 +62,48 @@ public struct ClipboardOutputWriter: OutputWriting {
     }
 }
 
+protocol OutputApplicationActivating {
+    var frontmostProcessIdentifier: pid_t? { get }
+    func activate(_ targetApplication: OutputTargetApplication)
+}
+
+struct AppKitOutputApplicationActivator: OutputApplicationActivating {
+    var frontmostProcessIdentifier: pid_t? {
+        NSWorkspace.shared.frontmostApplication?.processIdentifier
+    }
+
+    func activate(_ targetApplication: OutputTargetApplication) {
+        guard let app = NSRunningApplication(processIdentifier: targetApplication.processIdentifier) else {
+            return
+        }
+        _ = app.activate(options: [])
+    }
+}
+
 public struct OutputCoordinator: OutputCoordinating {
     private let writer: OutputWriting
     private let contextInspector: FocusedContextInspecting
+    private let applicationActivator: OutputApplicationActivating
 
     public init(
         writer: OutputWriting = ClipboardOutputWriter(),
         contextInspector: FocusedContextInspecting = AccessibilityFocusedContextInspector()
     ) {
+        self.init(
+            writer: writer,
+            contextInspector: contextInspector,
+            applicationActivator: AppKitOutputApplicationActivator()
+        )
+    }
+
+    init(
+        writer: OutputWriting,
+        contextInspector: FocusedContextInspecting,
+        applicationActivator: OutputApplicationActivating = AppKitOutputApplicationActivator()
+    ) {
         self.writer = writer
         self.contextInspector = contextInspector
+        self.applicationActivator = applicationActivator
     }
 
     public func deliver(
@@ -162,11 +194,14 @@ public struct OutputCoordinator: OutputCoordinating {
     private func activateTargetApplicationIfNeeded(_ targetApplication: OutputTargetApplication?) {
         guard let targetApplication else { return }
         let currentProcessIdentifier = ProcessInfo.processInfo.processIdentifier
-        guard targetApplication.processIdentifier != currentProcessIdentifier,
-              let app = NSRunningApplication(processIdentifier: targetApplication.processIdentifier) else {
+        guard targetApplication.processIdentifier != currentProcessIdentifier else {
             return
         }
-        _ = app.activate(options: [])
+        guard targetApplication.processIdentifier != applicationActivator.frontmostProcessIdentifier else {
+            return
+        }
+
+        applicationActivator.activate(targetApplication)
     }
 
     private func focusedAXElement() -> AXUIElement? {

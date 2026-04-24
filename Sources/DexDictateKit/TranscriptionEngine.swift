@@ -169,9 +169,7 @@ public final class TranscriptionEngine: ObservableObject {
 
         // Bind Whisper output
         whisperService.ontranscriptionComplete = { [weak self] text in
-            Task { @MainActor in
-                self?.liveTranscript = text
-            }
+            self?.liveTranscript = text
         }
 
         audioService.onRouteRecoveryResult = { [weak self] result in
@@ -588,10 +586,8 @@ public final class TranscriptionEngine: ObservableObject {
 
         // Wire up result handler before calling transcribe.
         whisperService.ontranscriptionComplete = { [weak self] text in
-            Task { @MainActor in
-                self?.currentMetrics.t_whisper_done = Date()
-                self?.handleWhisperResult(text)
-            }
+            self?.currentMetrics.t_whisper_done = Date()
+            self?.handleWhisperResult(text)
         }
         
         currentMetrics.t_whisper_submit = Date()
@@ -624,9 +620,7 @@ public final class TranscriptionEngine: ObservableObject {
         activityPhase = .transcribing
 
         whisperService.ontranscriptionComplete = { [weak self] text in
-            Task { @MainActor [weak self] in
-                self?.handleWhisperResult(text)
-            }
+            self?.handleWhisperResult(text)
         }
 
         Task.detached(priority: .userInitiated) { [weak self] in
@@ -910,12 +904,10 @@ public final class TranscriptionEngine: ObservableObject {
         let whisperSamples = AudioResampler.resampleToWhisper(snapshot.rawSamples, fromRate: snapshot.sourceSampleRate)
 
         whisperService.ontranscriptionComplete = { [weak self] text in
-            Task { @MainActor in
-                self?.handleAccuracyRetryResult(
-                    text: text,
-                    sourceHistoryItemID: snapshot.sourceHistoryItemID
-                )
-            }
+            self?.handleAccuracyRetryResult(
+                text: text,
+                sourceHistoryItemID: snapshot.sourceHistoryItemID
+            )
         }
 
         activityPhase = .transcribing
@@ -980,13 +972,11 @@ public final class TranscriptionEngine: ObservableObject {
         currentMetrics.t_whisper_submit = Date()
 
         whisperService.ontranscriptionComplete = { [weak self] text in
-            Task { @MainActor in
-                self?.currentMetrics.t_whisper_done = Date()
-                self?.handleAutomaticAccuracyRetryResult(
-                    text: text,
-                    originalText: originalText
-                )
-            }
+            self?.currentMetrics.t_whisper_done = Date()
+            self?.handleAutomaticAccuracyRetryResult(
+                text: text,
+                originalText: originalText
+            )
         }
 
         activityPhase = .transcribing

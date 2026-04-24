@@ -31,11 +31,12 @@ public class AudioDeviceScanner: ObservableObject {
     }
 
     private func refreshDevices(missingPreferredGraceExpired: Bool) {
-        Task { @MainActor in
+        MainActorDispatch.async { [weak self] in
+            guard let self else { return }
             let devices = AudioDeviceManager.inputDevices()
             let currentPreferredUID = AppSettings.shared.inputDeviceUID
             let graceExpiredForCurrentPreferred =
-                missingPreferredGraceExpired && currentPreferredUID == pendingMissingPreferredUID
+                missingPreferredGraceExpired && currentPreferredUID == self.pendingMissingPreferredUID
             let decision = AudioInputSelectionPolicy.resolve(
                 preferredUID: currentPreferredUID,
                 availableDevices: devices,
@@ -46,9 +47,9 @@ public class AudioDeviceScanner: ObservableObject {
 
             switch decision.status {
             case .systemDefault, .preferredAvailable, .fellBackToSystemDefault:
-                cancelPendingPreferredFallback()
+                self.cancelPendingPreferredFallback()
             case .preferredTemporarilyUnavailable:
-                schedulePreferredFallbackRecheck(for: currentPreferredUID)
+                self.schedulePreferredFallbackRecheck(for: currentPreferredUID)
             }
 
             if AppSettings.shared.inputDeviceUID != decision.normalizedUID {
