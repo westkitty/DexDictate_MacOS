@@ -2,7 +2,7 @@
 title: DexDictate for macOS Bible
 version: 1.0.1
 status: Authoritative
-last_updated: 2026-04-09
+last_updated: 2026-04-27
 app_version: 1.5.2
 project_root: <repo-root>
 primary_language: Swift
@@ -880,3 +880,124 @@ This restarts the macOS CoreAudio daemon (`coreaudiod`). macOS automatically rel
 - Modified: `Sources/DexDictateKit/Services/AudioRecorderRecoverySupport.swift`
 - Modified: `Sources/DexDictateKit/TranscriptionEngine.swift`
 - Modified: `Tests/DexDictateTests/AudioRecorderRecoveryFailureTests.swift`
+
+---
+
+### Entry 8: Output Hardening, Secure-Context Fix, Trigger Mode Crash, Permission Capability (2026-04-26)
+
+**Commit:** `68eff79e`
+
+**Goals:**
+- Add AX settability preflight to `insertViaAccessibility()` to stop silent failures on read-only fields.
+- Reduce false positives in `SensitiveContextHeuristic` for weak tokens (`pin`, `token`, `secret`).
+- Add a testable `PermissionCapabilityChecker` primitive separating TCC grant state from live API capability.
+- Eliminate the `SystemSegmentedControl._overrideSizeThatFits` crash path on macOS 26 in Quick Settings.
+
+**Problems solved:**
+- `insertViaAccessibility()` was calling `AXUIElementSetAttributeValue` without checking `AXUIElementIsAttributeSettable` first. All three insertion strategies failed silently with no logging. Callers could not distinguish "no focused element", "attribute not writable", "app doesn't implement AX", or "success".
+- `SensitiveContextHeuristic` used raw `field.contains($0)` substring matching. `"opinionText"` matched `"pin"`, `"tokenField"` matched `"token"`, `"clientSecret"` matched `"secret"` — causing false clipboard-only fallbacks in developer tools and API dashboards.
+- `PermissionManager` polled TCC state (`AXIsProcessTrusted`, `CGPreflightListenEventAccess`) but never confirmed the underlying APIs actually worked. Permission granted ≠ permission working after reinstalls or signing changes.
+- SwiftUI `.pickerStyle(.segmented)` in Quick Settings was calling into `SystemSegmentedControl._overrideSizeThatFits` during menu layout on macOS 26, causing a crash.
+
+**Architectural decisions:**
+- `SecureInputContext`: split tokens into *strong* (substring match on all AX attributes) and *weak* (`pin`, `token`, `secret` — whole-word regex on human-readable fields only: title, placeholder, label; excluded from role, subrole, identifier). Added `containsWholeWord()` private extension using `NSRegularExpression` word-boundary pattern.
+- `OutputCoordinator`: introduced `AccessibilityElementOperating` protocol and `SystemAccessibilityElementOperator` concrete type. All raw AX calls moved into the operator so `insertViaAccessibility()` can be unit-tested without real on-screen focus. Preflight with `isSettable()` before each strategy. Log each skip/fail/success via `Safety.log(..., category: .output)`.
+- Added `DiagnosticCategory.output` to `Diagnostics.swift`.
+- `PermissionCapabilityChecker`: new `public struct` with closure-injected probes (`checkAXFocusedElementRead`, `checkEventTapPreflight`). `run(accessibilityGranted:inputMonitoringGranted:)` skips a probe if the corresponding TCC permission is not granted. `PermissionCapabilityChecker.system` is the production implementation. Not yet wired to any UI or `PermissionManager` at this commit.
+- Quick Settings trigger mode: replaced `Picker(...).pickerStyle(.segmented)` with `HStack` of two `TriggerSegment` button invocations (existing pattern). `SystemSegmentedControl` is no longer instantiated in that view.
+
+**Files changed:**
+- `Sources/DexDictate/QuickSettingsView.swift`
+- `Sources/DexDictateKit/Diagnostics/Diagnostics.swift`
+- `Sources/DexDictateKit/Output/OutputCoordinator.swift`
+- `Sources/DexDictateKit/Output/SecureInputContext.swift`
+- `Sources/DexDictateKit/Permissions/PermissionCapabilityChecker.swift` *(new)*
+- `Tests/DexDictateTests/AccessibilityInsertionTests.swift` *(new, 5 tests)*
+- `Tests/DexDictateTests/OutputCoordinatorTests.swift`
+- `Tests/DexDictateTests/PermissionCapabilityTests.swift` *(new, 9 tests)*
+- `Tests/DexDictateTests/SecureInputContextTests.swift` *(new, 14 tests)*
+
+**Tests and verification:**
+- `swift test --filter SecureInputContextTests` — 14/14 passed
+- `swift test --filter AccessibilityInsertionTests` — 5/5 passed
+- `swift test --filter PermissionCapabilityTests` — 9/9 passed
+- `swift build` — passed
+
+**Known pre-existing flaky test:** `MainActorActionTests.testRunAsyncExecutesOnMainActor` is a timing-sensitive async scheduling test introduced in `4954b85f`. It passes ~2/3 runs in isolation. Unrelated to this work.
+
+---
+
+### Entry 9: Main Actor Dispatch Stabilization and Clipboard Restore (2026-04-26)
+
+**Commit:** `4db345bb`
+
+**Goals:**
+- Stabilize main-actor dispatch for UI callbacks that touch `@MainActor`-isolated objects.
+- Replace the fragile `NSPasteboardItem.copy()` clipboard preservation with a proper snapshot/restore pipeline.
+- Fix `.gitignore` so `output/` only ignores the repo-root generated-output directory, not `Sources/DexDictateKit/Output/`.
+
+**Problems solved:**
+- `MainActorAction.run { }` and `MainActorDispatch.async` were scheduling via `Task { @MainActor in }` directly from SwiftUI gesture callbacks, which could enter Swift Concurrency from a context that `assumeIsolated` would reject on macOS 26.
+- Clipboard restoration after paste was using `NSPasteboardItem.copy()` which does not reliably clone all representations (data, string, property list) — rich pasteboard content could be silently dropped on restore.
+- The `.gitignore` rule `output/` was matching `Sources/DexDictateKit/Output/` in addition to the intended build output directory, causing `git add` to require `-f` for any file in that directory.
+
+**Architectural decisions:**
+- `MainActorDispatch.async`: wrap `body()` in `MainActor.assumeIsolated { }` so the closure executes with provable main-actor isolation, not just scheduling on the main queue.
+- `MainActorAction.run(_ action: @MainActor () -> Void)`: switch to `MainActorDispatch.async` instead of `Task { @MainActor in }`.
+- `MainActorAction.run(_ action: @MainActor () async -> Void)`: use `DispatchQueue.main.async { MainActor.assumeIsolated { Task<Void, Never> { await action() } } }` to avoid entering Swift Concurrency from the gesture stack.
+- `ApplicationContextTracker`: replace the `MainActorDispatch.async` dispatch inside the activation notification handler with `MainActor.assumeIsolated { self?.handleActivation(notification) }` since `.main` queue notifications are already on the main thread.
+- `ClipboardManager`: introduce `SavedPasteboardContents`, `SavedPasteboardItem`, `SavedPasteboardRepresentation` value types. `clonePasteboardItems()` snapshots all types (data, string, property list) per item. `restorePasteboardContents()` rebuilds items from the snapshot on restore. `copy()` and `copyAndPaste()` now call `runOnMainThread` to ensure pasteboard access is on the main thread.
+- `.gitignore`: change `output/` to `/output/` (repo-root anchored).
+
+**Files changed:**
+- `Sources/DexDictate/` — `ApplicationContextTracker.swift`, `MainActorAction.swift`, `MainActorDispatch.swift`
+- `Sources/DexDictateKit/Output/ClipboardManager.swift`
+- `Sources/VerificationRunner/main.swift` (string check updates for refactored call sites)
+- `Tests/DexDictateTests/ClipboardManagerTests.swift` *(new, 4 tests)*
+- `Tests/DexDictateTests/OutputCoordinatorTests.swift` (new test for AX mode + sensitive context interaction)
+- `.gitignore`
+
+**Tests and verification:**
+- `swift test --filter ClipboardManagerTests` — 4/4 passed
+- `swift build` — passed
+
+---
+
+### Entry 10: Live Capability Diagnostics and Zoom Troubleshooting (2026-04-27)
+
+**Commit:** `7b789bc3`
+
+**Goals:**
+- Wire `PermissionCapabilityChecker` (created in Entry 8, unwired) into `PermissionManager` so live probe results are published and available to UI.
+- Surface live capability state in the Help → Diagnostics section.
+- Add Zoom compatibility troubleshooting guidance to the Help system.
+- Add Core Audio `-10868` recovery guidance to the Help system (previously only in the error message, not searchable via Help).
+
+**Problems solved:**
+- `PermissionCapabilityChecker` existed but was called by nothing. Users with permissions granted but broken live capability (post-reinstall, signing change, daemon restart) had no way to see the distinction.
+- The Diagnostics section of Help had no live data — only static text. Permission state and capability probe results were not visible there.
+- No Zoom-specific troubleshooting existed anywhere in the app. Users hitting Zoom chat insertion failures, audio device contention during calls, or Electron AX limitations had no guidance.
+- `killall coreaudiod` / `killall -9 coreaudiod` guidance existed only in `DictationError.errorDescription` (visible when the error fires) but was not findable via Help search.
+
+**Architectural decisions:**
+- `PermissionManager`: add `@Published public var capabilityReport: PermissionCapabilityReport?` and `var capabilityChecker: PermissionCapabilityChecker = .system`. Call `capabilityChecker.run(...)` at the end of every `checkPermissions()` execution (init + 2-second polling timer + foreground reactivation). Checker is injectable for tests. No behavior change to dictation start or permission enforcement.
+- `DiagnosticsContent` in `HelpView.swift`: add `@ObservedObject private var permissions = PermissionManager.shared` to observe live updates. Add: (1) Live Capability Status panel with TCC grant rows and live probe result rows; (2) Zoom Compatibility section with five keyed failure cases; (3) Core Audio Error (-10868) section with Terminal commands; all existing static content preserved.
+- `HelpSection` search aliases updated: `.diagnostics` adds zoom/coreaudiod/-10868/electron/capability; `.outputPasting` adds zoom/zoom chat/electron/not pasting; `.recordingAudio` adds zoom/audio route/device switch.
+
+**Files changed:**
+- `Sources/DexDictate/HelpView.swift`
+- `Sources/DexDictateKit/Permissions/PermissionManager.swift`
+- `Tests/DexDictateTests/PermissionManagerCapabilityTests.swift` *(new, 4 tests)*
+
+**Tests and verification:**
+- `swift test --filter PermissionManagerCapabilityTests` — 4/4 passed
+- `swift test --filter PermissionManagerTests` — 2/2 passed
+- `swift test --filter PermissionCapabilityTests` — 9/9 passed
+- `swift build` — passed
+
+**Zoom-specific notes:**
+- Zoom (`us.zoom.xos`) was already referenced in `DictationAssist.swift` for chat vocabulary domain bias. No Zoom-specific insertion behavior or overrides existed.
+- Zoom's Electron-based chat text fields typically do not implement AX write attributes, so all three `insertViaAccessibility()` strategies will fail and fall back to clipboard paste. This is expected and correct — clipboard paste is the recommended mode for Zoom chat.
+- The per-app insertion override UI already supports adding `us.zoom.xos` → Clipboard Paste manually. No default rule has been added yet.
+
+**Limitation:** `PermissionCapabilityChecker` is not yet wired into onboarding enforcement or any UI outside the Help Diagnostics section.
