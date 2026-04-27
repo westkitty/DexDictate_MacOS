@@ -8,6 +8,7 @@ public enum DiagnosticCategory: String, Codable {
     case audio
     case transcription
     case settings
+    case output
 }
 
 struct DiagnosticRecord: Codable, Equatable {

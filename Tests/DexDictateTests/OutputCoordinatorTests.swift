@@ -47,6 +47,26 @@ final class OutputCoordinatorTests: XCTestCase {
         XCTAssertEqual(writer.pastedTexts, ["hello"])
     }
 
+    func testAccessibilityModeStillRespectsSensitiveContextProtection() {
+        let writer = MockOutputWriter()
+        let coordinator = OutputCoordinator(
+            writer: writer,
+            contextInspector: MockFocusedContextInspector(context: .sensitive(reason: "Detected likely secure input context (password).")),
+            applicationActivator: MockApplicationActivator()
+        )
+
+        let decision = coordinator.deliver(
+            text: "secret",
+            autoPaste: true,
+            protectSensitiveContexts: true,
+            insertionMode: .accessibilityAPI
+        )
+
+        XCTAssertEqual(decision.delivery, .copiedOnly(reason: "Detected likely secure input context (password)."))
+        XCTAssertEqual(writer.copiedTexts, ["secret"])
+        XCTAssertEqual(writer.pastedTexts, [])
+    }
+
     func testSecureHeuristicFlagsLikelyPasswordFields() {
         let snapshot = FocusedElementSnapshot(
             role: "AXTextField",

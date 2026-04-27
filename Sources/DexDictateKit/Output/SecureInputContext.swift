@@ -11,38 +11,70 @@ struct FocusedElementSnapshot: Equatable {
 }
 
 enum SensitiveContextHeuristic {
-    private static let tokens = [
+    // Strong signals: substring-matched across all AX attributes.
+    // These strings don't occur as casual programming identifiers.
+    private static let strongTokens = [
         "secure",
         "password",
         "passcode",
-        "pin",
-        "secret",
-        "token",
         "otp",
         "2fa",
         "one-time code",
-        "verification code"
+        "verification code",
+    ]
+
+    // Weak signals: word-boundary-matched and only checked in human-readable fields
+    // (title, placeholder, label). Excluded from role/subrole/identifier to avoid
+    // false positives on programmer-assigned names like "tokenField" or "clientSecret".
+    private static let weakTokens = [
+        "pin",
+        "token",
+        "secret",
     ]
 
     static func classify(_ snapshot: FocusedElementSnapshot) -> OutputTargetContext {
-        let fields = [
+        let allFields = [
             snapshot.subrole,
             snapshot.role,
             snapshot.title,
             snapshot.placeholder,
             snapshot.label,
-            snapshot.identifier
+            snapshot.identifier,
         ]
         .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
         .filter { !$0.isEmpty }
 
-        for field in fields {
-            if let token = tokens.first(where: { field.contains($0) }) {
+        for token in strongTokens {
+            if allFields.contains(where: { $0.contains(token) }) {
+                return .sensitive(reason: "Detected likely secure input context (\(token)).")
+            }
+        }
+
+        let semanticFields = [
+            snapshot.title,
+            snapshot.placeholder,
+            snapshot.label,
+        ]
+        .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+        .filter { !$0.isEmpty }
+
+        for token in weakTokens {
+            if semanticFields.contains(where: { $0.containsWholeWord(token) }) {
                 return .sensitive(reason: "Detected likely secure input context (\(token)).")
             }
         }
 
         return .standard
+    }
+}
+
+private extension String {
+    /// Returns true if this string contains `word` as a whole token, using non-alphanumeric/
+    /// non-underscore boundaries. Prevents "pin" from matching "opinion" or "spinControl".
+    func containsWholeWord(_ word: String) -> Bool {
+        let escaped = NSRegularExpression.escapedPattern(for: word)
+        let pattern = "(?i)(?<![a-zA-Z0-9_])\(escaped)(?![a-zA-Z0-9_])"
+        return range(of: pattern, options: .regularExpression) != nil
     }
 }
 

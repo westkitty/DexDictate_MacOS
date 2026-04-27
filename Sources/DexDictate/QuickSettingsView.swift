@@ -581,12 +581,25 @@ struct QuickSettingsView: View {
                     Text("Trigger Mode")
                         .font(.caption2)
                         .foregroundStyle(.white.opacity(0.5))
-                    Picker("", selection: $settings.triggerMode) {
-                        Text("Hold").tag(AppSettings.TriggerMode.holdToTalk)
-                        Text("Toggle").tag(AppSettings.TriggerMode.toggle)
+                    HStack(spacing: 0) {
+                        TriggerSegment(
+                            title: "Hold",
+                            isSelected: settings.triggerMode == .holdToTalk
+                        ) {
+                            settings.triggerMode = .holdToTalk
+                        }
+                        Divider()
+                            .frame(width: 1)
+                            .background(Color.white.opacity(0.15))
+                        TriggerSegment(
+                            title: "Toggle",
+                            isSelected: settings.triggerMode == .toggle
+                        ) {
+                            settings.triggerMode = .toggle
+                        }
                     }
-                    .pickerStyle(.segmented)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .background(Color.white.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
                     .disabled(settings.safeModeEnabled)
                 }
 
