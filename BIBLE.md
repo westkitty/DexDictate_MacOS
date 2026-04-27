@@ -1001,3 +1001,24 @@ This restarts the macOS CoreAudio daemon (`coreaudiod`). macOS automatically rel
 - The per-app insertion override UI already supports adding `us.zoom.xos` → Clipboard Paste manually. No default rule has been added yet.
 
 **Limitation:** `PermissionCapabilityChecker` is not yet wired into onboarding enforcement or any UI outside the Help Diagnostics section.
+
+---
+
+### Entry 11: Zoom Manual QA Checklist (2026-04-27)
+
+**Goal:**
+- Add a manual QA checklist for verifying DexDictate behavior during Zoom workflows.
+
+**Problem being solved:**
+- Zoom compatibility depends on microphone routing, CoreAudio stability, focused app state, Accessibility insertion, clipboard fallback, Electron text fields, and secure-field protection. These need repeatable manual verification.
+
+**Files changed:**
+- `docs/Zoom_QA_Checklist.md`
+- `BIBLE.md`
+
+**Verification:**
+- Documentation-only change.
+- Confirmed checklist covers Zoom open, active call, muted/unmuted microphone, Zoom chat insertion, non-Zoom app insertion while Zoom is running, Electron fields, secure fields, audio-device switching, CoreAudio route errors, and Safe Mode.
+
+**Status:**
+- Complete.
