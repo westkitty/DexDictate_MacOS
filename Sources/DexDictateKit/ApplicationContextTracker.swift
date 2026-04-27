@@ -36,19 +36,8 @@ public final class ApplicationContextTracker: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] notification in
-            guard let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
-                  let bundleIdentifier = app.bundleIdentifier else {
-                return
-            }
-
-            let displayName = app.localizedName ?? bundleIdentifier
-            let processIdentifier = app.processIdentifier
-            MainActorDispatch.async { [weak self] in
-                self?.updateLastExternalApplication(
-                    bundleIdentifier: bundleIdentifier,
-                    displayName: displayName,
-                    processIdentifier: processIdentifier
-                )
+            MainActor.assumeIsolated { [weak self] in
+                self?.handleActivation(notification)
             }
         }
     }

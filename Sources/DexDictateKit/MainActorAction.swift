@@ -4,19 +4,23 @@ import Foundation
 /// SwiftUI's gesture dispatch stack.
 ///
 /// DexDictate uses this trampoline for button and gesture callbacks that touch
-/// `@MainActor`-isolated objects. Running the work in a fresh main-actor task avoids
-/// SwiftUI calling into actor-isolated methods directly through
-/// `MainActor.assumeIsolated`.
+/// `@MainActor`-isolated objects. The initial hop uses the main dispatch queue instead
+/// of `Task { @MainActor in ... }` so UI actions do not create a Swift Concurrency
+/// task directly from the gesture callback stack.
 public enum MainActorAction {
     public static func run(_ action: @escaping @MainActor () -> Void) {
-        Task { @MainActor in
+        MainActorDispatch.async {
             action()
         }
     }
 
     public static func run(_ action: @escaping @MainActor () async -> Void) {
-        Task { @MainActor in
-            await action()
+        DispatchQueue.main.async {
+            MainActor.assumeIsolated {
+                _ = Task<Void, Never> {
+                    await action()
+                }
+            }
         }
     }
 }

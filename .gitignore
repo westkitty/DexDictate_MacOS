@@ -53,6 +53,6 @@ Sources/DexDictateKit/Resources/base.en.bin
 Sources/DexDictateKit/Resources/tiny.en.bin
 
 # Generated outputs and temporary review directories
-output/
+/output/
 .tmp_onboarding_review/
 scripts/batch_circle_cutout.py
