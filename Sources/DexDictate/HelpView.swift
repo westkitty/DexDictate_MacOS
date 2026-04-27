@@ -79,9 +79,9 @@ enum HelpSection: String, CaseIterable, Identifiable, Hashable {
         case .gettingStarted: return ["setup", "first run", "onboarding", "begin", "new"]
         case .permissions:    return ["accessibility", "input monitoring", "microphone", "privacy", "permission denied", "not working"]
         case .triggerSetup:   return ["shortcut", "hotkey", "button", "hold", "toggle", "middle mouse", "key", "bind"]
-        case .recordingAudio: return ["mic", "microphone", "input", "audio", "record", "silence", "timeout", "device", "file import"]
+        case .recordingAudio: return ["mic", "microphone", "input", "audio", "record", "silence", "timeout", "device", "file import", "zoom", "audio route", "route change", "device switch"]
         case .transcription:  return ["whisper", "model", "accuracy", "local", "offline", "wer", "utterance", "preset", "retry"]
-        case .outputPasting:  return ["paste", "copy", "insert", "secure", "password", "auto-paste", "clipboard", "per app", "profanity"]
+        case .outputPasting:  return ["paste", "copy", "insert", "secure", "password", "auto-paste", "clipboard", "per app", "profanity", "zoom", "zoom chat", "electron", "not pasting", "no text", "wrong app"]
         case .history:        return ["history", "log", "export", "search", "detach", "previous", "transcript", "save"]
         case .vocabulary:     return ["words", "replacements", "vocabulary", "correction", "learn", "custom", "phrase"]
         case .voiceCommands:  return ["scratch that", "dex", "new line", "all caps", "commands", "voice", "command"]
@@ -91,7 +91,7 @@ enum HelpSection: String, CaseIterable, Identifiable, Hashable {
         case .safeMode:       return ["safe", "defaults", "restore", "low risk", "conservative", "troubleshoot"]
         case .benchmarking:   return ["benchmark", "wer", "latency", "model", "tiny.en", "accuracy", "corpus", "promote", "auto"]
         case .shortcuts:      return ["siri", "shortcuts", "app intents", "automation", "voice control"]
-        case .diagnostics:    return ["logs", "debug", "troubleshoot", "not working", "error", "crash", "broken", "fix"]
+        case .diagnostics:    return ["logs", "debug", "troubleshoot", "not working", "error", "crash", "broken", "fix", "zoom", "zoom call", "electron", "coreaudiod", "-10868", "core audio", "audio stuck", "microphone blocked", "capability"]
         case .about:          return ["version", "github", "credits", "license", "source"]
         }
     }
@@ -875,14 +875,76 @@ private struct ShortcutsContent: View {
 // ─────────────────────────────────────────────────────────────────────────────
 
 private struct DiagnosticsContent: View {
+    @ObservedObject private var permissions = PermissionManager.shared
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+
+            // MARK: Live capability status
+
+            helpHeading("Live Capability Status")
+            helpBody("Shows current macOS permission grants and live API probes. Probes are skipped when the corresponding permission is not granted.")
+            VStack(alignment: .leading, spacing: 2) {
+                HelpRow(key: "Accessibility (TCC)", value: permissions.accessibilityGranted ? "✓ Granted" : "✗ Not granted")
+                HelpRow(key: "Microphone (TCC)", value: permissions.microphoneGranted ? "✓ Granted" : "✗ Not granted")
+                HelpRow(key: "Input Monitoring (TCC)", value: permissions.inputMonitoringGranted ? "✓ Granted" : "✗ Not granted")
+                if let report = permissions.capabilityReport {
+                    HelpRow(key: "AX element read (live)", value: capabilityStatusLabel(report.accessibilityElementRead))
+                    HelpRow(key: "Event tap preflight (live)", value: capabilityStatusLabel(report.eventTapPreflight))
+                }
+            }
+            .padding(10)
+            .background(Color.white.opacity(0.04))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+
+            // MARK: Existing troubleshooting
+
             helpHeading("Trigger not firing")
             helpBody("1. Check Permissions — Accessibility and Input Monitoring must both be granted.\n2. Fully quit DexDictate and relaunch.\n3. Confirm your shortcut is set in Quick Settings → Input → Trigger Mode and the shortcut recorder field.")
             helpHeading("Transcription is empty or wrong")
             helpBody("1. Confirm Microphone permission is granted.\n2. Check Input Device in Quick Settings → Input → Input Device.\n3. Enable Safe Mode (clipboard-only) to rule out output issues.\n4. Try the bundled tiny.en model in Quick Settings → Benchmark → Optimization → Active Model.")
             helpHeading("Text pasting in wrong place / not pasting")
             helpBody("1. Ensure the target app is in focus when you release the trigger.\n2. Check per-app rules in Quick Settings → Output → Per-App Insertion Rules → Manage...\n3. Try enabling Accessibility API insertion.")
+
+            // MARK: Zoom compatibility
+
+            helpHeading("Zoom Compatibility")
+
+            helpBody("DexDictate works while Zoom is open. Different failure modes have different causes:")
+
+            VStack(alignment: .leading, spacing: 4) {
+                HelpRow(key: "Microphone fails during Zoom call", value: "Zoom may change the selected audio device. Check Route Health in Quick Settings. If recovery doesn't resume automatically, check the Input Device setting.")
+                HelpRow(key: "Zoom chat doesn't receive text", value: "Click directly inside the Zoom chat box before triggering dictation. If text still doesn't appear, set a per-app rule for Zoom (us.zoom.xos) to use Clipboard Paste. Zoom's Electron-based chat may not support Accessibility API insertion.")
+                HelpRow(key: "Works in TextEdit but not Zoom", value: "This is a target-app insertion issue, not a global failure. Set a per-app Clipboard Paste rule for Zoom. Quick Settings → Output → Per-App Insertion Rules → Manage…")
+                HelpRow(key: "Works outside calls but not during", value: "Probable audio route switch during the call. Zoom typically changes the input device when joining. DexDictate's route recovery should resume automatically — check Route Health for recovery count and status.")
+                HelpRow(key: "Password / OTP / verification fields", value: "DexDictate intentionally does not insert into detected secure fields. Text is copied to clipboard instead. This is expected safety behaviour.")
+            }
+
+            helpCallout("For Zoom chat specifically: Quick Settings → Output → Per-App Insertion Rules → Manage… → add bundle ID \"us.zoom.xos\" → Clipboard Paste.")
+
+            // MARK: CoreAudio -10868
+
+            helpHeading("Core Audio Error (-10868)")
+            helpBody("If DexDictate repeatedly reports a Core Audio error, macOS Core Audio may be stuck. This can happen after system sleep, audio device changes, or when Zoom or another audio app disrupts the audio session.")
+            helpWarning("Save your work first. The following command briefly interrupts all system audio.")
+            helpBody("Open Terminal and run:")
+            Text("sudo killall coreaudiod")
+                .font(.caption.monospaced())
+                .foregroundStyle(.cyan.opacity(0.9))
+                .padding(8)
+                .background(Color.white.opacity(0.05))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+            helpBody("If that does not work:")
+            Text("sudo killall -9 coreaudiod")
+                .font(.caption.monospaced())
+                .foregroundStyle(.cyan.opacity(0.9))
+                .padding(8)
+                .background(Color.white.opacity(0.05))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+            helpBody("DexDictate does not run these commands automatically.")
+
+            // MARK: Diagnostics log
+
             helpHeading("Diagnostics log")
             helpBody("DexDictate writes logs to:")
             Text("~/Library/Application Support/DexDictate/debug.log")
@@ -894,6 +956,14 @@ private struct DiagnosticsContent: View {
             HelpScreenshot("help-permissions-banner",
                            caption: "Check the permissions banner first when something isn't working.")
             helpCallout("Enable Safe Mode when troubleshooting. If dictation works in Safe Mode but not normally, the issue is likely an output setting or per-app rule.")
+        }
+    }
+
+    private func capabilityStatusLabel(_ status: PermissionCapabilityChecker.Status) -> String {
+        switch status {
+        case .passed:               return "✓ Working"
+        case .failed(let reason):   return "✗ Failed — \(reason)"
+        case .skipped:              return "— Skipped (permission not granted)"
         }
     }
 }

@@ -33,6 +33,15 @@ public class PermissionManager: ObservableObject {
     /// Human-readable summary of missing permissions shown in `PermissionBannerView`.
     @Published public var permissionsSummary: String = NSLocalizedString("Checking permissions...", comment: "")
 
+    /// Live capability probe results, updated after every permission check.
+    /// Nil until the first check runs. Separate from TCC grant state: a permission
+    /// can be granted yet still fail a live capability probe (e.g., after signing changes).
+    @Published public var capabilityReport: PermissionCapabilityReport?
+
+    /// Capability checker used by `checkPermissions()`. Defaults to the production
+    /// system implementation; replaced in unit tests with a mock.
+    var capabilityChecker: PermissionCapabilityChecker = .system
+
     /// 2-second polling timer; retained here so it can be invalidated on `deinit`.
     private var timer: Timer?
 
@@ -160,7 +169,12 @@ public class PermissionManager: ObservableObject {
         allPermissionsGranted = accessibilityGranted && microphoneGranted && inputMonitoringGranted
         
         updateSummary()
-        
+
+        capabilityReport = capabilityChecker.run(
+            accessibilityGranted: accessibilityGranted,
+            inputMonitoringGranted: inputMonitoringGranted
+        )
+
         // Auto-recovery logic
         if !oldAccessibility && accessibilityGranted {
             #if DEBUG
