@@ -5375,3 +5375,62 @@ Rationale:
 - Commands run: `git commit -m "fix: enable trailing silence trim with regression coverage"`
 - Result: commit created (`edb3cfa`) with scoped trailing-trim default + regression coverage changes.
 - Next step: amend commit to include this final checkpoint entry.
+
+### 22.01 Checkpoint — Initial Repo State Inspected For Explicit-Stop Silence Bug
+
+- Files inspected: `docs/DEXDICTATE_BIBLE.md` (recent section)
+- Commands run: `git status --short`; `git log -5 --oneline`; `tail -n 160 docs/DEXDICTATE_BIBLE.md`
+- Result: HEAD is `bea489c1` (at/after required commit); only known untracked planning docs present.
+- Next step: locate stop/silence lifecycle code paths with exact search.
+
+### 22.02 Checkpoint — Stop/Silence Lifecycle Path Inspected
+
+- Files inspected: `Sources/DexDictateKit/TranscriptionEngine.swift`; `Sources/DexDictateKit/Permissions/InputMonitor.swift`; relevant settings/flags/test hits from search.
+- Commands run: exact required `rg -n ...` search; targeted `sed -n` reads.
+- Result: confirmed active-session silence countdown exists and can call `stopListening()` while still listening (`startSilenceCountdownIfNeeded` -> countdown expiry -> `stopListening()`).
+- Next step: disable silence-timeout-driven auto-stop while preserving explicit stop paths and trailing trim after explicit stop.
+
+### 22.03 Checkpoint — Auto-Stop Path Confirmed
+
+- Files inspected: `Sources/DexDictateKit/TranscriptionEngine.swift`
+- Commands run: targeted source inspection from `rg` hits
+- Result: `startSilenceCountdownIfNeeded()` previously decremented a silence timer and called `stopListening()` on expiry during active listening.
+- Next step: disable active-session silence auto-stop and keep explicit-stop-only behavior.
+
+### 22.04 Checkpoint — Active-Session Silence Auto-Stop Disabled
+
+- Files changed: `Sources/DexDictateKit/TranscriptionEngine.swift`
+- Commands run: `apply_patch`
+- Result: removed silence-timeout countdown stop path; active dictation no longer auto-stops from silence; explicit stop paths remain.
+- Next step: add focused explicit-stop/silence regression tests.
+
+### 22.05 Checkpoint — Explicit-Stop Silence Regression Tests Added
+
+- Files changed: `Tests/DexDictateTests/DictationExplicitStopPolicyTests.swift` (new)
+- Commands run: `apply_patch`
+- Result: added tests proving silence-timeout does not stop active dictation and explicit trigger release / explicit toggle-off are stop signals.
+- Next step: run targeted tests and full `swift test`.
+
+### Explicit-stop silence fix recovery checkpoint
+
+- Timestamp: Wed Apr 29 13:40:53 EDT 2026
+- Scope: explicit-stop silence fix after Codex quota interruption
+- Summary: Continued the surgical fix after Codex hit quota during validation. The intended change is that silence must not end active dictation; only explicit trigger release or toggle-off should stop recording. Trailing silence trim remains enabled and should run only after explicit stop.
+- Files expected to be involved:
+  - Sources/DexDictateKit/TranscriptionEngine.swift
+  - Tests/DexDictateTests/DictationExplicitStopPolicyTests.swift
+  - docs/DEXDICTATE_BIBLE.md
+- Commands run:
+  - git status --short
+  - git log -5 --oneline
+  - git diff --stat
+  - git diff --check
+  - swift test --filter AudioResamplerTrailingTrimTests
+  - swift test --filter ExperimentFlagsDefaultsTests
+  - swift test --filter AppSettingsRestoreDefaultsTests
+  - swift test --filter DictationExplicitStopPolicyTests
+  - swift test
+- Result: Targeted tests and full Swift test suite completed successfully from Terminal after Codex quota interruption.
+- Behavior changed: Active dictation should no longer stop just because silence is detected.
+- Behavior intentionally not changed: Trailing trim remains enabled after explicit stop; leading/full trim remains disabled; model, decode, output, clipboard, command grammar, plist, signing, and release behavior were not intentionally changed.
+- Next step: Review diff, commit the focused fix, push, reinstall the current app build, and manually test long pauses in hold-to-talk and toggle mode.
