@@ -108,8 +108,12 @@ enum ClipboardManager {
             // Restore the clipboard only if DexDictate still owns the current string payload.
             let restoreDelay = deliveryProfile.initialDelay + deliveryProfile.activationTimeout + clipboardRestoreDelay
             DispatchQueue.main.asyncAfter(deadline: .now() + restoreDelay) {
-                guard pasteboard.changeCount == dictationChangeCount,
-                      pasteboard.string(forType: .string) == text else {
+                guard shouldRestoreClipboard(
+                    currentChangeCount: pasteboard.changeCount,
+                    currentStringPayload: pasteboard.string(forType: .string),
+                    dictationChangeCount: dictationChangeCount,
+                    dictationPayload: text
+                ) else {
                     return
                 }
 
@@ -120,6 +124,16 @@ enum ClipboardManager {
 
     static func clonePasteboardItem(_ source: NSPasteboardItem) -> NSPasteboardItem {
         snapshotPasteboardItem(source).makePasteboardItem()
+    }
+
+    static func shouldRestoreClipboard(
+        currentChangeCount: Int,
+        currentStringPayload: String?,
+        dictationChangeCount: Int,
+        dictationPayload: String
+    ) -> Bool {
+        currentChangeCount == dictationChangeCount &&
+        currentStringPayload == dictationPayload
     }
 
     static func clonePasteboardItems(_ items: [NSPasteboardItem]?) -> SavedPasteboardContents {

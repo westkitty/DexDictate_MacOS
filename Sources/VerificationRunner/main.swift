@@ -507,6 +507,8 @@ private func runBenchmarkCorpus(
 
     var latencies: [Double] = []
     var wers: [Double] = []
+    var qualityPairs: [TranscriptionQualityPair] = []
+    var latencyObservations: [LatencyObservation] = []
     var csvLines = ["file_name,reference,hypothesis,latency_ms,wer"]
 
     for item in items {
@@ -546,6 +548,8 @@ private func runBenchmarkCorpus(
         let wer = computeWER(reference: item.referenceText, hypothesis: hypothesis)
         latencies.append(latencyMs)
         wers.append(wer)
+        qualityPairs.append(TranscriptionQualityPair(reference: item.referenceText, hypothesis: hypothesis))
+        latencyObservations.append(LatencyObservation(transcriptionOnlyMs: latencyMs))
         csvLines.append("\"\(item.fileName)\",\"\(item.referenceText.replacingOccurrences(of: "\"", with: "\"\""))\",\"\(hypothesis.replacingOccurrences(of: "\"", with: "\"\""))\",\(Int(latencyMs)),\(wer)")
     }
 
@@ -583,6 +587,88 @@ private func runBenchmarkCorpus(
     print("BENCHMARK_CORPUS_AVG_WER:\(summary.averageWER)")
     print("BENCHMARK_CORPUS_AVG_LATENCY_MS:\(summary.averageLatencyMs)")
     print("BENCHMARK_CORPUS_P95_LATENCY_MS:\(summary.p95LatencyMs)")
+
+    let punctuationMetrics = TranscriptionQualityMetrics.punctuationMetrics(for: qualityPairs)
+    print("BENCHMARK_PUNCT_AWARE_WER:\(punctuationMetrics.punctuationAwareWER)")
+    print("BENCHMARK_PUNCT_STRIPPED_WER:\(punctuationMetrics.punctuationStrippedWER)")
+    print("BENCHMARK_PUNCT_TERMINAL_MATCHES:\(punctuationMetrics.terminalPunctuationMatches)")
+    print("BENCHMARK_PUNCT_TERMINAL_EXPECTED:\(punctuationMetrics.terminalPunctuationExpected)")
+    print("BENCHMARK_PUNCT_QUESTION_MATCHES:\(punctuationMetrics.questionMarkMatches)")
+    print("BENCHMARK_PUNCT_QUESTION_EXPECTED:\(punctuationMetrics.questionMarkExpected)")
+    print("BENCHMARK_PUNCT_COMMA_MATCHES:\(punctuationMetrics.commaMatches)")
+    print("BENCHMARK_PUNCT_COMMA_EXPECTED:\(punctuationMetrics.commaExpected)")
+    print("BENCHMARK_PUNCT_SPOKEN_MATCHES:\(punctuationMetrics.spokenPunctuationMatches)")
+    print("BENCHMARK_PUNCT_SPOKEN_EXPECTED:\(punctuationMetrics.spokenPunctuationExpected)")
+
+    let commandMetrics = TranscriptionQualityMetrics.commandRecognitionMetrics(for: qualityPairs)
+    print("BENCHMARK_COMMAND_EXPECTED:\(commandMetrics.expectedCommandCount)")
+    print("BENCHMARK_COMMAND_BUILTIN_FALSE_NEGATIVES:\(commandMetrics.builtInFalseNegatives)")
+    print("BENCHMARK_COMMAND_BUILTIN_FALSE_POSITIVES:\(commandMetrics.builtInFalsePositives)")
+    print("BENCHMARK_COMMAND_CUSTOM_DEX_FALSE_NEGATIVES:\(commandMetrics.customDexFalseNegatives)")
+    print("BENCHMARK_COMMAND_CUSTOM_DEX_FALSE_POSITIVES:\(commandMetrics.customDexFalsePositives)")
+    print("BENCHMARK_COMMAND_ONLY_EXPECTED:\(commandMetrics.commandOnlyExpectedCount)")
+    print("BENCHMARK_COMMAND_ONLY_PRESERVED:\(commandMetrics.commandOnlyPreservedCount)")
+
+    let clippingMetrics = TranscriptionQualityMetrics.clippingProxyMetrics(for: qualityPairs)
+    print("BENCHMARK_CLIPPING_EXPECTED_NON_EMPTY:\(clippingMetrics.expectedNonEmptyCount)")
+    print("BENCHMARK_CLIPPING_EMPTY_WHEN_EXPECTED:\(clippingMetrics.emptyWhenExpectedCount)")
+    print("BENCHMARK_CLIPPING_MISSING_FIRST_WORD:\(clippingMetrics.missingFirstWordCount)")
+    print("BENCHMARK_CLIPPING_MISSING_LAST_WORD:\(clippingMetrics.missingLastWordCount)")
+    print("BENCHMARK_CLIPPING_SUSPICIOUSLY_SHORT:\(clippingMetrics.suspiciouslyShortCount)")
+    print("BENCHMARK_CLIPPING_FINAL_WORD_TRUNCATION_PROXY:\(clippingMetrics.finalWordTruncationProxyCount)")
+
+    let vocabularyTerms: [VocabularyTerm] = [
+        VocabularyTerm(phrase: "Kubernetes", category: .properNoun),
+        VocabularyTerm(phrase: "Istio", category: .properNoun),
+        VocabularyTerm(phrase: "Prometheus", category: .properNoun),
+        VocabularyTerm(phrase: "Grafana", category: .properNoun),
+        VocabularyTerm(phrase: "PostgreSQL", category: .properNoun),
+        VocabularyTerm(phrase: "Redis", category: .properNoun),
+        VocabularyTerm(phrase: "SQLite", category: .properNoun),
+        VocabularyTerm(phrase: "Cassandra", category: .properNoun),
+        VocabularyTerm(phrase: "A N E", category: .acronym),
+        VocabularyTerm(phrase: "API", category: .frameworkAPI),
+        VocabularyTerm(phrase: "Core ML", category: .frameworkAPI),
+        VocabularyTerm(phrase: "Swift Whisper", category: .codingTerm),
+        VocabularyTerm(phrase: "DexDictate", category: .domainVocabulary),
+        VocabularyTerm(phrase: "DexGPT", category: .userVocabulary),
+    ]
+    let mergedReference = qualityPairs.map(\.reference).joined(separator: " ")
+    let mergedHypothesis = qualityPairs.map(\.hypothesis).joined(separator: " ")
+    let vocabularyMetrics = TranscriptionQualityMetrics.vocabularyAccuracyMetrics(
+        reference: mergedReference,
+        hypothesis: mergedHypothesis,
+        trackedTerms: vocabularyTerms
+    )
+    print("BENCHMARK_VOCAB_EXPECTED:\(vocabularyMetrics.overallExpected)")
+    print("BENCHMARK_VOCAB_MATCHED:\(vocabularyMetrics.overallMatched)")
+    print("BENCHMARK_VOCAB_ACCURACY:\(vocabularyMetrics.overallAccuracy)")
+    for category in VocabularyTermCategory.allCases {
+        if let score = vocabularyMetrics.perCategory[category] {
+            print("BENCHMARK_VOCAB_\(category.rawValue.uppercased())_EXPECTED:\(score.expected)")
+            print("BENCHMARK_VOCAB_\(category.rawValue.uppercased())_MATCHED:\(score.matched)")
+            print("BENCHMARK_VOCAB_\(category.rawValue.uppercased())_ACCURACY:\(score.accuracy)")
+        }
+    }
+
+    print("BENCHMARK_RETRY_QUALITY_AVAILABLE:false")
+    let latencyReport = TranscriptionQualityMetrics.latencyMetricsReport(latencyObservations)
+    print("BENCHMARK_TRANSCRIPTION_ONLY_AVG_LATENCY_MS:\(latencyReport.transcriptionOnly.averageMs)")
+    print("BENCHMARK_TRANSCRIPTION_ONLY_P95_LATENCY_MS:\(latencyReport.transcriptionOnly.p95Ms)")
+    if let endToEnd = latencyReport.endToEnd {
+        print("BENCHMARK_END_TO_END_LATENCY_AVAILABLE:true")
+        print("BENCHMARK_END_TO_END_AVG_LATENCY_MS:\(endToEnd.averageMs)")
+        print("BENCHMARK_END_TO_END_P95_LATENCY_MS:\(endToEnd.p95Ms)")
+    } else {
+        print("BENCHMARK_END_TO_END_LATENCY_AVAILABLE:false")
+    }
+    if let retryOverhead = latencyReport.retryOverhead {
+        print("BENCHMARK_RETRY_OVERHEAD_AVAILABLE:true")
+        print("BENCHMARK_RETRY_OVERHEAD_AVG_LATENCY_MS:\(retryOverhead.averageMs)")
+        print("BENCHMARK_RETRY_OVERHEAD_P95_LATENCY_MS:\(retryOverhead.p95Ms)")
+    } else {
+        print("BENCHMARK_RETRY_OVERHEAD_AVAILABLE:false")
+    }
 
     if let gatePath,
        let gateData = try? Data(contentsOf: URL(fileURLWithPath: gatePath)),

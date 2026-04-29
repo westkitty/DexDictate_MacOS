@@ -113,6 +113,50 @@ final class SecureInputContextTests: XCTestCase {
         )
     }
 
+    func testPasscodeInTitleIsSecure() {
+        let snapshot = FocusedElementSnapshot(
+            role: "AXTextField", subrole: nil, title: "Enter passcode",
+            placeholder: nil, label: nil, identifier: nil
+        )
+        XCTAssertEqual(
+            SensitiveContextHeuristic.classify(snapshot),
+            .sensitive(reason: "Detected likely secure input context (passcode).")
+        )
+    }
+
+    func testOneTimeCodeInPlaceholderIsSecure() {
+        let snapshot = FocusedElementSnapshot(
+            role: "AXTextField", subrole: nil, title: nil,
+            placeholder: "one-time code", label: nil, identifier: nil
+        )
+        XCTAssertEqual(
+            SensitiveContextHeuristic.classify(snapshot),
+            .sensitive(reason: "Detected likely secure input context (one-time code).")
+        )
+    }
+
+    func testVerificationCodeInLabelIsSecure() {
+        let snapshot = FocusedElementSnapshot(
+            role: "AXTextField", subrole: nil, title: nil,
+            placeholder: nil, label: "Verification code", identifier: nil
+        )
+        XCTAssertEqual(
+            SensitiveContextHeuristic.classify(snapshot),
+            .sensitive(reason: "Detected likely secure input context (verification code).")
+        )
+    }
+
+    func testTokenWordInPlaceholderFlagsLikelyApiKeyContext() {
+        let snapshot = FocusedElementSnapshot(
+            role: "AXTextField", subrole: nil, title: nil,
+            placeholder: "API key token", label: nil, identifier: nil
+        )
+        XCTAssertEqual(
+            SensitiveContextHeuristic.classify(snapshot),
+            .sensitive(reason: "Detected likely secure input context (token).")
+        )
+    }
+
     func testTwoFactorAuthTokenInLabelIsSecure() {
         let snapshot = FocusedElementSnapshot(
             role: "AXTextField", subrole: nil, title: nil,
@@ -135,10 +179,45 @@ final class SecureInputContextTests: XCTestCase {
         )
     }
 
+    func testStrongTokenInIdentifierStillFlagsSensitiveContext() {
+        let snapshot = FocusedElementSnapshot(
+            role: "AXTextField", subrole: nil, title: nil,
+            placeholder: nil, label: nil, identifier: "payment-passcode-field"
+        )
+        XCTAssertEqual(
+            SensitiveContextHeuristic.classify(snapshot),
+            .sensitive(reason: "Detected likely secure input context (passcode).")
+        )
+    }
+
     func testStandardFieldIsNotSecure() {
         let snapshot = FocusedElementSnapshot(
             role: "AXTextField", subrole: nil, title: "Search",
             placeholder: "Search something...", label: nil, identifier: "searchField"
+        )
+        XCTAssertEqual(SensitiveContextHeuristic.classify(snapshot), .standard)
+    }
+
+    func testChatMessageComposerFieldIsNotSecure() {
+        let snapshot = FocusedElementSnapshot(
+            role: "AXTextArea",
+            subrole: nil,
+            title: "Message",
+            placeholder: "Type a message",
+            label: "Chat message input",
+            identifier: "messageComposer"
+        )
+        XCTAssertEqual(SensitiveContextHeuristic.classify(snapshot), .standard)
+    }
+
+    func testCodeEditorFieldIsNotSecure() {
+        let snapshot = FocusedElementSnapshot(
+            role: "AXTextArea",
+            subrole: nil,
+            title: "Editor",
+            placeholder: nil,
+            label: "Source editor",
+            identifier: "mainEditorTextView"
         )
         XCTAssertEqual(SensitiveContextHeuristic.classify(snapshot), .standard)
     }

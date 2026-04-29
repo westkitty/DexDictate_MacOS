@@ -23,6 +23,24 @@ final class ClipboardManagerTests: XCTestCase {
         XCTAssertTrue(profile.postsToTargetProcess)
     }
 
+    func testZoomPrefixResolutionAppliesToAllUsZoomBundles() {
+        let target = OutputTargetApplication(bundleIdentifier: "us.zoom.chat", processIdentifier: 77)
+
+        let profile = PasteDeliveryProfile.resolve(for: target)
+
+        XCTAssertEqual(profile.initialDelay, 0.22)
+        XCTAssertEqual(profile.activationTimeout, 0.45)
+    }
+
+    func testNonMatchingZoomLikeBundleUsesDefaultProfile() {
+        let target = OutputTargetApplication(bundleIdentifier: "com.zoom.us", processIdentifier: 88)
+
+        let profile = PasteDeliveryProfile.resolve(for: target)
+
+        XCTAssertEqual(profile.initialDelay, 0.12)
+        XCTAssertEqual(profile.activationTimeout, 0.20)
+    }
+
     func testClonePasteboardItemPreservesIndependentRepresentations() {
         let source = NSPasteboardItem()
         let dataType = NSPasteboard.PasteboardType("com.dexdictate.test.data")
@@ -55,6 +73,14 @@ final class ClipboardManagerTests: XCTestCase {
         XCTAssertTrue(snapshot.makePasteboardItems().isEmpty)
     }
 
+    func testClonePasteboardItemsWithNilInputRepresentsEmptyClipboardSafely() {
+        let snapshot = ClipboardManager.clonePasteboardItems(nil)
+
+        XCTAssertFalse(snapshot.hadOriginalContents)
+        XCTAssertTrue(snapshot.items.isEmpty)
+        XCTAssertTrue(snapshot.makePasteboardItems().isEmpty)
+    }
+
     func testClonePasteboardItemsDropsEmptyClonesButKeepsValidItems() {
         let validItem = NSPasteboardItem()
         XCTAssertTrue(validItem.setString("transcript", forType: .string))
@@ -81,5 +107,67 @@ final class ClipboardManagerTests: XCTestCase {
         XCTAssertNotEqual(ObjectIdentifier(firstRestore[0]), ObjectIdentifier(secondRestore[0]))
         XCTAssertEqual(firstRestore[0].string(forType: .string), "transcript")
         XCTAssertEqual(secondRestore[0].string(forType: .string), "transcript")
+    }
+
+    func testRestoreOwnershipCheckAllowsRestoreOnlyWhenDexDictateStillOwnsPayload() {
+        XCTAssertTrue(
+            ClipboardManager.shouldRestoreClipboard(
+                currentChangeCount: 31,
+                currentStringPayload: "dictation",
+                dictationChangeCount: 31,
+                dictationPayload: "dictation"
+            )
+        )
+    }
+
+    func testRestoreOwnershipCheckRejectsRestoreWhenClipboardChangeCountMoved() {
+        XCTAssertFalse(
+            ClipboardManager.shouldRestoreClipboard(
+                currentChangeCount: 32,
+                currentStringPayload: "dictation",
+                dictationChangeCount: 31,
+                dictationPayload: "dictation"
+            )
+        )
+    }
+
+    func testRestoreOwnershipCheckRejectsRestoreWhenPayloadNoLongerMatches() {
+        XCTAssertFalse(
+            ClipboardManager.shouldRestoreClipboard(
+                currentChangeCount: 31,
+                currentStringPayload: "user-updated",
+                dictationChangeCount: 31,
+                dictationPayload: "dictation"
+            )
+        )
+    }
+
+    func testRestoreOwnershipCheckRejectsRestoreWhenStringPayloadMissing() {
+        XCTAssertFalse(
+            ClipboardManager.shouldRestoreClipboard(
+                currentChangeCount: 31,
+                currentStringPayload: nil,
+                dictationChangeCount: 31,
+                dictationPayload: "dictation"
+            )
+        )
+    }
+
+    func testRestoreOwnershipCheckPreventsStaleRestoreAcrossRepeatedPasteOperations() {
+        let firstPasteOwnsClipboard = ClipboardManager.shouldRestoreClipboard(
+            currentChangeCount: 102,
+            currentStringPayload: "second-pass",
+            dictationChangeCount: 101,
+            dictationPayload: "first-pass"
+        )
+        let secondPasteOwnsClipboard = ClipboardManager.shouldRestoreClipboard(
+            currentChangeCount: 102,
+            currentStringPayload: "second-pass",
+            dictationChangeCount: 102,
+            dictationPayload: "second-pass"
+        )
+
+        XCTAssertFalse(firstPasteOwnsClipboard)
+        XCTAssertTrue(secondPasteOwnsClipboard)
     }
 }

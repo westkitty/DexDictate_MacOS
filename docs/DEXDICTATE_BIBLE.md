@@ -4397,3 +4397,925 @@ Rationale:
   - Quit App functionality intact, moved to FooterView
 - Commits: 51229ae, c296034, 753b5c0, d07c362, 1890e5c
 - Next step: visual smoke test with the running app — open popover, expand Quick Settings, verify Quit is in footer and not in controls, confirm tickers appear below controls, confirm watermark does not interfere with controls zone.
+
+### 20.01 Checkpoint — Initial Repository State Inspected
+
+- Timestamp: 2026-04-29 America/Detroit
+- Step / checkpoint title: Initial repository state inspected
+- Summary: Captured branch, working tree status, recent commit history, and tracked/untracked state of planning docs before any source inspection.
+- Reason / intent: Establish clean handoff baseline and honor strict non-goals around accidental inclusion of untracked planning files.
+- Files inspected:
+  - `docs/DEXDICTATE_BIBLE.md` (tail for ledger format)
+- Files changed:
+  - `docs/DEXDICTATE_BIBLE.md` (append-only checkpoint)
+- Commands run:
+  - `git status --short && git branch --show-current && git log -5 --oneline`
+  - `git ls-files --error-unmatch DexDictate_Full_Handoff_Map.md ...` (and same check for the two docs files)
+  - `tail -n 80 docs/DEXDICTATE_BIBLE.md`
+- Command purpose:
+  - Confirm branch, latest commit, untracked files, and existing ledger style.
+- Results / outputs:
+  - Branch: `main`
+  - Latest commit: `08f576d3 fix: align plist metadata and validate accessibility usage`
+  - Untracked files: `DexDictate_Full_Handoff_Map.md`, `docs/analyze-the-dexdictate-project-expressive-cat.md`, `docs/codex dexdictate improvements 4_29_26.md`
+  - Planning docs tracked check returned non-zero for all three (currently untracked).
+- Decisions made:
+  - Do not stage/commit the three untracked planning docs.
+  - Proceed to required context reading order before implementation planning.
+- Bugs / blockers: None.
+- Behavior intentionally not changed: All runtime behavior unchanged; no source edits yet.
+- Current state after this checkpoint: Baseline captured; ready for required document-reading step.
+- Next step / handoff note: Read mandated context files in specified order, then append “Context and handoff documents read.”
+
+### 20.02 Checkpoint — Context and Handoff Documents Read
+
+- Timestamp: 2026-04-29 America/Detroit
+- Step / checkpoint title: Context and handoff documents read
+- Summary: Read required handoff/planning/context docs and project-facing docs before source edits.
+- Reason / intent: Ground this regression-hardening pass in existing project memory while preserving source-of-truth priority for current code.
+- Files inspected:
+  - `DexDictate_Full_Handoff_Map.md`
+  - `docs/analyze-the-dexdictate-project-expressive-cat.md`
+  - `docs/codex dexdictate improvements 4_29_26.md`
+  - `README.md`
+  - `docs/DEXDICTATE_BIBLE.md`
+  - `docs/FEATURE_INVENTORY.md`
+  - `docs/CONTROL_TO_CODE_MAP.md`
+  - `docs/help/HELP_CONTENT.md`
+- Files changed:
+  - `docs/DEXDICTATE_BIBLE.md` (append-only checkpoint)
+- Commands run:
+  - `wc -l` across required docs
+  - `sed -n` reads across required docs (initial sections and key architecture/behavior sections)
+- Command purpose:
+  - Capture current documented behavior, claimed architecture, and prior suggested work before verifying against source.
+- Results / outputs:
+  - Handoff docs repeatedly emphasize output path safety, local/offline transcription, and metric expansion before behavior changes.
+  - `README.md` confirms local-first/no-cloud runtime and current default model `tiny.en`.
+  - Feature/control/help docs map user controls to output, command, benchmark, and secure-field settings.
+- Decisions made:
+  - Treat documentation as guidance only; verify all behavior via current source before trusting any recommendation.
+  - Keep this pass test/metric-focused with no default/runtime behavior changes.
+- Bugs / blockers: None yet.
+- Behavior intentionally not changed: No source/runtime changes performed.
+- Current state after this checkpoint: Required docs pass complete; ready for source-level architecture verification and gap analysis.
+- Next step / handoff note: Inspect Lane A/Lane B source and existing tests; reconcile any doc/source contradictions.
+
+### 20.03 Checkpoint — Current Architecture Verified Against Source
+
+- Timestamp: 2026-04-29 America/Detroit
+- Step / checkpoint title: Current architecture verified against source
+- Summary: Verified end-to-end runtime flow in current `TranscriptionEngine` and connected services instead of relying on handoff claims.
+- Reason / intent: Confirm architectural assumptions before adding regression coverage.
+- Files inspected:
+  - `Sources/DexDictateKit/TranscriptionEngine.swift`
+  - `Sources/DexDictateKit/Services/AudioRecorderService.swift` (via callsite references)
+  - `Sources/DexDictateKit/Services/AudioResampler.swift`
+  - `Sources/DexDictateKit/Services/WhisperService.swift`
+  - `Sources/DexDictateKit/CommandProcessor.swift`
+  - `Sources/DexDictateKit/VocabularyManager.swift`
+  - `Sources/DexDictateKit/Output/OutputCoordinator.swift`
+  - `Sources/DexDictateKit/Output/ClipboardManager.swift`
+  - `Sources/DexDictateKit/Output/SecureInputContext.swift`
+  - `Sources/DexDictateKit/AppInsertionOverridesManager.swift`
+- Files changed:
+  - `docs/DEXDICTATE_BIBLE.md` (append-only checkpoint)
+- Commands run:
+  - `rg -n` flow-symbol probes in `TranscriptionEngine.swift`
+  - `sed -n` reads for architecture-critical files
+- Command purpose:
+  - Validate actual orchestration path and order of post-processing/delivery decisions.
+- Results / outputs:
+  - Verified flow: trigger -> audio capture -> stop on release/tail -> optional trim flags -> resample 16 kHz -> Whisper -> command processing -> vocabulary layer -> optional profanity filter -> output coordinator -> clipboard/accessibility path.
+  - Verified per-app insertion override resolution precedes output delivery mode choice.
+  - Verified secure-context protection gates output delivery via `OutputCoordinator`.
+- Decisions made:
+  - Preserve this runtime ordering exactly in this pass.
+  - Constrain work to tests/metrics/reporting helpers unless a test exposes a real defect.
+- Bugs / blockers: None.
+- Behavior intentionally not changed: No runtime defaults/behavior changed.
+- Current state after this checkpoint: Architecture assumptions validated against HEAD.
+- Next step / handoff note: Record dedicated Lane A and Lane B seam inspection checkpoints, then plan edits.
+
+### 20.04 Checkpoint — Output Delivery and Clipboard Test Seams Inspected
+
+- Timestamp: 2026-04-29 America/Detroit
+- Step / checkpoint title: Output delivery and clipboard test seams inspected
+- Summary: Inspected Lane A production files and existing tests for output mode behavior, clipboard restore safety, secure-field gating, per-app overrides, and Zoom profile handling.
+- Reason / intent: Identify deterministic seams where regression coverage can be expanded without runtime behavior changes.
+- Files inspected:
+  - `Sources/DexDictateKit/Output/OutputCoordinator.swift`
+  - `Sources/DexDictateKit/Output/ClipboardManager.swift`
+  - `Sources/DexDictateKit/Output/SecureInputContext.swift`
+  - `Sources/DexDictateKit/AppInsertionOverridesManager.swift`
+  - `Tests/DexDictateTests/OutputCoordinatorTests.swift`
+  - `Tests/DexDictateTests/ClipboardManagerTests.swift`
+  - `Tests/DexDictateTests/SecureInputContextTests.swift`
+- Files changed:
+  - `docs/DEXDICTATE_BIBLE.md` (append-only checkpoint)
+- Commands run:
+  - `sed -n` reads for Lane A source/tests
+  - `rg --files` to confirm file locations
+- Command purpose:
+  - Enumerate currently covered vs uncovered Lane A behaviors.
+- Results / outputs:
+  - Existing tests cover: `autoPaste=false` saved-only path, sensitive-context copy-only path, standard paste path, clipboard-only mode, basic target-activation behavior, Zoom profile timing constants, clone snapshot behavior.
+  - Gap found: direct tests for accessibility insertion success/failure fallback paths are missing.
+  - Gap found: no tests for `autoPaste=false` with explicit insertion modes to prove no clipboard mutation/paste call.
+  - Gap found: no unit tests for `insertionMode=.accessibilityAPI` failure behavior when auto-paste disabled vs enabled.
+  - Gap found: limited explicit coverage for secure-context disabled path under sensitive snapshot.
+  - Gap found: no deterministic tests of clipboard restore ownership checks (`changeCount`/payload match) because restore helper is private and timing-based.
+  - Zoom seam is testable today only through `PasteDeliveryProfile.resolve(for:)`; paste scheduling behavior itself is not currently directly unit-testable without refactor.
+- Decisions made:
+  - Prefer adding pure/unit tests around `OutputCoordinator` decision behavior first.
+  - Add low-risk pure helper seam only if needed to validate clipboard restore ownership logic deterministically.
+- Bugs / blockers:
+  - Missing deterministic seam for delayed restore race logic in `ClipboardManager.copyAndPaste`.
+- Behavior intentionally not changed: Output behavior left unchanged at this checkpoint.
+- Current state after this checkpoint: Lane A safe test-extension targets identified.
+- Next step / handoff note: Inspect Lane B benchmark/metric seams and design additive metric helpers/tests.
+
+### 20.05 Checkpoint — Accuracy Benchmark and Metric Seams Inspected
+
+- Timestamp: 2026-04-29 America/Detroit
+- Step / checkpoint title: Accuracy benchmark and metric seams inspected
+- Summary: Inspected Lane B benchmark/transcription files plus benchmark-related tests and scripts to identify additive metric seams before behavior work.
+- Reason / intent: Expand measurable accuracy dimensions (punctuation, commands, clipping, retry quality, vocabulary, latency) without changing transcription runtime defaults.
+- Files inspected:
+  - `Sources/DexDictateKit/Benchmarking/ModelBenchmarking.swift`
+  - `Sources/DexDictateKit/BenchmarkCorpus.swift`
+  - `Sources/VerificationRunner/main.swift`
+  - `Sources/DexDictateKit/Services/WhisperService.swift`
+  - `Sources/DexDictateKit/Services/AudioResampler.swift`
+  - `Sources/DexDictateKit/DictationAssist.swift`
+  - `Sources/DexDictateKit/VocabularyManager.swift`
+  - `Sources/DexDictateKit/CommandProcessor.swift`
+  - `Sources/DexDictateKit/TranscriptionEngine.swift`
+  - `Tests/DexDictateTests/BenchmarkCorpusTests.swift`
+  - `Tests/DexDictateTests/BenchmarkPromotionPolicyTests.swift`
+  - `Tests/DexDictateTests/CommandProcessorTests.swift`
+  - `Tests/DexDictateTests/DictationIntelligenceTests.swift`
+  - `scripts/benchmark.py`
+- Files changed:
+  - `docs/DEXDICTATE_BIBLE.md` (append-only checkpoint)
+- Commands run:
+  - `sed -n` on Lane B sources/tests/scripts
+  - `rg -n` for benchmark/retry/latency/heuristic symbols
+- Command purpose:
+  - Confirm existing metrics and exposed seams for safe additive reporting.
+- Results / outputs:
+  - Existing corpus reporting outputs only aggregate WER, average latency, and p95 latency.
+  - `VerificationRunner` WER normalization strips punctuation; no punctuation-aware metric exists yet.
+  - No command recognition quality metric exists in benchmark output.
+  - No clipping proxy metric exists.
+  - Automatic retry currently always replaces with retry text unless retry is empty; no quality comparator seam exists.
+  - `TranscriptionEngine` already tracks capture/resample/transcription/total timing in `PerformanceSnapshot` and metrics timestamps, which supports additive latency naming/reporting.
+  - Existing tests cover domain mapping and suspicious-result heuristic basics but not richer retry-quality scoring or benchmark metric dimensions.
+- Decisions made:
+  - Add pure metric helper module and unit tests for punctuation, command, clipping, retry-quality scoring, vocabulary/hard-word hit rate, and latency rollups.
+  - Integrate helper into benchmark corpus path reporting (`VerificationRunner`) with additive output fields only.
+  - Keep Whisper decode defaults, model defaults, trim defaults, and retry behavior unchanged.
+- Bugs / blockers:
+  - Retry-quality comparator is not used by runtime path today; coverage can still be added as pure helper/test only in this pass.
+- Behavior intentionally not changed: No transcription behavior/default changes.
+- Current state after this checkpoint: Lane B seams are clear for additive metrics/testing work.
+- Next step / handoff note: Check for doc/source contradictions and produce source-evidence summary + minimal edit plan.
+
+### 20.06 Checkpoint — Documentation/Source Contradiction Reconciled
+
+- Timestamp: 2026-04-29 America/Detroit
+- Step / checkpoint title: Contradiction discovered and reconciled
+- Summary: Re-checked the plist contradiction called out in older handoff docs against current source after commit `08f576d3`.
+- Reason / intent: Ensure outdated doc contradictions do not drive unnecessary changes.
+- Files inspected:
+  - `DexDictate_Full_Handoff_Map.md` (prior contradiction note)
+  - `templates/Info.plist.template`
+  - `Sources/DexDictate/Info.plist`
+- Files changed:
+  - `docs/DEXDICTATE_BIBLE.md` (append-only checkpoint)
+- Commands run:
+  - `rg -n "NSAccessibilityUsageDescription|NSAppleEventsUsageDescription|NSSpeechRecognitionUsageDescription|CFBundleIdentifier|CFBundleShortVersionString" templates/Info.plist.template Sources/DexDictate/Info.plist`
+- Command purpose:
+  - Verify whether stale AppleEvents/SpeechRecognition keys still exist and whether Accessibility wording is aligned.
+- Results / outputs:
+  - Current source plist and template include `NSAccessibilityUsageDescription`.
+  - No `NSAppleEventsUsageDescription` or `NSSpeechRecognitionUsageDescription` found in current source plist.
+  - Confirms the previously documented mismatch is already resolved by current HEAD.
+- Decisions made:
+  - Do not touch plist/signing/release metadata in this task.
+- Bugs / blockers: None.
+- Behavior intentionally not changed: No metadata/runtime behavior changes.
+- Current state after this checkpoint: Contradiction resolved in favor of current source reality.
+- Next step / handoff note: Produce explicit source-evidence summary and record pre-edit implementation plan.
+
+### 20.07 Checkpoint — Source Evidence Summary Completed
+
+- Timestamp: 2026-04-29 America/Detroit
+- Step / checkpoint title: Source evidence summary completed
+- Summary: Consolidated current test/metric coverage and safe regression-hardening gaps from source inspection.
+- Reason / intent: Lock scope before edits to avoid behavior drift.
+- Files inspected:
+  - `Tests/DexDictateTests/OutputCoordinatorTests.swift`
+  - `Tests/DexDictateTests/ClipboardManagerTests.swift`
+  - `Tests/DexDictateTests/SecureInputContextTests.swift`
+  - `Sources/DexDictateKit/Output/OutputCoordinator.swift`
+  - `Sources/DexDictateKit/Output/ClipboardManager.swift`
+  - `Sources/DexDictateKit/Output/SecureInputContext.swift`
+  - `Sources/DexDictateKit/Benchmarking/ModelBenchmarking.swift`
+  - `Sources/VerificationRunner/main.swift`
+  - `Tests/DexDictateTests/BenchmarkCorpusTests.swift`
+  - `Tests/DexDictateTests/CommandProcessorTests.swift`
+  - `Tests/DexDictateTests/DictationIntelligenceTests.swift`
+- Files changed:
+  - `docs/DEXDICTATE_BIBLE.md` (append-only checkpoint)
+- Commands run:
+  - `sed -n` and `rg -n` inspection commands across Lane A/Lane B source/tests
+- Command purpose:
+  - Produce concrete baseline of existing coverage and bounded, low-risk additions.
+- Results / outputs:
+  - Output/clipboard/secure tests have good baseline coverage but miss several fallback/ownership/race-relevant assertions.
+  - Benchmark path currently reports aggregate WER + latency only; punctuation-aware and command/clipping/retry/vocabulary dimensions are not yet surfaced.
+  - Existing architecture supports additive pure metric helpers and unit tests without runtime default changes.
+- Decisions made:
+  - Implement coverage hardening in small clusters, prioritizing deterministic tests and pure helpers.
+  - Avoid runtime behavior modifications unless a test exposes a clear bug requiring minimal fix.
+- Bugs / blockers:
+  - Clipboard restore ownership checks are timing/private-helper based; may require minimal helper seam for deterministic testing.
+- Behavior intentionally not changed: No runtime behavior/default modifications.
+- Current state after this checkpoint: Ready for pre-edit implementation plan.
+- Next step / handoff note: Record exact file-level plan, then implement cluster-by-cluster with bible updates after each.
+
+### 20.08 Checkpoint — Implementation Plan Recorded Before Edits
+
+- Timestamp: 2026-04-29 America/Detroit
+- Step / checkpoint title: Implementation plan recorded before edits
+- Summary: Locked exact file-level plan for bounded regression-hardening in Lane A and Lane B.
+- Reason / intent: Prevent scope creep and preserve runtime behavior/default invariants.
+- Files inspected:
+  - Lane A/Lane B source and tests listed in prior checkpoints.
+- Files changed:
+  - `docs/DEXDICTATE_BIBLE.md` (append-only checkpoint)
+- Commands run:
+  - No new commands for this checkpoint (planning synthesis from completed inspections).
+- Command purpose:
+  - N/A
+- Results / outputs:
+  - Planned test updates in:
+    - `Tests/DexDictateTests/OutputCoordinatorTests.swift`
+    - `Tests/DexDictateTests/ClipboardManagerTests.swift`
+    - `Tests/DexDictateTests/SecureInputContextTests.swift`
+    - `Tests/DexDictateTests/AppInsertionOverridesManagerTests.swift` (new)
+  - Planned metric helper + tests:
+    - `Sources/DexDictateKit/Benchmarking/TranscriptionQualityMetrics.swift` (new)
+    - `Tests/DexDictateTests/TranscriptionQualityMetricsTests.swift` (new)
+  - Planned benchmark reporting integration:
+    - `Sources/VerificationRunner/main.swift` (additive metric output)
+  - Planned low-risk seam only if needed:
+    - `Sources/DexDictateKit/Output/ClipboardManager.swift` internal pure ownership helper for deterministic restore-safety tests.
+- Decisions made:
+  - Runtime behavior/defaults remain unchanged.
+  - No model default/decode/trim-default changes.
+  - No output insertion behavior change unless a test exposes a concrete bug.
+- Bugs / blockers:
+  - Deterministic coverage of delayed clipboard restore still requires a small pure seam (approved as low risk).
+- Behavior intentionally not changed:
+  - `ExperimentFlags.enableSilenceTrim` remains false.
+  - `ExperimentFlags.enableTrailingTrim` remains false by default.
+  - Whisper model/decode defaults unchanged.
+  - Per-app/output behavior unchanged at runtime.
+- Current state after this checkpoint: Ready to implement tests/metric helpers incrementally.
+- Next step / handoff note: Implement Cluster 1 (clipboard restore safety + helper seam if required), then append checkpoint.
+
+### 20.09 Checkpoint — Clipboard Restore Regression Coverage Updated
+
+- Timestamp: 2026-04-29 America/Detroit
+- Step / checkpoint title: Clipboard restore regression coverage updated
+- Summary: Added deterministic restore-ownership tests and an internal pure helper seam to validate stale-restore prevention without timing sleeps or live clipboard mutation.
+- Reason / intent: Harden A1 coverage for clipboard safety and stale-state restore prevention.
+- Files inspected:
+  - `Sources/DexDictateKit/Output/ClipboardManager.swift`
+  - `Tests/DexDictateTests/ClipboardManagerTests.swift`
+- Files changed:
+  - `Sources/DexDictateKit/Output/ClipboardManager.swift`
+  - `Tests/DexDictateTests/ClipboardManagerTests.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Commands run:
+  - `apply_patch` (ClipboardManager + ClipboardManagerTests)
+- Command purpose:
+  - Expose ownership guard logic as pure helper and add unit tests for restore/no-restore cases.
+- Results / outputs:
+  - Added `ClipboardManager.shouldRestoreClipboard(...)` internal helper; callsite now uses helper with unchanged semantics.
+  - Added tests for:
+    - empty/nil clipboard snapshot handling (`clonePasteboardItems(nil)`)
+    - ownership true-path when change count and payload still match
+    - no-restore when change count moved
+    - no-restore when payload changed
+    - no-restore when payload missing
+    - repeated-paste stale-restore guard (first op denied, second op allowed)
+- Decisions made:
+  - Kept restore timing and paste behavior unchanged.
+  - Chose pure seam over brittle async delay tests.
+- Bugs / blockers: None.
+- Behavior intentionally not changed:
+  - Clipboard restore delay unchanged.
+  - Paste scheduling and event posting unchanged.
+- Current state after this checkpoint: A1 clipboard ownership/restore safety coverage materially stronger and deterministic.
+- Next step / handoff note: Implement A2 output fallback/per-app override coverage next.
+
+### 20.10 Checkpoint — Output Fallback Regression Coverage Updated
+
+- Timestamp: 2026-04-29 America/Detroit
+- Step / checkpoint title: Output fallback regression coverage updated
+- Summary: Expanded deterministic output-mode/fallback tests and added per-app override manager tests.
+- Reason / intent: Harden A2 coverage for accessibility fallback behavior, mode distinctions, and per-app override isolation.
+- Files inspected:
+  - `Tests/DexDictateTests/OutputCoordinatorTests.swift`
+  - `Tests/DexDictateTests/AppInsertionOverridesManagerTests.swift`
+  - `Sources/DexDictateKit/Output/OutputCoordinator.swift`
+  - `Sources/DexDictateKit/AppInsertionOverridesManager.swift`
+- Files changed:
+  - `Tests/DexDictateTests/OutputCoordinatorTests.swift`
+  - `Tests/DexDictateTests/AppInsertionOverridesManagerTests.swift` (new)
+  - `docs/DEXDICTATE_BIBLE.md`
+- Commands run:
+  - `apply_patch` (OutputCoordinator test expansion + new AppInsertionOverridesManager tests)
+- Command purpose:
+  - Add missing fallback-path and override-isolation assertions without touching production behavior.
+- Results / outputs:
+  - Added OutputCoordinator tests for:
+    - accessibility insertion success via AX path (no clipboard paste fallback call)
+    - accessibility insertion failure fallback to clipboard paste when auto-paste is enabled
+    - accessibility mode with auto-paste disabled remaining saved-only with no output mutation
+    - sensitive context not forcing copy-only when protection is disabled
+    - explicit distinction across save-only, clipboard-only, clipboard-paste, accessibility paths
+  - Added per-app override manager tests for:
+    - bundle-specific override precedence
+    - override non-leakage to unrelated bundle IDs
+    - `.useGlobal` mapping to nil effective mode
+    - duplicate-bundle replacement semantics
+- Decisions made:
+  - Kept this cluster test-only; no output runtime behavior changes.
+  - Documented current `autoPaste=false` behavior as saved-only/no-copy to match source truth.
+- Bugs / blockers: None.
+- Behavior intentionally not changed:
+  - Output insertion order/fallback semantics unchanged.
+  - No per-app runtime logic changes.
+- Current state after this checkpoint: A2 mode/fallback and override-coverage materially stronger.
+- Next step / handoff note: Implement secure-field heuristic coverage expansion (A4), then Zoom/race coverage items.
+
+### 20.11 Checkpoint — Secure-Field Regression Coverage Updated
+
+- Timestamp: 2026-04-29 America/Detroit
+- Step / checkpoint title: Secure-field regression coverage updated
+- Summary: Expanded secure-context heuristic tests with additional representative sensitive tokens and non-sensitive editor/chat contexts.
+- Reason / intent: Harden A4 coverage without broadening production heuristics.
+- Files inspected:
+  - `Tests/DexDictateTests/SecureInputContextTests.swift`
+  - `Sources/DexDictateKit/Output/SecureInputContext.swift`
+- Files changed:
+  - `Tests/DexDictateTests/SecureInputContextTests.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Commands run:
+  - `apply_patch` (SecureInputContext test expansion)
+- Command purpose:
+  - Add coverage for requested token families and realistic non-sensitive fields.
+- Results / outputs:
+  - Added secure-positive tests for:
+    - `passcode`
+    - `one-time code`
+    - `verification code`
+    - API-key-adjacent token phrasing (`API key token` via existing weak token logic)
+    - strong token in identifier (`payment-passcode-field`)
+  - Added non-sensitive tests for:
+    - chat composer field
+    - code editor field
+- Decisions made:
+  - Did not expand token list in production heuristics.
+  - Kept false-positive prevention boundaries intact.
+- Bugs / blockers: None.
+- Behavior intentionally not changed: Secure-context classifier logic unchanged.
+- Current state after this checkpoint: A4 representative coverage substantially broader while behavior remains unchanged.
+- Next step / handoff note: Address Zoom-style behavior coverage checkpoint and actor/race coverage checkpoint.
+
+### 20.12 Checkpoint — Zoom-Style Output Behavior Coverage Addressed
+
+- Timestamp: 2026-04-29 America/Detroit
+- Step / checkpoint title: Zoom-style output behavior coverage addressed or deferred with reason
+- Summary: Extended existing Zoom profile tests through current deterministic seam (`PasteDeliveryProfile.resolve`).
+- Reason / intent: Cover Zoom-specific bundle-prefix behavior without refactoring timing/event code.
+- Files inspected:
+  - `Sources/DexDictateKit/Output/ClipboardManager.swift`
+  - `Tests/DexDictateTests/ClipboardManagerTests.swift`
+- Files changed:
+  - `Tests/DexDictateTests/ClipboardManagerTests.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Commands run:
+  - `apply_patch` (ClipboardManager test expansion)
+- Command purpose:
+  - Validate bundle-ID-prefix routing to Zoom timing profile and default-profile isolation.
+- Results / outputs:
+  - Added tests confirming:
+    - any bundle ID beginning with `us.zoom.` resolves to Zoom profile timing
+    - `com.zoom.us` does not match the Zoom prefix rule and uses default timing profile
+  - Existing seam does not directly expose async activation/paste scheduling internals; those remain indirectly covered through profile resolution tests.
+- Decisions made:
+  - Chose seam-based unit coverage only; avoided risky refactor of async paste scheduler for this pass.
+- Bugs / blockers:
+  - Direct unit instrumentation of delayed activation/paste loop remains limited by private async internals.
+- Behavior intentionally not changed: Zoom paste timing behavior unchanged.
+- Current state after this checkpoint: A3 covered via deterministic profile seam; deeper async-path instrumentation deferred.
+- Next step / handoff note: Address actor/thread/race coverage with deterministic seams, then begin Lane B metrics helper implementation.
+
+### 20.13 Checkpoint — Output Actor/Race Coverage Addressed or Deferred With Reason
+
+- Timestamp: 2026-04-29 America/Detroit
+- Step / checkpoint title: Output actor/race coverage addressed or deferred with reason
+- Summary: Addressed deterministic stale-restore race scenarios via ownership helper tests; deferred private main-thread/paste-delay internals that lack deterministic test seams.
+- Reason / intent: Improve race safety coverage without brittle sleeps or invasive refactor.
+- Files inspected:
+  - `Sources/DexDictateKit/Output/ClipboardManager.swift`
+  - `Tests/DexDictateTests/ClipboardManagerTests.swift`
+  - `Sources/DexDictateKit/Output/OutputCoordinator.swift`
+  - `Tests/DexDictateTests/OutputCoordinatorTests.swift`
+- Files changed:
+  - No additional source changes in this checkpoint (decision record only)
+  - `docs/DEXDICTATE_BIBLE.md`
+- Commands run:
+  - No new command (analysis of already added tests/seams)
+- Command purpose:
+  - Evaluate A5 expectations against available deterministic unit-test seams.
+- Results / outputs:
+  - Covered: stale restore prevention across repeated rapid deliveries (`shouldRestoreClipboard` tests).
+  - Covered: no-output mutations when delivery path is save-only (`autoPaste=false`) via output coordinator tests.
+  - Deferred: direct thread/actor assertions for private `runOnMainThread`/delayed async paste loop due lack of non-brittle seam.
+- Decisions made:
+  - Keep current deterministic coverage and avoid introducing sleep-based tests.
+  - Recommend future seam extraction for scheduler/thread instrumentation if deeper actor tests become necessary.
+- Bugs / blockers:
+  - Private async scheduling internals are not directly observable in tests without refactor.
+- Behavior intentionally not changed: No output runtime/thread behavior changes.
+- Current state after this checkpoint: A5 partially addressed with deterministic stale-race coverage; deeper actor instrumentation deferred.
+- Next step / handoff note: Begin Lane B additive metric helper implementation (B1–B6).
+
+### 20.14 Checkpoint — Punctuation Metric Coverage Updated
+
+- Timestamp: 2026-04-29 America/Detroit
+- Step / checkpoint title: Punctuation metric coverage updated
+- Summary: Added punctuation-quality metric helpers and tests, including punctuation-aware vs punctuation-stripped WER.
+- Reason / intent: Provide stricter punctuation observability before behavior changes.
+- Files inspected:
+  - `Sources/DexDictateKit/Benchmarking/TranscriptionQualityMetrics.swift`
+  - `Tests/DexDictateTests/TranscriptionQualityMetricsTests.swift`
+  - `Sources/VerificationRunner/main.swift`
+- Files changed:
+  - `Sources/DexDictateKit/Benchmarking/TranscriptionQualityMetrics.swift` (new)
+  - `Tests/DexDictateTests/TranscriptionQualityMetricsTests.swift` (new)
+  - `Sources/VerificationRunner/main.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Commands run:
+  - `apply_patch` (new metric helper module, tests, benchmark output integration)
+- Command purpose:
+  - Add and surface punctuation-focused quality metrics without runtime behavior changes.
+- Results / outputs:
+  - Added punctuation metrics: terminal punctuation expectation/match, question-mark expectation/match, comma expectation/match, spoken-punctuation token counts, punctuation-aware WER, punctuation-stripped WER.
+  - Added tests verifying punctuation metrics and dual-WER reporting behavior.
+  - VerificationRunner now prints punctuation metric lines in benchmark corpus mode.
+- Decisions made:
+  - Keep legacy punctuation-stripped WER intact while adding stricter punctuation-aware reporting.
+- Bugs / blockers: None.
+- Behavior intentionally not changed: No Whisper decode/prompt/post-processing behavior changes.
+- Current state after this checkpoint: B1 metric coverage implemented and reportable.
+- Next step / handoff note: Record command, clipping, retry, vocabulary, and latency metric checkpoints from same helper integration.
+
+### 20.15 Checkpoint — Command Recognition Metric Coverage Updated
+
+- Timestamp: 2026-04-29 America/Detroit
+- Step / checkpoint title: Command recognition metric coverage updated
+- Summary: Added command-recognition quality metrics and tests for built-in/custom command false negatives/positives and command-only preservation.
+- Reason / intent: Measure command reliability regression risk independently of transcription text WER.
+- Files inspected:
+  - `Sources/DexDictateKit/Benchmarking/TranscriptionQualityMetrics.swift`
+  - `Tests/DexDictateTests/TranscriptionQualityMetricsTests.swift`
+  - `Sources/VerificationRunner/main.swift`
+- Files changed:
+  - `Sources/DexDictateKit/Benchmarking/TranscriptionQualityMetrics.swift`
+  - `Tests/DexDictateTests/TranscriptionQualityMetricsTests.swift`
+  - `Sources/VerificationRunner/main.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Commands run:
+  - `apply_patch` (command metrics + tests + benchmark output lines)
+- Command purpose:
+  - Introduce measurable command error dimensions without changing command grammar/runtime.
+- Results / outputs:
+  - Added command metrics: expected-command count, built-in FN/FP, custom Dex-command FN/FP, command-only expected/preserved counts.
+  - Added tests covering:
+    - built-in command false negatives and false positives
+    - custom `Dex <keyword>` false negatives and false positives
+    - command-only preservation signal
+  - VerificationRunner now emits command-metric lines for corpus runs.
+- Decisions made:
+  - Metrics use current `CommandProcessor` behavior as baseline; no grammar expansion.
+- Bugs / blockers: None.
+- Behavior intentionally not changed: `CommandProcessor` runtime behavior unchanged.
+- Current state after this checkpoint: B2 command-recognition coverage implemented and reportable.
+- Next step / handoff note: Record clipping proxy metric checkpoint.
+
+### 20.16 Checkpoint — Clipping Proxy Metric Coverage Updated
+
+- Timestamp: 2026-04-29 America/Detroit
+- Step / checkpoint title: Clipping proxy metric coverage updated
+- Summary: Added clipping-proxy helper metrics and tests for missing leading/trailing words, suspiciously short output, empty output, and final-word truncation proxy.
+- Reason / intent: Detect clipping-style regressions without enabling trim defaults.
+- Files inspected:
+  - `Sources/DexDictateKit/Benchmarking/TranscriptionQualityMetrics.swift`
+  - `Tests/DexDictateTests/TranscriptionQualityMetricsTests.swift`
+  - `Sources/VerificationRunner/main.swift`
+- Files changed:
+  - `Sources/DexDictateKit/Benchmarking/TranscriptionQualityMetrics.swift`
+  - `Tests/DexDictateTests/TranscriptionQualityMetricsTests.swift`
+  - `Sources/VerificationRunner/main.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Commands run:
+  - `apply_patch` (clipping metrics + tests + reporting)
+- Command purpose:
+  - Add clipping visibility in benchmark reports with deterministic text-based proxies.
+- Results / outputs:
+  - Added clipping metrics:
+    - expected non-empty utterance count
+    - empty-when-expected count
+    - missing first word count
+    - missing last word count
+    - suspiciously short output count
+    - final-word truncation proxy count
+  - Added tests validating these proxies.
+  - VerificationRunner now prints clipping-proxy metric lines for corpus runs.
+- Decisions made:
+  - No changes to `AudioResampler` trimming defaults or behavior.
+- Bugs / blockers: None.
+- Behavior intentionally not changed:
+  - `ExperimentFlags.enableSilenceTrim` remains false.
+  - `ExperimentFlags.enableTrailingTrim` default remains false.
+- Current state after this checkpoint: B3 clipping proxy metrics implemented and reportable.
+- Next step / handoff note: Record retry quality checkpoint (implemented as helper/test seam; runtime selection unchanged).
+
+### 20.17 Checkpoint — Retry Quality Metric Coverage Addressed With Reason
+
+- Timestamp: 2026-04-29 America/Detroit
+- Step / checkpoint title: Retry quality metric coverage addressed or deferred with reason
+- Summary: Added pure retry-quality comparison helpers and tests across original-vs-retry scenarios; kept runtime retry selection behavior unchanged.
+- Reason / intent: Build measurable retry-quality guardrails without altering live behavior in this hardening pass.
+- Files inspected:
+  - `Sources/DexDictateKit/Benchmarking/TranscriptionQualityMetrics.swift`
+  - `Tests/DexDictateTests/TranscriptionQualityMetricsTests.swift`
+  - `Sources/DexDictateKit/TranscriptionEngine.swift`
+  - `Sources/VerificationRunner/main.swift`
+- Files changed:
+  - `Sources/DexDictateKit/Benchmarking/TranscriptionQualityMetrics.swift`
+  - `Tests/DexDictateTests/TranscriptionQualityMetricsTests.swift`
+  - `Sources/VerificationRunner/main.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Commands run:
+  - `apply_patch` (retry evaluator + aggregate metrics + tests + reporting availability flag)
+- Command purpose:
+  - Add quality-scoring instrumentation for retry decisions without forcing runtime selection changes.
+- Results / outputs:
+  - Added retry evaluator and aggregate metrics for:
+    - original better vs retry better vs tie
+    - retry empty/original usable
+    - original empty/retry usable
+    - command-preserving and command-recovery cases
+    - repeated-token hallucination and suspicious-text cases
+  - Added tests covering each requested scenario cluster.
+  - VerificationRunner now explicitly reports `BENCHMARK_RETRY_QUALITY_AVAILABLE:false` for corpus mode because no paired retry transcripts are present in current corpus workflow.
+- Decisions made:
+  - Runtime automatic retry selection in `TranscriptionEngine` intentionally left unchanged.
+  - Chose helper/test seam approach rather than risky retry-architecture refactor.
+- Bugs / blockers:
+  - Current corpus benchmark run does not capture original+retry pairs, so corpus-level retry-quality summary remains unavailable by design.
+- Behavior intentionally not changed: Live retry replacement logic unchanged.
+- Current state after this checkpoint: B4 addressed via pure metrics/test seam with explicit corpus-reporting limitation.
+- Next step / handoff note: Record vocabulary/hard-word metric checkpoint.
+
+### 20.18 Checkpoint — Vocabulary and Hard-Word Metric Coverage Updated
+
+- Timestamp: 2026-04-29 America/Detroit
+- Step / checkpoint title: Vocabulary and hard-word metric coverage updated
+- Summary: Added vocabulary/hard-word accuracy metrics with category-level accounting and test coverage.
+- Reason / intent: Measure proper nouns/acronyms/coding/framework/API/domain/user vocabulary performance before future prompt behavior changes.
+- Files inspected:
+  - `Sources/DexDictateKit/Benchmarking/TranscriptionQualityMetrics.swift`
+  - `Tests/DexDictateTests/TranscriptionQualityMetricsTests.swift`
+  - `Sources/VerificationRunner/main.swift`
+  - `Sources/DexDictateKit/BenchmarkCorpus.swift`
+- Files changed:
+  - `Sources/DexDictateKit/Benchmarking/TranscriptionQualityMetrics.swift`
+  - `Tests/DexDictateTests/TranscriptionQualityMetricsTests.swift`
+  - `Sources/VerificationRunner/main.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Commands run:
+  - `apply_patch` (vocabulary metrics + tests + benchmark output lines)
+- Command purpose:
+  - Add measurable hard-word/category hit-rate tracking to benchmark outputs.
+- Results / outputs:
+  - Added tracked-term categories:
+    - `properNoun`, `acronym`, `codingTerm`, `frameworkAPI`, `userVocabulary`, `domainVocabulary`
+  - Added overall and per-category expected/matched/accuracy accounting.
+  - Added tests confirming per-category and overall metric correctness.
+  - VerificationRunner now emits vocabulary expected/matched/accuracy lines (overall and per present category) in corpus mode.
+- Decisions made:
+  - No `DictationAssist` prompt injection/default behavior changes.
+  - Vocabulary metrics are measurement-only in this pass.
+- Bugs / blockers: None.
+- Behavior intentionally not changed: Dictation prompt/runtime vocabulary behavior unchanged.
+- Current state after this checkpoint: B5 vocabulary/hard-word measurement capability added.
+- Next step / handoff note: Record latency metric checkpoint and limitations.
+
+### 20.19 Checkpoint — Latency Metric Coverage Addressed With Reason
+
+- Timestamp: 2026-04-29 America/Detroit
+- Step / checkpoint title: Latency metric coverage addressed or deferred with reason
+- Summary: Added additive latency rollup helpers/tests and clarified which latency dimensions are available in current corpus benchmark path.
+- Reason / intent: Preserve existing latency gates while making transcription-only/end-to-end/retry-overhead naming explicit.
+- Files inspected:
+  - `Sources/DexDictateKit/Benchmarking/TranscriptionQualityMetrics.swift`
+  - `Tests/DexDictateTests/TranscriptionQualityMetricsTests.swift`
+  - `Sources/VerificationRunner/main.swift`
+  - `Sources/DexDictateKit/TranscriptionEngine.swift`
+- Files changed:
+  - `Sources/DexDictateKit/Benchmarking/TranscriptionQualityMetrics.swift`
+  - `Tests/DexDictateTests/TranscriptionQualityMetricsTests.swift`
+  - `Sources/VerificationRunner/main.swift`
+  - `docs/DEXDICTATE_BIBLE.md`
+- Commands run:
+  - `apply_patch` (latency report helpers + tests + benchmark output lines)
+- Command purpose:
+  - Add named latency dimensions while preserving legacy average/p95 latency and gate behavior.
+- Results / outputs:
+  - Added `LatencyObservation`, `LatencySummary`, `LatencyMetricsReport` helpers and tests.
+  - VerificationRunner now emits:
+    - `BENCHMARK_TRANSCRIPTION_ONLY_AVG_LATENCY_MS`
+    - `BENCHMARK_TRANSCRIPTION_ONLY_P95_LATENCY_MS`
+    - `BENCHMARK_END_TO_END_LATENCY_AVAILABLE` (true/false)
+    - `BENCHMARK_RETRY_OVERHEAD_AVAILABLE` (true/false)
+  - In current corpus mode, end-to-end and retry-overhead remain unavailable (`false`) because benchmark path does not capture trigger-release timestamps or retry pair timings.
+  - Legacy metrics/gates (`BENCHMARK_CORPUS_AVG_LATENCY_MS`, `BENCHMARK_CORPUS_P95_LATENCY_MS`, gate pass/fail) remain unchanged.
+- Decisions made:
+  - Preserve existing benchmark thresholds and pass/fail logic exactly.
+  - Treat unavailable dimensions as explicit availability flags, not inferred zeros.
+- Bugs / blockers:
+  - Current corpus-run data model lacks trigger-release and retry-overhead timings; requires future data-capture seam to fully populate.
+- Behavior intentionally not changed: No latency threshold/gate relaxation.
+- Current state after this checkpoint: B6 addressed with additive reporting and explicit unsupported-dimension flags.
+- Next step / handoff note: Run targeted test validation for updated files and fix any regressions.
+
+### 20.20 Checkpoint — Targeted Validation Checkpoint (Lane A Filters)
+
+- Timestamp: 2026-04-29 America/Detroit
+- Step / checkpoint title: Targeted validation checkpoint
+- Summary: Ran required Lane A targeted test filters after output/clipboard/secure coverage updates.
+- Reason / intent: Verify regression-hardening changes compile and pass before broader validation.
+- Files inspected:
+  - Test/runtime logs from filtered `swift test` commands
+- Files changed:
+  - `docs/DEXDICTATE_BIBLE.md`
+- Commands run:
+  - `swift test --filter OutputCoordinatorTests`
+  - `swift test --filter ClipboardManagerTests`
+  - `swift test --filter SecureInputContextTests`
+- Command purpose:
+  - Validate A1/A2/A3/A4/A5 coverage changes and new mocks/helpers.
+- Results / outputs:
+  - PASS: `OutputCoordinatorTests` (14 tests)
+  - PASS: `ClipboardManagerTests` (14 tests)
+  - PASS: `SecureInputContextTests` (21 tests)
+  - No failures; only expected test log lines from fallback-path assertions.
+- Decisions made:
+  - Proceed to targeted validation for new metric/override test files.
+- Bugs / blockers: None.
+- Behavior intentionally not changed: Runtime behavior unchanged; validation only.
+- Current state after this checkpoint: Lane A targeted validations are green.
+- Next step / handoff note: Run targeted tests for `AppInsertionOverridesManagerTests` and `TranscriptionQualityMetricsTests`.
+
+### 20.21 Checkpoint — Targeted Validation Checkpoint (Metrics/Overrides Filters)
+
+- Timestamp: 2026-04-29 America/Detroit
+- Step / checkpoint title: Targeted validation checkpoint
+- Summary: Ran targeted tests for new per-app override and transcription-quality metrics coverage.
+- Reason / intent: Confirm Lane B helper/test additions are stable before full test run.
+- Files inspected:
+  - Test/runtime logs from filtered `swift test` commands
+- Files changed:
+  - `docs/DEXDICTATE_BIBLE.md`
+- Commands run:
+  - `swift test --filter AppInsertionOverridesManagerTests`
+  - `swift test --filter TranscriptionQualityMetricsTests`
+- Command purpose:
+  - Validate new per-app override tests and B1–B6 metric helper tests.
+- Results / outputs:
+  - PASS: `AppInsertionOverridesManagerTests` (4 tests)
+  - PASS: `TranscriptionQualityMetricsTests` (6 tests)
+  - No failures.
+- Decisions made:
+  - Proceed to full validation sequence (`swift test`, release build, release validation script).
+- Bugs / blockers: None.
+- Behavior intentionally not changed: Runtime behavior unchanged; validation only.
+- Current state after this checkpoint: All new/modified targeted filters are green.
+- Next step / handoff note: Run full test suite next.
+
+### 20.22 Checkpoint — Full Validation Checkpoint (`swift test`)
+
+- Timestamp: 2026-04-29 America/Detroit
+- Step / checkpoint title: Full validation checkpoint
+- Summary: Ran full test suite after all changes.
+- Reason / intent: Ensure no regressions outside targeted test filters.
+- Files inspected:
+  - `swift test` output logs
+- Files changed:
+  - `docs/DEXDICTATE_BIBLE.md`
+- Commands run:
+  - `swift test`
+- Command purpose:
+  - Full-suite verification before release build/validation.
+- Results / outputs:
+  - PASS: full suite (`167` tests) with `0` failures.
+  - New tests (`AppInsertionOverridesManagerTests`, `TranscriptionQualityMetricsTests`) passed within full run.
+- Decisions made:
+  - Proceed to release build validation steps.
+- Bugs / blockers: None.
+- Behavior intentionally not changed: Validation-only step.
+- Current state after this checkpoint: Unit/integration tests fully green.
+- Next step / handoff note: Run `./build.sh --release`.
+
+### 20.23 Checkpoint — Full Validation Checkpoint (`./build.sh --release`)
+
+- Timestamp: 2026-04-29 America/Detroit
+- Step / checkpoint title: Full validation checkpoint
+- Summary: Ran release build/packaging flow.
+- Reason / intent: Verify release build integrity after test/metric hardening pass.
+- Files inspected:
+  - `./build.sh --release` output log
+- Files changed:
+  - `docs/DEXDICTATE_BIBLE.md`
+- Commands run:
+  - `./build.sh --release`
+- Command purpose:
+  - Build production app, sign, package artifacts, and execute release validation report path.
+- Results / outputs:
+  - PASS: production build and helper build completed.
+  - PASS: app installed to `/Applications/DexDictate.app`.
+  - PASS: release artifact packaging completed.
+  - PASS: embedded release validation summary reported `Failures: 0`, `Warnings: 1`.
+  - Expected warning observed: Gatekeeper (`spctl`) assessment warning due local dev signing/non-notarized artifact.
+- Decisions made:
+  - Treat `spctl` warning as expected non-failure per task constraints.
+- Bugs / blockers: None.
+- Behavior intentionally not changed: Build/signing logic untouched.
+- Current state after this checkpoint: Release build succeeded with only expected dev-signing warning.
+- Next step / handoff note: Run explicit `scripts/validate_release.sh` command next.
+
+### 20.24 Checkpoint — Full Validation Checkpoint (`scripts/validate_release.sh`)
+
+- Timestamp: 2026-04-29 America/Detroit
+- Step / checkpoint title: Full validation checkpoint
+- Summary: Ran explicit release validation script after release build.
+- Reason / intent: Confirm release artifact integrity and expected warning profile.
+- Files inspected:
+  - `scripts/validate_release.sh` output report
+- Files changed:
+  - `docs/DEXDICTATE_BIBLE.md`
+- Commands run:
+  - `scripts/validate_release.sh`
+- Command purpose:
+  - Verify bundle integrity, architecture, metadata, signing, entitlements, gatekeeper, and checksums.
+- Results / outputs:
+  - PASS: all integrity/architecture/metadata/signing/entitlements/hash checks.
+  - WARN only: Gatekeeper assessment exit code `3` (`spctl`) as expected for local dev-signed non-notarized build.
+  - Summary reported `Failures: 0`, `Warnings: 1`.
+- Decisions made:
+  - Keep expected Gatekeeper warning as non-failure.
+- Bugs / blockers: None.
+- Behavior intentionally not changed: Validation-only step.
+- Current state after this checkpoint: Full validation is green with only expected dev-signing warning.
+- Next step / handoff note: Perform pre-commit diff review commands and staging audit.
+
+### 20.25 Checkpoint — Pre-Commit Diff Review Completed
+
+- Timestamp: 2026-04-29 America/Detroit
+- Step / checkpoint title: Pre-commit diff review completed
+- Summary: Ran required diff/status checks and reviewed commit scope for accidental artifacts or behavior drift.
+- Reason / intent: Ensure commit contains only intended regression-hardening files.
+- Files inspected:
+  - `git diff --stat`
+  - `git diff --check`
+  - `git status --short`
+- Files changed:
+  - `docs/DEXDICTATE_BIBLE.md`
+- Commands run:
+  - `git diff --stat`
+  - `git diff --check`
+  - `git status --short`
+- Command purpose:
+  - Verify no whitespace errors, accidental generated files, or unrelated file churn.
+- Results / outputs:
+  - `git diff --check`: no whitespace/pathology output.
+  - Working changes are limited to intended source/tests/bible files.
+  - Untracked planning docs remain untracked as expected:
+    - `DexDictate_Full_Handoff_Map.md`
+    - `docs/analyze-the-dexdictate-project-expressive-cat.md`
+    - `docs/codex dexdictate improvements 4_29_26.md`
+  - No plist/signing/entitlement/model or unrelated build-metadata files changed.
+- Decisions made:
+  - Keep commit scope to source/test/benchmark/bible files only.
+- Bugs / blockers: None.
+- Behavior intentionally not changed: No runtime behavior changes introduced during diff cleanup.
+- Current state after this checkpoint: Pre-commit scope is clean and aligned with task constraints.
+- Next step / handoff note: Add required final pre-commit handoff checkpoint, then stage/commit.
+
+### 20.26 Checkpoint — Final Pre-Commit Handoff Snapshot
+
+- Timestamp: 2026-04-29 America/Detroit
+- Step / checkpoint title: Final pre-commit bible checkpoint before commit
+- Summary: Consolidated full change scope, command history, validation status, invariants, and remaining risks before creating commit.
+- Reason / intent: Ensure handoff-safe state if interrupted before commit.
+- Files inspected:
+  - All modified/new files listed below
+  - Full validation outputs (`swift test`, `./build.sh --release`, `scripts/validate_release.sh`)
+- Files changed:
+  - `Sources/DexDictateKit/Output/ClipboardManager.swift`
+  - `Sources/DexDictateKit/Benchmarking/TranscriptionQualityMetrics.swift` (new)
+  - `Sources/VerificationRunner/main.swift`
+  - `Tests/DexDictateTests/ClipboardManagerTests.swift`
+  - `Tests/DexDictateTests/OutputCoordinatorTests.swift`
+  - `Tests/DexDictateTests/SecureInputContextTests.swift`
+  - `Tests/DexDictateTests/AppInsertionOverridesManagerTests.swift` (new)
+  - `Tests/DexDictateTests/TranscriptionQualityMetricsTests.swift` (new)
+  - `docs/DEXDICTATE_BIBLE.md`
+- Commands run:
+  - Repository/context commands: `git status`, `git log`, `wc -l`, `sed -n`, `rg`, `ls`
+  - Targeted tests:
+    - `swift test --filter OutputCoordinatorTests`
+    - `swift test --filter ClipboardManagerTests`
+    - `swift test --filter SecureInputContextTests`
+    - `swift test --filter AppInsertionOverridesManagerTests`
+    - `swift test --filter TranscriptionQualityMetricsTests`
+  - Full validation:
+    - `swift test`
+    - `./build.sh --release`
+    - `scripts/validate_release.sh`
+  - Diff review:
+    - `git diff --stat`
+    - `git diff --check`
+    - `git status --short`
+- Command purpose:
+  - Implement and verify bounded regression-hardening coverage in Lane A and Lane B.
+- Results / outputs:
+  - Added deterministic clipboard restore-ownership seam/tests.
+  - Added output fallback/accessibility mode distinction tests.
+  - Added per-app override precedence/non-leakage tests.
+  - Expanded secure-field heuristic representative coverage.
+  - Added comprehensive pure benchmark metric helpers + tests (punctuation, command, clipping, retry-quality, vocabulary/hard-word, latency rollups).
+  - Extended `VerificationRunner` corpus output with additive metric lines and explicit availability flags.
+  - Validation results: all targeted filters passed; full `swift test` passed (`167` tests, `0` failures); release build passed; release validation passed with expected `spctl` warning only.
+- Decisions made:
+  - Did not alter runtime behavior/defaults.
+  - Explicitly left retry selection behavior unchanged; added evaluation metrics only.
+  - Explicitly left trim/model/decode defaults unchanged.
+- Bugs / blockers:
+  - Deeper async/thread instrumentation for clipboard scheduler remains limited by private internals (documented deferral).
+  - Corpus benchmark path still lacks paired original+retry transcripts and trigger-release timestamps, so retry-quality and end-to-end latency are flagged unavailable in corpus reporting.
+- Behavior intentionally not changed:
+  - No model default changes.
+  - No Whisper decode default changes.
+  - No default trim flag changes.
+  - No output insertion runtime behavior changes.
+  - No plist/signing/entitlement/release metadata code changes.
+- Current state after this checkpoint:
+  - All requested hardening implemented within bounded scope and validated.
+  - Ready to stage/commit focused diff.
+- Next step / handoff note:
+  - Create one focused commit: `test: harden output delivery and accuracy metric coverage`.
+  - After this pass, next likely task remains enabling trailing silence trim behind existing flags/settings and validating against the new metrics (not implemented here).
+
+### 20.27 Checkpoint — Commit Created
+
+- Timestamp: 2026-04-29 America/Detroit
+- Step / checkpoint title: Commit created
+- Summary: Created focused regression-hardening commit, then prepared to amend once to include this final checkpoint per workflow requirement.
+- Reason / intent: Preserve complete handoff trace inside committed bible history.
+- Files inspected:
+  - `git commit` output
+- Files changed:
+  - `docs/DEXDICTATE_BIBLE.md`
+- Commands run:
+  - `git commit -m "test: harden output delivery and accuracy metric coverage"`
+- Command purpose:
+  - Create one focused commit containing source/test/benchmark/bible hardening changes.
+- Results / outputs:
+  - Initial commit created: `8a9eea9` on `main`.
+  - Commit contents: 9 tracked files changed, including new metric helper + new tests + updated bible.
+- Decisions made:
+  - Amend once to include this checkpoint entry in the same focused commit.
+- Bugs / blockers: None.
+- Behavior intentionally not changed: Commit contains no runtime-default behavior changes.
+- Current state after this checkpoint: Final checkpoint appended and ready for amend.
+- Next step / handoff note: Stage updated bible and run `git commit --amend --no-edit`; report final commit hash.
