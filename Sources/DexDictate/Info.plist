@@ -28,7 +28,7 @@
     <true/>
     <key>NSMicrophoneUsageDescription</key>
     <string>DexDictate needs microphone access to transcribe your speech into text.</string>
-    <key>NSAppleEventsUsageDescription</key>
-    <string>DexDictate needs accessibility access to paste transcribed text and capture global hotkeys.</string>
+    <key>NSAccessibilityUsageDescription</key>
+    <string>DexDictate needs accessibility access to monitor global keyboard/mouse events.</string>
 </dict>
 </plist>

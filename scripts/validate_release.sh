@@ -132,6 +132,12 @@ if [ -f "$INFO_PLIST" ]; then
     else
         fail "NSMicrophoneUsageDescription missing or unreadable"
     fi
+
+    if /usr/libexec/PlistBuddy -c "Print :NSAccessibilityUsageDescription" "$INFO_PLIST" >>"$REPORT_PATH" 2>&1; then
+        pass "NSAccessibilityUsageDescription readable"
+    else
+        fail "NSAccessibilityUsageDescription missing or unreadable"
+    fi
 fi
 
 append_command "Code signing verification" codesign --verify --deep --strict --verbose=2 "$APP_PATH"

@@ -12,8 +12,7 @@
     <key>CFBundleShortVersionString</key><string>{{VERSION}}</string>
     <key>LSUIElement</key><false/>
     <key>LSMinimumSystemVersion</key><string>14.0</string>
-    <key>NSMicrophoneUsageDescription</key><string>This app needs microphone access to transcribe your speech.</string>
-    <key>NSSpeechRecognitionUsageDescription</key><string>This app uses speech recognition to convert your voice to text.</string>
-    <key>NSAccessibilityUsageDescription</key><string>This app needs accessibility access to monitor global keyboard/mouse events.</string>
+    <key>NSMicrophoneUsageDescription</key><string>DexDictate needs microphone access to transcribe your speech into text.</string>
+    <key>NSAccessibilityUsageDescription</key><string>DexDictate needs accessibility access to monitor global keyboard/mouse events.</string>
 </dict>
 </plist>

@@ -22,6 +22,7 @@ INSTALL_DIR="${INSTALL_DIR:-$DEFAULT_INSTALL_DIR}"
 ENTITLEMENTS="Sources/DexDictate/DexDictate.entitlements"
 ICON_SOURCE="Sources/DexDictate/AppIcon.icns"
 INFO_TEMPLATE="templates/Info.plist.template"
+# Canonical packaged Info.plist source. Source plist is kept in sync via tests.
 SOURCE_INFO_PLIST="Sources/DexDictate/Info.plist"
 VERSION_FILE="VERSION"
 BENCHMARK_BASELINE="benchmark_baseline.json"
