@@ -52,6 +52,8 @@ final class AppSettingsRestoreDefaultsTests: XCTestCase {
         XCTAssertEqual(settings.dictationDomainMode, .automatic)
         XCTAssertTrue(settings.showFlavorTicker)
         XCTAssertTrue(settings.animateFlavorTicker)
+        XCTAssertTrue(settings.enableTrailingTrimExperiment)
+        XCTAssertFalse(settings.enableSilenceTrim)
         XCTAssertEqual(settings.selectedMenuBarIconIdentifier, "")
         XCTAssertEqual(settings.selectedMenuBarEmoji, "🐶")
         XCTAssertEqual(settings.userShortcut, .defaultMiddleMouse)

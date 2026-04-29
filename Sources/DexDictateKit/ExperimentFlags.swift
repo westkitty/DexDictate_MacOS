@@ -11,8 +11,8 @@ public struct ExperimentFlags {
     /// Current default is 250ms. Older builds used 750ms.
     public static var stopTailDelayMs: UInt64 = 250
 
-    /// Trailing-only trim remains opt-in until benchmark evidence says otherwise.
-    public static var enableTrailingTrim = false
+    /// Trailing-only trim defaults on; leading/full trim remains separately guarded.
+    public static var enableTrailingTrim = true
     public static var trailingTrimMinimumSilenceMs = 220
     public static var trailingTrimPadMs = 80
     

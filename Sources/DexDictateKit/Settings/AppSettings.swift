@@ -203,7 +203,7 @@ public class AppSettings: ObservableObject {
     @AppStorage("utteranceEndPreset_v1") public var utteranceEndPreset: UtteranceEndPreset = .stable
     @AppStorage("benchmarkGateEnabled_v1") public var benchmarkGateEnabled: Bool = true
     @AppStorage("allowAutoModelPromotion_v1") public var allowAutoModelPromotion: Bool = true
-    @AppStorage("enableTrailingTrimExperiment_v1") public var enableTrailingTrimExperiment: Bool = false
+    @AppStorage("enableTrailingTrimExperiment_v1") public var enableTrailingTrimExperiment: Bool = true
     @AppStorage("enableAccuracyRetry_v1") public var enableAccuracyRetry: Bool = true
     @AppStorage("adaptiveTailDelayEnabled_v1") public var adaptiveTailDelayEnabled: Bool = true
     @AppStorage("autoRetrySuspiciousResults_v1") public var autoRetrySuspiciousResults: Bool = true
@@ -420,7 +420,7 @@ public class AppSettings: ObservableObject {
         utteranceEndPreset = .stable
         benchmarkGateEnabled = true
         allowAutoModelPromotion = true
-        enableTrailingTrimExperiment = false
+        enableTrailingTrimExperiment = true
         enableAccuracyRetry = true
         adaptiveTailDelayEnabled = true
         autoRetrySuspiciousResults = true
@@ -440,7 +440,7 @@ public class AppSettings: ObservableObject {
     public func restoreStableDictationDefaults() {
         activeWhisperModelID = "tiny.en"
         utteranceEndPreset = .stable
-        enableTrailingTrimExperiment = false
+        enableTrailingTrimExperiment = true
         enableAccuracyRetry = true
         adaptiveTailDelayEnabled = true
         autoRetrySuspiciousResults = true

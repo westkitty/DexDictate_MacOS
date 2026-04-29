@@ -5319,3 +5319,59 @@ Rationale:
 - Behavior intentionally not changed: Commit contains no runtime-default behavior changes.
 - Current state after this checkpoint: Final checkpoint appended and ready for amend.
 - Next step / handoff note: Stage updated bible and run `git commit --amend --no-edit`; report final commit hash.
+
+### 21.01 Checkpoint — Initial Repository State Inspected
+
+- Files inspected: `docs/DEXDICTATE_BIBLE.md`
+- Commands run: `git status --short`; `git log -5 --oneline`
+- Result: HEAD is `d4f5d5f3` (meets requirement); only known untracked planning docs present.
+- Next step: Locate trailing-trim symbols and exact files to edit.
+
+### 21.02 Checkpoint — Trailing Trim Symbols Located
+
+- Files inspected: `Sources/DexDictateKit/ExperimentFlags.swift`; `Sources/DexDictateKit/Settings/AppSettings.swift`; `Sources/DexDictateKit/Services/AudioResampler.swift`; `Sources/DexDictateKit/TranscriptionEngine.swift`; related UI hooks and tests.
+- Commands run: `rg "enableTrailingTrim|enableTrailingTrimExperiment|trimTrailingSilence|enableSilenceTrim" Sources Tests`
+- Result: Exact default seams confirmed in `ExperimentFlags.swift` and `AppSettings.swift`; trailing trim behavior seam confirmed in `AudioResampler.trimTrailingSilenceCalibrated`.
+- Next step: Apply minimal default changes and add focused tests.
+
+### 21.03 Checkpoint — Trailing Trim Default Enabled
+
+- Files changed: `Sources/DexDictateKit/ExperimentFlags.swift`; `Sources/DexDictateKit/Settings/AppSettings.swift`
+- Commands run: `apply_patch` (default toggle edits)
+- Result: `enableTrailingTrim` default set to `true`; persisted `enableTrailingTrimExperiment` default set to `true`; `restoreDefaults()` and `restoreStableDictationDefaults()` now set trailing trim to `true`; `enableSilenceTrim` left `false`.
+- Next step: Add focused default/trim regression tests.
+
+### 21.04 Checkpoint — Trailing Trim Regression Tests Added
+
+- Files changed: `Tests/DexDictateTests/AppSettingsRestoreDefaultsTests.swift`; `Tests/DexDictateTests/AudioResamplerTrailingTrimTests.swift` (new); `Tests/DexDictateTests/ExperimentFlagsDefaultsTests.swift` (new)
+- Commands run: `apply_patch` (focused defaults and resampler tests)
+- Result: Added coverage for trailing-trim defaults (`on`), leading/full trim default (`off`), restore-default behavior, and trailing-only trim safety/behavior.
+- Next step: Run targeted test filters.
+
+### 21.05 Checkpoint — Targeted Tests Completed
+
+- Files inspected: targeted test outputs for settings/trim defaults.
+- Commands run: `swift test --filter AppSettingsRestoreDefaultsTests`; `swift test --filter AudioResamplerTrailingTrimTests`; `swift test --filter ExperimentFlagsDefaultsTests`
+- Result: all targeted tests passed.
+- Next step: run full validation (`swift test`, `swift run VerificationRunner`).
+
+### 21.06 Checkpoint — Full Validation Completed
+
+- Files inspected: full test and release validation outputs.
+- Commands run: `swift test`; `swift run VerificationRunner`; `./build.sh --release`; `scripts/validate_release.sh`
+- Result: all validations passed; expected Gatekeeper (`spctl`) warning present (`WARN` exit code 3) with no failures.
+- Next step: pre-commit diff review and scope check.
+
+### 21.07 Checkpoint — Pre-Commit Diff Review Completed
+
+- Files inspected: working diff and git status.
+- Commands run: `git diff --stat`; `git diff --check`; `git status --short`
+- Result: diff limited to trailing-trim defaults/tests and bible updates; no whitespace issues; known planning docs remain untracked.
+- Next step: stage relevant files, commit, append final commit checkpoint, amend to include it.
+
+### 21.08 Checkpoint — Commit Created
+
+- Files changed: committed trailing-trim defaults/tests plus bible.
+- Commands run: `git commit -m "fix: enable trailing silence trim with regression coverage"`
+- Result: commit created (`edb3cfa`) with scoped trailing-trim default + regression coverage changes.
+- Next step: amend commit to include this final checkpoint entry.
