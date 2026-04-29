@@ -3,23 +3,6 @@ import AVFoundation
 import AudioToolbox
 import Combine
 
-enum DictationStopSignal {
-    case explicitTriggerRelease
-    case explicitToggleOff
-    case silenceTimeout
-}
-
-enum DictationStopPolicy {
-    static func shouldStopActivelyDictating(for signal: DictationStopSignal) -> Bool {
-        switch signal {
-        case .explicitTriggerRelease, .explicitToggleOff:
-            return true
-        case .silenceTimeout:
-            return false
-        }
-    }
-}
-
 /// The central coordinator for the speech-recognition pipeline.
 @MainActor
 public final class TranscriptionEngine: ObservableObject {
@@ -502,12 +485,31 @@ public final class TranscriptionEngine: ObservableObject {
     }
 
     private func startSilenceCountdownIfNeeded() {
-        _ = DictationStopPolicy.shouldStopActivelyDictating(for: .silenceTimeout)
-        // Silence is allowed during active dictation and must never auto-stop recording.
-        // Explicit user action (trigger release or toggle-off) is the only stop signal.
+        let timeout = AppSettings.shared.silenceTimeout
+        guard timeout > 0 else { return }
         silenceTimeoutTask?.cancel()
-        silenceTimeoutTask = nil
-        silenceCountdown = nil
+        silenceCountdown = timeout
+        let tickInterval: Double = 0.25
+        silenceTimeoutTask = Task { @MainActor [weak self] in
+            var remaining = timeout
+            while remaining > 0 {
+                do {
+                    try await Task.sleep(nanoseconds: UInt64(tickInterval * 1_000_000_000))
+                } catch {
+                    break
+                }
+                guard let self, !Task.isCancelled else { break }
+                if self.inputLevel > 0.01 {
+                    remaining = timeout
+                } else {
+                    remaining -= tickInterval
+                }
+                self.silenceCountdown = max(0, remaining)
+            }
+            guard let self, !Task.isCancelled, self.state == .listening else { return }
+            self.silenceCountdown = nil
+            self.stopListening()
+        }
     }
 
     // NOTE: startWhisperRecognition() has been removed.

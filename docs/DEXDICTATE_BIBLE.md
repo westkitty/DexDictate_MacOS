@@ -5434,3 +5434,20 @@ Rationale:
 - Behavior changed: Active dictation should no longer stop just because silence is detected.
 - Behavior intentionally not changed: Trailing trim remains enabled after explicit stop; leading/full trim remains disabled; model, decode, output, clipboard, command grammar, plist, signing, and release behavior were not intentionally changed.
 - Next step: Review diff, commit the focused fix, push, reinstall the current app build, and manually test long pauses in hold-to-talk and toggle mode.
+
+### Explicit-stop silence fix rollback checkpoint
+
+- Timestamp: Wed Apr 29 13:52:47 EDT 2026
+- Scope: rollback of commit 62f7ee63 behavior while preserving additive Bible history
+- Summary: The explicit-stop silence patch prevented silence from ending active dictation, but live testing showed DexDictate became stuck at the Transcribing step and failed to return usable transcripts even for short phrases. The installed app was temporarily rolled back to bea489c1, and live testing confirmed transcription works again there.
+- Files changed:
+  - Sources/DexDictateKit/TranscriptionEngine.swift
+  - Tests/DexDictateTests/DictationExplicitStopPolicyTests.swift
+  - docs/DEXDICTATE_BIBLE.md
+- Decision: Restore TranscriptionEngine.swift to the last known transcribing implementation from bea489c1 and remove the policy test from the unsafe patch. The desired product behavior remains valid, but the 62f7ee63 implementation is not safe.
+- Behavior restored: Live transcription should work again using the previous recording/transcription lifecycle.
+- Known unresolved issue: DexDictate may still auto-stop or cut off after silence. That must be fixed later with a runtime-aware patch that preserves stop/collect/transcribe behavior.
+- Behavior intentionally not changed: Trailing silence trim remains enabled by default from bea489c1. Model, decode, output, clipboard, command grammar, plist, signing, and release behavior are not intentionally changed.
+- Tests run:
+  - swift test
+- Next step: Design a safer pause-tolerance fix that keeps explicit stop control without severing the live stop/collect/transcribe chain.
