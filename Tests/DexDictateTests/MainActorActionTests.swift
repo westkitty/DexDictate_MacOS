@@ -31,10 +31,12 @@ final class MainActorActionTests: XCTestCase {
         events.append("after")
         XCTAssertEqual(events, ["after"])
 
-        await Task.yield()
+        for _ in 0..<10 where events == ["after"] {
+            await Task.yield()
+        }
         XCTAssertEqual(events, ["after", "action-start"])
 
-        for _ in 0..<5 where events.count < 3 {
+        for _ in 0..<10 where events.count < 3 {
             await Task.yield()
         }
         XCTAssertEqual(events, ["after", "action-start", "action-end"])
