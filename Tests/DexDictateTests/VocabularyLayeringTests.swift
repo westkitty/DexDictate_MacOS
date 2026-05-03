@@ -44,4 +44,34 @@ final class VocabularyLayeringTests: XCTestCase {
 
         XCTAssertEqual(manager.applyEffective(to: "grab a double double from tim hortons"), "grab a Double Double from Tim Hortons")
     }
+
+    // Regression test: replacement strings containing NSRegularExpression template
+    // metacharacters ($0, $1, \1, etc.) must be output literally and not interpreted
+    // as capture-group back-references.
+    func testReplacementWithRegexTemplateMetacharactersIsOutputLiterally() {
+        let manager = VocabularyManager()
+
+        // $0 / $1 — dollar-sign back-reference syntax
+        manager.items = [
+            VocabularyItem(original: "one hundred dollars", replacement: "$100"),
+            VocabularyItem(original: "rev counter", replacement: "$1000 RPM"),
+            VocabularyItem(original: "cpp plus", replacement: "C++\\1"),
+        ]
+
+        XCTAssertEqual(
+            manager.apply(to: "one hundred dollars"),
+            "$100",
+            "Replacement '$100' must appear verbatim; NSRegularExpression must not expand $1 as a capture group"
+        )
+        XCTAssertEqual(
+            manager.apply(to: "rev counter"),
+            "$1000 RPM",
+            "Replacement '$1000 RPM' must appear verbatim"
+        )
+        XCTAssertEqual(
+            manager.apply(to: "cpp plus"),
+            "C++\\1",
+            "Replacement 'C++\\1' must appear verbatim; backslash-digit must not be treated as a back-reference"
+        )
+    }
 }

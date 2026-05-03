@@ -1272,3 +1272,45 @@ Files that exist in the repo but were not in §9 and are worth knowing about:
 | `.claude/settings.local.json` | Claude Code allowed commands (git, build, swift, etc.) |
 
 **Status:** Complete.
+
+---
+
+### Entry 13: VocabularyManager Regex Template Escape Bug Fix (2026-05-03)
+
+**Goal:**
+- Apply the one confirmed real bug found in the Entry 12 deep-scan: `NSRegularExpression` was interpreting capture-group backreference syntax (`$0`, `$1`, `\1`, etc.) in user-supplied vocabulary replacement strings, silently corrupting output.
+
+**Bug description:**
+- File: `Sources/DexDictateKit/VocabularyManager.swift`, line 113 (pre-fix).
+- `regex.stringByReplacingMatches(in:options:range:withTemplate:)` interprets the `withTemplate:` argument using NSRegularExpression template syntax. Dollar-sign (`$0`, `$1`...) and backslash-digit (`\1`...) sequences are treated as capture-group back-references.
+- A user vocabulary entry with replacement `"$100"` or `"C++\1"` would produce corrupted output (e.g. `"$100"` → the entire matched string repeated, `"C++\1"` → `"C++"` with the back-reference silently dropped).
+- No existing test covered this path.
+
+**Fix applied:**
+```swift
+// BEFORE (buggy):
+processed = regex.stringByReplacingMatches(in: processed, options: [], range: range, withTemplate: item.replacement)
+
+// AFTER (correct):
+let escapedReplacement = NSRegularExpression.escapedTemplate(for: item.replacement)
+processed = regex.stringByReplacingMatches(in: processed, options: [], range: range, withTemplate: escapedReplacement)
+```
+`NSRegularExpression.escapedTemplate(for:)` escapes all template metacharacters so the replacement string is always treated as a literal.
+
+**Dead code noted (no fix):**
+- `recognitionTask` property in `TranscriptionEngine.swift` is never set to non-nil — harmless leftover from a removed streaming approach. Documented only.
+
+**Files changed:**
+| File | Change |
+|---|---|
+| `Sources/DexDictateKit/VocabularyManager.swift` | Wrap `item.replacement` with `NSRegularExpression.escapedTemplate(for:)` before passing to `withTemplate:` |
+| `Tests/DexDictateTests/VocabularyLayeringTests.swift` | Added `testReplacementWithRegexTemplateMetacharactersIsOutputLiterally()` — covers `$100`, `$1000 RPM`, `C++\1` |
+| `BIBLE.md` | This entry |
+
+**Test results:**
+- Before fix: 171 tests (baseline confirmed via prior session).
+- After fix + new regression test: **172 tests, 0 failures, EXIT_CODE:0** (run 2026-05-03 15:58:11).
+
+**Commit:** `fix: escape regex replacement templates in VocabularyManager to prevent capture-group corruption`
+
+**Next step:** No further correctness fixes identified. See Entry 13 improvement suggestions for prioritised enhancement candidates.

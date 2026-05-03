@@ -110,7 +110,8 @@ public class VocabularyManager: ObservableObject {
             
             if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) {
                 let range = NSRange(processed.startIndex..<processed.endIndex, in: processed)
-                processed = regex.stringByReplacingMatches(in: processed, options: [], range: range, withTemplate: item.replacement)
+                let escapedReplacement = NSRegularExpression.escapedTemplate(for: item.replacement)
+                processed = regex.stringByReplacingMatches(in: processed, options: [], range: range, withTemplate: escapedReplacement)
             } else {
                  processed = processed.replacingOccurrences(of: item.original, with: item.replacement, options: .caseInsensitive)
             }
