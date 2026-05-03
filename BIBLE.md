@@ -1022,3 +1022,253 @@ This restarts the macOS CoreAudio daemon (`coreaudiod`). macOS automatically rel
 
 **Status:**
 - Complete.
+
+---
+
+### Entry 12: Full Project Deep-Scan and SNAPSHOT Archive (2026-05-03)
+
+**Goal:**
+- Perform an exhaustive read-only audit of every element of the project and create a git-ignored reference archive (`SNAPSHOT/`) capturing the exact state of all config files and runtime settings at v1.5.2.
+
+**Why this was done:**
+- Future AI sessions were spending multiple turns re-discovering project structure, build constants, UserDefaults schema, and dependency pins that are stable and could be referenced directly. This entry and the SNAPSHOT/ directory eliminate that redundant search.
+
+---
+
+#### Corrections to Prior Bible Sections
+
+The following inaccuracies were found in §9 (File & Folder Structure) relative to the actual v1.5.2 codebase. These are recorded as amendments; §9 itself is preserved per §16.
+
+**§9 Amendment A — DexDictate/ source layout is flat, not nested:**
+The §9 diagram shows `Sources/DexDictate/Views/` containing `MenuBarView.swift`, `SettingsPanel.swift`, `HistoryView.swift`, `OnboardingView.swift`. The actual layout has no `Views/` subdirectory. All 26 Swift files sit directly under `Sources/DexDictate/`. The actual filenames differ from §9:
+
+| §9 documented name | Actual filename |
+|---|---|
+| `AppDelegate.swift` | Subsumed into `DexDictateApp.swift` — no separate AppDelegate.swift |
+| `MenuBarView.swift` | Does not exist; menu bar scene is handled in `DexDictateApp.swift` + `MenuBarIconController.swift` |
+| `SettingsPanel.swift` | `QuickSettingsView.swift` (1373 lines) |
+| `HistoryView.swift` | Exists — correct |
+| `OnboardingView.swift` | Exists — correct |
+
+Other actual top-level `Sources/DexDictate/` files not in §9:
+`BenchmarkCaptureWindow.swift`, `ChromeButton.swift`, `ControlsView.swift`, `CustomCommandsSheet.swift`, `DictationIntents.swift`, `FlavorTickerView.swift`, `FloatingHUD.swift`, `FooterView.swift`, `HelpView.swift`, `HelpWindowController.swift`, `HistoryWindow.swift`, `ImportedFileTranscriptionSheet.swift`, `LaunchIntroController.swift`, `MenuBarIconController.swift`, `PerAppInsertionSheet.swift`, `PermissionBannerView.swift`, `ShortcutRecorder.swift`, `StatsTickerView.swift`, `SurfaceTokens.swift`, `VocabularyCorrectionSheet.swift`, `VocabularySettingsView.swift`
+
+**§9 Amendment B — Scripts directory contents differ:**
+§9 documents `scripts/build_release.sh`. This file does not exist. The actual `scripts/` directory contains:
+`fetch_model.sh`, `validate_release.sh`, `benchmark.sh`, `benchmark_regression.sh`, `trim_benchmark_corpus.sh`, `create_signing_cert.sh`, `setup_dev_env.sh`, `run_quality_paths.sh`, `verify_audio_route_recovery.sh`
+
+**§9 Amendment C — Whisper model size:**
+§9 and the FLAGS section state `tiny.en.bin` is 80 MB. The actual download SHA in `scripts/fetch_model.sh` matches the 74 MB ggml-tiny.en binary. Treat 74 MB as correct.
+
+**§9 Amendment D — `install.sh` does not exist:**
+§9 lists `install.sh` as a thin wrapper around `build.sh`. No such file exists; `build.sh` is the only installer.
+
+**§9 Amendment E — DexDictateKit contains 48 Swift files, not split into sub-packages:**
+§9 is consistent with the actual layout — DexDictateKit is a single SPM target, not sub-packages. Confirmed. No amendment needed.
+
+---
+
+#### Current Exact Project State (as of 2026-05-03, v1.5.2, commit 5969b484)
+
+**Identity:**
+
+| Property | Value |
+|---|---|
+| Version | 1.5.2 |
+| Bundle ID | `com.westkitty.dexdictate.macos` |
+| Swift Tools Version | 5.9 |
+| Min macOS | 14.0 (Sonoma) |
+| Architecture | `arm64` only (build.sh rejects Rosetta shells) |
+| Installed at | `/Applications/DexDictate.app` |
+| Settings schema | v2 (tracked via `settingsSchemaVersion = 2` in UserDefaults) |
+
+**Dependency pin (Package.resolved):**
+```
+SwiftWhisper — https://github.com/exPHAT/SwiftWhisper.git
+Revision: deb1cb6a27256c7b01f5d3d2e7dc1dcc330b5d01
+```
+Pinned at this specific revision (not a tag) to force `-O3` optimization in Debug builds. Do not upgrade without benchmarking; Debug inference without this pin is unusably slow.
+
+**Whisper model:**
+```
+File:   Sources/DexDictateKit/Resources/tiny.en.bin
+Size:   74 MB
+SHA256: 921e4cf8686fdd993dcd081a5da5b6c365bfde1162e72b08d75ac75289920b1f
+Fetch:  bash scripts/fetch_model.sh
+```
+Git-ignored. Not committed. Must be fetched before first build.
+
+**Code signing:**
+- Cert name: `DexDictate Development` (self-signed, RSA 2048, in login keychain)
+- Created via: `scripts/create_signing_cert.sh`
+- Fallback: ad-hoc signing (`-`) if cert is absent
+- Entitlements: `com.apple.security.device.audio-input` + `com.apple.security.device.input-monitoring` only
+
+**Build targets (4):**
+
+| Target | Type | Path | Notes |
+|---|---|---|---|
+| `DexDictateKit` | Library | `Sources/DexDictateKit/` | Core engine — 48 Swift files + Resources bundle |
+| `DexDictate` | Executable | `Sources/DexDictate/` | App UI layer — 26 Swift files |
+| `DexDictateTests` | Test | `Tests/DexDictateTests/` | 44 test files |
+| `VerificationRunner` | Executable | `Sources/VerificationRunner/` | Standalone benchmark/verification binary used by `build.sh` |
+
+**Source file counts:**
+- `Sources/DexDictate/`: 26 Swift files
+- `Sources/DexDictateKit/`: 48 Swift files
+- `Sources/VerificationRunner/`: 1 Swift file
+- `Tests/DexDictateTests/`: 44 Swift files
+- **Total: 119 Swift files, ~456 files by `wc -l` manifest**
+
+**Benchmark thresholds (`benchmark_baseline.json`):**
+```json
+{
+  "benchmarkVersion": "2026-03-27",
+  "stableModelID": "tiny.en",
+  "thresholds": {
+    "maxAverageWER": 0.08,
+    "maxP95LatencyMs": 2200,
+    "minImprovementWERRatio": 0.2,
+    "maxP95LatencyRegressionRatio": 0.35
+  }
+}
+```
+
+**Active UserDefaults (v1.5.2 runtime snapshot):**
+
+Key settings at the time of this audit (full dump in `SNAPSHOT/userdefaults_snapshot.txt`):
+
+| Key | Value | Notes |
+|---|---|---|
+| `activeWhisperModelID_v1` | `tiny.en` | Active inference model |
+| `modelSelectionMode_v1` | `Auto Idle Benchmark` | Promotes to larger model when idle |
+| `triggerMode` | `Hold to Talk` | |
+| `inputButton` | `Middle Mouse` | |
+| `silenceTimeout` | `2` | Seconds |
+| `autoPaste` | `1` | Enabled |
+| `useAccessibilityInsertion` | `1` | Enabled |
+| `appendMode` | `0` | Disabled |
+| `enableCorrectionSheet_v1` | `1` | Enabled |
+| `enableAccuracyRetry_v1` | `1` | Enabled |
+| `enableSilenceTrim_v1` | `0` | Disabled |
+| `enableTrailingTrimExperiment_v1` | `0` | Disabled |
+| `silverTongueEnabled_v1` | `0` | Disabled |
+| `silverTongueSelectedVoiceID_v1` | `user-sample-clone-2026-04-10-b` | Stored even when disabled |
+| `selectedMenuBarIconIdentifier_v2` | `dexdictate-icon-aussie-01.png` | |
+| `menuBarDisplayMode_v1` | `Mic + Text` | |
+| `appearanceTheme_stored` | `System` | |
+| `showFlavorTicker_v1` | `1` | Enabled |
+| `showDictationStats_v1` | `0` | Disabled |
+| `showFloatingHUD` | `0` | Disabled |
+| `persistHistory_v1` | `0` | Disabled |
+| `profanityFilter` | `0` | Disabled |
+| `safeModeEnabled` | `0` | Disabled |
+| `benchmarkGateEnabled_v1` | `1` | Enabled |
+| `selectedStartSound` | `Tink` | |
+| `selectedStopSound` | `Frog` | |
+| `launchAtLogin` | `0` | Disabled |
+| `hasCompletedOnboarding` | `1` | Onboarding done |
+| `settingsSchemaVersion` | `2` | Migration version |
+| `utteranceEndPreset_v1` | `Stable` | |
+| `localizationMode_v1` | `standard` | |
+
+**Runtime file locations:**
+
+| Path | Purpose |
+|---|---|
+| `~/Library/Preferences/com.westkitty.dexdictate.macos.plist` | UserDefaults on disk |
+| `~/Library/Application Support/DexDictate/debug.log` | Runtime debug log |
+| `~/Library/Application Support/DexDictate/diagnostics.jsonl` | Structured diagnostics (JSONL) |
+
+**No LaunchAgent plists** — DexDictate uses `SMAppService` for launch-at-login, not a plist in `~/Library/LaunchAgents/`.
+
+**App bundle (installed at `/Applications/DexDictate.app`):**
+```
+Contents/
+  MacOS/DexDictate              ← arm64 executable
+  Helpers/VerificationRunner    ← arm64 helper
+  Resources/
+    AppIcon.icns
+    benchmark_baseline.json
+    DexDictate_MacOS_DexDictateKit.bundle/
+      tiny.en.bin               ← 74 MB Whisper model
+      profanity_list.json
+      transcripts.json
+      OnboardingWelcomeAnimation.mp4
+      OnboardingPermissionsAnimation.mp4
+      OnboardingCompletionAnimation.mp4
+      Assets.xcassets/ + 120+ image assets
+  Info.plist
+  PkgInfo
+  _CodeSignature/CodeResources
+```
+
+---
+
+#### SNAPSHOT Archive
+
+A git-ignored reference archive was created at `SNAPSHOT/` in the project root. It contains verbatim copies of all config files and generated captures from this audit. The directory is excluded by a `SNAPSHOT/` entry at line 61 of `.gitignore`.
+
+| Archive file | Contents |
+|---|---|
+| `README.md` | Master index: key facts, file descriptions, restore checklist |
+| `version.txt` | `1.5.2` |
+| `Package.swift` | SPM manifest |
+| `Package.resolved` | Locked dependency (SwiftWhisper pin) |
+| `Info.plist` | Bundle metadata |
+| `DexDictate.entitlements` | Entitlements |
+| `swiftlint.yml` | Lint config |
+| `benchmark_baseline.json` | Regression thresholds |
+| `ci_workflow.yml` | GitHub Actions pipeline |
+| `settings_local.json` | Claude Code local permissions |
+| `build_constants.txt` | All constants from `build.sh` |
+| `file_inventory.txt` | 1358 project files with sizes |
+| `swift_file_manifest.txt` | 456 Swift files with line counts |
+| `userdefaults_snapshot.txt` | Live `defaults read` — 50 keys |
+| `app_bundle_structure.txt` | Bundle tree (143 entries) |
+| `codesign_details.txt` | Signing identity + entitlements dump |
+
+**To refresh the SNAPSHOT archive** after future changes:
+```bash
+cd ~/Projects/DexDictate_MacOS
+cp Package.swift Package.resolved Sources/DexDictate/Info.plist \
+   Sources/DexDictate/DexDictate.entitlements .swiftlint.yml \
+   benchmark_baseline.json .github/workflows/main.yml \
+   .claude/settings.local.json VERSION SNAPSHOT/
+grep -E '^(APP_NAME|BUNDLE_IDENTIFIER|CERT_NAME|...)=' build.sh > SNAPSHOT/build_constants.txt
+defaults read com.westkitty.dexdictate.macos > SNAPSHOT/userdefaults_snapshot.txt
+find /Applications/DexDictate.app -not -path '*/_CodeSignature/*' | sort > SNAPSHOT/app_bundle_structure.txt
+codesign -dv --verbose=4 /Applications/DexDictate.app > SNAPSHOT/codesign_details.txt
+```
+
+---
+
+#### Additional Notable Files for Future AI Sessions
+
+Files that exist in the repo but were not in §9 and are worth knowing about:
+
+| File | Purpose |
+|---|---|
+| `BIBLE.md` | This file — authoritative reference |
+| `BIBLE.md` version header | `version: 1.0.1`, `app_version: 1.5.2` |
+| `SECURITY_AUDIT_REPORT.md` | Security analysis (25 KB) |
+| `VERIFICATION_REPORT.md` | Build/test verification (13 KB) |
+| `CODEX_VERIFICATION_REPORT.md` | Codex-specific verification |
+| `DEXDICTATE_FIX_PLAN.md` | Tracked issue list (Issue 10: UI tests not yet implemented) |
+| `DEXDICTATE_FILE_MAP.md` | Alternate file map reference |
+| `DEXDICTATE_FEATURE_MATRIX.md` | Feature matrix |
+| `DEXDICTATE_READINESS.md` | Release readiness tracker |
+| `AUDIT_DEXDICTATE.md` | Prior AI audit |
+| `BIBLE.md` | This document |
+| `baseline.csv` | Performance baseline CSV |
+| `benchmark_baseline.json` | Machine-readable thresholds used by `build.sh` and `benchmark.sh` |
+| `templates/Info.plist.template` | Template used by `build.sh` to generate bundle `Info.plist` |
+| `dexdictate-ux/` | UX design files with full Node/pnpm dependency tree (node_modules — not Swift) |
+| `docs/help/HELP_CONTENT.md` | Full Help IA (18 sections, search aliases, screenshot placements) |
+| `docs/help/HELP_ASSETS.md` | Screenshot shot list (17 captures, framing instructions) |
+| `docs/Zoom_QA_Checklist.md` | Manual QA checklist for Zoom workflows |
+| `sample_corpus/` | WAV audio files for benchmark corpus |
+| `assets/` | Icon variants, marketing images |
+| `.claude/settings.local.json` | Claude Code allowed commands (git, build, swift, etc.) |
+
+**Status:** Complete.

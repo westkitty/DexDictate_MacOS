@@ -56,3 +56,6 @@ Sources/DexDictateKit/Resources/tiny.en.bin
 /output/
 .tmp_onboarding_review/
 scripts/batch_circle_cutout.py
+
+# Project state snapshot archive (git-ignored, for local reference only)
+SNAPSHOT/
