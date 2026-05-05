@@ -123,7 +123,6 @@ public final class TranscriptionEngine: ObservableObject {
     private weak var permissionManager: PermissionManager?
     private var currentSessionId = UUID()
     
-    private var recognitionTask: Task<Void, Error>?
     private var cancellables = Set<AnyCancellable>()
     private var lifecycle = EngineLifecycleStateMachine()
     private var lastCapturedUtterance: (samples: [Float], sampleRate: Double)?
@@ -537,8 +536,6 @@ public final class TranscriptionEngine: ObservableObject {
         // 1. Stop the audio engine and atomically collect the full utterance buffer.
         // stopAndCollect() runs on audioQueue.sync — safe from @MainActor because
         // audioQueue never dispatches back to main synchronously.
-        recognitionTask?.cancel()
-        recognitionTask = nil
         automaticRetryOriginalText = nil
 
         let (rawSamples, sourceSampleRate) = audioService.stopAndCollect()
