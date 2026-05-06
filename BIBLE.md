@@ -1314,3 +1314,98 @@ processed = regex.stringByReplacingMatches(in: processed, options: [], range: ra
 **Commit:** `fix: escape regex replacement templates in VocabularyManager to prevent capture-group corruption`
 
 **Next step:** No further correctness fixes identified. See Entry 13 improvement suggestions for prioritised enhancement candidates.
+
+---
+
+### Entry 14: Pause Browser Media During Dictation (2026-05-06)
+
+**Commit:** `2f72f9bc feat: pause browser media during dictation`
+
+**Goal:**
+- Automatically pause browser video/audio when dictation starts, then resume only the media DexDictate paused when dictation ends.
+- Skips entirely when Zoom is running to avoid interfering with calls.
+- Off by default; user-controlled via Quick Settings.
+
+**Feature setting added:**
+- Key: `pauseBrowserMediaDuringDictation_v1` (versioned `@AppStorage`, `Bool`, default `false`)
+- Added to `AppSettings.shared.restoreDefaults()`.
+
+**UI added:**
+- Quick Settings → Input panel → Toggle: "Pause browser media during dictation"
+- Helper text below toggle: "Pauses browser video/audio while recording, then resumes only media DexDictate paused. Skips when Zoom is active."
+
+**New files:**
+| File | Purpose |
+|---|---|
+| `Sources/DexDictateKit/Services/BrowserMediaPauseService.swift` | Service + protocol + session types |
+| `Tests/DexDictateTests/BrowserMediaPauseServiceTests.swift` | 10 unit tests (service logic, Zoom guard, multi-browser, resume filter) |
+| `Tests/DexDictateTests/TranscriptionEngineBrowserMediaPauseTests.swift` | 8 unit tests (injection, lifecycle wiring) |
+
+**Protocol:**
+```swift
+public protocol BrowserMediaControlling: Sendable {
+    func pauseIfNeeded() async -> BrowserMediaPauseSession?
+    func resume(session: BrowserMediaPauseSession) async
+}
+```
+`BrowserMediaPauseSession` carries `[BrowserEntry]` (bundleID + pausedCount). `hasPausedMedia` is a computed property. `BrowserMediaPauseService` is the production implementation; tests inject a mock conformance.
+
+**TranscriptionEngine wiring:**
+- `BrowserMediaControlling` injected via `init(browserMediaController:)` (default: `BrowserMediaPauseService(settingsProvider: { AppSettings.shared.pauseBrowserMediaDuringDictation })`).
+- `activeBrowserMediaPauseSession: BrowserMediaPauseSession?` stored as a private property.
+- In `startListening()`: a `Task` awaits `pauseIfNeeded()`, stores the session, then starts `audioService.startRecordingAsync`. Pause occurs before the audio engine opens. A state guard inside the Task handles the race where `stopSystem()` is called while pause is still in-flight.
+- `resumeActiveBrowserMediaSession()` is a private helper that nil-checks, clears the property, then fires a detached `Task` to call `resume(session:)`.
+- Resume is called on **all dictation exit paths**:
+  - `finalizeTranscription` defer block (normal completion)
+  - `handleWhisperResult` empty branch (no speech detected)
+  - `startListening()` audio start `.failure` callback
+  - `stopListening()` Whisper-refused path
+  - Route recovery failure callback in `init`
+  - `stopSystem()`
+
+**Supported browsers (v1):**
+| Browser | Bundle ID |
+|---|---|
+| Google Chrome | `com.google.Chrome` |
+| Brave Browser | `com.brave.Browser` |
+| Microsoft Edge | `com.microsoft.edgemac` |
+
+**Safari excluded (intentional):**
+Safari does not reliably support `execute tab javascript` via AppleScript — the entitlement is off by default for most users and the call fails silently. Including Safari would cause the feature to appear broken for every Safari user without any error. Excluded in v1; may be reconsidered if a reliable alternative (e.g. WKWebView scripting) becomes viable.
+
+**Zoom guard:**
+If `us.zoom.xos` is in the running-apps list when `pauseIfNeeded()` is called, the method returns `nil` immediately — no browser scripts are run, no Automation permission prompt is triggered, and no session is stored.
+
+**Design decisions (what was deliberately avoided):**
+- No global media keys (would affect native apps like Music.app, QuickTime, etc.)
+- No system volume ducking
+- No native media app control
+- No blind play/pause toggle (would restart already-paused media)
+
+**Dataset marker pattern:**
+Pause script: sets `el.dataset.dexdictatePaused = 'true'` on each `<video>`/`<audio>` element that is currently playing, then calls `el.pause()`. Returns the count of paused elements.
+Resume script: finds elements where `el.dataset.dexdictatePaused === 'true'`, deletes the attribute, calls `el.play()`. Only elements DexDictate paused are ever resumed.
+
+**Production implementation:**
+Uses `/usr/bin/osascript` via `Process` (not `NSAppleScript` — `NSAppleEventDescriptor` value accessors are broken in Swift 6.2 / macOS 26). AppleScript iterates all windows and tabs of each supported browser, executes the JS string, and accumulates the integer return value. Newlines in the JS are replaced with spaces before embedding in the AppleScript string literal.
+
+**Prerequisite cleanup included in commit:**
+- `VocabularyManager.swift`: fixed unescaped `"` in `errorDescription` string (caused prior compile warnings).
+- `ApplicationContextTracker.swift`: replaced removed `OperationQueue.main` with `queue: nil` for macOS 26 SDK compatibility.
+- Seven `VocabularyManager.add()` call sites across `VerificationRunner/main.swift`, `ControlsView.swift`, `HistoryWindow.swift`, and `VocabularySettingsView.swift`: added `try?` (the method was made `throws` after callers were written).
+
+**Verification:**
+- `swift build` → `Build complete` (one pre-existing Sendable warning on `defaultScriptRunner`, not new)
+- `swift test` → **190/190 passed, 0 failures**
+- `swift test --filter BrowserMedia` → **18/18 passed** (10 service + 8 engine tests)
+
+**Manual QA still required:**
+Unit tests cannot exercise `Process`/`osascript`, real browser Automation permission prompts, or the actual JS dataset-marker behaviour on live tabs. The following must be verified on Big Mac before considering the feature production-ready:
+- Chrome YouTube playing → dictation pauses it → resumes on completion
+- Pre-paused media not restarted by resume
+- Multiple tabs with mixed play/paused states
+- Brave and/or Edge if installed
+- Zoom running → zero browser interaction
+- Browser Automation permission granted and denied paths
+- Empty-result path (no speech detected) → media resumes
+- `stopSystem()` while paused → media resumes, no hang
