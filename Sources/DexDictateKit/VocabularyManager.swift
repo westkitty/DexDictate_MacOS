@@ -22,7 +22,7 @@ public enum VocabularyManagerError: LocalizedError {
         case .emptyPattern:
             return "Vocabulary pattern must not be blank."
         case .duplicatePattern(let original):
-            return "A vocabulary entry for "\(original)" already exists."
+            return "A vocabulary entry for \"\(original)\" already exists."
         }
     }
 }

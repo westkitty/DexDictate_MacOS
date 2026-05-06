@@ -189,7 +189,7 @@ struct FullHistoryView: View {
         }
         .sheet(isPresented: $isCorrectionSheetPresented) {
             VocabularyCorrectionSheet(draft: $draft) {
-                vocabularyManager.add(
+                try? vocabularyManager.add(
                     original: draft.incorrectPhrase.trimmingCharacters(in: .whitespacesAndNewlines),
                     replacement: draft.correctPhrase.trimmingCharacters(in: .whitespacesAndNewlines)
                 )

@@ -108,6 +108,12 @@ struct QuickSettingsView: View {
                                 .foregroundStyle(.white.opacity(0.5))
                                 .fixedSize(horizontal: false, vertical: true)
 
+                            Toggle("Pause browser media during dictation", isOn: $settings.pauseBrowserMediaDuringDictation)
+                            Text("Pauses browser video/audio while recording, then resumes only media DexDictate paused. Skips when Zoom is active.")
+                                .font(.caption2)
+                                .foregroundStyle(.white.opacity(0.5))
+                                .fixedSize(horizontal: false, vertical: true)
+
                             DisclosureGroup("Route Health", isExpanded: $routeHealthExpanded) {
                                 VStack(alignment: .leading, spacing: 8) {
                                     QuickSettingsSummaryValue(

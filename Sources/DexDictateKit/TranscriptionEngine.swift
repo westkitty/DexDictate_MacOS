@@ -106,6 +106,8 @@ public final class TranscriptionEngine: ObservableObject {
     private let audioService = AudioRecorderService()
     private let whisperService = WhisperService()
     private let outputCoordinator: OutputCoordinating
+    private let browserMediaController: BrowserMediaControlling
+    private var activeBrowserMediaPauseSession: BrowserMediaPauseSession?
     public let vocabularyManager = VocabularyManager()
     private let commandProcessor = CommandProcessor()
     public let customCommandsManager = CustomCommandsManager()
@@ -160,8 +162,14 @@ public final class TranscriptionEngine: ObservableObject {
     
     public static let shared = TranscriptionEngine()
              
-    public init(outputCoordinator: OutputCoordinating = OutputCoordinator()) {
+    public init(
+        outputCoordinator: OutputCoordinating = OutputCoordinator(),
+        browserMediaController: BrowserMediaControlling = BrowserMediaPauseService(
+            settingsProvider: { AppSettings.shared.pauseBrowserMediaDuringDictation }
+        )
+    ) {
         self.outputCoordinator = outputCoordinator
+        self.browserMediaController = browserMediaController
         // AudioRecorderService.inputLevel is @MainActor @Published — safe to bind directly.
         audioService.$inputLevel
             .assign(to: &$inputLevel)
@@ -210,6 +218,7 @@ public final class TranscriptionEngine: ObservableObject {
                 self.silenceTimeoutTask = nil
                 self.silenceCountdown = nil
                 self.resultFeedback = .idle
+                self.resumeActiveBrowserMediaSession()
                 _ = self.applyLifecycle(.audioCaptureFailed, context: "routeRecoveryFailed")
                 self.statusText = failure.recoveryNotice
                     ?? NSLocalizedString("Audio device changed. Ready to record.", comment: "Status: Route change")
@@ -239,6 +248,7 @@ public final class TranscriptionEngine: ObservableObject {
         silenceTimeoutTask?.cancel()
         silenceTimeoutTask = nil
         silenceCountdown = nil
+        resumeActiveBrowserMediaSession()
         inputMonitor?.stop()
         audioService.stopRecording()
         _ = applyLifecycle(.systemStopped, context: "stopSystem")
@@ -425,44 +435,64 @@ public final class TranscriptionEngine: ObservableObject {
             SoundPlayer.play(AppSettings.shared.selectedStartSound)
         }
 
-        // All AVAudioEngine operations (inputNode, prepare, start) run on AudioRecorderService's
-        // internal audioQueue — fully off the main actor. The completion block fires back on
-        // @MainActor so we can update state without re-entering the main thread.
+        // Pause browser media, then start the audio engine. Both steps run on the
+        // @MainActor Task (pauseIfNeeded is async; startRecordingAsync dispatches
+        // internally to audioQueue so there's no blocking here).
         let uid = AppSettings.shared.inputDeviceUID
-        audioService.startRecordingAsync(inputDeviceUID: uid) { [weak self] result in
+        let ctrl = browserMediaController
+        Task { [weak self] in
             guard let self else { return }
-            switch result {
-            case .failure(let error):
-                Safety.log("ERROR: startListening() — audio engine failed: \(error) — resetting state to .ready")
-                let userFacingMessage = userFacingAudioStartFailureMessage(for: error)
-                let desc = userFacingMessage.lowercased()
-                if desc.contains("permission") || desc.contains("unauthorized") {
-                    self.statusText = NSLocalizedString("Microphone access lost. Please check system preferences.", comment: "Status: Permission revoked during recording")
-                    self.permissionManager?.refreshPermissions()
-                } else {
-                    self.statusText = userFacingMessage
+            let session = await ctrl.pauseIfNeeded()
+            self.activeBrowserMediaPauseSession = session
+            // Guard: state may have changed while awaiting pause (e.g. stopSystem()).
+            guard self.state == .listening else {
+                if let session { await ctrl.resume(session: session) }
+                self.activeBrowserMediaPauseSession = nil
+                return
+            }
+            self.audioService.startRecordingAsync(inputDeviceUID: uid) { [weak self] result in
+                guard let self else { return }
+                switch result {
+                case .failure(let error):
+                    Safety.log("ERROR: startListening() — audio engine failed: \(error) — resetting state to .ready")
+                    let userFacingMessage = self.userFacingAudioStartFailureMessage(for: error)
+                    let desc = userFacingMessage.lowercased()
+                    if desc.contains("permission") || desc.contains("unauthorized") {
+                        self.statusText = NSLocalizedString("Microphone access lost. Please check system preferences.", comment: "Status: Permission revoked during recording")
+                        self.permissionManager?.refreshPermissions()
+                    } else {
+                        self.statusText = userFacingMessage
+                    }
+                    self.resultFeedback = .idle
+                    self.pendingOutputTargetApplication = nil
+                    self.currentRecordingStartedAt = nil
+                    self.resumeActiveBrowserMediaSession()
+                    _ = self.applyLifecycle(.audioCaptureFailed, context: "audio start failure")
+                case .success(let report):
+                    Safety.log(
+                        "Audio engine started successfully — finalDecision=\(report.finalDecisionDescription), retries=\(report.retryCount), usedSystemDefault=\(report.usedSystemDefault)",
+                        category: .audio
+                    )
+                    self.recordAudioStart(report)
+                    if report.shouldClearStoredPreferredUID {
+                        AppSettings.shared.inputDeviceUID = ""
+                    }
+                    if report.usedSystemDefault {
+                        self.statusText = report.recoveryNotice
+                            ?? NSLocalizedString("Listening on System Default input.", comment: "Status: Fallback input")
+                    }
+                    Safety.log("Audio engine started successfully — accumulating audio until trigger release")
+                    self.startSilenceCountdownIfNeeded()
                 }
-                self.resultFeedback = .idle
-                self.pendingOutputTargetApplication = nil
-                self.currentRecordingStartedAt = nil
-                _ = self.applyLifecycle(.audioCaptureFailed, context: "audio start failure")
-            case .success(let report):
-                Safety.log(
-                    "Audio engine started successfully — finalDecision=\(report.finalDecisionDescription), retries=\(report.retryCount), usedSystemDefault=\(report.usedSystemDefault)",
-                    category: .audio
-                )
-                self.recordAudioStart(report)
-                if report.shouldClearStoredPreferredUID {
-                    AppSettings.shared.inputDeviceUID = ""
-                }
-                if report.usedSystemDefault {
-                    self.statusText = report.recoveryNotice
-                        ?? NSLocalizedString("Listening on System Default input.", comment: "Status: Fallback input")
-                }
-                Safety.log("Audio engine started successfully — accumulating audio until trigger release")
-                self.startSilenceCountdownIfNeeded()
             }
         }
+    }
+
+    private func resumeActiveBrowserMediaSession() {
+        guard let session = activeBrowserMediaPauseSession else { return }
+        activeBrowserMediaPauseSession = nil
+        let ctrl = browserMediaController
+        Task { await ctrl.resume(session: session) }
     }
 
     private func userFacingAudioStartFailureMessage(for error: Error) -> String {
@@ -595,6 +625,7 @@ public final class TranscriptionEngine: ObservableObject {
             liveTranscript = ""
             resultFeedback = .idle
             activityPhase = .ready
+            resumeActiveBrowserMediaSession()
             _ = applyLifecycle(.transcriptionCompleted, context: "whisper unavailable")
         }
     }
@@ -656,6 +687,7 @@ public final class TranscriptionEngine: ObservableObject {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         Safety.log("handleWhisperResult — \(trimmed.isEmpty ? "empty" : "\(trimmed.count) chars")")
         if trimmed.isEmpty {
+            resumeActiveBrowserMediaSession()
             _ = applyLifecycle(.transcriptionCompleted, context: "empty whisper result")
             statusText = NSLocalizedString("Ready", comment: "Status: Ready to dictate")
             resultFeedback = .noSpeechDetected
@@ -708,6 +740,7 @@ public final class TranscriptionEngine: ObservableObject {
         // Without this, early returns (e.g. command-only utterances) can leave state
         // stuck at .transcribing and block the next trigger press.
         defer {
+            resumeActiveBrowserMediaSession()
             pendingOutputTargetApplication = nil
             automaticRetryOriginalText = nil
             whisperService.setInitialPrompt(nil)

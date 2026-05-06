@@ -165,7 +165,7 @@ private func runGreenPath() {
 
     let vocab = VocabularyManager()
     vocab.items = []
-    vocab.add(original: "brb", replacement: "Be Right Back")
+    try? vocab.add(original: "brb", replacement: "Be Right Back")
     let vocabResult = vocab.apply(to: "I will brb shortly")
     checkEqual(path, vocabResult, "I will Be Right Back shortly", "vocabulary substitution works")
 
@@ -223,7 +223,7 @@ private func runRedPath() {
 
     let vocab = VocabularyManager()
     vocab.items = []
-    vocab.add(original: "Hello (World)", replacement: "Hi Earth")
+    try? vocab.add(original: "Hello (World)", replacement: "Hi Earth")
     let regexResult = vocab.apply(to: "I say Hello (World) to you")
     checkEqual(path, regexResult, "I say Hi Earth to you", "special characters are escaped safely")
 
@@ -298,8 +298,8 @@ private func runEdgeCasePath() {
 
     let vocab = VocabularyManager()
     vocab.items = []
-    vocab.add(original: "test", replacement: "TEST")
-    vocab.add(original: "testing", replacement: "TESTING")
+    try? vocab.add(original: "test", replacement: "TEST")
+    try? vocab.add(original: "testing", replacement: "TESTING")
     let overlap = vocab.apply(to: "testing 1 2 3")
     checkEqual(path, overlap, "TESTING 1 2 3", "overlapping vocabulary terms respect word boundaries")
 

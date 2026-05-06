@@ -34,7 +34,7 @@ public final class ApplicationContextTracker: ObservableObject {
         activationObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification,
             object: nil,
-            queue: .main
+            queue: nil
         ) { [weak self] notification in
             MainActor.assumeIsolated { [weak self] in
                 self?.handleActivation(notification)

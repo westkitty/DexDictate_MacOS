@@ -318,7 +318,7 @@ struct ControlsView: View {
             let incorrect = correctionDraft.incorrectPhrase.trimmingCharacters(in: .whitespacesAndNewlines)
             let corrected = correctionDraft.correctPhrase.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !incorrect.isEmpty, !corrected.isEmpty else { return }
-            engine.vocabularyManager.add(original: incorrect, replacement: corrected)
+            try? engine.vocabularyManager.add(original: incorrect, replacement: corrected)
             isCorrectionSheetPresented = false
         }
     }

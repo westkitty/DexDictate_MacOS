@@ -58,7 +58,7 @@ public struct VocabularySettingsView: View {
     
     private func addItem() {
         withAnimation {
-            vocabularyManager.add(original: newOriginal, replacement: newReplacement)
+            try? vocabularyManager.add(original: newOriginal, replacement: newReplacement)
             newOriginal = ""
             newReplacement = ""
         }

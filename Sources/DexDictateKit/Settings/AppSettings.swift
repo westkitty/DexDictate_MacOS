@@ -123,6 +123,10 @@ public class AppSettings: ObservableObject {
     /// When `true`, leading and trailing silence is trimmed from recordings before transcription.
     @AppStorage("enableSilenceTrim_v1") public var enableSilenceTrim: Bool = false
 
+    /// When `true`, browser video/audio is paused before recording starts and resumed
+    /// (only elements DexDictate paused) when recording ends. Skipped entirely when Zoom is running.
+    @AppStorage("pauseBrowserMediaDuringDictation_v1") public var pauseBrowserMediaDuringDictation: Bool = false
+
     /// Persisted selection for the Dex icon asset.
     @AppStorage("selectedMenuBarIconIdentifier_v2") public var selectedMenuBarIconIdentifier: String = ""
 
@@ -431,6 +435,7 @@ public class AppSettings: ObservableObject {
         showDictationStats = false
         persistHistory = false
         enableSilenceTrim = false
+        pauseBrowserMediaDuringDictation = false
         selectedMenuBarIconIdentifier = ""
         selectedMenuBarEmoji = "🐶"
         
