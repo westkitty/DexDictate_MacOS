@@ -170,4 +170,31 @@ final class ClipboardManagerTests: XCTestCase {
         XCTAssertFalse(firstPasteOwnsClipboard)
         XCTAssertTrue(secondPasteOwnsClipboard)
     }
+
+    func testPasteValidationChecksFrontmostApp() {
+        let target = OutputTargetApplication(bundleIdentifier: "com.example.app", processIdentifier: 1234)
+        var calledCheck = false
+        
+        ClipboardManager.isFrontmostProvider = { app in
+            calledCheck = true
+            XCTAssertEqual(app.processIdentifier, 1234)
+            return false // Force failure to abort paste
+        }
+        defer {
+            ClipboardManager.isFrontmostProvider = { targetApplication in
+                NSWorkspace.shared.frontmostApplication?.processIdentifier == targetApplication.processIdentifier
+            }
+        }
+        
+        let expectation = self.expectation(description: "Paste checks frontmost")
+        
+        ClipboardManager.copyAndPaste("test-dictation", targetApplication: target)
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            XCTAssertTrue(calledCheck)
+            expectation.fulfill()
+        }
+        
+        waitForExpectations(timeout: 1.5, handler: nil)
+    }
 }

@@ -179,8 +179,9 @@ enum ClipboardManager {
         }
 
         if Date() >= deadline {
-            let targetProcessIdentifier = profile.postsToTargetProcess ? targetApplication.processIdentifier : nil
-            simulatePaste(targetProcessIdentifier: targetProcessIdentifier)
+            // Pre-paste validation step: immediately before synthetic Cmd+V, verify target app is still frontmost.
+            // If it is not, abort the paste command to prevent wrong-target pasting (e.g. user switched app or overlay took focus).
+            Safety.log("ClipboardManager — paste aborted: target application '\(targetApplication.bundleIdentifier)' (PID \(targetApplication.processIdentifier)) is not frontmost at deadline.", category: .output)
             return
         }
 
@@ -204,8 +205,12 @@ enum ClipboardManager {
         _ = app.activate(options: [])
     }
 
-    private static func isFrontmost(_ targetApplication: OutputTargetApplication) -> Bool {
+    internal static var isFrontmostProvider: (OutputTargetApplication) -> Bool = { targetApplication in
         NSWorkspace.shared.frontmostApplication?.processIdentifier == targetApplication.processIdentifier
+    }
+
+    private static func isFrontmost(_ targetApplication: OutputTargetApplication) -> Bool {
+        isFrontmostProvider(targetApplication)
     }
 
     private static func simulatePaste(targetProcessIdentifier: pid_t?) {
