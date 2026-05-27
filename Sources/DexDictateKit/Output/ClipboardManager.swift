@@ -181,7 +181,10 @@ enum ClipboardManager {
         if Date() >= deadline {
             // Pre-paste validation step: immediately before synthetic Cmd+V, verify target app is still frontmost.
             // If it is not, abort the paste command to prevent wrong-target pasting (e.g. user switched app or overlay took focus).
-            Safety.log("ClipboardManager — paste aborted: target application '\(targetApplication.bundleIdentifier)' (PID \(targetApplication.processIdentifier)) is not frontmost at deadline.", category: .output)
+            let actualApp = NSWorkspace.shared.frontmostApplication
+            let actualBundle = actualApp?.bundleIdentifier ?? "unknown"
+            let actualPID = actualApp?.processIdentifier ?? 0
+            Safety.log("ClipboardManager — paste aborted: target application '\(targetApplication.bundleIdentifier)' (PID \(targetApplication.processIdentifier)) is not frontmost at deadline. Current frontmost is '\(actualBundle)' (PID \(actualPID)).", category: .output)
             return
         }
 
