@@ -49,12 +49,59 @@ public struct AudioRecorderRecoveryFailure: Error, LocalizedError {
             return recoveryNotice
         }
 
+        let isStall = AudioErrorClassifier.isCoreAudioDeviceStall(underlyingError)
+        let recoveryCommandText = isStall ? "\n\nCore Audio error -10868 detected. A manual Core Audio reset may be required. Run in Terminal:\nsudo killall -9 coreaudiod" : ""
+
         switch reason {
         case .initialStart:
-            return "DexDictate could not open the selected microphone. Try again."
+            return "DexDictate could not open the selected microphone. Try again.\(recoveryCommandText)"
         case .routeRecovery:
-            return "DexDictate could not recover audio after the route changed. Ready to record again."
+            return "DexDictate could not recover audio after the route changed. Ready to record again.\(recoveryCommandText)"
         }
+    }
+}
+
+public enum AudioErrorClassifier {
+    public static func isCoreAudioDeviceStall(_ error: Error) -> Bool {
+        let nsError = error as NSError
+
+        // 1. Verify code matches kAudioOutputUnitErr_InvalidDevice (-10868)
+        if nsError.code == -10868 {
+            let domain = nsError.domain
+            // Treat as device stall if domain is a known audio or system domain
+            if domain == NSOSStatusErrorDomain ||
+               domain.contains("AVFoundation") ||
+               domain.contains("Audio") ||
+               domain.contains("coreaudio") ||
+               domain.contains("avfaudio") {
+                return true
+            }
+
+            // Or if domain is generic/unknown but localized description contains explicit CoreAudio evidence
+            let desc = nsError.localizedDescription.lowercased()
+            if desc.contains("kaudiooutputuniterr_invaliddevice") ||
+               desc.contains("coreaudio") ||
+               desc.contains("avfaudio") {
+                return true
+            }
+        }
+
+        // 2. Fallback description searches across all other errors (where code is not -10868)
+        if nsError.code != -10868 {
+            let desc = error.localizedDescription.lowercased()
+            if desc.contains("-10868") || desc.contains("kaudiooutputuniterr_invaliddevice") {
+                return true
+            }
+        }
+
+        // 3. Fallback matching for DictationError setup failures
+        if let dictationError = error as? DictationError,
+           case .audioEngineSetupFailed(let msg) = dictationError {
+            let lowered = msg.lowercased()
+            return lowered.contains("-10868") || lowered.contains("kaudiooutputuniterr_invaliddevice")
+        }
+
+        return false
     }
 }
 
@@ -154,20 +201,6 @@ struct AudioRecorderRecoveryPlanner {
         }
     }
 
-    private static func shouldClearStoredPreferredUID(
-        preferredUID: String,
-        lastResolution: AudioInputDeviceResolution
-    ) -> Bool {
-        guard !preferredUID.isEmpty else { return false }
-
-        switch lastResolution {
-        case .missing, .unavailableAsInput:
-            return true
-        case .systemDefault, .available:
-            return false
-        }
-    }
-
     private static func fallbackNotice(
         preferredUID: String,
         lastResolution: AudioInputDeviceResolution,
@@ -180,16 +213,33 @@ struct AudioRecorderRecoveryPlanner {
             ? "Preferred microphone could not be restored after the audio route changed."
             : "Preferred microphone could not be opened."
 
+        let isStall = lastPreferredStartError.map { AudioErrorClassifier.isCoreAudioDeviceStall($0) } ?? false
+        let recoveryCommandText = isStall ? "\n\nCore Audio error -10868 detected. A manual Core Audio reset may be required. Run in Terminal:\nsudo killall -9 coreaudiod" : ""
+
         switch lastResolution {
         case .systemDefault:
             return nil
         case .missing:
-            return "Selected microphone is unavailable. DexDictate switched to System Default input."
+            return "Selected microphone is unavailable. DexDictate switched to System Default input.\(recoveryCommandText)"
         case .unavailableAsInput:
-            return "Selected device is not usable as an input. DexDictate switched to System Default input."
+            return "Selected device is not usable as an input. DexDictate switched to System Default input.\(recoveryCommandText)"
         case .available:
             _ = lastPreferredStartError
-            return "\(prefix) DexDictate switched to System Default input."
+            return "\(prefix) DexDictate switched to System Default input.\(recoveryCommandText)"
+        }
+    }
+
+    private static func shouldClearStoredPreferredUID(
+        preferredUID: String,
+        lastResolution: AudioInputDeviceResolution
+    ) -> Bool {
+        guard !preferredUID.isEmpty else { return false }
+
+        switch lastResolution {
+        case .missing, .unavailableAsInput:
+            return true
+        case .systemDefault, .available:
+            return false
         }
     }
 }
