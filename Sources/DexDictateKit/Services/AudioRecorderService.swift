@@ -433,6 +433,19 @@ public final class AudioRecorderService: ObservableObject {
     nonisolated(unsafe) private var _accumulatedSamples: [Float] = []
     private(set) var capturedSampleRate: Double = 44100
 
+    #if DEBUG
+    /// Internal seam to inject mock float samples directly into the buffer queue during testing.
+    internal func injectMockSamples(_ samples: [Float]) {
+        bufferQueue.sync {
+            _accumulatedSamples.append(contentsOf: samples)
+        }
+    }
+
+    internal func setCapturedSampleRateForTesting(_ rate: Double) {
+        capturedSampleRate = rate
+    }
+    #endif
+
     func collectRecording() -> [Float] {
         bufferQueue.sync {
             let samples = _accumulatedSamples
