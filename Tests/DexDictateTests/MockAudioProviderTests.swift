@@ -73,4 +73,74 @@ final class MockAudioProviderTests: XCTestCase {
         // 48000 Hz resampled to 16000 Hz should yield exactly 16000 samples.
         XCTAssertEqual(whisperSamples.count, 16000, "Resampling from 48000Hz to 16000Hz must produce exactly 16000 samples")
     }
+    
+    func testRepeatedInjectionsAccumulateInOrder() {
+        let service = AudioRecorderService()
+        
+        let firstBatch: [Float] = [1.0, 2.0]
+        let secondBatch: [Float] = [3.0, 4.0]
+        let thirdBatch: [Float] = [5.0, 6.0]
+        
+        service.injectMockSamples(firstBatch)
+        service.injectMockSamples(secondBatch)
+        service.injectMockSamples(thirdBatch)
+        
+        let collected = service.collectRecording()
+        XCTAssertEqual(collected.count, 6)
+        XCTAssertEqual(collected, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0], "Buffers must accumulate strictly in chronological order")
+    }
+    
+    func testLargeMockBufferAccumulatesAndDownsamples() {
+        let service = AudioRecorderService()
+        
+        #if DEBUG
+        service.setCapturedSampleRateForTesting(44100.0)
+        #endif
+        
+        // 5 seconds at 44.1 kHz = 220,500 samples.
+        // Fast to generate and run, yet large enough to verify chunk boundaries.
+        let nativeRate = 44100.0
+        let targetRate = 16000.0
+        let seconds = 5.0
+        let nativeCount = Int(nativeRate * seconds)
+        
+        var mockSamples = [Float](repeating: 0.0, count: nativeCount)
+        for i in 0..<nativeCount {
+            mockSamples[i] = sin(2.0 * .pi * 220.0 * Float(i) / Float(nativeRate))
+        }
+        
+        service.injectMockSamples(mockSamples)
+        
+        let collected = service.collectRecording()
+        XCTAssertEqual(collected.count, nativeCount)
+        
+        let whisperSamples = AudioResampler.resampleToWhisper(collected, fromRate: service.capturedSampleRate)
+        
+        let expectedCount = Int(targetRate * seconds)
+        // Allow a small mathematical tolerance of 5 frames due to linear conversion alignment.
+        let difference = abs(whisperSamples.count - expectedCount)
+        XCTAssertLessThanOrEqual(difference, 5, "Large downsampling output should match 16kHz within standard margins")
+    }
+    
+    func testZeroAndExtremeAmplitudeMockSamples() {
+        let service = AudioRecorderService()
+        
+        #if DEBUG
+        service.setCapturedSampleRateForTesting(44100.0)
+        #endif
+        
+        // Feed zeros, system limit extremes, and slight overflows.
+        let extremes: [Float] = [0.0, -1.0, 1.0, -2.0, 2.0, -0.0]
+        service.injectMockSamples(extremes)
+        
+        let collected = service.collectRecording()
+        XCTAssertEqual(collected, extremes)
+        
+        // Ensure resampling handles mathematical limits without crashing or producing non-finite values.
+        let whisperSamples = AudioResampler.resampleToWhisper(collected, fromRate: service.capturedSampleRate)
+        XCTAssertFalse(whisperSamples.isEmpty)
+        for val in whisperSamples {
+            XCTAssertTrue(val.isFinite, "Resampled extreme amplitudes must remain mathematically finite")
+        }
+    }
 }
