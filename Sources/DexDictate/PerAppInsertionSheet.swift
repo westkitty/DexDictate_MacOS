@@ -42,6 +42,10 @@ struct PerAppInsertionView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
+                Text("\"Replace Entire Field\" sends Cmd+A then Cmd+V. It destroys all existing text in the focused field. Use only for search bars, address bars, and single-field inputs — never for documents, chat boxes, code editors, or multi-line text.")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Recommended presets")
                         .font(.caption.bold())

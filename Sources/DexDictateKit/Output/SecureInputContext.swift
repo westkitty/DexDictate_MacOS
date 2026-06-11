@@ -65,33 +65,48 @@ struct FocusedElementSnapshot: Equatable {
 
 /// Determines whether two element snapshots represent the same focused text field.
 /// Used to detect whether focus shifted during transcription.
-/// Errs toward false negatives (permitting paste) over false positives (blocking paste).
+///
+/// Safety posture: when strong identity information is present and conflicts,
+/// the matcher returns false (blocks paste). When information is entirely absent on
+/// both sides after the app-identity check passes, the matcher allows paste — this
+/// is the documented "same-app, no-further-info" fallback, not a permissive default.
+/// If the app identity itself is ambiguous (no bundle ID and no PID on either side),
+/// the matcher falls through to allow, because there is no safe discriminating signal.
 enum FocusedElementIdentityMatcher {
     /// Returns `true` if `trigger` and `current` are plausibly the same element.
     ///
-    /// Matching rules (in order of strength):
-    /// 1. If apps differ by bundle identifier → fail.
-    /// 2. If both have an AX `identifier` → compare directly.
-    /// 3. If role differs → fail.
-    /// 4. If semantic fields (title/placeholder/label) are available on both, at least one must match.
-    /// 5. If current is nil (AX unavailable) → allow paste conservatively.
+    /// Matching rules (in priority order):
+    /// 0. If both have a process identifier and they differ → fail (strongest signal).
+    /// 1. If both have a bundle identifier and they differ → fail.
+    /// 2. If both have a non-empty AX `identifier` → compare directly; result is final.
+    /// 3. If both have a role and they differ → fail.
+    /// 4. If both sides have semantic fields (title/placeholder/label), at least one must match.
+    /// 5. If `current` is nil (AX unavailable) → allow (can't discriminate without data).
+    /// 6. No remaining discriminating info → allow (same app, no element-level info available).
     static func isSameContext(
         _ trigger: FocusedElementSnapshot,
         _ current: FocusedElementSnapshot?,
         targetBundleID: String? = nil
     ) -> Bool {
         guard let current else {
-            return true  // can't snapshot → conservative allow
+            return true  // can't snapshot current state → allow
         }
 
-        // 1. App identity check
+        // 0. Process identity: strongest signal. Different PID means different process.
+        if let tp = trigger.processIdentifier, tp > 0,
+           let cp = current.processIdentifier, cp > 0,
+           tp != cp {
+            return false
+        }
+
+        // 1. App bundle identity
         let triggerBundle = trigger.bundleIdentifier ?? targetBundleID
         let currentBundle = current.bundleIdentifier
         if let t = triggerBundle, let c = currentBundle, t != c {
             return false
         }
 
-        // 2. Strong AX identifier
+        // 2. Strong AX identifier — if both sides have one, it's the ground truth.
         if let tid = trigger.identifier, !tid.isEmpty,
            let cid = current.identifier, !cid.isEmpty {
             return tid == cid
@@ -102,7 +117,7 @@ enum FocusedElementIdentityMatcher {
             return false
         }
 
-        // 4. At least one semantic field must match when both have any
+        // 4. At least one semantic field must match when both sides have any
         let triggerSemantic = [trigger.title, trigger.placeholder, trigger.label]
             .compactMap { $0 }.filter { !$0.isEmpty }
         let currentSemantic = [current.title, current.placeholder, current.label]
@@ -111,7 +126,7 @@ enum FocusedElementIdentityMatcher {
             return !Set(triggerSemantic).isDisjoint(with: Set(currentSemantic))
         }
 
-        // 5. No discriminating info → allow
+        // 6. No element-level discriminating info remains; app identity already matched.
         return true
     }
 }

@@ -72,6 +72,42 @@ final class OutputPipelineHardeningTests: XCTestCase {
         ))
     }
 
+    func testDifferentPIDFailsEvenWhenBundleIDsAreAbsent() {
+        // PID check (rule 0) must fire before bundle check so that process changes
+        // aren't missed when bundle IDs couldn't be captured.
+        let trigger = FocusedElementSnapshot(
+            role: "AXTextField", processIdentifier: 1001, bundleIdentifier: nil
+        )
+        let current = FocusedElementSnapshot(
+            role: "AXTextField", processIdentifier: 1002, bundleIdentifier: nil
+        )
+        XCTAssertFalse(FocusedElementIdentityMatcher.isSameContext(trigger, current),
+            "Different PIDs with absent bundle IDs must fail — different process is different app")
+    }
+
+    func testSamePIDPassesWhenBundleIDsAreAbsent() {
+        let trigger = FocusedElementSnapshot(
+            role: "AXTextField", processIdentifier: 1001, bundleIdentifier: nil
+        )
+        let current = FocusedElementSnapshot(
+            role: "AXTextField", processIdentifier: 1001, bundleIdentifier: nil
+        )
+        XCTAssertTrue(FocusedElementIdentityMatcher.isSameContext(trigger, current),
+            "Same PID, same role, no further info — same process, allow paste")
+    }
+
+    func testPIDCheckTakesPriorityOverBundleCheck() {
+        // Same bundle but different PID: should fail (different process instance)
+        let trigger = FocusedElementSnapshot(
+            role: "AXTextField", processIdentifier: 1001, bundleIdentifier: "com.example.app"
+        )
+        let current = FocusedElementSnapshot(
+            role: "AXTextField", processIdentifier: 1002, bundleIdentifier: "com.example.app"
+        )
+        XCTAssertFalse(FocusedElementIdentityMatcher.isSameContext(trigger, current),
+            "Same bundle but different PID must fail — app was relaunched between trigger and delivery")
+    }
+
     // MARK: - ClipboardManager.isFocusedElementEditableProvider
 
     func testNonEditableFocusAbortsPaste() {
@@ -138,7 +174,7 @@ final class OutputPipelineHardeningTests: XCTestCase {
             ("Clipboard Paste (Cmd+V)", .clipboardPaste),
             ("Clipboard Only (no paste)", .clipboardOnly),
             ("Accessibility API", .accessibilityAPI),
-            ("Replace Field with Clipboard Paste", .replaceFieldWithClipboardPaste),
+            ("Replace Entire Field (Cmd+A then paste)", .replaceFieldWithClipboardPaste),
         ]
         for (raw, expected) in cases {
             let decoded = InsertionModeOverride(rawValue: raw)

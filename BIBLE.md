@@ -1819,3 +1819,130 @@ Added `didHandleError` flag in the transcription Task catch block to distinguish
 - **`swift build -c release` not run:** Omitted from this pass because prior sessions confirmed the signing environment fails validation. No logic changes that would affect release build correctness were introduced.
 
 **Status:** Complete.
+
+---
+
+## Entry 17 — Audit: Commit Verification (2026-06-11)
+
+**Timestamp:** 2026-06-11T14:38Z
+**Files inspected:** `BIBLE.md`, `.git/`, all source files listed in Entry 16 report
+
+### Decision
+Commit `9275db90` verified present locally. All claimed source changes confirmed via grep and file read:
+- `currentValue + text` absent from all sources ✓
+- `replaceFieldWithClipboardPaste` present in `AppInsertionOverridesManager.swift`, `OutputCoordinator.swift`, test files ✓
+- `utf16.count` absent from output insertion code (only appears in `ProfanityFilter.swift` for NSRange construction, which is correct) ✓
+- `pendingFocusSnapshot` present in `TranscriptionEngine.swift` ✓
+- `FocusedElementIdentityMatcher` present in `SecureInputContext.swift` ✓
+- Branch: `main`, 1 commit ahead of `origin/main` (not yet pushed)
+
+### Reason
+Auditing prior session report against actual repo state before proceeding with gaps analysis.
+
+### Validation
+`swift test` → 237 pass, 0 fail (baseline confirmed)
+
+### Remaining Risk
+Commit exists locally but is not yet pushed to remote. Remote verification deferred to push step.
+
+---
+
+## Entry 18 — Audit: FocusedElementIdentityMatcher PID Check Gap (2026-06-11)
+
+**Timestamp:** 2026-06-11T14:39Z
+**Files inspected:** `Sources/DexDictateKit/Output/SecureInputContext.swift`
+
+### Bug Found
+`FocusedElementIdentityMatcher.isSameContext` had a `processIdentifier` field in `FocusedElementSnapshot` but never compared it. If both bundle IDs were nil (e.g., AX failed to resolve the running app, system processes), a focus shift to a completely different process would pass the app-identity check and proceed to the "no info → allow" fallback. PID is the strongest single identity signal — different PID means unambiguously different process.
+
+Additional issue: the doc comment said "Errs toward false negatives (permitting paste) over false positives (blocking paste)" which misrepresents the intent. When strong identity signals conflict, the matcher must fail. Only when all checks are exhausted and the app identity matched does the matcher allow paste.
+
+### Fix Applied
+Added rule 0 to `isSameContext`: if both snapshots have a non-zero PID and they differ, return false immediately. This fires before the bundle ID check, covering the case where bundle IDs couldn't be captured. Updated the doc comment to accurately describe the posture: fail on conflicting strong signals; allow only when identity is exhausted and app-level match succeeded.
+
+**Files changed:** `Sources/DexDictateKit/Output/SecureInputContext.swift`
+
+### Tests Added
+Three new tests in `Tests/DexDictateTests/OutputPipelineHardeningTests.swift`:
+- `testDifferentPIDFailsEvenWhenBundleIDsAreAbsent` — different PIDs, nil bundles → false
+- `testSamePIDPassesWhenBundleIDsAreAbsent` — same PID, nil bundles → true
+- `testPIDCheckTakesPriorityOverBundleCheck` — same bundle, different PID → false
+
+### Validation
+`swift test` → 240 pass, 0 fail
+
+### Remaining Risk
+`captureFromSystem()` uses `NSRunningApplication(processIdentifier:)` to get bundle ID and PID directly from the AX element. PID capture should be reliable. The rare edge case where both PIDs are nil (AX couldn't determine the process at all) still falls through to the bundle check, then allow — this is acceptable given nil-PID implies AX is deeply degraded.
+
+---
+
+## Entry 19 — Audit: replaceFieldWithClipboardPaste UI Label (2026-06-11)
+
+**Timestamp:** 2026-06-11T14:40Z
+**Files inspected:** `Sources/DexDictateKit/AppInsertionOverridesManager.swift`, `Sources/DexDictate/PerAppInsertionSheet.swift`, `Tests/DexDictateTests/OutputPipelineHardeningTests.swift`
+
+### Bug Found
+The rawValue `"Replace Field with Clipboard Paste"` did not convey the destructive nature of the Cmd+A operation. The PerAppInsertionSheet UI displayed this string as the picker label with no warning text explaining that all existing field content would be destroyed. A user selecting this mode expecting normal paste behavior could inadvertently erase text.
+
+### Fix Applied
+1. Rawvalue changed to `"Replace Entire Field (Cmd+A then paste)"` — directly names the key sequence and implies replacement in the label itself.
+2. Added an orange warning paragraph to `PerAppInsertionSheet`: "\"Replace Entire Field\" sends Cmd+A then Cmd+V. It destroys all existing text in the focused field. Use only for search bars, address bars, and single-field inputs — never for documents, chat boxes, code editors, or multi-line text."
+3. Updated `testAllInsertionModesDecodeFromRawValues` in `OutputPipelineHardeningTests.swift` to match the new rawValue.
+
+Since this branch has not been pushed to remote, there are no deployed users with this setting persisted under the old rawValue string. The change is safe.
+
+**Files changed:** `Sources/DexDictateKit/AppInsertionOverridesManager.swift`, `Sources/DexDictate/PerAppInsertionSheet.swift`, `Tests/DexDictateTests/OutputPipelineHardeningTests.swift`
+
+### Validation
+`swift test` → 240 pass, 0 fail
+`swift build -c release` → Build complete
+
+### Remaining Risk
+The rawValue is now the user-visible string AND the JSON persistence key. If this string ever needs to change again post-deployment, a migration path will be needed. Future improvement: add a separate `displayName` computed property so rawValue is stable persistence key and display label is decoupled.
+
+---
+
+## Entry 20 — Audit: Strategy 3, Cursor Offset, Editable Check, HID Fallback (2026-06-11)
+
+**Timestamp:** 2026-06-11T14:40Z
+**Files inspected:** `Sources/DexDictateKit/Output/OutputCoordinator.swift`, `Sources/DexDictateKit/Output/ClipboardManager.swift`
+
+### Decision
+No changes needed for these items. All confirmed clean from source:
+
+**Strategy 3 (AX append fallback):** `insertViaAccessibility` has exactly two strategies. Strategy 1 replaces selected range in `kAXValueAttribute`. Strategy 2 sets `kAXSelectedTextAttribute`. On both failing, the function logs and returns `false`; caller falls back to clipboard paste. No `currentValue + text` construction anywhere in sources.
+
+**Cursor offset:** `accessibilityCharacterCount(_:)` uses `text.unicodeScalars.count`. No `utf16.count` in output insertion code. `ProfanityFilter.swift` uses `utf16.count` for `NSRange` construction against NS strings — correct and unrelated to AX cursor.
+
+**Editable check before Cmd+V:** `isFocusedElementEditable()` / `isFocusedElementEditableProvider` present and called in both `waitForTargetActivationAndPaste` and `waitForTargetActivationAndSelectAllPaste` before `simulatePaste` / `simulateSelectAllAndPaste` fire.
+
+**Unsafe HID fallback (spec I):** `post()` falls through to `.cghidEventTap` only when `targetProcessIdentifier` is nil, which occurs only when no target application was specified — the intentional "paste to active app" mode, always guarded by the editable check. The deadline abort path returns without posting events. No wrong-target post exists.
+
+### Validation
+`swift test` → 240 pass, 0 fail
+
+### Remaining Risk
+None additional from this audit pass.
+
+---
+
+## Entry 21 — Audit: Validation and Push (2026-06-11)
+
+**Timestamp:** 2026-06-11T14:45Z
+**Files changed:** Commit in progress
+
+### Validation Results
+- `swift test` → 240 tests, 0 failures (237 baseline + 3 new PID-check tests)
+- `swift build -c release` → Build complete (48.3s)
+- `./scripts/validate_release.sh` → Gatekeeper assessment WARN (exit code 3). All other checks pass (codesign, entitlements dump, SHA-256 artifacts, checksum manifest). Gatekeeper failure is expected in dev environment without Apple notarization.
+
+### Commit
+Audit fixes committed as follow-up to `9275db9`. See commit SHA below after push.
+
+### Push Status
+To be updated after `git push`.
+
+### Remaining Risk
+- Gatekeeper assessment requires notarization (production pipeline only).
+- `replaceFieldWithClipboardPaste` rawValue is now the display string — any future wording change requires migration.
+- PID nil case (AX deeply degraded) still falls through to bundle/role/semantic checks.

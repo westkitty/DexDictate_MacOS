@@ -11,7 +11,7 @@ public enum InsertionModeOverride: String, Codable, CaseIterable, Identifiable {
     /// Use for search bars, address bars, and single-field inputs where each
     /// utterance should replace the whole field contents. Not for documents,
     /// chat boxes, code editors, or multi-line text areas.
-    case replaceFieldWithClipboardPaste = "Replace Field with Clipboard Paste"
+    case replaceFieldWithClipboardPaste = "Replace Entire Field (Cmd+A then paste)"
 
     public var id: String { rawValue }
 }
