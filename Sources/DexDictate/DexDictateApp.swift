@@ -502,8 +502,8 @@ struct AntiGravityMainView: View {
                 .frame(maxWidth: .infinity)
             }
         }
-        .frame(width: 320, height: isQuickSettingsExpanded ? 720 : 540)
-        .animation(.easeInOut(duration: 0.25), value: isQuickSettingsExpanded)
+        .frame(width: isQuickSettingsExpanded ? 560 : 320, height: isQuickSettingsExpanded ? 580 : 540)
+        .animation(.spring(response: 0.32, dampingFraction: 0.82), value: isQuickSettingsExpanded)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.cyan.opacity(isDroppingFile ? 0.8 : 0), lineWidth: 2)

@@ -11,17 +11,17 @@ final class LaunchIntroController {
     private var panel: LaunchIntroPanel?
     private var player: AVPlayer?
 
+    private static let animationNames: [String] = (1...8).map { String(format: "LaunchAnimation_%02d", $0) }
+
     private init() {}
 
     func playIfNeeded() {
         guard !hasPlayedThisSession else { return }
         hasPlayedThisSession = true
 
+        let name = Self.animationNames.randomElement() ?? "LaunchAnimation_01"
         guard
-            let url = Safety.resourceBundle.url(
-                forResource: "IntroAnimation",
-                withExtension: "mp4"
-            ),
+            let url = Safety.resourceBundle.url(forResource: name, withExtension: "mp4"),
             let screen = NSScreen.main ?? NSScreen.screens.first
         else {
             return
@@ -34,6 +34,9 @@ final class LaunchIntroController {
         player.actionAtItemEnd = .pause
         self.player = player
 
+        // All launch animations are 8–10 s; 9.5 s gives a comfortable exit window.
+        let duration: Double = 9.5
+
         let startFrame = initialFrame(on: screen)
         let panel = LaunchIntroPanel(
             contentRect: startFrame,
@@ -44,38 +47,39 @@ final class LaunchIntroController {
         self.panel = panel
 
         NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.18
+            context.duration = 0.2
             panel.animator().alphaValue = 1
         }
 
         player.play()
 
-        let duration = 6.0
-        let exitDelay = max(0.9, duration - 1.1)
-
+        let exitDelay = max(0.9, duration - 1.2)
+        let exitDuration = min(1.0, max(0.6, duration * 0.15))
         DispatchQueue.main.asyncAfter(deadline: .now() + exitDelay) { [weak self] in
-            self?.animateExit(on: screen, duration: min(1.0, max(0.75, duration * 0.18)))
+            self?.animateExit(on: screen, duration: exitDuration)
         }
     }
 
+    // 16:9 panel, comfortably sized — not full-screen, centered
     private func initialFrame(on screen: NSScreen) -> NSRect {
-        let size: CGFloat = 220
+        let width: CGFloat = 400
+        let height: CGFloat = 225   // exactly 16:9
         let frame = screen.visibleFrame
         return NSRect(
-            x: frame.midX - (size / 2),
-            y: frame.midY - (size / 2) + 24,
-            width: size,
-            height: size
+            x: frame.midX - width / 2,
+            y: frame.midY - height / 2 + 20,
+            width: width,
+            height: height
         )
     }
 
     private func animateExit(on screen: NSScreen, duration: Double) {
         guard let panel else { return }
 
-        let finalSize: CGFloat = 68
+        let finalSize: CGFloat = 64
         let visibleFrame = screen.visibleFrame
         let finalFrame = NSRect(
-            x: visibleFrame.midX - (finalSize / 2),
+            x: visibleFrame.midX - finalSize / 2,
             y: visibleFrame.maxY - finalSize - 4,
             width: finalSize,
             height: finalSize
@@ -111,7 +115,7 @@ private final class LaunchIntroPanel: NSPanel {
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
         backgroundColor = .clear
         isOpaque = false
-        hasShadow = false
+        hasShadow = true
         ignoresMouseEvents = true
 
         contentView = NSHostingView(rootView: rootView)
@@ -123,16 +127,16 @@ private struct LaunchIntroView: View {
 
     var body: some View {
         ZStack {
-            Circle()
-                .fill(Color.white.opacity(0.08))
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.black.opacity(0.55))
                 .overlay(
-                    Circle()
-                        .stroke(Color.white.opacity(0.16), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color.white.opacity(0.12), lineWidth: 1)
                 )
 
             IntroPlayerRepresentable(player: player)
-                .clipShape(Circle())
-                .padding(8)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .padding(6)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.clear)

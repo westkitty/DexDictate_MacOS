@@ -56,14 +56,14 @@ It does not "phone home."
 
 ### Option 1: Install the latest packaged release (recommended)
 
-Use the newest release artifact first. Current latest release: **v1.5.2**  
-Release page: [v1.5.2](https://github.com/westkitty/DexDictate_MacOS/releases/tag/v1.5.2)
+Use the newest release artifact first. Current latest release: **v1.5.3**  
+Release page: [v1.5.3](https://github.com/westkitty/DexDictate_MacOS/releases/tag/v1.5.3)
 
 Download one of these Apple Silicon artifacts:
 
-- `DexDictate-1.5.2-macos-arm64.dmg`
-- `DexDictate-1.5.2-macos-arm64.zip`
-- `DexDictate-1.5.2-macos-arm64-SHA256SUMS.txt`
+- `DexDictate-1.5.3-macos-arm64.dmg`
+- `DexDictate-1.5.3-macos-arm64.zip`
+- `DexDictate-1.5.3-macos-arm64-SHA256SUMS.txt`
 
 Standard `.dmg` flow:
 
@@ -138,6 +138,9 @@ This is macOS, not a suggestion.
 - Clipboard-only fallback for likely secure fields
 - Optional Accessibility API insertion path
 - Per-app insertion overrides by bundle identifier
+- Replace-field mode (Cmd+A then paste) for single-input targets such as address bars and search fields — not for documents or multi-line fields
+- Focused-element identity matching before paste delivery to prevent wrong-target insertion
+- Editable-element validation before paste (role-aware; fails open for ambiguous AX contexts)
 - Save-only behavior mode
 - Launch-at-login support through `SMAppService`
 
@@ -159,7 +162,8 @@ This is macOS, not a suggestion.
 ### History and UX
 
 - Detachable transcription history window
-- Quick settings popover
+- Quick settings popover that expands wider (not taller) with a spring animation
+- Randomized launch animation drawn from a pool of original short films
 - Help content backed by repository-owned assets
 
 ### Developer and release tooling
