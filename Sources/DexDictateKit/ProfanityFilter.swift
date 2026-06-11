@@ -53,7 +53,7 @@ public enum ProfanityFilter {
         for (word, regex, replacement) in whimsicalRegexMap {
             guard !removalSet.contains(word.lowercased()) else { continue }
             let range = NSRange(location: 0, length: result.utf16.count)
-            result = regex.stringByReplacingMatches(in: result, options: [], range: range, withTemplate: replacement)
+            result = regex.stringByReplacingMatches(in: result, options: [], range: range, withTemplate: NSRegularExpression.escapedTemplate(for: replacement))
         }
 
         // 3. Custom additions
