@@ -37,22 +37,43 @@ struct DiagnosticsStore {
         encoder.dateEncodingStrategy = .iso8601
 
         guard let encoded = try? encoder.encode(record),
-              let line = String(data: encoded, encoding: .utf8) else {
+              let lineString = String(data: encoded, encoding: .utf8),
+              let lineData = (lineString + "\n").data(using: .utf8) else {
             return
         }
 
-        let existingLines: [String]
-        if let data = try? Data(contentsOf: logURL),
-           let string = String(data: data, encoding: .utf8) {
-            existingLines = string
-                .split(separator: "\n", omittingEmptySubsequences: true)
-                .map(String.init)
-        } else {
-            existingLines = []
+        // Create file if it doesn't exist, then append.
+        if !FileManager.default.fileExists(atPath: logURL.path) {
+            FileManager.default.createFile(atPath: logURL.path, contents: nil)
         }
 
-        let pruned = Array((existingLines + [line]).suffix(maxRecords))
-        let payload = pruned.joined(separator: "\n") + "\n"
+        guard let handle = try? FileHandle(forWritingTo: logURL) else { return }
+        defer { try? handle.close() }
+        handle.seekToEndOfFile()
+        handle.write(lineData)
+
+        // Prune when file size exceeds a conservative per-line estimate.
+        // Using 80 bytes/line (the minimum serialized DiagnosticRecord size) ensures
+        // pruning fires reliably for both short test records and production records.
+        let approxBytesThreshold = maxRecords * 80
+        let fileSize = (try? FileManager.default.attributesOfItem(atPath: logURL.path)[.size] as? Int) ?? 0
+        if fileSize > approxBytesThreshold {
+            pruneIfNeeded()
+        }
+    }
+
+    private func pruneIfNeeded() {
+        guard let data = try? Data(contentsOf: logURL),
+              let string = String(data: data, encoding: .utf8) else { return }
+
+        let lines = string
+            .split(separator: "\n", omittingEmptySubsequences: true)
+            .map(String.init)
+
+        guard lines.count > maxRecords else { return }
+
+        let kept = Array(lines.suffix(maxRecords))
+        let payload = kept.joined(separator: "\n") + "\n"
         try? payload.write(to: logURL, atomically: true, encoding: .utf8)
     }
 }

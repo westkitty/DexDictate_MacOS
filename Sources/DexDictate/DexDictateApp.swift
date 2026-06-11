@@ -94,9 +94,9 @@ struct DexDictateApp: App {
 
                 // Load persisted history if opt-in is enabled.
                 if settings.persistHistory {
-                    let saved = HistoryPersistenceManager.load()
-                    if !saved.isEmpty {
-                        Task { @MainActor in
+                    Task {
+                        let saved = await HistoryPersistenceManager.loadAsync()
+                        if !saved.isEmpty {
                             for item in saved {
                                 engine.history.insert(item)
                             }
@@ -153,9 +153,11 @@ struct DexDictateApp: App {
                     adaptiveBenchmarkController.noteDictationFinished()
                 }
             }
-            .onReceive(engine.history.$items) { items in
+            .onReceive(engine.history.$items.debounce(for: .milliseconds(500), scheduler: DispatchQueue.main)) { items in
                 if settings.persistHistory {
-                    HistoryPersistenceManager.save(items)
+                    Task {
+                        await HistoryPersistenceManager.saveAsync(items)
+                    }
                 }
             }
         } label: {
@@ -376,6 +378,7 @@ struct AntiGravityMainView: View {
     @ObservedObject var benchmarkResultsStore: BenchmarkResultsStore
     @State private var expandedHistory: Bool = false
     @State private var isDroppingFile: Bool = false
+    @State private var cachedWatermarkImage: NSImage? = nil
 
     var onDetachHistory: (() -> Void)?
     var onOpenHelp: (() -> Void)?
@@ -392,17 +395,8 @@ struct AntiGravityMainView: View {
                     .ignoresSafeArea()
             }
 
-            // Large app-icon watermark behind all content (visible on every theme).
-            if let assetURL = profileManager.currentWatermarkAsset?.url,
-               let nsImage = NSImage(contentsOf: assetURL) {
-                Image(nsImage: nsImage)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 200, height: 200)
-                    .opacity(0.12)
-                    .allowsHitTesting(false)
-            } else if let url = Safety.resourceBundle.url(forResource: "Assets.xcassets/AppIcon.appiconset/icon", withExtension: "png"),
-               let nsImage = NSImage(contentsOf: url) {
+            // Large app-icon watermark behind all content — cached to avoid disk I/O on every body re-render.
+            if let nsImage = cachedWatermarkImage {
                 Image(nsImage: nsImage)
                     .resizable()
                     .scaledToFit()
@@ -530,6 +524,24 @@ struct AntiGravityMainView: View {
             }
             return true
         }
+        .onAppear {
+            cachedWatermarkImage = loadWatermarkImage()
+        }
+        .onChange(of: profileManager.currentWatermarkAsset?.url) { _, _ in
+            cachedWatermarkImage = loadWatermarkImage()
+        }
+    }
+
+    private func loadWatermarkImage() -> NSImage? {
+        if let assetURL = profileManager.currentWatermarkAsset?.url,
+           let nsImage = NSImage(contentsOf: assetURL) {
+            return nsImage
+        }
+        if let url = Safety.resourceBundle.url(forResource: "Assets.xcassets/AppIcon.appiconset/icon", withExtension: "png"),
+           let nsImage = NSImage(contentsOf: url) {
+            return nsImage
+        }
+        return nil
     }
 
     private var importedFileResultBinding: Binding<ImportedFileTranscriptionResult?> {

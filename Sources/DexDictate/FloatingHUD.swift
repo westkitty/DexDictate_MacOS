@@ -28,19 +28,12 @@ struct FloatingHUDView: View {
     @ObservedObject var engine: TranscriptionEngine
     @ObservedObject var profileManager: ProfileManager
 
+    @State private var cachedWatermarkImage: NSImage? = nil
+
     var body: some View {
         ZStack {
-            // Logo watermark (background) — load directly from kit bundle PNG
-            if let assetURL = profileManager.currentWatermarkAsset?.url,
-               let nsImage = NSImage(contentsOf: assetURL) {
-                Image(nsImage: nsImage)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: watermarkSize, height: watermarkSize)
-                    .opacity(watermarkOpacity)
-                    .ignoresSafeArea()
-            } else if let url = Safety.resourceBundle.url(forResource: "Assets.xcassets/AppIcon.appiconset/icon", withExtension: "png"),
-               let nsImage = NSImage(contentsOf: url) {
+            // Logo watermark (background) — cached to avoid disk I/O on every body re-render
+            if let nsImage = cachedWatermarkImage {
                 Image(nsImage: nsImage)
                     .resizable()
                     .scaledToFit()
@@ -105,8 +98,26 @@ struct FloatingHUDView: View {
                     )
             }
         }
+        .onAppear {
+            cachedWatermarkImage = loadWatermarkImage()
+        }
+        .onChange(of: profileManager.currentWatermarkAsset?.url) { _, _ in
+            cachedWatermarkImage = loadWatermarkImage()
+        }
     }
-    
+
+    private func loadWatermarkImage() -> NSImage? {
+        if let assetURL = profileManager.currentWatermarkAsset?.url,
+           let nsImage = NSImage(contentsOf: assetURL) {
+            return nsImage
+        }
+        if let url = Safety.resourceBundle.url(forResource: "Assets.xcassets/AppIcon.appiconset/icon", withExtension: "png"),
+           let nsImage = NSImage(contentsOf: url) {
+            return nsImage
+        }
+        return nil
+    }
+
     var statusColor: Color {
         switch engine.state {
         case .listening: return .red

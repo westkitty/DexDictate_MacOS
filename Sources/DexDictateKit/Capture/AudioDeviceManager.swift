@@ -125,6 +125,8 @@ public enum AudioDeviceManager {
                         hasInputChannels: Self.hasInputChannels(deviceID: deviceID)
                     )
                 )
+            } else {
+                Safety.log("[AudioDeviceManager] enumerateCoreAudioDevices: UID lookup failed for deviceID=\(deviceID) (status=\(uidStatus))", category: .audio)
             }
         }
 
@@ -141,11 +143,22 @@ public enum AudioDeviceManager {
         )
         var dataSize: UInt32 = 0
         let sizeStatus = AudioObjectGetPropertyDataSize(deviceID, &streamAddress, 0, nil, &dataSize)
-        guard sizeStatus == noErr, dataSize > 0 else { return false }
+        guard sizeStatus == noErr, dataSize > 0 else {
+            Safety.log("[AudioDeviceManager] hasInputChannels: stream config size query failed for deviceID=\(deviceID) (status=\(sizeStatus))", category: .audio)
+            return false
+        }
 
-        let bufferList = UnsafeMutablePointer<AudioBufferList>.allocate(capacity: Int(dataSize))
-        defer { bufferList.deallocate() }
-        let dataStatus = AudioObjectGetPropertyData(deviceID, &streamAddress, 0, nil, &dataSize, bufferList)
+        // `dataSize` is a byte count, not a capacity count. Allocate exactly that many
+        // bytes with correct alignment, then bind to AudioBufferList.
+        let rawPtr = UnsafeMutableRawPointer.allocate(
+            byteCount: Int(dataSize),
+            alignment: MemoryLayout<AudioBufferList>.alignment
+        )
+        defer { rawPtr.deallocate() }
+
+        let bufferList = rawPtr.bindMemory(to: AudioBufferList.self, capacity: 1)
+        var mutableDataSize = dataSize
+        let dataStatus = AudioObjectGetPropertyData(deviceID, &streamAddress, 0, nil, &mutableDataSize, rawPtr)
         guard dataStatus == noErr else { return false }
 
         // AudioBufferList.mBuffers is a C flexible array member; use withUnsafePointer

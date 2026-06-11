@@ -46,10 +46,15 @@ public final class CustomCommandsManager: ObservableObject {
     }
 
     private func load() {
-        guard let data = UserDefaults.standard.data(forKey: storageKey),
-              let decoded = try? JSONDecoder().decode([CustomCommand].self, from: data) else { return }
-        isLoading = true
-        defer { isLoading = false }
-        commands = decoded
+        guard let data = UserDefaults.standard.data(forKey: storageKey) else { return }  // absent = fine
+        do {
+            let decoded = try JSONDecoder().decode([CustomCommand].self, from: data)
+            isLoading = true
+            defer { isLoading = false }
+            commands = decoded
+        } catch {
+            Safety.log("[CustomCommandsManager] Corrupt data for key '\(storageKey)': \(error). Leaving commands empty; stored data preserved.", category: .settings)
+            // Do NOT overwrite commands — leave them as []
+        }
     }
 }

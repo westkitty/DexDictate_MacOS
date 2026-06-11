@@ -430,6 +430,7 @@ public final class AudioRecorderService: ObservableObject {
     // MARK: - Audio Accumulation
 
     private let bufferQueue = DispatchQueue(label: "com.dexdictate.audioBuffer")
+    private let maxSampleCount = 48000 * 600  // 10 minutes at 48 kHz
     nonisolated(unsafe) private var _accumulatedSamples: [Float] = []
     private(set) var capturedSampleRate: Double = 44100
 
@@ -456,24 +457,35 @@ public final class AudioRecorderService: ObservableObject {
 
     // Called on AVAudioEngine's internal audio thread — never main thread.
     private func processAudioBuffer(_ buffer: AVAudioPCMBuffer) {
-        guard let channelData = buffer.floatChannelData?[0] else { return }
+        // Copy buffer to local array first — tap buffer is only valid during this callback.
         let frameLength = Int(buffer.frameLength)
-        if frameLength == 0 { return }
+        guard frameLength > 0, let channelData = buffer.floatChannelData?[0] else { return }
 
-        var sumSquares: Float = 0
-        for i in 0..<frameLength {
-            sumSquares += channelData[i] * channelData[i]
+        var chunk = [Float](repeating: 0, count: frameLength)
+        chunk.withUnsafeMutableBufferPointer { dst in
+            let src = UnsafeBufferPointer(start: channelData, count: frameLength)
+            dst.baseAddress?.initialize(from: src.baseAddress!, count: frameLength)
         }
 
-        bufferQueue.sync {
-            _accumulatedSamples.reserveCapacity(_accumulatedSamples.count + frameLength)
-            for i in 0..<frameLength {
-                _accumulatedSamples.append(channelData[i])
+        // Compute RMS from local copy — no lock needed.
+        var sumSquares: Float = 0
+        for s in chunk { sumSquares += s * s }
+
+        // Async enqueue to bufferQueue — does not block the audio thread.
+        bufferQueue.async { [weak self] in
+            guard let self else { return }
+            let cap = self.maxSampleCount
+            let currentCount = self._accumulatedSamples.count
+            if currentCount + frameLength > cap {
+                // Drop oldest samples to make room.
+                let overflow = currentCount + frameLength - cap
+                self._accumulatedSamples.removeFirst(overflow)
             }
+            self._accumulatedSamples.append(contentsOf: chunk)
         }
 
         let rms = sqrt(sumSquares / Float(frameLength))
-        let avgPower = rms == 0 ? -100 : 20 * log10(rms)
+        let avgPower = rms == 0 ? -100.0 : 20 * log10(rms)
         let normalized = min(max((Double(avgPower) + 50) / 50, 0), 1)
         MainActorDispatch.async { [weak self] in
             self?.inputLevel = normalized

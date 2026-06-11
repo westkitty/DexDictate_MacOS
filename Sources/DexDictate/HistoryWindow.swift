@@ -69,6 +69,7 @@ struct FullHistoryView: View {
     @State private var searchText = ""
     @State private var draft = VocabularyCorrectionDraft()
     @State private var isCorrectionSheetPresented = false
+    @State private var cachedAppIcon: NSImage? = nil
 
     private var filteredItems: [HistoryItem] {
         guard !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
@@ -81,8 +82,7 @@ struct FullHistoryView: View {
     
     var body: some View {
         ZStack {
-            if let url = Safety.resourceBundle.url(forResource: "Assets.xcassets/AppIcon.appiconset/icon", withExtension: "png"),
-               let nsImage = NSImage(contentsOf: url) {
+            if let nsImage = cachedAppIcon {
                 Image(nsImage: nsImage)
                     .resizable()
                     .scaledToFit()
@@ -194,6 +194,12 @@ struct FullHistoryView: View {
                     replacement: draft.correctPhrase.trimmingCharacters(in: .whitespacesAndNewlines)
                 )
                 isCorrectionSheetPresented = false
+            }
+        }
+        .onAppear {
+            if cachedAppIcon == nil,
+               let url = Safety.resourceBundle.url(forResource: "Assets.xcassets/AppIcon.appiconset/icon", withExtension: "png") {
+                cachedAppIcon = NSImage(contentsOf: url)
             }
         }
     }

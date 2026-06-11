@@ -574,59 +574,82 @@ public final class TranscriptionEngine: ObservableObject {
         lastCapturedUtterance = (rawSamples, sourceSampleRate)
         activityPhase = .captured
         currentRecordingStartedAt = nil
-        
+
         Safety.log("stopListening() — collected \(rawSamples.count) samples @ \(sourceSampleRate) Hz")
 
         if AppSettings.shared.playStopSound {
             SoundPlayer.play(AppSettings.shared.selectedStopSound)
         }
 
-        var samplesToProcess = rawSamples
-        if ExperimentFlags.enableSilenceTrim {
-            samplesToProcess = AudioResampler.trimSilenceFast(samplesToProcess, sampleRate: sourceSampleRate)
-            if samplesToProcess.count != rawSamples.count {
-                let pct = Int((1.0 - Double(samplesToProcess.count) / Double(rawSamples.count)) * 100)
-                Safety.log("Silence trim: \(rawSamples.count) → \(samplesToProcess.count) samples (\(pct)% removed)")
-            }
-        }
-        if ExperimentFlags.enableTrailingTrim {
-            samplesToProcess = AudioResampler.trimTrailingSilenceCalibrated(
-                samplesToProcess,
-                sampleRate: sourceSampleRate,
-                minimumSilenceMs: ExperimentFlags.trailingTrimMinimumSilenceMs,
-                padMs: ExperimentFlags.trailingTrimPadMs
-            )
-        }
-        currentMetrics.trim_samples = samplesToProcess.count
-        
         // Immediate UI feedback to user that dictation was captured and is processing.
         self.liveTranscript = NSLocalizedString("Processing...", comment: "Status: Processing audio")
 
-        // 2. Resample to 16 kHz (Whisper's required sample rate) and submit once.
-        activityPhase = .resampling
-        let whisperSamples = AudioResampler.resampleToWhisper(samplesToProcess, fromRate: sourceSampleRate)
-        currentMetrics.t_resample_done = Date()
-        currentMetrics.resample_samples = whisperSamples.count
-        
-        Safety.log("Submitting \(whisperSamples.count) samples @ 16000 Hz to Whisper")
-        whisperService.setInitialPrompt(DictationDomainBias.initialPrompt(for: pendingDictationDomain))
+        // Capture session token before leaving the main actor so we can detect stale
+        // sessions if the user starts a new recording while the worker is still running.
+        let sessionId = self.currentSessionId
+        let capturedRawCount = rawSamples.count
 
-        // Wire up result handler before calling transcribe.
-        whisperService.ontranscriptionComplete = { [weak self] text in
-            self?.currentMetrics.t_whisper_done = Date()
-            self?.handleWhisperResult(text)
-        }
-        
-        currentMetrics.t_whisper_submit = Date()
-        activityPhase = .transcribing
-        if !whisperService.transcribe(audioFrames: whisperSamples) {
-            Safety.log("stopListening() — Whisper refused transcription; resetting to ready state")
-            statusText = NSLocalizedString("Ready", comment: "Status: Ready to dictate")
-            liveTranscript = ""
-            resultFeedback = .idle
-            activityPhase = .ready
-            resumeActiveBrowserMediaSession()
-            _ = applyLifecycle(.transcriptionCompleted, context: "whisper unavailable")
+        // 2. Move silence trimming and resampling off the main actor — these are
+        //    CPU-heavy operations (10–50 ms) that don't need the main thread.
+        Task.detached(priority: .userInitiated) { [weak self] in
+            // ── Heavy work (off main actor) ──────────────────────────────────────
+            var samplesToProcess = rawSamples
+            if ExperimentFlags.enableSilenceTrim {
+                samplesToProcess = AudioResampler.trimSilenceFast(samplesToProcess, sampleRate: sourceSampleRate)
+                if samplesToProcess.count != capturedRawCount {
+                    let pct = Int((1.0 - Double(samplesToProcess.count) / Double(capturedRawCount)) * 100)
+                    Safety.log("Silence trim: \(capturedRawCount) → \(samplesToProcess.count) samples (\(pct)% removed)")
+                }
+            }
+            if ExperimentFlags.enableTrailingTrim {
+                samplesToProcess = AudioResampler.trimTrailingSilenceCalibrated(
+                    samplesToProcess,
+                    sampleRate: sourceSampleRate,
+                    minimumSilenceMs: ExperimentFlags.trailingTrimMinimumSilenceMs,
+                    padMs: ExperimentFlags.trailingTrimPadMs
+                )
+            }
+            let trimSamples = samplesToProcess.count
+
+            let whisperSamples = AudioResampler.resampleToWhisper(samplesToProcess, fromRate: sourceSampleRate)
+            let tResampleDone = Date()
+
+            // ── Return to main actor ─────────────────────────────────────────────
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                // Stale session check: if the user started a new session while the
+                // worker was running, discard this work.
+                guard self.currentSessionId == sessionId else {
+                    Safety.log("stopListening() detached worker: stale session, discarding resampled audio", category: .transcription)
+                    return
+                }
+
+                // Write back timing fields captured in the worker.
+                self.currentMetrics.trim_samples = trimSamples
+                self.currentMetrics.resample_samples = whisperSamples.count
+                self.currentMetrics.t_resample_done = tResampleDone
+
+                Safety.log("Submitting \(whisperSamples.count) samples @ 16000 Hz to Whisper")
+                self.whisperService.setInitialPrompt(DictationDomainBias.initialPrompt(for: self.pendingDictationDomain))
+
+                // Wire up result handler before calling transcribe.
+                self.whisperService.ontranscriptionComplete = { [weak self] text in
+                    self?.currentMetrics.t_whisper_done = Date()
+                    self?.handleWhisperResult(text)
+                }
+
+                self.currentMetrics.t_whisper_submit = Date()
+                self.activityPhase = .transcribing
+                if !self.whisperService.transcribe(audioFrames: whisperSamples) {
+                    Safety.log("stopListening() — Whisper refused transcription; resetting to ready state")
+                    self.statusText = NSLocalizedString("Ready", comment: "Status: Ready to dictate")
+                    self.liveTranscript = ""
+                    self.resultFeedback = .idle
+                    self.activityPhase = .ready
+                    self.resumeActiveBrowserMediaSession()
+                    _ = self.applyLifecycle(.transcriptionCompleted, context: "whisper unavailable")
+                }
+            }
         }
     }
 

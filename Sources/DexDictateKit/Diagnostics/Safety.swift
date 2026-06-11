@@ -128,8 +128,32 @@ public struct Safety {
                 handle.seekToEndOfFile()
                 handle.write(data)
             }
+            pruneDebugLogIfNeeded(at: logURL)
         } else {
             try? data.write(to: logURL, options: .atomic)
         }
+    }
+
+    private static let debugLogMaxBytes = 500 * 1024  // 500 KB
+
+    private static func pruneDebugLogIfNeeded(at logURL: URL) {
+        let fileSize = (try? FileManager.default.attributesOfItem(atPath: logURL.path)[.size] as? Int) ?? 0
+        guard fileSize > debugLogMaxBytes else { return }
+
+        guard let data = try? Data(contentsOf: logURL) else { return }
+
+        // Keep the newest ~half by byte count from the end.
+        let keepBytes = debugLogMaxBytes / 2
+        guard data.count > keepBytes else { return }
+
+        let cutOffset = data.count - keepBytes
+        var trimData = data.subdata(in: cutOffset ..< data.count)
+
+        // Advance past the partial first line to avoid a truncated log entry.
+        if let newlineOffset = trimData.firstIndex(of: UInt8(ascii: "\n")) {
+            trimData = trimData.subdata(in: trimData.index(after: newlineOffset) ..< trimData.endIndex)
+        }
+
+        try? trimData.write(to: logURL, options: .atomic)
     }
 }

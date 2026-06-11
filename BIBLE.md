@@ -1409,3 +1409,237 @@ Unit tests cannot exercise `Process`/`osascript`, real browser Automation permis
 - Browser Automation permission granted and denied paths
 - Empty-result path (no speech detected) → media resumes
 - `stopSystem()` while paused → media resumes, no hang
+
+---
+
+### Entry 15: Architecture Hardening Pass — Storage, Audio Pipeline, UI, and Error Recovery (2026-06-11)
+
+**Goal:**
+Execute an exhaustive architecture hardening pass across 11 engineering work units (A–K), covering: local-first storage resilience, audio pipeline safety, main-actor responsiveness, memory boundedness, failure-path completeness, and UI rendering efficiency.
+
+**Validation results:**
+- `swift test` → **214/214 passed, 0 failures**
+- `swift build -c release` → Build complete (72s); one pre-existing Sendable warning on `defaultScriptRunner` (not new)
+- `scripts/validate_release.sh` → All checks passed except "Code signing verification failed" — pre-existing environment issue with self-signed `DexDictate Development` cert; not caused by these changes
+
+---
+
+#### Work Unit A: New `LocalJSONStore<T>` Storage Primitive
+
+**File created:** `Sources/DexDictateKit/Storage/LocalJSONStore.swift`
+
+**Architectural decision:** Introduced a reusable `public actor LocalJSONStore<T: Codable>` that provides versioned-envelope JSON persistence with: atomic writes via temp-file + `FileManager.replaceItemAt(_:withItemAt:)`, corruption quarantine (rename to `<name>.corrupt-<ISO8601>` — never silent deletion), and optional `legacyMigrate: ((Data) throws -> T)?` closure for schema migration. Actor isolation eliminates the need for external locking at every call site. This supersedes ad-hoc `JSONDecoder`/file-write code duplicated across managers.
+
+**Key types:**
+```swift
+public actor LocalJSONStore<T: Codable> {
+    private struct Envelope<P: Codable>: Codable { let version: Int; let payload: P }
+    public func load() -> T        // quarantine on corruption; legacyMigrate before quarantine
+    public func save(_ value: T)   // temp-write + replaceItemAt (atomic)
+    public func delete()           // ignores NSFileNoSuchFileError
+}
+```
+
+---
+
+#### Work Unit B: Harden `HistoryPersistenceManager`
+
+**File modified:** `Sources/DexDictateKit/HistoryPersistenceManager.swift`
+
+**Changes:** Rewrote over a private serial `DispatchQueue` (preserves synchronous public API). Added versioned envelope (`schemaVersion = 1`), legacy migration for raw-array files, corruption quarantine, blank-text filtering, UUID deduplication, 200-item cap, and atomic write. Added `saveAsync(_:) async` / `loadAsync() async -> [HistoryItem]` variants bridged via `withCheckedContinuation`.
+
+**Reason:** Prior implementation had no schema versioning, no corruption recovery, and no UUID deduplication. Corrupt files caused silent empty history. Blank items and duplicate UUIDs could accumulate indefinitely.
+
+---
+
+#### Work Unit C: Off-Main History Load + Debounced Save
+
+**File modified:** `Sources/DexDictate/DexDictateApp.swift`
+
+**Changes:**
+- Replaced synchronous `HistoryPersistenceManager.load()` at startup with `Task { let saved = await HistoryPersistenceManager.loadAsync(); ... }` — file I/O no longer blocks the main actor at launch.
+- Replaced immediate `HistoryPersistenceManager.save()` on history change with a Combine `.debounce(for: .milliseconds(500), scheduler: DispatchQueue.main)` pipeline calling `Task { await HistoryPersistenceManager.saveAsync(items) }`.
+
+**Reason:** Synchronous file reads at launch blocked the main run-loop visibly on slow disks; every keystroke or append triggered a full 200-item JSON write.
+
+---
+
+#### Work Unit D: Corrupt-Data Detection in Settings Managers
+
+**Files modified:** `Sources/DexDictateKit/CustomCommandsManager.swift`, `Sources/DexDictateKit/AppInsertionOverridesManager.swift`
+
+**Changes:** Split `guard let data = UserDefaults.standard.data(forKey: storageKey) else { return }` from the JSON decode step. Decode failures now emit a `Safety.log` message and leave the in-memory collection empty (the stored `Data` is preserved — not deleted — for forensics), rather than crashing or silently ignoring the error.
+
+**Reason:** Previously, a single corrupt UserDefaults value silently produced an empty custom-commands list with no log trace. Users would lose all custom commands on next save.
+
+---
+
+#### Work Unit E: Append-Only `DiagnosticsStore` + `debug.log` Rotation
+
+**File modified:** `Sources/DexDictateKit/Diagnostics/Diagnostics.swift`, `Sources/DexDictateKit/Diagnostics/Safety.swift`
+
+**Changes (DiagnosticsStore):**
+- `append()` rewritten from full-file-rewrite to `FileHandle.seekToEndOfFile()` + `handle.write(lineData)` — O(1) per append.
+- Prune threshold: `maxRecords * 80` bytes (minimum serialized `DiagnosticRecord` size at 80 bytes). Firing threshold fixed at `80` (not `250`) after test regression where `maxRecords=3`, 4 small test records (~80 bytes each) didn't exceed the old 750-byte threshold.
+- `pruneIfNeeded()` reads file once, keeps `.suffix(maxRecords)` lines, writes back atomically.
+
+**Changes (Safety.swift):**
+- `appendLegacyLogLine` calls `pruneDebugLogIfNeeded(at:)` after each append.
+- `debugLogMaxBytes = 500 * 1024` (500 KB cap).
+- Prune keeps newest 250 KB of `debug.log` using a Data byte-offset split (not Swift string indices, which are O(N) on UTF-8).
+
+**Reason:** Prior implementation read and rewrote the entire diagnostics file on every append — O(N) per call, dangerous during high-frequency recording events. `debug.log` had no size cap and could grow unboundedly.
+
+---
+
+#### Work Unit F: Fix CoreAudio `AudioBufferList` Allocation
+
+**File modified:** `Sources/DexDictateKit/Capture/AudioDeviceManager.swift`
+
+**Bug fixed:** `hasInputChannels(deviceID:)` used `UnsafeMutablePointer<AudioBufferList>.allocate(capacity: Int(dataSize))`, treating a byte count as an instance count — over-allocating by up to 24× (`MemoryLayout<AudioBufferList>.size = 24 bytes`). The allocated buffer was the wrong size, causing undefined behavior when `AudioObjectGetPropertyData` wrote into it.
+
+**Fix:**
+```swift
+let rawPtr = UnsafeMutableRawPointer.allocate(
+    byteCount: Int(dataSize),
+    alignment: MemoryLayout<AudioBufferList>.alignment
+)
+defer { rawPtr.deallocate() }
+let bufferList = rawPtr.bindMemory(to: AudioBufferList.self, capacity: 1)
+```
+
+Added `Safety.log` on size-query failure and UID lookup failure in `enumerateCoreAudioDevices()`.
+
+---
+
+#### Work Unit G: Bounded Audio Buffer Accumulation
+
+**File modified:** `Sources/DexDictateKit/Services/AudioRecorderService.swift`
+
+**Changes:**
+- Added `private let maxSampleCount = 48000 * 600` (10 minutes at 48 kHz).
+- `processAudioBuffer`: copies tap buffer to a local `[Float]` chunk during the callback (valid only for the callback duration), computes RMS from the local copy (no lock needed), then dispatches `bufferQueue.async { }` (changed from `.sync`) to enqueue the append.
+- Inside the async block: enforces cap with `removeFirst(overflow)` if `accumulatedSamples.count > maxSampleCount`.
+
+**Reason:** Tap callback was using `bufferQueue.sync` — blocking the real-time audio thread on disk/memory contention. Memory was unbounded; a 3-hour session would accumulate ~2 GB of samples.
+
+---
+
+#### Work Unit H: Whisper `didErrorWith` Completion Fix
+
+**File modified:** `Sources/DexDictateKit/Services/WhisperService.swift`
+
+**Bug fixed:** `whisper(_:didErrorWith:)` only logged the error; it never called `ontranscriptionComplete`. If Whisper hit an error mid-session, `isTranscribing` stayed `true` forever — the engine was permanently stuck in `.transcribing` with no recovery path.
+
+**Fix:**
+```swift
+nonisolated public func whisper(_ whisper: Whisper, didErrorWith error: Error) {
+    Safety.log("ERROR: Whisper delegate error: \(error)", category: .transcription)
+    MainActorDispatch.async { [weak self] in
+        guard let self else { return }
+        self.isTranscribing = false
+        self.ontranscriptionComplete?("")
+    }
+}
+```
+
+Added `didHandleError` flag in the transcription Task catch block to distinguish error vs. cancellation paths; non-`CancellationError` path also clears `isTranscribing` and calls `ontranscriptionComplete?("")` with a generation check.
+
+---
+
+#### Work Unit I: Trim/Resample Off MainActor
+
+**File modified:** `Sources/DexDictateKit/TranscriptionEngine.swift`
+
+**Changes:** `stopListening()` moved the CPU-heavy `trimSilenceFast`, `trimTrailingSilenceCalibrated`, and `resampleToWhisper` calls into `Task.detached(priority: .userInitiated)`.
+
+**Session staleness guard:**
+1. Capture `sessionId = self.currentSessionId` on main actor before the detached task.
+2. Perform all preprocessing in the detached task (off-main, no actor).
+3. `await MainActor.run { guard self.currentSessionId == sessionId else { return } }` — discards results if a new session started while preprocessing ran.
+4. Inside `MainActor.run`: update `currentMetrics`, set `whisperService.ontranscriptionComplete`, call `whisperService.transcribe`.
+
+**Reason:** Trim + resample on the main actor caused 200–400 ms UI freezes on long recordings. Detached task prevents the freeze; session guard prevents stale results from corrupting a newer session.
+
+---
+
+#### Work Unit J: Clipboard Snapshot Memory Cap
+
+**File modified:** `Sources/DexDictateKit/Output/ClipboardManager.swift`
+
+**Change:** `clonePasteboardItems()` now accumulates `totalBytes` across all `.data` representations. If `totalBytes > 10 * 1024 * 1024` (10 MB): logs via `Safety.log(category: .output)` and returns `SavedPasteboardContents(hadOriginalContents: true, items: [])` — triggering the existing "cannot clone safely" fallback that leaves the dictation text on the clipboard rather than restoring the original.
+
+**Reason:** Pathological pasteboard payloads (large images, video thumbnails) could cause the app to hold 100+ MB of heap for the clipboard restore window. The 10 MB cap bounds memory use while preserving safe behavior on oversized payloads.
+
+---
+
+#### Work Unit K: UI Image Loading Cache
+
+**Files modified:** `Sources/DexDictate/FloatingHUD.swift`, `Sources/DexDictate/HistoryWindow.swift`, `Sources/DexDictate/DexDictateApp.swift`
+
+**Changes:** Three SwiftUI views were loading images from disk (or `Bundle.main`) on every `body` evaluation:
+
+| View | Image | Fix |
+|---|---|---|
+| `FloatingHUDView` | Watermark PNG from file URL | `@State private var cachedWatermarkImage: NSImage?` + `.onAppear`; `.onChange(of: profileManager.currentWatermarkAsset?.url)` to refresh |
+| `FullHistoryView` | AppIcon from `Bundle.main` | `@State private var cachedAppIcon: NSImage?` + `.onAppear` |
+| `AntiGravityMainView` | Watermark in DexDictateApp.swift | `@State private var cachedWatermarkImage: NSImage?` + `.onAppear` |
+
+**Reason:** SwiftUI re-evaluates `body` on every state change (mic level, transcription text, etc.). Disk I/O in `body` adds latency to every UI frame — measurable during high-frequency mic-level updates.
+
+---
+
+#### New Test File
+
+**File created:** `Tests/DexDictateTests/ArchitectureHardeningTests.swift` (13 tests)
+
+| Test | Covers |
+|---|---|
+| `testLocalJSONStoreRoundTrip` | Save + load returns identical value |
+| `testLocalJSONStoreVersionedEnvelope` | Raw JSON contains `version` + `payload` keys |
+| `testLocalJSONStoreLegacyMigration` | `legacyMigrate` closure called when envelope decode fails |
+| `testLocalJSONStoreCorruptQuarantine` | Corrupt file renamed to `.corrupt-<ISO8601>`, `defaultValue` returned |
+| `testLocalJSONStoreDelete` | File removed; subsequent load returns `defaultValue` |
+| `testDiagnosticsStoreAppendsLines` | N appends → N JSONL lines |
+| `testDiagnosticsStorePrunesOnOverflow` | Overflow triggers prune; exactly `maxRecords` lines retained |
+| `testDiagnosticsStoreRetainsNewestRecords` | After prune, newest records are kept (not oldest) |
+| `testClipboardManagerCapExceeded` | Snapshot >10 MB → `items` empty, `hadOriginalContents` true |
+| `testClipboardManagerSmallPayloadClonedNormally` | Small payload → normal `SavedPasteboardItem` entries |
+| `testAudioRecorderServiceBufferInjectAndCollect` | DEBUG seam: inject samples, verify they appear in buffer |
+| `testAudioRecorderServiceBufferCapEnforced` | Injecting beyond cap evicts oldest samples |
+| `testAudioRecorderServiceRMSFromInjectedBuffer` | RMS computed from injected samples matches expected value |
+
+---
+
+#### Files Changed Summary
+
+**New files (2):**
+- `Sources/DexDictateKit/Storage/LocalJSONStore.swift`
+- `Tests/DexDictateTests/ArchitectureHardeningTests.swift`
+
+**Modified files (13):**
+- `Sources/DexDictateKit/HistoryPersistenceManager.swift`
+- `Sources/DexDictate/DexDictateApp.swift`
+- `Sources/DexDictateKit/CustomCommandsManager.swift`
+- `Sources/DexDictateKit/AppInsertionOverridesManager.swift`
+- `Sources/DexDictateKit/Diagnostics/Diagnostics.swift`
+- `Sources/DexDictateKit/Diagnostics/Safety.swift`
+- `Sources/DexDictateKit/Capture/AudioDeviceManager.swift`
+- `Sources/DexDictateKit/Services/AudioRecorderService.swift`
+- `Sources/DexDictateKit/Services/WhisperService.swift`
+- `Sources/DexDictateKit/TranscriptionEngine.swift`
+- `Sources/DexDictateKit/Output/ClipboardManager.swift`
+- `Sources/DexDictate/FloatingHUD.swift`
+- `Sources/DexDictate/HistoryWindow.swift`
+
+---
+
+#### Remaining Risks and Follow-Up
+
+- **WhisperService `didHandleError` path:** The generation check inside the Task catch block prevents stale completions but does not yet surface a user-visible "transcription failed" status. If Whisper errors repeatedly, the user sees silent empty results.
+- **`LocalJSONStore` not yet wired:** `LocalJSONStore` exists and is tested but `CustomCommandsManager` and `AppInsertionOverridesManager` still use `UserDefaults` directly. A follow-up pass could migrate those to file-backed `LocalJSONStore` instances for parity with the hardened `HistoryPersistenceManager`.
+- **`HistoryPersistenceManager` not yet migrated to `LocalJSONStore`:** `HistoryPersistenceManager` was hardened in parallel using the same patterns but is its own implementation. The two could be unified in a future cleanup.
+- **Code signing:** `validate_release.sh` "Code signing verification failed" is a pre-existing dev-environment issue with the self-signed `DexDictate Development` cert. Does not affect runtime behavior.
+- **SwiftWhisper build-time dependency:** Fetched from `https://github.com/exPHAT/SwiftWhisper.git` at revision `deb1cb6a` during `swift build`. This is a **build-time** dependency only. The compiled Whisper model inference code is statically linked into the binary — no network call at runtime. The offline-only privacy guarantee is unaffected.
+
+**Status:** Complete.

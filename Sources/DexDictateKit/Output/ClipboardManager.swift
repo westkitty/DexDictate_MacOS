@@ -138,9 +138,30 @@ enum ClipboardManager {
 
     static func clonePasteboardItems(_ items: [NSPasteboardItem]?) -> SavedPasteboardContents {
         let sourceItems = items ?? []
-        let clonedItems = sourceItems
-            .map { snapshotPasteboardItem($0) }
-            .filter { !$0.isEmpty }
+
+        var totalBytes = 0
+        let snapshotCap = 10 * 1024 * 1024  // 10 MB
+
+        var clonedItems: [SavedPasteboardItem] = []
+        for item in sourceItems {
+            let snapshot = snapshotPasteboardItem(item)
+            // Count bytes from data representations
+            let itemBytes = snapshot.representations.reduce(0) { sum, rep in
+                if case .data(let d) = rep.value { return sum + d.count }
+                return sum
+            }
+            totalBytes += itemBytes
+            if totalBytes > snapshotCap {
+                Safety.log(
+                    "ClipboardManager — pasteboard snapshot exceeded \(snapshotCap / 1024 / 1024) MB cap (\(totalBytes) bytes); skipping restore to avoid memory pressure.",
+                    category: .output
+                )
+                return SavedPasteboardContents(hadOriginalContents: true, items: [])
+            }
+            if !snapshot.isEmpty {
+                clonedItems.append(snapshot)
+            }
+        }
 
         return SavedPasteboardContents(
             hadOriginalContents: !sourceItems.isEmpty,

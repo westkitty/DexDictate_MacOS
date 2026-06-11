@@ -269,19 +269,27 @@ public class WhisperService: ObservableObject {
         let startedAt = Date()
 
         transcriptionTask = Task {
+            var didHandleError = false
             do {
                 _ = try await whisper.transcribe(audioFrames: audioFrames)
                 let elapsedMs = Int(Date().timeIntervalSince(startedAt) * 1000)
-                Safety.log("Whisper transcribe completed in \(elapsedMs)ms")
+                Safety.log("Whisper transcribe completed in \(elapsedMs)ms", category: .transcription)
             } catch {
                 if !(error is CancellationError) {
-                    Safety.log("ERROR: Whisper transcription failed: \(error)")
+                    Safety.log("ERROR: Whisper transcription failed: \(error)", category: .transcription)
+                    didHandleError = true
+                    let myGen = myGeneration
+                    // Drive the engine back to ready via the empty-result path.
+                    MainActorDispatch.async { [weak self] in
+                        guard let self, self.transcriptionGeneration == myGen else { return }
+                        self.isTranscribing = false
+                        self.ontranscriptionComplete?("")
+                    }
                 }
             }
-            // Only clear isTranscribing if this task is still the active one.
-            // A cancelled task must not reset the flag for a newer transcription that
-            // set isTranscribing = true and bumped transcriptionGeneration after us.
-            if self.transcriptionGeneration == myGeneration {
+            // Clear isTranscribing for normal completion and CancellationError paths.
+            // Non-cancellation errors clear it in the MainActorDispatch block above.
+            if !didHandleError, self.transcriptionGeneration == myGeneration {
                 self.isTranscribing = false
             }
         }
@@ -338,6 +346,11 @@ extension WhisperService: WhisperDelegate {
     }
 
     nonisolated public func whisper(_ whisper: Whisper, didErrorWith error: Error) {
-        Safety.log("ERROR: Whisper delegate error: \(error)")
+        Safety.log("ERROR: Whisper delegate error: \(error)", category: .transcription)
+        MainActorDispatch.async { [weak self] in
+            guard let self else { return }
+            self.isTranscribing = false
+            self.ontranscriptionComplete?("")
+        }
     }
 }

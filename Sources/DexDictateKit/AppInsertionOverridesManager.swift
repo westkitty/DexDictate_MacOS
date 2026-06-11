@@ -63,10 +63,14 @@ public final class AppInsertionOverridesManager: ObservableObject {
     }
 
     private func load() {
-        guard let data = UserDefaults.standard.data(forKey: storageKey),
-              let decoded = try? JSONDecoder().decode([AppInsertionOverride].self, from: data) else { return }
-        isLoading = true
-        defer { isLoading = false }
-        overrides = decoded
+        guard let data = UserDefaults.standard.data(forKey: storageKey) else { return }
+        do {
+            let decoded = try JSONDecoder().decode([AppInsertionOverride].self, from: data)
+            isLoading = true
+            defer { isLoading = false }
+            overrides = decoded
+        } catch {
+            Safety.log("[AppInsertionOverridesManager] Corrupt data for key '\(storageKey)': \(error). Leaving overrides empty; stored data preserved.", category: .settings)
+        }
     }
 }
