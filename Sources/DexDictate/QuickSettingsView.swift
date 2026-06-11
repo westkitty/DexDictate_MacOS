@@ -67,6 +67,7 @@ struct QuickSettingsView: View {
             .accessibilityLabel(isExpanded ? "Collapse quick settings" : "Expand quick settings")
 
             if isExpanded {
+                ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 10) {
                     pinnedControlsStrip
 
@@ -492,6 +493,8 @@ struct QuickSettingsView: View {
                 .padding(SurfaceTokens.cardPadding)
                 .background(Color.black.opacity(0.3))
                 .clipShape(RoundedRectangle(cornerRadius: SurfaceTokens.cornerRadius))
+                }
+                .frame(maxHeight: 500)
             }
         }
         .padding(.horizontal)
