@@ -34,8 +34,8 @@ final class LaunchIntroController {
         player.actionAtItemEnd = .pause
         self.player = player
 
-        // Videos are 8–10 s played at 2x, so effective runtime is ~4–5 s.
-        let duration: Double = 4.5
+        // Videos are 8–10 s played at 1.5x, so effective runtime is ~5–7 s.
+        let duration: Double = 6.0
 
         let startFrame = initialFrame(on: screen)
         let panel = LaunchIntroPanel(
@@ -51,7 +51,7 @@ final class LaunchIntroController {
             panel.animator().alphaValue = 1
         }
 
-        player.rate = 2.0
+        player.rate = 1.5
 
         let exitDelay = max(0.9, duration - 1.2)
         let exitDuration = min(1.0, max(0.6, duration * 0.15))
