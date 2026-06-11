@@ -100,6 +100,8 @@ public struct SystemAccessibilityElementOperator: AccessibilityElementOperating 
 public protocol OutputWriting {
     func copy(_ text: String)
     func copyAndPaste(_ text: String, targetApplication: OutputTargetApplication?)
+    /// Selects all text in the focused field (Cmd+A) then pastes (Cmd+V).
+    func selectAllAndPaste(_ text: String, targetApplication: OutputTargetApplication?)
 }
 
 public protocol FocusedContextInspecting {
@@ -125,6 +127,10 @@ public struct ClipboardOutputWriter: OutputWriting {
 
     public func copyAndPaste(_ text: String, targetApplication: OutputTargetApplication?) {
         ClipboardManager.copyAndPaste(text, targetApplication: targetApplication)
+    }
+
+    public func selectAllAndPaste(_ text: String, targetApplication: OutputTargetApplication?) {
+        ClipboardManager.copySelectAllAndPaste(text, targetApplication: targetApplication)
     }
 }
 
@@ -203,6 +209,11 @@ public struct OutputCoordinator: OutputCoordinating {
             }
         }
 
+        if insertionMode == .replaceFieldWithClipboardPaste {
+            writer.selectAllAndPaste(text, targetApplication: targetApplication)
+            return OutputDeliveryDecision(delivery: .pastedToActiveApp)
+        }
+
         if insertionMode == .accessibilityAPI {
             if insertViaAccessibility(text) {
                 return OutputDeliveryDecision(delivery: .pastedToActiveApp)
@@ -232,12 +243,15 @@ public struct OutputCoordinator: OutputCoordinating {
             let updatedValue = replacingText(in: currentValue, selectedRange: selectedRange, with: text)
             let result = axOperator.set(updatedValue as CFTypeRef, for: kAXValueAttribute as CFString, element: element)
             if result == .success {
-                axOperator.setCursor(location: selectedRange.location + text.utf16.count, element: element)
+                axOperator.setCursor(
+                    location: selectedRange.location + accessibilityCharacterCount(text),
+                    element: element
+                )
                 return true
             }
             Safety.log("insertViaAccessibility() — strategy 1 (value+range) failed: AXError \(result.rawValue)", category: .output)
         } else if !valueSettable {
-            Safety.log("insertViaAccessibility() — strategies 1 and 3 skipped: kAXValueAttribute not settable", category: .output)
+            Safety.log("insertViaAccessibility() — strategies 1 skipped: kAXValueAttribute not settable", category: .output)
         }
 
         // Strategy 2: replace the selected text directly
@@ -250,15 +264,7 @@ public struct OutputCoordinator: OutputCoordinating {
             Safety.log("insertViaAccessibility() — strategy 2 (selectedText) skipped: attribute not settable", category: .output)
         }
 
-        // Strategy 3: append to the full value
-        if valueSettable,
-           let currentValue = axOperator.getString(kAXValueAttribute as CFString, element: element) {
-            let result = axOperator.set((currentValue + text) as CFTypeRef, for: kAXValueAttribute as CFString, element: element)
-            if result == .success { return true }
-            Safety.log("insertViaAccessibility() — strategy 3 (append) failed: AXError \(result.rawValue)", category: .output)
-        }
-
-        Safety.log("insertViaAccessibility() — all strategies failed; falling back to clipboard", category: .output)
+        Safety.log("insertViaAccessibility() — both strategies failed; falling back to clipboard paste", category: .output)
         return false
     }
 
@@ -273,6 +279,13 @@ public struct OutputCoordinator: OutputCoordinating {
         }
 
         applicationActivator.activate(targetApplication)
+    }
+
+    /// Returns the character count AX text-range APIs use for cursor advancement.
+    /// AX positions are Unicode scalar offsets, not UTF-16 code units.
+    /// The two diverge for characters outside the BMP (e.g. emoji).
+    private func accessibilityCharacterCount(_ text: String) -> Int {
+        text.unicodeScalars.count
     }
 
     private func replacingText(in currentValue: String, selectedRange: NSRange, with replacement: String) -> String {

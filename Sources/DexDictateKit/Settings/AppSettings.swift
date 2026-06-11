@@ -84,7 +84,8 @@ public class AppSettings: ObservableObject {
     /// When `true`, uses Accessibility API for text insertion; when `false`, uses keyboard simulation.
     @AppStorage("useAccessibilityInsertion") public var useAccessibilityInsertion: Bool = false
 
-    /// Reserved for a future append-mode feature; not currently implemented.
+    /// Not implemented and not wired. Do not implement this as global destructive-replace behavior.
+    /// Per-field replace semantics are available via InsertionModeOverride.replaceFieldWithClipboardPaste.
     @AppStorage("appendMode") public var appendMode: Bool = false
 
     /// Applies a reversible lower-risk preset for dictation behavior.

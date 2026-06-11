@@ -130,6 +130,9 @@ public final class TranscriptionEngine: ObservableObject {
     private var lastCapturedUtterance: (samples: [Float], sampleRate: Double)?
     private var pendingImportedFileName: String?
     private var pendingOutputTargetApplication: OutputTargetApplication?
+    /// Snapshot of the focused AX element captured at trigger-down (recording start).
+    /// Used to detect focus changes during transcription before committing paste.
+    private var pendingFocusSnapshot: FocusedElementSnapshot?
     private var pendingDictationDomain: DictationDomain = .general
     private var currentRecordingStartedAt: Date?
     private var recentCommittedOutputs: [String] = []
@@ -260,6 +263,7 @@ public final class TranscriptionEngine: ObservableObject {
         pendingImportedFileName = nil
         importedFileResult = nil
         pendingOutputTargetApplication = nil
+        pendingFocusSnapshot = nil
         pendingDictationDomain = .general
         currentRecordingStartedAt = nil
         automaticRetryOriginalText = nil
@@ -424,6 +428,7 @@ public final class TranscriptionEngine: ObservableObject {
         inputLevel = 0
         activityPhase = .listening
         pendingOutputTargetApplication = captureOutputTargetApplication()
+        pendingFocusSnapshot = FocusedElementSnapshot.captureFromSystem()
         pendingDictationDomain = DictationDomainBias.resolvedDomain(
             mode: AppSettings.shared.dictationDomainMode,
             bundleIdentifier: pendingOutputTargetApplication?.bundleIdentifier
@@ -765,6 +770,7 @@ public final class TranscriptionEngine: ObservableObject {
         defer {
             resumeActiveBrowserMediaSession()
             pendingOutputTargetApplication = nil
+            pendingFocusSnapshot = nil
             automaticRetryOriginalText = nil
             whisperService.setInitialPrompt(nil)
             if completesLifecycle {
@@ -801,6 +807,24 @@ public final class TranscriptionEngine: ObservableObject {
             )
         }
         
+        // Focus identity check: if the focused element changed meaningfully during
+        // transcription, copy to clipboard instead of pasting into the wrong field.
+        if AppSettings.shared.autoPaste, let triggerSnapshot = pendingFocusSnapshot {
+            let currentSnapshot = FocusedElementSnapshot.captureFromSystem()
+            if !FocusedElementIdentityMatcher.isSameContext(
+                triggerSnapshot, currentSnapshot,
+                targetBundleID: pendingOutputTargetApplication?.bundleIdentifier
+            ) {
+                Safety.log(
+                    "TranscriptionEngine — paste aborted: focused element changed during transcription. Copying to clipboard.",
+                    category: .output
+                )
+                ClipboardManager.copy(finalText)
+                resultFeedback = .copiedOnlySensitiveContext(modified: preparedResult.wasModified, reason: "Focus changed during transcription.")
+                return
+            }
+        }
+
         let deliveryDecision = outputCoordinator.deliver(
             text: finalText,
             autoPaste: AppSettings.shared.autoPaste,

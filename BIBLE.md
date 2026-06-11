@@ -1643,3 +1643,179 @@ Added `didHandleError` flag in the transcription Task catch block to distinguish
 - **SwiftWhisper build-time dependency:** Fetched from `https://github.com/exPHAT/SwiftWhisper.git` at revision `deb1cb6a` during `swift build`. This is a **build-time** dependency only. The compiled Whisper model inference code is statically linked into the binary — no network call at runtime. The offline-only privacy guarantee is unaffected.
 
 **Status:** Complete.
+
+---
+
+## Entry 16 — 2026-06-11: Paste Pipeline Hardening — A through I
+
+### A. Removed Accessibility API Append Fallback
+
+**Timestamp:** 2026-06-11
+
+**Files changed:**
+- `Sources/DexDictateKit/Output/OutputCoordinator.swift`
+- `Tests/DexDictateTests/AccessibilityInsertionTests.swift`
+- `Tests/DexDictateTests/OutputCoordinatorTests.swift`
+
+**Decision:** Removed `insertViaAccessibility` Strategy 3 — the fallback that blindly set `currentValue + text` on the AX value attribute, ignoring cursor position. This was the primary cause of dictated text appending to existing field contents rather than inserting at the cursor. Only Strategy 1 (replace selected range in value) and Strategy 2 (set selected text directly) remain. When both fail, the function returns `false` and falls back to clipboard paste.
+
+**Reason:** Strategy 3 always appended to end-of-field regardless of cursor position, making it semantically incorrect for any field with existing content. The clipboard paste fallback is at least cursor-aware (target app's own paste handler positions the result correctly).
+
+**Validation:** `swift test` — 237/237 passing. Tests added: `testWhenBothStrategiesFailOnlyTwoSetAttemptsOccurAndNothingIsAppended`, `testWhenValueNotSettableOnlySelectedTextStrategyIsAttempted`.
+
+---
+
+### B. Fixed Cursor Offset Calculation
+
+**Timestamp:** 2026-06-11
+
+**Files changed:**
+- `Sources/DexDictateKit/Output/OutputCoordinator.swift`
+- `Tests/DexDictateTests/AccessibilityInsertionTests.swift`
+
+**Decision:** Replaced `text.utf16.count` with `accessibilityCharacterCount(text)` (returns `text.unicodeScalars.count`) when advancing the cursor after AX Strategy 1 insertion. Added private helper `accessibilityCharacterCount`.
+
+**Reason:** AX text-range positions use Unicode scalar (code point) offsets, not UTF-16 code unit offsets. These diverge for characters outside the BMP (emoji, some mathematical symbols). Using `utf16.count` would place the cursor 1–N positions too far right when the inserted text contained surrogate-pair characters.
+
+**Validation:** 237/237 tests. Tests added: `testCursorOffsetASCII`, `testCursorOffsetEmojiUsesUnicodeScalarsNotUTF16`, `testCursorOffsetCJK`, `testCursorOffsetMixedEmojiAndCJK`, `testCursorOffsetNonZeroInitialRange`.
+
+---
+
+### C. Added Focused Text-Element Validation Before Paste
+
+**Timestamp:** 2026-06-11
+
+**Files changed:**
+- `Sources/DexDictateKit/Output/ClipboardManager.swift`
+
+**Decision:** Added `isFocusedElementEditableProvider` testable hook and `isFocusedElementEditable()` private method to `ClipboardManager`. The check fires inside `waitForTargetActivationAndPaste` (and the new `waitForTargetActivationAndSelectAllPaste`) immediately before `simulatePaste`/`simulateSelectAllAndPaste`. If the focused AX element doesn't expose settable `kAXSelectedTextAttribute` or `kAXValueAttribute`, the paste is aborted and the text remains on the clipboard.
+
+**Reason:** Prevents Cmd+V from firing into non-editable UI elements (menus, toolbars, dialogs, read-only fields) if the focused element shifts during transcription or activation. Follows the same testable-provider pattern already used for `isFrontmostProvider`.
+
+**Known limitation:** The delivery feedback shown to the user will still say "pasted" even if aborted, because the abort happens asynchronously after `finalizeTranscription` has already set the result feedback. The text is on the clipboard, so the user can paste manually.
+
+**Validation:** 237/237 tests. Tests added in `OutputPipelineHardeningTests.swift`: `testNonEditableFocusAbortsPaste`, `testEditableProviderIsConsultedBeforeSelectAllPaste`.
+
+---
+
+### D. Captured Focused-Element Snapshot at Trigger-Down
+
+**Timestamp:** 2026-06-11
+
+**Files changed:**
+- `Sources/DexDictateKit/Output/SecureInputContext.swift`
+- `Sources/DexDictateKit/TranscriptionEngine.swift`
+
+**Decision:** Extended `FocusedElementSnapshot` with `processIdentifier: pid_t?` and `bundleIdentifier: String?` fields (both optional with defaults to preserve all existing call sites). Added `static func captureFromSystem() -> FocusedElementSnapshot?` that calls `AXUIElementCopyAttributeValue(kAXFocusedUIElementAttribute)` and `AXUIElementGetPid`. Added `private var pendingFocusSnapshot: FocusedElementSnapshot?` to `TranscriptionEngine`. In `startListening()`, after `captureOutputTargetApplication()`, the snapshot is captured. Cleared in both `stopSystem()` and the `defer` block of `finalizeTranscription()`.
+
+**Reason:** The trigger-press moment is when the user's intent is established — what field and position they want text inserted into. By capturing the focused element identity at that moment, the engine can later verify nothing has changed.
+
+**Validation:** 237/237 tests. `FocusedElementSnapshot` existing call sites (in SecureInputContextTests.swift and OutputCoordinatorTests.swift) compile without changes because new fields default to `nil`.
+
+---
+
+### E. Added Delivery-Time Focus Identity Validation
+
+**Timestamp:** 2026-06-11
+
+**Files changed:**
+- `Sources/DexDictateKit/Output/SecureInputContext.swift`
+- `Sources/DexDictateKit/TranscriptionEngine.swift`
+- `Tests/DexDictateTests/OutputPipelineHardeningTests.swift`
+
+**Decision:** Added `FocusedElementIdentityMatcher.isSameContext(_:_:targetBundleID:)` to `SecureInputContext.swift`. Rules: (1) different bundle identifiers → fail; (2) both have a non-empty AX `identifier` → compare directly; (3) roles differ → fail; (4) when semantic fields (title/placeholder/label) are available on both, at least one must match; (5) nil current snapshot → allow conservatively. In `finalizeTranscription()`, just before `outputCoordinator.deliver()`, the current snapshot is compared to `pendingFocusSnapshot`. If they differ: `ClipboardManager.copy(finalText)` is called, `resultFeedback` is set to `.copiedOnlySensitiveContext(reason: "Focus changed during transcription.")`, and the method returns early (defer handles lifecycle cleanup). The check only fires when `autoPaste = true` and a trigger snapshot was captured.
+
+**Reason:** Prevents dictated text from pasting into a different field than the one the user was focused on at trigger-down. This is the core fix for wrong-target paste risk during transcription delays of 1–5 seconds.
+
+**Design choice — conservative matching:** When identity info is absent (all AX attributes nil), the matcher allows paste rather than blocking. False negatives (blocking a valid paste) are more frustrating than an occasional wrong-field paste in rare no-info scenarios. Apps with AX identifiers or semantic labels get strict matching.
+
+**Validation:** 237/237 tests. Tests added: `testSameElementPassesWhenBothHaveSameIdentifier`, `testDifferentIdentifierFails`, `testDifferentBundleIDFails`, `testDifferentRoleFails`, `testMatchingSemanticFieldPasses`, `testNoMatchingSemanticFieldFails`, `testNilCurrentSnapshotConservativelyAllowsPaste`, `testNoSemanticInfoOnEitherSideAllowsPaste`, `testTargetBundleIDUsedWhenTriggerBundleIDNil`.
+
+---
+
+### F. Added Replace-Field Insertion Mode
+
+**Timestamp:** 2026-06-11
+
+**Files changed:**
+- `Sources/DexDictateKit/AppInsertionOverridesManager.swift`
+- `Sources/DexDictateKit/Output/OutputCoordinator.swift`
+- `Sources/DexDictateKit/Output/ClipboardManager.swift`
+- `Tests/DexDictateTests/OutputCoordinatorTests.swift`
+- `Tests/DexDictateTests/OutputPipelineHardeningTests.swift`
+
+**Decision:** Added `case replaceFieldWithClipboardPaste = "Replace Field with Clipboard Paste"` to `InsertionModeOverride`. Added `selectAllAndPaste(_:targetApplication:)` to the `OutputWriting` protocol and `ClipboardOutputWriter`. `OutputCoordinator.deliver()` routes this mode (after the sensitive context check) to `writer.selectAllAndPaste`. Added `ClipboardManager.copySelectAllAndPaste` which sends Cmd+A then Cmd+V by keeping Cmd held across both key events. The select-all-paste path shares the same activation/editable validation as the regular paste path.
+
+**Reason:** Provides an explicit, safe, user-configured replacement for search bars, browser address bars, and single-field prompts where each utterance should replace the whole field. Not the global default — requires explicit per-app configuration in the Per-App Insertion Rules sheet.
+
+**Validation:** 237/237 tests. Tests added: `testReplaceFieldModeRoutesToSelectAllAndPaste`, `testReplaceFieldModeRespectsSensitiveContextProtection`, `testAllInsertionModesDecodeFromRawValues`, `testExistingModesStillDecodeAfterAddingReplaceFieldCase`, `testReplaceFieldModeRoundTripsAsJSON`. Updated `testInsertionModesStayBehaviorallyDistinct` to cover the new mode.
+
+---
+
+### G. Wired Replace-Field Mode Into Per-App Overrides UI
+
+**Timestamp:** 2026-06-11
+
+**Files changed:** None (automatic via `InsertionModeOverride.allCases`)
+
+**Decision:** `PerAppInsertionSheet` uses `InsertionModeOverride.allCases.filter { $0 != .useGlobal }` in its `Picker`. Adding the new enum case to `CaseIterable` automatically exposes it in the UI without any further code changes.
+
+**Reason:** Zero-friction UI integration because the sheet was designed to be enum-driven from the start.
+
+---
+
+### H. Clarified `appendMode` Comment
+
+**Timestamp:** 2026-06-11
+
+**Files changed:**
+- `Sources/DexDictateKit/Settings/AppSettings.swift`
+
+**Decision:** Updated the `appendMode` comment from "Reserved for a future append-mode feature; not currently implemented." to "Not implemented and not wired. Do not implement this as global destructive-replace behavior. Per-field replace semantics are available via InsertionModeOverride.replaceFieldWithClipboardPaste."
+
+**Reason:** The old comment said "reserved for a future feature" which implied someone could implement it as global replace behavior. That would be destructive. The new comment makes the intent explicit and points to the correct implementation path.
+
+---
+
+### I. Verified No Unsafe HID Fallback
+
+**Timestamp:** 2026-06-11
+
+**Files changed:** None
+
+**Decision:** Confirmed that when the target application is not frontmost at deadline, `ClipboardManager.waitForTargetActivationAndPaste` returns without posting a system-wide HID event. The text remains on the clipboard. No change was made. The existing abort-and-log behavior is correct.
+
+**Reason:** Wrong-target paste is worse than failed paste. Posting to `.cghidEventTap` after a timeout would risk injecting Cmd+V into whatever gained focus (e.g., a different app, a system dialog). The spec explicitly forbids this.
+
+---
+
+### Validation — Entry 16
+
+**Command:** `swift test`
+**Result:** 237 tests, 0 failures (up from 214 before this pass)
+**New test files:** `Tests/DexDictateTests/OutputPipelineHardeningTests.swift`
+**Updated test files:** `Tests/DexDictateTests/AccessibilityInsertionTests.swift`, `Tests/DexDictateTests/OutputCoordinatorTests.swift`
+
+#### Files changed in this entry
+**Modified (8):**
+- `Sources/DexDictateKit/AppInsertionOverridesManager.swift`
+- `Sources/DexDictateKit/Output/ClipboardManager.swift`
+- `Sources/DexDictateKit/Output/OutputCoordinator.swift`
+- `Sources/DexDictateKit/Output/SecureInputContext.swift`
+- `Sources/DexDictateKit/Settings/AppSettings.swift`
+- `Sources/DexDictateKit/TranscriptionEngine.swift`
+- `Tests/DexDictateTests/AccessibilityInsertionTests.swift`
+- `Tests/DexDictateTests/OutputCoordinatorTests.swift`
+
+**New (1):**
+- `Tests/DexDictateTests/OutputPipelineHardeningTests.swift`
+
+#### Remaining Risks and Follow-Up
+
+- **Delivery feedback mismatch on aborted paste:** When the focused-element editable check aborts a paste inside `ClipboardManager` (async path), the UI already shows "pasted" because `resultFeedback` was set synchronously before the async delivery. This is a structural issue with the current void-return async API. A future fix would require `copyAndPaste` to accept a completion handler so the engine can update feedback after actual delivery.
+- **Focus identity false-negative rate:** The conservative matcher allows paste when identity info is sparse (all AX attributes nil). In apps that expose zero AX metadata, the matcher falls back to app-level identity only. This is intentional but means some shifted-focus cases aren't caught in those apps.
+- **`replaceFieldWithClipboardPaste` in full-screen apps:** In some full-screen or kiosk apps, Cmd+A may trigger non-paste actions (e.g., select all in a file manager). Users should configure this mode only for confirmed text-input fields.
+- **`appendMode` UserDefaults key persists:** The `appendMode` UserDefaults key may be set to `true` on some installations from a user who manually toggled it. Since it's not wired, this is harmless, but a future cleanup could remove the key entirely.
+- **`swift build -c release` not run:** Omitted from this pass because prior sessions confirmed the signing environment fails validation. No logic changes that would affect release build correctness were introduced.
+
+**Status:** Complete.

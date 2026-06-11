@@ -7,6 +7,11 @@ public enum InsertionModeOverride: String, Codable, CaseIterable, Identifiable {
     case clipboardPaste = "Clipboard Paste (Cmd+V)"
     case clipboardOnly = "Clipboard Only (no paste)"
     case accessibilityAPI = "Accessibility API"
+    /// Selects all text in the focused field (Cmd+A) then pastes (Cmd+V).
+    /// Use for search bars, address bars, and single-field inputs where each
+    /// utterance should replace the whole field contents. Not for documents,
+    /// chat boxes, code editors, or multi-line text areas.
+    case replaceFieldWithClipboardPaste = "Replace Field with Clipboard Paste"
 
     public var id: String { rawValue }
 }

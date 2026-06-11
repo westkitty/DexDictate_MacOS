@@ -1,4 +1,5 @@
 import AppKit
+import ApplicationServices
 
 struct PasteDeliveryProfile: Equatable {
     let initialDelay: TimeInterval
@@ -189,19 +190,25 @@ enum ClipboardManager {
         deadline: Date
     ) {
         guard let targetApplication else {
+            guard isFocusedElementEditable() else {
+                Safety.log("ClipboardManager — paste aborted: focused element is not editable. Text remains on clipboard.", category: .output)
+                return
+            }
             simulatePaste(targetProcessIdentifier: nil)
             return
         }
 
         if isFrontmost(targetApplication) {
+            guard isFocusedElementEditable() else {
+                Safety.log("ClipboardManager — paste aborted: focused element in '\(targetApplication.bundleIdentifier)' is not editable. Text remains on clipboard.", category: .output)
+                return
+            }
             let targetProcessIdentifier = profile.postsToTargetProcess ? targetApplication.processIdentifier : nil
             simulatePaste(targetProcessIdentifier: targetProcessIdentifier)
             return
         }
 
         if Date() >= deadline {
-            // Pre-paste validation step: immediately before synthetic Cmd+V, verify target app is still frontmost.
-            // If it is not, abort the paste command to prevent wrong-target pasting (e.g. user switched app or overlay took focus).
             let actualApp = NSWorkspace.shared.frontmostApplication
             let actualBundle = actualApp?.bundleIdentifier ?? "unknown"
             let actualPID = actualApp?.processIdentifier ?? 0
@@ -219,6 +226,112 @@ enum ClipboardManager {
         }
     }
 
+    // MARK: - Select-All-Then-Paste (replace-field mode)
+
+    /// Copies `text` to the pasteboard, then sends Cmd+A followed by Cmd+V to the target
+    /// application, replacing the entire focused field contents. Use only via the
+    /// `.replaceFieldWithClipboardPaste` insertion mode; not as a global default.
+    static func copySelectAllAndPaste(_ text: String, targetApplication: OutputTargetApplication?) {
+        runOnMainThread {
+            let pasteboard = NSPasteboard.general
+            let deliveryProfile = PasteDeliveryProfile.resolve(for: targetApplication)
+            let originalContents = clonePasteboardItems(pasteboard.pasteboardItems)
+            writeString(text, to: pasteboard)
+            let dictationChangeCount = pasteboard.changeCount
+            activateTargetApplication(targetApplication)
+            scheduleSelectAllAndPaste(using: deliveryProfile, targetApplication: targetApplication)
+            let restoreDelay = deliveryProfile.initialDelay + deliveryProfile.activationTimeout + clipboardRestoreDelay
+            DispatchQueue.main.asyncAfter(deadline: .now() + restoreDelay) {
+                guard shouldRestoreClipboard(
+                    currentChangeCount: pasteboard.changeCount,
+                    currentStringPayload: pasteboard.string(forType: .string),
+                    dictationChangeCount: dictationChangeCount,
+                    dictationPayload: text
+                ) else { return }
+                restorePasteboardContents(originalContents, to: pasteboard, fallbackText: text)
+            }
+        }
+    }
+
+    private static func scheduleSelectAllAndPaste(
+        using profile: PasteDeliveryProfile,
+        targetApplication: OutputTargetApplication?
+    ) {
+        let deadline = Date().addingTimeInterval(profile.initialDelay + profile.activationTimeout)
+        DispatchQueue.main.asyncAfter(deadline: .now() + profile.initialDelay) {
+            waitForTargetActivationAndSelectAllPaste(
+                targetApplication: targetApplication,
+                profile: profile,
+                deadline: deadline
+            )
+        }
+    }
+
+    private static func waitForTargetActivationAndSelectAllPaste(
+        targetApplication: OutputTargetApplication?,
+        profile: PasteDeliveryProfile,
+        deadline: Date
+    ) {
+        guard let targetApplication else {
+            guard isFocusedElementEditable() else {
+                Safety.log("ClipboardManager — select-all-paste aborted: focused element is not editable. Text remains on clipboard.", category: .output)
+                return
+            }
+            simulateSelectAllAndPaste(targetProcessIdentifier: nil)
+            return
+        }
+
+        if isFrontmost(targetApplication) {
+            guard isFocusedElementEditable() else {
+                Safety.log("ClipboardManager — select-all-paste aborted: focused element in '\(targetApplication.bundleIdentifier)' is not editable. Text remains on clipboard.", category: .output)
+                return
+            }
+            let targetProcessIdentifier = profile.postsToTargetProcess ? targetApplication.processIdentifier : nil
+            simulateSelectAllAndPaste(targetProcessIdentifier: targetProcessIdentifier)
+            return
+        }
+
+        if Date() >= deadline {
+            let actualApp = NSWorkspace.shared.frontmostApplication
+            let actualBundle = actualApp?.bundleIdentifier ?? "unknown"
+            Safety.log("ClipboardManager — select-all-paste aborted: target '\(targetApplication.bundleIdentifier)' not frontmost at deadline. Current: '\(actualBundle)'.", category: .output)
+            return
+        }
+
+        activateTargetApplication(targetApplication)
+        DispatchQueue.main.asyncAfter(deadline: .now() + profile.activationPollInterval) {
+            waitForTargetActivationAndSelectAllPaste(
+                targetApplication: targetApplication,
+                profile: profile,
+                deadline: deadline
+            )
+        }
+    }
+
+    private static func simulateSelectAllAndPaste(targetProcessIdentifier: pid_t?) {
+        let src = CGEventSource(stateID: .hidSystemState)
+        // Hold Cmd while sending A then V: Cmd+A selects all, Cmd+V pastes.
+        let cmdDown = CGEvent(keyboardEventSource: src, virtualKey: 0x37, keyDown: true)
+        let aDown   = CGEvent(keyboardEventSource: src, virtualKey: 0x00, keyDown: true)
+        let aUp     = CGEvent(keyboardEventSource: src, virtualKey: 0x00, keyDown: false)
+        let vDown   = CGEvent(keyboardEventSource: src, virtualKey: 0x09, keyDown: true)
+        let vUp     = CGEvent(keyboardEventSource: src, virtualKey: 0x09, keyDown: false)
+        let cmdUp   = CGEvent(keyboardEventSource: src, virtualKey: 0x37, keyDown: false)
+
+        cmdDown?.flags = .maskCommand
+        aDown?.flags   = .maskCommand
+        aUp?.flags     = .maskCommand
+        vDown?.flags   = .maskCommand
+        vUp?.flags     = .maskCommand
+
+        post(cmdDown, targetProcessIdentifier: targetProcessIdentifier)
+        post(aDown,   targetProcessIdentifier: targetProcessIdentifier)
+        post(aUp,     targetProcessIdentifier: targetProcessIdentifier)
+        post(vDown,   targetProcessIdentifier: targetProcessIdentifier)
+        post(vUp,     targetProcessIdentifier: targetProcessIdentifier)
+        post(cmdUp,   targetProcessIdentifier: targetProcessIdentifier)
+    }
+
     private static func activateTargetApplication(_ targetApplication: OutputTargetApplication?) {
         guard let targetApplication,
               targetApplication.processIdentifier != ProcessInfo.processInfo.processIdentifier,
@@ -231,6 +344,33 @@ enum ClipboardManager {
 
     internal static var isFrontmostProvider: (OutputTargetApplication) -> Bool = { targetApplication in
         NSWorkspace.shared.frontmostApplication?.processIdentifier == targetApplication.processIdentifier
+    }
+
+    /// Testable hook for focused-element editable check. Overridden in unit tests.
+    internal static var isFocusedElementEditableProvider: () -> Bool = {
+        let systemWide = AXUIElementCreateSystemWide()
+        var focusedValue: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            systemWide, kAXFocusedUIElementAttribute as CFString, &focusedValue
+        ) == .success,
+        let focusedValue,
+        CFGetTypeID(focusedValue) == AXUIElementGetTypeID() else { return false }
+
+        let element = unsafeBitCast(focusedValue, to: AXUIElement.self)
+
+        var settable: DarwinBoolean = false
+        if AXUIElementIsAttributeSettable(element, kAXSelectedTextAttribute as CFString, &settable) == .success,
+           settable.boolValue { return true }
+
+        settable = false
+        if AXUIElementIsAttributeSettable(element, kAXValueAttribute as CFString, &settable) == .success,
+           settable.boolValue { return true }
+
+        return false
+    }
+
+    private static func isFocusedElementEditable() -> Bool {
+        isFocusedElementEditableProvider()
     }
 
     private static func isFrontmost(_ targetApplication: OutputTargetApplication) -> Bool {
