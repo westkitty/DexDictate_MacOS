@@ -416,6 +416,7 @@ struct AntiGravityMainView: View {
                 .rotationEffect(.degrees(-18))
                 .allowsHitTesting(false)
 
+            ScrollViewReader { scrollProxy in
             ScrollView(.vertical, showsIndicators: true) {
                 VStack(spacing: 15) {
                     // App title with help button (top-right).
@@ -483,6 +484,7 @@ struct AntiGravityMainView: View {
                         benchmarkResultsStore: benchmarkResultsStore,
                         isExpanded: $isQuickSettingsExpanded
                     )
+                    .id("quickSettings")
 
                     QuickSettingsStatusStrip(
                         engine: engine,
@@ -501,6 +503,16 @@ struct AntiGravityMainView: View {
                 .padding(.vertical, 10)
                 .frame(maxWidth: .infinity)
             }
+            .onChange(of: isQuickSettingsExpanded) { _, expanded in
+                if expanded {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                            scrollProxy.scrollTo("quickSettings", anchor: .top)
+                        }
+                    }
+                }
+            }
+            } // ScrollViewReader
         }
         .frame(width: 320, height: isQuickSettingsExpanded ? 660 : 540)
         .animation(.spring(response: 0.32, dampingFraction: 0.82), value: isQuickSettingsExpanded)

@@ -10,6 +10,7 @@ final class LaunchIntroController {
     private var hasPlayedThisSession = false
     private var panel: LaunchIntroPanel?
     private var player: AVPlayer?
+    private var endObserver: Any?
 
     private static let animationNames: [String] = (1...8).map { String(format: "LaunchAnimation_%02d", $0) }
 
@@ -34,9 +35,6 @@ final class LaunchIntroController {
         player.actionAtItemEnd = .pause
         self.player = player
 
-        // Videos are 8–10 s played at 1.5x, so effective runtime is ~5–7 s.
-        let duration: Double = 6.0
-
         let startFrame = initialFrame(on: screen)
         let panel = LaunchIntroPanel(
             contentRect: startFrame,
@@ -53,10 +51,27 @@ final class LaunchIntroController {
 
         player.rate = 1.5
 
-        let exitDelay = max(0.9, duration - 1.2)
-        let exitDuration = min(1.0, max(0.6, duration * 0.15))
-        DispatchQueue.main.asyncAfter(deadline: .now() + exitDelay) { [weak self] in
-            self?.animateExit(on: screen, duration: exitDuration)
+        // Hold on the final frame (brand card) for 1.5 s, then exit.
+        endObserver = NotificationCenter.default.addObserver(
+            forName: AVPlayerItem.didPlayToEndTimeNotification,
+            object: playerItem,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                let exitScreen = NSScreen.main ?? NSScreen.screens.first
+                guard let exitScreen else { return }
+                self.animateExit(on: exitScreen, duration: 0.7)
+            }
+        }
+
+        // Safety fallback: exit after 10 s regardless (longest video at 1.5x is ~6.7 s).
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10.0) { [weak self] in
+            guard let self, self.panel != nil else { return }
+            let fallbackScreen = NSScreen.main ?? NSScreen.screens.first
+            guard let fallbackScreen else { return }
+            self.animateExit(on: fallbackScreen, duration: 0.7)
         }
     }
 
@@ -75,6 +90,11 @@ final class LaunchIntroController {
 
     private func animateExit(on screen: NSScreen, duration: Double) {
         guard let panel else { return }
+
+        if let obs = endObserver {
+            NotificationCenter.default.removeObserver(obs)
+            endObserver = nil
+        }
 
         let finalSize: CGFloat = 64
         let visibleFrame = screen.visibleFrame
