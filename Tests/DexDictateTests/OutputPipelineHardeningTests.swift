@@ -207,6 +207,9 @@ final class OutputPipelineHardeningTests: XCTestCase {
     // MARK: - Helpers
 
     private func restoreEditableProvider() {
+        // Restore the production default: allow when AX is ambiguous, block only for
+        // definitively non-editable structural roles. Must mirror ClipboardManager's
+        // isFocusedElementEditableProvider closure exactly.
         ClipboardManager.isFocusedElementEditableProvider = {
             let systemWide = AXUIElementCreateSystemWide()
             var focusedValue: CFTypeRef?
@@ -214,7 +217,7 @@ final class OutputPipelineHardeningTests: XCTestCase {
                 systemWide, kAXFocusedUIElementAttribute as CFString, &focusedValue
             ) == .success,
             let focusedValue,
-            CFGetTypeID(focusedValue) == AXUIElementGetTypeID() else { return false }
+            CFGetTypeID(focusedValue) == AXUIElementGetTypeID() else { return true }
             let element = unsafeBitCast(focusedValue, to: AXUIElement.self)
             var settable: DarwinBoolean = false
             if AXUIElementIsAttributeSettable(element, kAXSelectedTextAttribute as CFString, &settable) == .success,
@@ -222,7 +225,19 @@ final class OutputPipelineHardeningTests: XCTestCase {
             settable = false
             if AXUIElementIsAttributeSettable(element, kAXValueAttribute as CFString, &settable) == .success,
                settable.boolValue { return true }
-            return false
+            var roleValue: CFTypeRef?
+            if AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleValue) == .success,
+               let role = roleValue as? String {
+                let editableRoles: Set<String> = ["AXTextField", "AXTextArea", "AXComboBox", "AXSearchField", "AXWebArea"]
+                if editableRoles.contains(role) { return true }
+                let nonEditableRoles: Set<String> = [
+                    "AXButton", "AXImage", "AXStaticText", "AXToolbar",
+                    "AXMenuBar", "AXMenu", "AXMenuItem", "AXSplitter",
+                    "AXTabGroup", "AXTab", "AXScrollArea", "AXList"
+                ]
+                if nonEditableRoles.contains(role) { return false }
+            }
+            return true
         }
     }
 

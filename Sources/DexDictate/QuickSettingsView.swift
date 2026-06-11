@@ -14,7 +14,7 @@ struct QuickSettingsView: View {
     @ObservedObject var modelCatalog: WhisperModelCatalog
     @ObservedObject var adaptiveBenchmarkController: AdaptiveBenchmarkController
     @ObservedObject var benchmarkResultsStore: BenchmarkResultsStore
-    @State private var isExpanded = false
+    @Binding var isExpanded: Bool
     @StateObject private var launchAtLoginController = LaunchAtLoginController()
     @State private var profanityAdditionsText: String = ""
     @State private var profanityRemovalsText: String = ""

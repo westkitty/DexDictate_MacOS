@@ -347,26 +347,57 @@ enum ClipboardManager {
     }
 
     /// Testable hook for focused-element editable check. Overridden in unit tests.
+    ///
+    /// Returns `true` when the focused element appears to accept text input, or when
+    /// AX metadata is unavailable / ambiguous. Returns `false` only when the focused
+    /// element is positively identified as a non-editable structural role (button, image,
+    /// menu item, etc.). Electron apps, browser web content, and custom text views
+    /// frequently omit AX settability attributes while still accepting Cmd+V — we allow
+    /// paste in all ambiguous cases rather than blocking valid input targets.
     internal static var isFocusedElementEditableProvider: () -> Bool = {
         let systemWide = AXUIElementCreateSystemWide()
         var focusedValue: CFTypeRef?
+        // AX unavailable or no focused element: allow paste — inability to introspect is
+        // not a reason to block the user's dictation output.
         guard AXUIElementCopyAttributeValue(
             systemWide, kAXFocusedUIElementAttribute as CFString, &focusedValue
         ) == .success,
         let focusedValue,
-        CFGetTypeID(focusedValue) == AXUIElementGetTypeID() else { return false }
+        CFGetTypeID(focusedValue) == AXUIElementGetTypeID() else { return true }
 
         let element = unsafeBitCast(focusedValue, to: AXUIElement.self)
 
+        // Positive settability signals — explicitly editable.
         var settable: DarwinBoolean = false
         if AXUIElementIsAttributeSettable(element, kAXSelectedTextAttribute as CFString, &settable) == .success,
            settable.boolValue { return true }
-
         settable = false
         if AXUIElementIsAttributeSettable(element, kAXValueAttribute as CFString, &settable) == .success,
            settable.boolValue { return true }
 
-        return false
+        // Role-based classification: text-input roles accept paste even when settability
+        // attributes are absent (Electron apps, browser web areas, custom SwiftUI fields).
+        var roleValue: CFTypeRef?
+        if AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleValue) == .success,
+           let role = roleValue as? String {
+            let editableRoles: Set<String> = [
+                "AXTextField", "AXTextArea", "AXComboBox", "AXSearchField", "AXWebArea"
+            ]
+            if editableRoles.contains(role) { return true }
+
+            // Definitively non-editable structural roles: block paste.
+            let nonEditableRoles: Set<String> = [
+                "AXButton", "AXImage", "AXStaticText", "AXToolbar",
+                "AXMenuBar", "AXMenu", "AXMenuItem", "AXSplitter",
+                "AXTabGroup", "AXTab", "AXScrollArea", "AXList"
+            ]
+            if nonEditableRoles.contains(role) { return false }
+        }
+
+        // Ambiguous (no settability, unknown role): allow paste. The focus identity guard
+        // in TranscriptionEngine already blocks wrong-target delivery; at the clipboard
+        // layer, blocking an ambiguous-but-valid text field is worse than a no-op paste.
+        return true
     }
 
     private static func isFocusedElementEditable() -> Bool {

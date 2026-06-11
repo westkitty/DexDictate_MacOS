@@ -379,6 +379,7 @@ struct AntiGravityMainView: View {
     @State private var expandedHistory: Bool = false
     @State private var isDroppingFile: Bool = false
     @State private var cachedWatermarkImage: NSImage? = nil
+    @State private var isQuickSettingsExpanded: Bool = false
 
     var onDetachHistory: (() -> Void)?
     var onOpenHelp: (() -> Void)?
@@ -479,7 +480,8 @@ struct AntiGravityMainView: View {
                         menuBarIconController: menuBarIconController,
                         modelCatalog: modelCatalog,
                         adaptiveBenchmarkController: adaptiveBenchmarkController,
-                        benchmarkResultsStore: benchmarkResultsStore
+                        benchmarkResultsStore: benchmarkResultsStore,
+                        isExpanded: $isQuickSettingsExpanded
                     )
 
                     QuickSettingsStatusStrip(
@@ -500,7 +502,8 @@ struct AntiGravityMainView: View {
                 .frame(maxWidth: .infinity)
             }
         }
-        .frame(width: 320, height: 540)
+        .frame(width: 320, height: isQuickSettingsExpanded ? 720 : 540)
+        .animation(.easeInOut(duration: 0.25), value: isQuickSettingsExpanded)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.cyan.opacity(isDroppingFile ? 0.8 : 0), lineWidth: 2)
