@@ -34,33 +34,47 @@ struct DexDictateApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            AntiGravityMainView(
-                engine: engine,
-                permissionManager: permissionManager,
-                settings: settings,
-                scanner: scanner,
-                profileManager: profileManager,
-                benchmarkCaptureController: benchmarkCaptureController,
-                menuBarIconController: menuBarIconController,
-                modelCatalog: modelCatalog,
-                adaptiveBenchmarkController: adaptiveBenchmarkController,
-                benchmarkResultsStore: benchmarkResultsStore,
-                onDetachHistory: {
-                    MainActorAction.run {
-                        historyController.show()
-                    }
-                },
-                onOpenHelp: {
-                    MainActorAction.run {
-                        helpController.show()
-                    }
-                },
-                onRequestOnboardingDebug: {
-                    MainActorAction.run {
-                        appDelegate.presentOnboardingForDebug()
-                    }
+            Group {
+                if settings.useExperimentalStateFirstUI {
+                    DexExperimentalEntry(
+                        engine: engine,
+                        permissionManager: permissionManager,
+                        settings: settings,
+                        profileManager: profileManager,
+                        onDetachHistory: {
+                            MainActorAction.run { historyController.show() }
+                        },
+                        onOpenHelp: {
+                            MainActorAction.run { helpController.show() }
+                        },
+                        onRequestOnboardingDebug: {
+                            MainActorAction.run { appDelegate.presentOnboardingForDebug() }
+                        }
+                    )
+                } else {
+                    AntiGravityMainView(
+                        engine: engine,
+                        permissionManager: permissionManager,
+                        settings: settings,
+                        scanner: scanner,
+                        profileManager: profileManager,
+                        benchmarkCaptureController: benchmarkCaptureController,
+                        menuBarIconController: menuBarIconController,
+                        modelCatalog: modelCatalog,
+                        adaptiveBenchmarkController: adaptiveBenchmarkController,
+                        benchmarkResultsStore: benchmarkResultsStore,
+                        onDetachHistory: {
+                            MainActorAction.run { historyController.show() }
+                        },
+                        onOpenHelp: {
+                            MainActorAction.run { helpController.show() }
+                        },
+                        onRequestOnboardingDebug: {
+                            MainActorAction.run { appDelegate.presentOnboardingForDebug() }
+                        }
+                    )
                 }
-            )
+            }
             .onAppear {
                 // .onAppear fires every time the MenuBarExtra popover is opened.
                 // Guard here so one-time setup (model load, engine start) only runs once.
@@ -110,7 +124,12 @@ struct DexDictateApp: App {
                 }
 
                 // Configure HUD and History controllers (idempotent but guard anyway).
-                hudController.setup(engine: engine, profileManager: profileManager)
+                hudController.setup(
+                    engine: engine,
+                    profileManager: profileManager,
+                    onDetachHistory: { MainActorAction.run { historyController.show() } },
+                    onOpenHelp: { MainActorAction.run { helpController.show() } }
+                )
                 historyController.setup(engine: engine, vocabularyManager: engine.vocabularyManager)
                 adaptiveBenchmarkController.start(engine: engine)
 
@@ -120,6 +139,9 @@ struct DexDictateApp: App {
             }
             .onChange(of: settings.showFloatingHUD) { _, newValue in
                 hudController.toggle(shouldShow: newValue)
+            }
+            .onChange(of: settings.useExperimentalNanoHUD) { _, _ in
+                hudController.refresh()
             }
             .onChange(of: settings.localizationMode) { _, _ in
                 profileManager.synchronizeFromSettings()

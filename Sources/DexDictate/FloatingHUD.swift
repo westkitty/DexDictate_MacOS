@@ -178,46 +178,113 @@ struct FloatingHUDView: View {
 @MainActor
 class FloatingHUDController: ObservableObject {
     private var window: FloatingHUDWindow?
+    private var hubPanel: NSPanel?
     private var engine: TranscriptionEngine?
     private var profileManager: ProfileManager?
-    
+    private var onDetachHistory: (() -> Void)?
+    private var onOpenHelp: (() -> Void)?
+
     init() {}
-    
-    func setup(engine: TranscriptionEngine, profileManager: ProfileManager) {
+
+    func setup(
+        engine: TranscriptionEngine,
+        profileManager: ProfileManager,
+        onDetachHistory: (() -> Void)? = nil,
+        onOpenHelp: (() -> Void)? = nil
+    ) {
         self.engine = engine
         self.profileManager = profileManager
+        self.onDetachHistory = onDetachHistory
+        self.onOpenHelp = onOpenHelp
     }
-    
+
     func show() {
         guard let engine = engine, let profileManager = profileManager else { return }
         if window == nil {
-            let view = FloatingHUDView(engine: engine, profileManager: profileManager)
+            let rootView: AnyView
+            if AppSettings.shared.useExperimentalNanoHUD {
+                let nanoView = DexNanoHUDView(
+                    engine: engine,
+                    profileManager: profileManager,
+                    onOpenHub: { [weak self] in self?.showHubPanel() }
+                )
+                rootView = AnyView(nanoView)
+            } else {
+                let stdView = FloatingHUDView(engine: engine, profileManager: profileManager)
+                rootView = AnyView(stdView)
+            }
             window = FloatingHUDWindow(
                 contentRect: NSRect(x: 100, y: 100, width: 200, height: 60),
-                rootView: AnyView(view)
+                rootView: rootView
             )
-            // Set window size constraints to prevent invalid resizing
-            window?.minSize = NSSize(width: 150, height: 50)
-            window?.maxSize = NSSize(width: 400, height: 200)
-
-            // Restore saved position or center on first launch
+            window?.minSize = NSSize(width: 150, height: 40)
+            window?.maxSize = NSSize(width: 480, height: 200)
             window?.setFrameAutosaveName("FloatingHUDPosition")
             if window?.frame.origin == .zero {
-                window?.center() // Only center on first launch
+                window?.center()
             }
         }
         window?.orderFront(nil)
     }
-    
+
     func hide() {
         window?.orderOut(nil)
     }
-    
+
     func toggle(shouldShow: Bool) {
-        if shouldShow {
+        if shouldShow { show() } else { hide() }
+    }
+
+    /// Tear down the existing window and reopen it, picking up any flag changes
+    /// (e.g. `useExperimentalNanoHUD`). Safe to call when HUD is hidden — no-op.
+    func refresh() {
+        let wasVisible = window?.isVisible ?? false
+        if wasVisible {
+            window?.close()
+            window = nil
             show()
-        } else {
-            hide()
         }
+    }
+
+    /// Open a floating feature-hub panel from the Nano HUD so the HUD is never a dead end.
+    /// The panel hosts DexExperimentalFeatureHubView and uses the same non-activating style
+    /// as the HUD — no Dock bounce.
+    func showHubPanel() {
+        guard let engine = engine, let profileManager = profileManager else { return }
+        if hubPanel == nil {
+            let hubView = DexExperimentalFeatureHubView(
+                engine: engine,
+                settings: AppSettings.shared,
+                profileManager: profileManager,
+                onBack: { [weak self] in self?.closeHubPanel() },
+                onDetachHistory: onDetachHistory != nil ? { [weak self] in self?.onDetachHistory?(); self?.closeHubPanel() } : nil,
+                onOpenHelp: onOpenHelp != nil ? { [weak self] in self?.onOpenHelp?(); self?.closeHubPanel() } : nil,
+                onQuit: { NSApplication.shared.terminate(nil) }
+            )
+            let panel = NSPanel(
+                contentRect: NSRect(x: 0, y: 0, width: 320, height: 480),
+                styleMask: [.nonactivatingPanel, .titled, .closable, .resizable],
+                backing: .buffered,
+                defer: false
+            )
+            panel.isFloatingPanel = true
+            panel.level = .floating
+            panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+            panel.titleVisibility = .hidden
+            panel.titlebarAppearsTransparent = true
+            panel.isMovableByWindowBackground = true
+            panel.backgroundColor = NSColor(red: 0.09, green: 0.10, blue: 0.14, alpha: 1.0)
+            panel.hasShadow = true
+            panel.contentView = NSHostingView(rootView: AnyView(hubView))
+            panel.setFrameAutosaveName("DexFeatureHubPanelPosition")
+            if panel.frame.origin == .zero { panel.center() }
+            hubPanel = panel
+        }
+        hubPanel?.orderFront(nil)
+    }
+
+    private func closeHubPanel() {
+        hubPanel?.orderOut(nil)
+        hubPanel = nil
     }
 }

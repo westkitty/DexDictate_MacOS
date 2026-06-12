@@ -26,6 +26,7 @@ struct QuickSettingsView: View {
     @State private var routeHealthExpanded = false
     @State private var contextBiasExpanded = false
     @State private var benchmarkPanelExpanded = false
+    @State private var experimentalPanelExpanded = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -486,6 +487,58 @@ struct QuickSettingsView: View {
                                 settings: settings,
                                 menuBarIconController: menuBarIconController
                             )
+                        }
+                    }
+
+                    QuickSettingsDisclosureCard(
+                        title: "Experimental UI",
+                        subtitle: "Preview surfaces — off by default. No dictation behavior changes.",
+                        systemImage: "flask.fill",
+                        isExpanded: $experimentalPanelExpanded
+                    ) {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("These flags activate prototype UI surfaces. The dictation engine, audio, transcription, insertion, and permissions are unchanged.")
+                                .font(.caption2)
+                                .foregroundStyle(.white.opacity(0.55))
+                                .fixedSize(horizontal: false, vertical: true)
+
+                            Divider().opacity(0.2)
+
+                            VStack(alignment: .leading, spacing: 6) {
+                                Toggle("State-first compact popover", isOn: $settings.useExperimentalStateFirstUI)
+                                    .accessibilityLabel("Toggle state-first compact popover experiment")
+                                Text("Replaces the standard menu-bar popover while enabled.")
+                                    .font(.caption2)
+                                    .foregroundStyle(.white.opacity(0.45))
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+
+                            VStack(alignment: .leading, spacing: 6) {
+                                Toggle("Nano HUD (active dictation strip)", isOn: $settings.useExperimentalNanoHUD)
+                                    .accessibilityLabel("Toggle nano HUD experiment")
+                                Text("Replaces the floating HUD when a new HUD window is created. Requires Show Floating HUD to be on. Toggle while HUD is hidden for cleanest switch.")
+                                    .font(.caption2)
+                                    .foregroundStyle(.white.opacity(0.45))
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+
+                            VStack(alignment: .leading, spacing: 6) {
+                                Toggle("Command palette (power-user overlay)", isOn: $settings.useExperimentalCommandPalette)
+                                    .accessibilityLabel("Toggle experimental command palette")
+                                Text("Adds a searchable command overlay accessible from the state-first popover.")
+                                    .font(.caption2)
+                                    .foregroundStyle(.white.opacity(0.45))
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+
+                            VStack(alignment: .leading, spacing: 6) {
+                                Toggle("Dexter stateful feed", isOn: $settings.useExperimentalDexterFeed)
+                                    .accessibilityLabel("Toggle experimental Dexter stateful feed")
+                                Text("Shows Dexter commentary feed in the Settings & History panel. Local quote packs only — no network.")
+                                    .font(.caption2)
+                                    .foregroundStyle(.white.opacity(0.45))
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
                         }
                     }
                 }
