@@ -13,6 +13,8 @@ final class LaunchIntroController {
     private var endObserver: Any?
 
     private static let animationNames: [String] = (1...8).map { String(format: "LaunchAnimation_%02d", $0) }
+    // These clips have no "DexDictate" branding in the video itself.
+    private static let animationsNeedingOverlay: Set<String> = ["LaunchAnimation_07", "LaunchAnimation_08"]
 
     private init() {}
 
@@ -35,10 +37,11 @@ final class LaunchIntroController {
         player.actionAtItemEnd = .pause
         self.player = player
 
+        let showOverlay = Self.animationsNeedingOverlay.contains(name)
         let startFrame = initialFrame(on: screen)
         let panel = LaunchIntroPanel(
             contentRect: startFrame,
-            rootView: AnyView(LaunchIntroView(player: player))
+            rootView: AnyView(LaunchIntroView(player: player, showNameOverlay: showOverlay))
         )
         panel.alphaValue = 0
         panel.orderFrontRegardless()
@@ -144,6 +147,7 @@ private final class LaunchIntroPanel: NSPanel {
 
 private struct LaunchIntroView: View {
     let player: AVPlayer
+    var showNameOverlay: Bool = false
 
     var body: some View {
         ZStack {
@@ -157,6 +161,15 @@ private struct LaunchIntroView: View {
             IntroPlayerRepresentable(player: player)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .padding(6)
+
+            if showNameOverlay {
+                Text("DexDictate")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundColor(.white)
+                    .shadow(color: .black.opacity(0.7), radius: 6, x: 0, y: 2)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                    .padding(.bottom, 16)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.clear)

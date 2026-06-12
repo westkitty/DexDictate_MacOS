@@ -416,105 +416,103 @@ struct AntiGravityMainView: View {
                 .rotationEffect(.degrees(-18))
                 .allowsHitTesting(false)
 
-            ScrollViewReader { scrollProxy in
-            ScrollView(.vertical, showsIndicators: true) {
-                VStack(spacing: 15) {
-                    // App title with help button (top-right).
-                    ZStack {
-                        Text("DexDictate")
-                            .font(.headline)
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
+            VStack(spacing: 0) {
+                ScrollView(.vertical, showsIndicators: true) {
+                    VStack(spacing: 15) {
+                        // App title with help button (top-right).
+                        ZStack {
+                            Text("DexDictate")
+                                .font(.headline)
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity)
 
-                        HStack {
-                            Spacer()
-                            ChromeIconButton(
-                                systemName: "questionmark.circle",
-                                accessibilityText: "Open Help"
-                            ) {
-                                onOpenHelp?()
+                            HStack {
+                                Spacer()
+                                ChromeIconButton(
+                                    systemName: "questionmark.circle",
+                                    accessibilityText: "Open Help"
+                                ) {
+                                    onOpenHelp?()
+                                }
                             }
+                            .padding(.horizontal, 16)
                         }
-                        .padding(.horizontal, 16)
-                    }
-                    .padding(.top, 4)
+                        .padding(.top, 4)
 
-                    if settings.showFlavorTicker {
-                        FlavorTickerView(
-                            text: profileManager.currentFlavorLine?.text ?? "",
-                            animateWhenNeeded: settings.animateFlavorTicker
-                        )
-                    }
+                        if settings.showFlavorTicker {
+                            FlavorTickerView(
+                                text: profileManager.currentFlavorLine?.text ?? "",
+                                animateWhenNeeded: settings.animateFlavorTicker
+                            )
+                        }
 
-                    if settings.showDictationStats {
-                        StatsTickerView(
+                        if settings.showDictationStats {
+                            StatsTickerView(
+                                history: engine.history,
+                                animateWhenNeeded: settings.animateFlavorTicker
+                            )
+                        }
+
+                        PermissionBannerView(permissionManager: permissionManager)
+
+                        HistoryView(
                             history: engine.history,
-                            animateWhenNeeded: settings.animateFlavorTicker
+                            statusText: engine.statusText,
+                            liveTranscript: engine.liveTranscript,
+                            inputLevel: engine.inputLevel,
+                            isListening: engine.state == .listening || engine.state == .transcribing,
+                            expanded: $expandedHistory,
+                            onDetach: onDetachHistory,
+                            silenceCountdown: engine.silenceCountdown
+                        )
+
+                        ControlsView(
+                            engine: engine,
+                            adaptiveBenchmarkController: adaptiveBenchmarkController
+                        )
+
+                        Spacer(minLength: 0)
+
+                        FooterView(
+                            settings: settings,
+                            onHiddenDebugTrigger: {
+                                onRequestOnboardingDebug?()
+                            }
                         )
                     }
-
-                    PermissionBannerView(permissionManager: permissionManager)
-
-                    HistoryView(
-                        history: engine.history,
-                        statusText: engine.statusText,
-                        liveTranscript: engine.liveTranscript,
-                        inputLevel: engine.inputLevel,
-                        isListening: engine.state == .listening || engine.state == .transcribing,
-                        expanded: $expandedHistory,
-                        onDetach: onDetachHistory,
-                        silenceCountdown: engine.silenceCountdown
-                    )
-
-                    ControlsView(
-                        engine: engine,
-                        adaptiveBenchmarkController: adaptiveBenchmarkController
-                    )
-
-                    QuickSettingsView(
-                        engine: engine,
-                        settings: settings,
-                        scanner: scanner,
-                        profileManager: profileManager,
-                        benchmarkCaptureController: benchmarkCaptureController,
-                        vocabularyManager: engine.vocabularyManager,
-                        menuBarIconController: menuBarIconController,
-                        modelCatalog: modelCatalog,
-                        adaptiveBenchmarkController: adaptiveBenchmarkController,
-                        benchmarkResultsStore: benchmarkResultsStore,
-                        isExpanded: $isQuickSettingsExpanded
-                    )
-                    .id("quickSettings")
-
-                    QuickSettingsStatusStrip(
-                        engine: engine,
-                        settings: settings
-                    )
-
-                    Spacer(minLength: 0)
-
-                    FooterView(
-                        settings: settings,
-                        onHiddenDebugTrigger: {
-                            onRequestOnboardingDebug?()
-                        }
-                    )
+                    .padding(.vertical, 10)
+                    .frame(maxWidth: .infinity)
                 }
-                .padding(.vertical, 10)
-                .frame(maxWidth: .infinity)
-            }
-            .onChange(of: isQuickSettingsExpanded) { _, expanded in
-                if expanded {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
-                            scrollProxy.scrollTo("quickSettings", anchor: .top)
-                        }
+
+                Divider().opacity(0.3)
+
+                ScrollView(.vertical, showsIndicators: true) {
+                    VStack(spacing: 0) {
+                        QuickSettingsView(
+                            engine: engine,
+                            settings: settings,
+                            scanner: scanner,
+                            profileManager: profileManager,
+                            benchmarkCaptureController: benchmarkCaptureController,
+                            vocabularyManager: engine.vocabularyManager,
+                            menuBarIconController: menuBarIconController,
+                            modelCatalog: modelCatalog,
+                            adaptiveBenchmarkController: adaptiveBenchmarkController,
+                            benchmarkResultsStore: benchmarkResultsStore,
+                            isExpanded: $isQuickSettingsExpanded
+                        )
+
+                        QuickSettingsStatusStrip(
+                            engine: engine,
+                            settings: settings
+                        )
                     }
                 }
+                .frame(maxHeight: isQuickSettingsExpanded ? 340 : 90)
+                .animation(.spring(response: 0.32, dampingFraction: 0.82), value: isQuickSettingsExpanded)
             }
-            } // ScrollViewReader
         }
-        .frame(width: 320, height: isQuickSettingsExpanded ? 660 : 540)
+        .frame(width: 320, height: 540)
         .animation(.spring(response: 0.32, dampingFraction: 0.82), value: isQuickSettingsExpanded)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
