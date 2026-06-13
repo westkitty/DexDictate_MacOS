@@ -20,6 +20,7 @@ import DexDictateKit
 struct DexNanoHUDView: View {
     @ObservedObject var engine: TranscriptionEngine
     @ObservedObject var profileManager: ProfileManager
+    @ObservedObject var toastState: ToastState
     var onOpenHub: (() -> Void)?
 
     @State private var cachedWatermarkImage: NSImage? = nil
@@ -29,17 +30,26 @@ struct DexNanoHUDView: View {
         ZStack {
             watermarkLayer
 
-            HStack(spacing: 10) {
-                stateIndicator
-                centerContent
-                if engine.state == .listening {
-                    cancelButton
+            VStack(spacing: 4) {
+                HStack(spacing: 10) {
+                    stateIndicator
+                    centerContent
+                    if engine.state == .listening {
+                        cancelButton
+                    }
+                    hubButton
                 }
-                hubButton
+
+                // Toast notification strip — auto-dismisses after ~2.5 s
+                if let toast = toastState.current {
+                    HUDToastBannerView(event: toast)
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
+                }
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
             .background(backgroundLayer)
+            .animation(.easeInOut(duration: 0.22), value: toastState.current != nil)
         }
         .fixedSize()
         .onAppear { cachedWatermarkImage = loadWatermarkImage() }

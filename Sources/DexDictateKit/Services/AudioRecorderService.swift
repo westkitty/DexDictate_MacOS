@@ -1,5 +1,20 @@
 import AppKit
 import AVFoundation
+import CoreAudio
+
+// MARK: - Core Audio default-device callback (file-scope C-style function)
+
+/// Fires on an arbitrary Core Audio thread whenever the system default input device changes.
+/// MUST return immediately — no heavyweight work allowed here.
+private let defaultInputDeviceListenerProc: AudioObjectPropertyListenerProc = { _, _, _, context in
+    guard let context else { return noErr }
+    let service = Unmanaged<AudioRecorderService>.fromOpaque(context).takeUnretainedValue()
+    Safety.log("CoreAudio: kAudioHardwarePropertyDefaultInputDevice changed — scheduling recovery", category: .audio)
+    service.audioQueue.async { [weak service] in
+        service?.handleEngineConfigurationChange()
+    }
+    return noErr
+}
 
 /// Service responsible for managing the audio engine and microphone input.
 ///
@@ -22,7 +37,8 @@ public final class AudioRecorderService: ObservableObject {
     @MainActor @Published public var inputLevel: Double = 0
 
     /// All engine lifecycle operations run on this serial queue.
-    private let audioQueue = DispatchQueue(label: "com.dexdictate.audioEngine", qos: .userInitiated)
+    /// `fileprivate` (not `private`) so the file-scope Core Audio callback can dispatch onto it.
+    fileprivate let audioQueue = DispatchQueue(label: "com.dexdictate.audioEngine", qos: .userInitiated)
 
     /// Called on the main actor when AVAudioEngine stops itself due to a hardware
     /// configuration change and recovery ultimately fails.
@@ -35,6 +51,15 @@ public final class AudioRecorderService: ObservableObject {
     private var wakeObserver: NSObjectProtocol?
     private var configChangeObserver: NSObjectProtocol?
 
+    /// Tracks whether the Core Audio default-input-device listener is currently registered.
+    /// Guarded by the Swift runtime (set once in init, read/cleared in deinit).
+    /// Exposed internally so tests can verify single-registration invariant.
+    #if DEBUG
+    internal private(set) var isDefaultDeviceListenerRegistered = false
+    #else
+    private var isDefaultDeviceListenerRegistered = false
+    #endif
+
     // Accessed only on audioQueue.
     nonisolated(unsafe) private var isCaptureSessionActive = false
     nonisolated(unsafe) private var activePreferredInputUID = ""
@@ -45,12 +70,14 @@ public final class AudioRecorderService: ObservableObject {
     public init() {
         setupSleepWakeNotifications()
         setupEngineConfigChangeObserver()
+        setupDefaultDeviceListener()
     }
 
     deinit {
         if let obs = sleepObserver { NSWorkspace.shared.notificationCenter.removeObserver(obs) }
         if let obs = wakeObserver { NSWorkspace.shared.notificationCenter.removeObserver(obs) }
         if let obs = configChangeObserver { NotificationCenter.default.removeObserver(obs) }
+        teardownDefaultDeviceListener()
     }
 
     private func setupSleepWakeNotifications() {
@@ -94,6 +121,69 @@ public final class AudioRecorderService: ObservableObject {
                 guard let self else { return }
                 self.handleEngineConfigurationChange()
             }
+        }
+    }
+
+    /// Registers a Core Audio listener for `kAudioHardwarePropertyDefaultInputDevice`.
+    ///
+    /// This supplements `AVAudioEngineConfigurationChange` by catching system-level input
+    /// device switches that AVAudioEngine may not surface immediately (e.g. when the engine
+    /// is idle). Safe to call multiple times — the listener is only registered once.
+    private func setupDefaultDeviceListener() {
+        guard !isDefaultDeviceListenerRegistered else {
+            Safety.log("setupDefaultDeviceListener() — already registered, skipping", category: .audio)
+            return
+        }
+
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultInputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+
+        // Pass `self` as an unretained raw pointer — the listener is removed in deinit
+        // before `self` can be released, so this pointer remains valid for the listener's
+        // entire lifetime.
+        let context = Unmanaged.passUnretained(self).toOpaque()
+        let status = AudioObjectAddPropertyListener(
+            AudioObjectID(kAudioObjectSystemObject),
+            &address,
+            defaultInputDeviceListenerProc,
+            context
+        )
+
+        if status == noErr {
+            isDefaultDeviceListenerRegistered = true
+            Safety.log("setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener", category: .audio)
+        } else {
+            Safety.log("setupDefaultDeviceListener() — AudioObjectAddPropertyListener failed (status=\(status)); relying on AVAudioEngineConfigurationChange only", category: .audio)
+        }
+    }
+
+    // AudioObjectRemovePropertyListener is synchronous on macOS: it blocks until any
+    // in-flight invocation of the proc returns before returning. This makes the
+    // unretained `self` pointer safe for the listener's full lifetime — no callback
+    // can fire after this call returns.
+    private func teardownDefaultDeviceListener() {
+        guard isDefaultDeviceListenerRegistered else { return }
+        isDefaultDeviceListenerRegistered = false
+
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultInputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+
+        let context = Unmanaged.passUnretained(self).toOpaque()
+        let status = AudioObjectRemovePropertyListener(
+            AudioObjectID(kAudioObjectSystemObject),
+            &address,
+            defaultInputDeviceListenerProc,
+            context
+        )
+
+        if status != noErr {
+            Safety.log("teardownDefaultDeviceListener() — AudioObjectRemovePropertyListener returned status=\(status)", category: .audio)
         }
     }
 
@@ -216,7 +306,8 @@ public final class AudioRecorderService: ObservableObject {
         }
     }
 
-    private func handleEngineConfigurationChange() {
+    // fileprivate (not private) so the file-scope Core Audio callback can dispatch to this.
+    fileprivate func handleEngineConfigurationChange() {
         let wasCaptureSessionActive = isCaptureSessionActive
         let preferredUID = activePreferredInputUID
         let activeUID = activeInputUID
@@ -280,7 +371,20 @@ public final class AudioRecorderService: ObservableObject {
         )
 
         if !preserveBufferedAudio {
-            bufferQueue.sync { _accumulatedSamples = [] }
+            // Capture any pre-trigger audio before resetting accumulated samples.
+            let preTriggerSnapshot = preTriggerBuffer?.snapshot() ?? []
+            preTriggerBuffer?.clear()
+            bufferQueue.sync {
+                if preTriggerSnapshot.isEmpty {
+                    _accumulatedSamples = []
+                } else {
+                    Safety.log(
+                        "performStartAttempt() — prepending \(preTriggerSnapshot.count) pre-trigger samples",
+                        category: .audio
+                    )
+                    _accumulatedSamples = preTriggerSnapshot
+                }
+            }
         } else {
             let bufferedSampleCount = bufferQueue.sync { _accumulatedSamples.count }
             Safety.log("performStartAttempt() — preserving \(bufferedSampleCount) buffered samples across recovery", category: .audio)
@@ -301,10 +405,6 @@ public final class AudioRecorderService: ObservableObject {
         )
 
         inputNode.removeTap(onBus: 0)
-        inputNode.installTap(onBus: 0, bufferSize: 4096, format: nil) { [weak self] buffer, _ in
-            self?.processAudioBuffer(buffer)
-        }
-
         engine.prepare()
 
         let finalFormat = inputNode.outputFormat(forBus: 0)
@@ -314,13 +414,23 @@ public final class AudioRecorderService: ObservableObject {
         )
 
         guard finalFormat.sampleRate > 0, finalFormat.channelCount > 0 else {
-            inputNode.removeTap(onBus: 0)
             throw DictationError.audioEngineSetupFailed(
                 "Audio input returned an invalid format after prepare() (sampleRate=\(finalFormat.sampleRate), channels=\(finalFormat.channelCount))."
             )
         }
 
+        let previousSampleRate = capturedSampleRate
         capturedSampleRate = finalFormat.sampleRate
+        if capturedSampleRate != previousSampleRate {
+            preTriggerBuffer?.reset(sampleRate: capturedSampleRate)
+        }
+
+        // capturedSampleRate is set above; capture it as a local constant so the tap
+        // closure never reads the property from the audio thread (data-race fix).
+        let sampleRateForTap = capturedSampleRate   // captured once; never read from audio thread
+        inputNode.installTap(onBus: 0, bufferSize: 4096, format: nil) { [weak self] buffer, _ in
+            self?.processAudioBuffer(buffer, sampleRate: sampleRateForTap)
+        }
 
         do {
             Safety.log("performStartAttempt() — calling engine.start()", category: .audio)
@@ -434,7 +544,23 @@ public final class AudioRecorderService: ObservableObject {
     nonisolated(unsafe) private var _accumulatedSamples: [Float] = []
     private(set) var capturedSampleRate: Double = 44100
 
+    // MARK: - Pre-trigger Buffer
+
+    /// Circular audio buffer that retains the last 750ms of audio so that the onset of
+    /// speech is not lost when dictation begins. Allocated lazily; nil when the flag is off.
+    // nonisolated(unsafe): pointer is immutable after init; internal state is guarded by PreTriggerAudioBuffer's os_unfair_lock.
+    // Evaluated once at init; runtime flag changes require a new service instance.
+    nonisolated(unsafe) private var preTriggerBuffer: PreTriggerAudioBuffer? = {
+        ExperimentFlags.enablePreTriggerBuffer ? PreTriggerAudioBuffer(durationSeconds: 0.75) : nil
+    }()
+
     #if DEBUG
+    /// Internal seam that calls `setupDefaultDeviceListener()` for testing the idempotency guard.
+    /// Allows tests to invoke the private method a second time and verify no double-registration occurs.
+    internal func setupDefaultDeviceListenerForTesting() {
+        setupDefaultDeviceListener()
+    }
+
     /// Internal seam to inject mock float samples directly into the buffer queue during testing.
     internal func injectMockSamples(_ samples: [Float]) {
         bufferQueue.sync {
@@ -456,7 +582,7 @@ public final class AudioRecorderService: ObservableObject {
     }
 
     // Called on AVAudioEngine's internal audio thread — never main thread.
-    private func processAudioBuffer(_ buffer: AVAudioPCMBuffer) {
+    private func processAudioBuffer(_ buffer: AVAudioPCMBuffer, sampleRate: Double) {
         // Copy buffer to local array first — tap buffer is only valid during this callback.
         let frameLength = Int(buffer.frameLength)
         guard frameLength > 0, let channelData = buffer.floatChannelData?[0] else { return }
@@ -470,6 +596,11 @@ public final class AudioRecorderService: ObservableObject {
         // Compute RMS from local copy — no lock needed.
         var sumSquares: Float = 0
         for s in chunk { sumSquares += s * s }
+
+        // Pre-trigger buffer: write the chunk with a minimal os_unfair_lock — no await,
+        // no @MainActor crossing, no allocation. Safe on the real-time audio thread.
+        // `sampleRate` is the local constant captured at installTap time — no property read from audio thread.
+        preTriggerBuffer?.append(chunk, sampleRate: sampleRate)
 
         // Async enqueue to bufferQueue — does not block the audio thread.
         bufferQueue.async { [weak self] in
@@ -485,8 +616,7 @@ public final class AudioRecorderService: ObservableObject {
         }
 
         let rms = sqrt(sumSquares / Float(frameLength))
-        let avgPower = rms == 0 ? -100.0 : 20 * log10(rms)
-        let normalized = min(max((Double(avgPower) + 50) / 50, 0), 1)
+        let normalized = AudioLevelNormalizer.normalize(Double(rms))
         MainActorDispatch.async { [weak self] in
             self?.inputLevel = normalized
         }

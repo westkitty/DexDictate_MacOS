@@ -193,8 +193,8 @@ struct DexStateFirstPopoverView: View {
 
     private var contextChips: some View {
         DexContextChips(
-            triggerLabel: adapter.state.triggerDisplayString,
-            modelLabel: adapter.state.modelSummary
+            settings: settings,
+            modelCatalog: WhisperModelCatalog.shared
         )
     }
 
@@ -382,8 +382,12 @@ struct DexStateFirstPopoverView: View {
     }
 
     private func openSystemPermissions() {
-        if let url = permissionManager.settingsURL {
-            NSWorkspace.shared.open(url)
+        if !permissionManager.accessibilityGranted {
+            permissionManager.openAccessibilitySettings()
+        } else if !permissionManager.microphoneGranted {
+            permissionManager.openMicrophoneSettings()
+        } else {
+            permissionManager.openInputMonitoringSettings()
         }
     }
 

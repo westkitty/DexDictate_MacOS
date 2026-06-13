@@ -58,19 +58,16 @@ public class PermissionManager: ObservableObject {
         timer != nil
     }
 
-    public var settingsURL: URL? {
-        if !inputMonitoringGranted {
-            return URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent")
-        }
-        return URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
+    public var microphoneSettingsURL: URL? {
+        PermissionSettingsLinker.url(for: .microphone)
     }
 
     public var accessibilitySettingsURL: URL? {
-        URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
+        PermissionSettingsLinker.url(for: .accessibility)
     }
 
     public var inputMonitoringSettingsURL: URL? {
-        URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent")
+        PermissionSettingsLinker.url(for: .inputMonitoring)
     }
     
     public init() {
@@ -230,14 +227,16 @@ public class PermissionManager: ObservableObject {
         }
     }
 
+    public func openMicrophoneSettings() {
+        PermissionSettingsLinker.open(.microphone)
+    }
+
     public func openAccessibilitySettings() {
-        guard let url = accessibilitySettingsURL else { return }
-        NSWorkspace.shared.open(url)
+        PermissionSettingsLinker.open(.accessibility)
     }
 
     public func openInputMonitoringSettings() {
-        guard let url = inputMonitoringSettingsURL else { return }
-        NSWorkspace.shared.open(url)
+        PermissionSettingsLinker.open(.inputMonitoring)
     }
 
     /// Requests microphone permission if not already granted.

@@ -159,29 +159,71 @@ struct DexStatusChip: View {
     }
 }
 
-// MARK: - Trigger + Model Chips
+// MARK: - Trigger + Model Chips (interactive)
 
 struct DexContextChips: View {
-    let triggerLabel: String
-    let modelLabel: String
+    @ObservedObject var settings: AppSettings
+    @ObservedObject var modelCatalog: WhisperModelCatalog
+    @State private var showingTriggerPopover = false
 
     var body: some View {
         HStack(spacing: 6) {
-            DexStatusChip(
-                icon: "hand.tap",
-                label: triggerLabel,
-                tone: .neutral
-            )
-            .accessibilityLabel("Trigger: \(triggerLabel)")
+            Button { showingTriggerPopover = true } label: {
+                DexInteractivePill(icon: "hand.tap", text: settings.userShortcut.displayString)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Input: \(settings.userShortcut.displayString). Tap to rebind.")
+            .popover(isPresented: $showingTriggerPopover, arrowEdge: .top) {
+                ShortcutRecorder(shortcut: $settings.userShortcut)
+                    .padding(12)
+                    .frame(width: 220)
+            }
 
-            DexStatusChip(
-                icon: "brain",
-                label: modelLabel,
-                tone: .neutral
-            )
-            .accessibilityLabel("Model: \(modelLabel)")
+            Menu {
+                ForEach(modelCatalog.availableModels) { model in
+                    Button(model.displayName) { settings.activeWhisperModelID = model.id }
+                }
+            } label: {
+                DexInteractivePill(icon: "brain", text: settings.activeWhisperModelID)
+            }
+            .menuStyle(.borderlessButton)
+            .fixedSize()
+            .accessibilityLabel("Model: \(settings.activeWhisperModelID). Tap to change.")
+
+            Button {
+                settings.triggerMode = settings.triggerMode == .holdToTalk ? .toggle : .holdToTalk
+            } label: {
+                DexInteractivePill(
+                    icon: settings.triggerMode == .holdToTalk ? "hand.raised.fill" : "record.circle",
+                    text: settings.triggerMode == .holdToTalk ? "Hold Mode" : "Toggle Mode"
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Trigger mode: \(settings.triggerMode.rawValue). Tap to switch.")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct DexInteractivePill: View {
+    let icon: String
+    let text: String
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.caption2)
+                .accessibilityHidden(true)
+            Text(text)
+                .font(.caption2.weight(.medium))
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Color.white.opacity(0.08))
+        .foregroundStyle(Color.white.opacity(0.75))
+        .clipShape(Capsule())
+        .overlay(Capsule().stroke(Color.white.opacity(0.21), lineWidth: 0.5))
     }
 }
 

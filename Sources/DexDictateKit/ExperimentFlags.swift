@@ -31,6 +31,11 @@ public struct ExperimentFlags {
     /// The manual resampler vs AVAudioConverter path.
     public static var resampleMethod: ResampleMethod = .avAudioConverter
 
+    /// Pre-trigger circular audio buffer — preserves the 750ms of audio before dictation
+    /// starts so the first syllable is never clipped.
+    /// Default disabled for safe rollout; enable via feature flags or testing.
+    public static var enablePreTriggerBuffer: Bool = false
+
     public static func applyRuntimeSettings(_ settings: AppSettings) {
         stopTailDelayMs = settings.utteranceEndPreset.stopTailDelayMs
         enableTrailingTrim = settings.enableTrailingTrimExperiment

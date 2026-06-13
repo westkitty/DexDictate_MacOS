@@ -125,6 +125,11 @@ public final class TranscriptionEngine: ObservableObject {
     private weak var permissionManager: PermissionManager?
     private var currentSessionId = UUID()
     
+    /// Optional callback invoked on the main actor after each dictation event that
+    /// warrants visible toast feedback. Wire this in the UI layer to drive `ToastState`.
+    /// Matches the `onRouteRecoveryResult` pattern — non-blocking, fire-and-forget.
+    public var onToast: ((ToastEvent) -> Void)?
+
     private var cancellables = Set<AnyCancellable>()
     private var lifecycle = EngineLifecycleStateMachine()
     private var lastCapturedUtterance: (samples: [Float], sampleRate: Double)?
@@ -821,6 +826,7 @@ public final class TranscriptionEngine: ObservableObject {
                 )
                 ClipboardManager.copy(finalText)
                 resultFeedback = .copiedOnlySensitiveContext(modified: preparedResult.wasModified, reason: "Focus changed during transcription.")
+                onToast?(.clipboardFallback(reason: "Focus changed during transcription."))
                 return
             }
         }
@@ -836,10 +842,13 @@ public final class TranscriptionEngine: ObservableObject {
         switch deliveryDecision.delivery {
         case .savedOnly:
             resultFeedback = .savedToHistory(modified: preparedResult.wasModified)
+            onToast?(.outputSavedOnly)
         case .pastedToActiveApp:
             resultFeedback = .pastedToActiveApp(modified: preparedResult.wasModified)
+            onToast?(.outputInserted)
         case .copiedOnly(let reason):
             resultFeedback = .copiedOnlySensitiveContext(modified: preparedResult.wasModified, reason: reason)
+            onToast?(.clipboardFallback(reason: reason))
         }
     }
 
@@ -909,6 +918,7 @@ public final class TranscriptionEngine: ObservableObject {
                 if history.removeMostRecent() != nil {
                     statusText = NSLocalizedString("Scratch that", comment: "")
                     resultFeedback = .deletedPreviousHistory
+                    onToast?(.commandExecuted(name: "Scratch That"))
                 } else {
                     statusText = NSLocalizedString("Nothing to remove", comment: "")
                     resultFeedback = .nothingToDelete
@@ -918,7 +928,17 @@ public final class TranscriptionEngine: ObservableObject {
 
             statusText = NSLocalizedString("Scratched", comment: "")
             resultFeedback = .discardedCurrentUtterance
+            onToast?(.commandExecuted(name: "Scratch That"))
             return nil
+        }
+
+        // Detect "Dex [keyword]" custom command execution.
+        // CommandProcessor returns .none for custom commands — infer from the raw text.
+        if command == .none, !customCommandsManager.commands.isEmpty {
+            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            if let keyword = extractCustomCommandKeyword(from: trimmed) {
+                onToast?(.customCommandExecuted(keyword: keyword))
+            }
         }
 
         var finalText = processedText
@@ -1069,6 +1089,25 @@ public final class TranscriptionEngine: ObservableObject {
         }
 
         finalizeTranscription(trimmed, isAccuracyRetry: true, sourceHistoryItemID: nil)
+    }
+
+    /// Cached regex for `extractCustomCommandKeyword(from:)`. Compiled once at class load time.
+    private static let customCommandRegex: NSRegularExpression? = try? NSRegularExpression(pattern: #"(?i)^dex\s+(.+)$"#)
+
+    /// Returns the keyword portion of a "Dex [keyword]" utterance if it matches a
+    /// registered custom command, otherwise `nil`. Used to emit `.customCommandExecuted`
+    /// toast events without changing `CommandProcessor`'s return type.
+    private func extractCustomCommandKeyword(from text: String) -> String? {
+        guard let regex = TranscriptionEngine.customCommandRegex,
+              let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
+              let range = Range(match.range(at: 1), in: text) else {
+            return nil
+        }
+        let keyword = String(text[range]).trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard customCommandsManager.commands.contains(where: { $0.keyword.lowercased() == keyword }) else {
+            return nil
+        }
+        return keyword
     }
 
     private func recordCommittedOutput(_ text: String) {
