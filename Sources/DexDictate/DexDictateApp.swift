@@ -680,11 +680,12 @@ struct TriggerSegment: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(.caption).fontWeight(.medium)
+                .font(.caption.weight(.medium))
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-                .background(isSelected ? Color.blue.opacity(0.6) : Color.clear)
-                .foregroundStyle(.white)
+                .frame(height: 30)
+                .background(isSelected ? Color.blue.opacity(0.70) : Color.clear)
+                .foregroundStyle(isSelected ? .white : .white.opacity(0.60))
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

@@ -64,6 +64,16 @@ public final class AudioRecorderService: ObservableObject {
     nonisolated(unsafe) private var isCaptureSessionActive = false
     nonisolated(unsafe) private var activePreferredInputUID = ""
     nonisolated(unsafe) private var activeInputUID = ""
+    /// True while `handleEngineConfigurationChange()` is executing on audioQueue.
+    /// Prevents a second concurrent route-change event from re-entering recovery
+    /// while the first is still in progress (the two events that always fire together —
+    /// the HAL listener and AVAudioEngineConfigurationChange — would otherwise both
+    /// attempt to install a tap, causing an NSException from AVAudioEngine).
+    nonisolated(unsafe) private var isHandlingConfigChange = false
+    /// True between a successful `installTap` call and the matching `removeTap`.
+    /// Guards against calling `installTap` while a tap is already installed, which
+    /// throws an uncatchable NSException.
+    nonisolated(unsafe) private var isTapInstalled = false
 
     private let preferredInputRetryDelays: [TimeInterval] = [0, 0.2, 0.5, 1.0]
 
@@ -300,7 +310,10 @@ public final class AudioRecorderService: ObservableObject {
     /// Removes the tap and stops the engine. Safe to call from any state.
     /// Must be called on audioQueue.
     private func teardownEngineUnsafe() {
-        engine.inputNode.removeTap(onBus: 0)
+        if isTapInstalled {
+            engine.inputNode.removeTap(onBus: 0)
+            isTapInstalled = false
+        }
         if engine.isRunning {
             engine.stop()
         }
@@ -308,6 +321,13 @@ public final class AudioRecorderService: ObservableObject {
 
     // fileprivate (not private) so the file-scope Core Audio callback can dispatch to this.
     fileprivate func handleEngineConfigurationChange() {
+        guard !isHandlingConfigChange else {
+            Safety.log("handleEngineConfigurationChange() — skipping duplicate event (already in progress)", category: .audio)
+            return
+        }
+        isHandlingConfigChange = true
+        defer { isHandlingConfigChange = false }
+
         let wasCaptureSessionActive = isCaptureSessionActive
         let preferredUID = activePreferredInputUID
         let activeUID = activeInputUID
@@ -404,7 +424,10 @@ public final class AudioRecorderService: ObservableObject {
             category: .audio
         )
 
-        inputNode.removeTap(onBus: 0)
+        if isTapInstalled {
+            inputNode.removeTap(onBus: 0)
+            isTapInstalled = false
+        }
         engine.prepare()
 
         let finalFormat = inputNode.outputFormat(forBus: 0)
@@ -431,6 +454,7 @@ public final class AudioRecorderService: ObservableObject {
         inputNode.installTap(onBus: 0, bufferSize: 4096, format: nil) { [weak self] buffer, _ in
             self?.processAudioBuffer(buffer, sampleRate: sampleRateForTap)
         }
+        isTapInstalled = true
 
         do {
             Safety.log("performStartAttempt() — calling engine.start()", category: .audio)

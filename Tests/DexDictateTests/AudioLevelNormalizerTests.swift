@@ -17,7 +17,7 @@ final class AudioLevelNormalizerTests: XCTestCase {
     }
 
     func testTinyAmplitudeReturnsNearZero() {
-        // 1e-8 is about -160 dB — well below the -60 dB floor.
+        // 1e-8 is about -160 dB — well below the -80 dB floor.
         let result = AudioLevelNormalizer.normalize(1e-8)
         XCTAssertEqual(result, 0.0, accuracy: 1e-10, "Amplitude far below floor should return 0.0")
     }
@@ -25,47 +25,46 @@ final class AudioLevelNormalizerTests: XCTestCase {
     // MARK: - Floor boundary
 
     func testAmplitudeAtFloorReturnsApproxZero() {
-        // -60 dB floor corresponds to amplitude 10^(-60/20) = 10^(-3) = 0.001.
-        let floorAmplitude = pow(10.0, -60.0 / 20.0)  // = 0.001
+        // -80 dB floor corresponds to amplitude 10^(-80/20) = 10^(-4) = 0.0001.
+        let floorAmplitude = pow(10.0, AudioLevelNormalizer.floorDB / 20.0)
         let result = AudioLevelNormalizer.normalize(floorAmplitude)
-        XCTAssertEqual(result, 0.0, accuracy: 1e-9, "Amplitude at -60 dB floor should return ~0.0")
+        XCTAssertEqual(result, 0.0, accuracy: 1e-9, "Amplitude at floor dB should return ~0.0")
     }
 
     func testAmplitudeJustAboveFloorReturnsSmallPositive() {
-        // Slightly above -60 dB floor — should be a small but positive value.
-        let justAboveFloor = pow(10.0, -59.5 / 20.0)
+        // Slightly above the floor (floor + 0.5 dB) — should be a small but positive value.
+        let justAboveFloor = pow(10.0, (AudioLevelNormalizer.floorDB + 0.5) / 20.0)
         let result = AudioLevelNormalizer.normalize(justAboveFloor)
-        XCTAssertGreaterThan(result, 0.0, "Amplitude just above -60 dB floor should return small positive value")
+        XCTAssertGreaterThan(result, 0.0, "Amplitude just above floor should return small positive value")
         XCTAssertLessThan(result, 0.02, "Amplitude just above floor should still be very small")
     }
 
     // MARK: - Normal speech range
 
     func testLowSpeechAmplitudeIsInRange() {
-        // 0.01 ≈ -40 dB — quiet speech
+        // 0.01 ≈ -40 dB — quiet speech. With -80 dB floor and 80 dB range: (-40+80)/80 = 0.5
         let result = AudioLevelNormalizer.normalize(0.01)
         XCTAssertGreaterThanOrEqual(result, 0.0)
         XCTAssertLessThanOrEqual(result, 1.0)
-        // Expected: (-40 + 60) / 60 = 20/60 ≈ 0.333
-        XCTAssertEqual(result, 20.0 / 60.0, accuracy: 1e-9)
+        let expected = (20.0 * log10(0.01) - AudioLevelNormalizer.floorDB) / AudioLevelNormalizer.rangeDB
+        XCTAssertEqual(result, expected, accuracy: 1e-9)
     }
 
     func testMidSpeechAmplitudeIsInRange() {
-        // 0.1 ≈ -20 dB — normal conversational speech
+        // 0.1 ≈ -20 dB — normal conversational speech. With -80 dB floor: (-20+80)/80 = 0.75
         let result = AudioLevelNormalizer.normalize(0.1)
         XCTAssertGreaterThanOrEqual(result, 0.0)
         XCTAssertLessThanOrEqual(result, 1.0)
-        // Expected: (-20 + 60) / 60 = 40/60 ≈ 0.667
-        XCTAssertEqual(result, 40.0 / 60.0, accuracy: 1e-9)
+        let expected = (20.0 * log10(0.1) - AudioLevelNormalizer.floorDB) / AudioLevelNormalizer.rangeDB
+        XCTAssertEqual(result, expected, accuracy: 1e-9)
     }
 
     func testHighSpeechAmplitudeIsInRange() {
-        // 0.5 ≈ -6 dB — loud speech
+        // 0.5 ≈ -6 dB — loud speech.
         let result = AudioLevelNormalizer.normalize(0.5)
         XCTAssertGreaterThanOrEqual(result, 0.0)
         XCTAssertLessThanOrEqual(result, 1.0)
-        // Expected: (-6.02... + 60) / 60 ≈ 0.8997
-        let expected = (20.0 * log10(0.5) + 60.0) / 60.0
+        let expected = (20.0 * log10(0.5) - AudioLevelNormalizer.floorDB) / AudioLevelNormalizer.rangeDB
         XCTAssertEqual(result, expected, accuracy: 1e-9)
     }
 

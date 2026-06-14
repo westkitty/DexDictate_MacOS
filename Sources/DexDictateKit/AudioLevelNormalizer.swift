@@ -6,7 +6,10 @@ import Darwin
 /// normal speech dynamics than a narrower range.
 enum AudioLevelNormalizer {
     /// The floor in dB below which signal is treated as silence.
-    static let floorDB: Double = -60.0
+    /// -80 dB (amplitude ≈ 0.0001) covers the full dynamic range of typical
+    /// microphone input without compressing quiet/loud speech into the same
+    /// narrow band that -60 dB produces.
+    static let floorDB: Double = -80.0
 
     /// The ceiling in dB (linear amplitude of 1.0 corresponds to 0 dB).
     static let ceilingDB: Double = 0.0

@@ -104,16 +104,11 @@ struct QuickSettingsView: View {
                                     .tint(.cyan)
                             }
 
-                            Text("Hold records only while the trigger is pressed. Toggle starts on the first press and stops on the second.")
-                                .font(.caption2)
-                                .foregroundStyle(.white.opacity(0.5))
-                                .fixedSize(horizontal: false, vertical: true)
-
-                            Toggle("Pause browser media during dictation", isOn: $settings.pauseBrowserMediaDuringDictation)
-                            Text("Pauses browser video/audio while recording, then resumes only media DexDictate paused. Skips when Zoom is active.")
-                                .font(.caption2)
-                                .foregroundStyle(.white.opacity(0.5))
-                                .fixedSize(horizontal: false, vertical: true)
+                                    SettingToggleWithInfo(
+                                title: "Pause browser media during dictation",
+                                info: "Pauses video and audio in Chrome, Brave, or Edge tabs when recording starts, then resumes them when you stop. macOS will ask for Automation permission the first time it runs. Skips automatically when Zoom is active. Safari and Firefox are not supported.",
+                                isOn: $settings.pauseBrowserMediaDuringDictation
+                            )
 
                             DisclosureGroup("Route Health", isExpanded: $routeHealthExpanded) {
                                 VStack(alignment: .leading, spacing: 8) {
@@ -266,17 +261,44 @@ struct QuickSettingsView: View {
                                 .frame(width: 180)
                             }
 
-                            Toggle("Adaptive Tail Delay", isOn: $settings.adaptiveTailDelayEnabled)
-                            Toggle("Trim Leading/Trailing Silence", isOn: $settings.enableSilenceTrim)
-                            Toggle("Trailing Trim Experiment", isOn: $settings.enableTrailingTrimExperiment)
-                            Toggle("Accuracy Retry", isOn: $settings.enableAccuracyRetry)
+                            SettingToggleWithInfo(
+                                title: "Adaptive Tail Delay",
+                                info: "After you stop speaking, DexDictate waits a moment before cutting off the recording. Adaptive Tail Delay learns how long you typically pause between words and adjusts this wait automatically — so it doesn't clip the end of what you said or make you wait too long before transcription starts.",
+                                isOn: $settings.adaptiveTailDelayEnabled
+                            )
+
+                            SettingToggleWithInfo(
+                                title: "Trim Leading/Trailing Silence",
+                                info: "Removes silent audio from the beginning and end of each recording before sending it to Whisper. Reduces the chance of hallucinated words in the silent gaps and can marginally improve speed on short utterances.",
+                                isOn: $settings.enableSilenceTrim
+                            )
+
+                            SettingToggleWithInfo(
+                                title: "Trailing Trim Experiment",
+                                info: "An experimental variation that trims silence only at the end of the recording, after your last spoken word. May improve accuracy on the final word of an utterance by preventing Whisper from continuing to 'hear' noise after speech ends. Best used alongside Trim Leading/Trailing Silence.",
+                                isOn: $settings.enableTrailingTrimExperiment
+                            )
+
+                            SettingToggleWithInfo(
+                                title: "Accuracy Retry",
+                                info: "When transcription produces a suspiciously short or low-confidence result, DexDictate silently re-runs Whisper on the same audio at a higher quality level. Costs extra processing time but catches utterances where the first pass stumbled.",
+                                isOn: $settings.enableAccuracyRetry
+                            )
 
                             if settings.enableAccuracyRetry {
-                                Toggle("Retry Suspicious Results Automatically", isOn: $settings.autoRetrySuspiciousResults)
-                                    .padding(.leading, 16)
+                                SettingToggleWithInfo(
+                                    title: "Retry Suspicious Results Automatically",
+                                    info: "When Accuracy Retry is on, this fires the retry without asking you first. Turn it off if you'd rather decide manually — you'll see a 'Retry Last in Accuracy Mode' button after each suspicious result instead.",
+                                    isOn: $settings.autoRetrySuspiciousResults
+                                )
+                                .padding(.leading, 16)
                             }
 
-                            Toggle("Correction Sheet", isOn: $settings.enableCorrectionSheet)
+                            SettingToggleWithInfo(
+                                title: "Correction Sheet",
+                                info: "After each dictation, shows a compact review sheet where you can confirm, edit, or reject the transcript before it gets inserted. Adds one extra step but lets you catch mistakes before they reach the target app.",
+                                isOn: $settings.enableCorrectionSheet
+                            )
 
                             DisclosureGroup("Context Biasing", isExpanded: $contextBiasExpanded) {
                                 VStack(alignment: .leading, spacing: 8) {
@@ -291,7 +313,7 @@ struct QuickSettingsView: View {
                                         .frame(width: 180)
                                     }
 
-                                    Text("Automatic maps coding, email, and chat apps into lighter domain-specific prompts and vocabulary. It stays tucked here because this is assistance, not theater.")
+                                    Text("Automatic detects which app is in focus and applies a light domain-specific vocabulary hint — coding terms for Xcode, email phrasing for Mail, chat style for Slack. Manual lets you pin a domain yourself. Off disables all biasing. Everything runs locally; no text leaves your machine.")
                                         .font(.caption2)
                                         .foregroundStyle(.white.opacity(0.5))
                                         .fixedSize(horizontal: false, vertical: true)
@@ -660,6 +682,13 @@ struct QuickSettingsView: View {
                     .background(Color.white.opacity(0.08))
                     .clipShape(RoundedRectangle(cornerRadius: 6))
                     .disabled(settings.safeModeEnabled)
+
+                    Text(settings.triggerMode == .holdToTalk
+                         ? "Hold: records only while the trigger is pressed."
+                         : "Toggle: first press starts, second press stops.")
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.45))
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
                 HStack(spacing: 8) {
@@ -1367,6 +1396,45 @@ private struct MenuBarDisplayPreview: View {
         case .emojiIcon:
             Text(emoji)
                 .font(.system(size: 20))
+        }
+    }
+}
+
+private struct SettingToggleWithInfo: View {
+    let title: String
+    let info: String
+    @Binding var isOn: Bool
+    @State private var showingInfo = false
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 6) {
+            Toggle(isOn: $isOn) {
+                Text(title)
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.82))
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Button {
+                showingInfo.toggle()
+            } label: {
+                Image(systemName: "info.circle")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.white.opacity(0.35))
+            }
+            .buttonStyle(.plain)
+            .popover(isPresented: $showingInfo, arrowEdge: .trailing) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(title)
+                        .font(.caption.weight(.semibold))
+                    Text(info)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(12)
+                .frame(width: 240)
+            }
         }
     }
 }
