@@ -5538,3 +5538,20 @@ The proposed "AX -> CGEvent Cmd+V -> clipboard-restore + toast" chain already ex
 - Phase 4 mic pinning: already functional — inputDeviceUID persisted (AppSettings), preferred-UID handling + route recovery (AudioRecorderRecoveryPlanner), and user feedback via statusText + routeHealthSnapshot (QuickSettingsStatusStrip). Only a transient recovery toast remains, which touches async UI and needs manual verification. No code change made.
 - Phase 5 double-tap trigger mode: would change live event-tap timing behavior; needs on-device verification. Not implemented blind.
 - Phase 6 true VAD endpointing: silence-based endpointing already exists via UtteranceEndPreset. A real energy-VAD endpointer would be additive but must be wired into the live capture loop and verified on-device; an unwired component would be speculative dead code, so it was intentionally not added autonomously.
+
+## Section 25. Salvaged Features — Context Injection + Whisper Warm-up
+
+- Timestamp: Mon Jun 16 2026
+- Source: re-implemented from the retired claude/nifty-wilson branch (origin) against the current diverged codebase; the rest of that branch was already superseded.
+
+### 25.1 Focused-field context injection (opt-in)
+- Sources/DexDictateKit/Output/FocusedTextReader.swift: reads the tail of the focused field via the Accessibility API (nil-safe; nil means "no context").
+- Sources/DexDictateKit/DictationContextPrompt.swift: pure combiner that merges the dynamic focused-field context with the existing DictationDomainBias prompt into a single bounded initial_prompt, preserving the recent tail. Unit-tested (DictationContextPromptTests, 8 cases).
+- Wired in TranscriptionEngine live-transcribe path; gated by AppSettings.enableContextInjection (default false); Quick Settings toggle "Use Context From Focused Field". Requires Accessibility permission.
+
+### 25.2 Whisper warm-up (always on, no UI effect)
+- WhisperService.warmup(): silent 0.5 s inference after each model load to prime whisper.cpp / Metal buffers and remove first-transcription latency. Result suppressed via isWarmingUp guard in didCompleteWithSegments + both error paths; real transcriptions clear the flag first so a superseded warm-up cannot suppress a real result.
+
+### 25.3 Validation + remaining risk
+- swift build; swift test 366 passed/0 failures.
+- FocusedTextReader and the live wiring depend on real AX focus and a loaded model, so they are covered by build + headless-safety tests + the pure combiner unit tests; end-to-end accuracy/latency benefit should be confirmed on-device.
