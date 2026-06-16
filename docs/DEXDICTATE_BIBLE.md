@@ -5528,3 +5528,13 @@ The proposed "AX -> CGEvent Cmd+V -> clipboard-restore + toast" chain already ex
 
 ### 24.4 Remaining batch-1 phases (NOT started — require authorization + manual verification)
 - Mic pinning + route-change recovery UX; trigger/hotkey modes (push-to-talk/double-tap) + conflict detection; smarter VAD endpointing. These are feature-level changes touching live audio/event-tap behavior and UI; they need on-device manual verification and were intentionally not implemented autonomously.
+
+### 24.5 Implemented — trigger shortcut conflict detection (Phase 5 partial)
+- New Sources/DexDictateKit/TriggerShortcutConflictChecker.swift: pure, AppKit-free classifier returning .systemReserved (names the colliding macOS shortcut: Spotlight, App Switcher, screenshots, Force Quit, etc.) or .firesWhileTyping (bare key, no modifiers), or nil when safe. Mouse-button triggers never conflict; non-standard modifier bits are masked before matching.
+- Tests: Tests/DexDictateTests/TriggerShortcutConflictCheckerTests.swift (8 cases). Full suite: 356 passed, 0 failures.
+- The existing trigger modes (TriggerMode.holdToTalk / .toggle via InputMonitor) already work; this adds the previously-missing conflict signal. Wiring it into Sources/DexDictate/ShortcutRecorder.swift is a small, visually-verified follow-up (display the message under the recorder field).
+
+### 24.6 Audited — remaining batch-1 items deferred (require on-device verification)
+- Phase 4 mic pinning: already functional — inputDeviceUID persisted (AppSettings), preferred-UID handling + route recovery (AudioRecorderRecoveryPlanner), and user feedback via statusText + routeHealthSnapshot (QuickSettingsStatusStrip). Only a transient recovery toast remains, which touches async UI and needs manual verification. No code change made.
+- Phase 5 double-tap trigger mode: would change live event-tap timing behavior; needs on-device verification. Not implemented blind.
+- Phase 6 true VAD endpointing: silence-based endpointing already exists via UtteranceEndPreset. A real energy-VAD endpointer would be additive but must be wired into the live capture loop and verified on-device; an unwired component would be speculative dead code, so it was intentionally not added autonomously.
