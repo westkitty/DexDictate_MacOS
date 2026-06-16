@@ -5497,3 +5497,44 @@ NSException from `AVAudioEngine` tap installation during start/recovery. `-[AVAu
 - The bridge guarantees an `installTap`/`removeTap` `NSException` cannot abort the process, but it does not make a failed device usable: if the hardware format is genuinely invalid, capture still fails and is surfaced as a recoverable error that drives the existing bounded recovery / system-default fallback.
 - Other AVFoundation calls that can raise `NSException` (e.g. `engine.attach`/`connect` in unusual states) are not currently bridged; this fix targets the tap path proven by the crash. `engine.start()` already bridges as a Swift `throws` and is unchanged.
 - The `_releases/` artifact names still reference an older version string; unrelated to this fix.
+
+## Section 24. Batch-1 Lifecycle Hardening + Insertion Audit Addendum
+
+- Timestamp: Mon Jun 16 2026
+- Branch: improvements/batch1-lifecycle-insertion (off experiment/state-first-popover-nano-hud-20260612-170821)
+- Scope: Additive. Single-instance / menu-bar lifecycle hardening implemented; insertion-reliability and per-app-insertion phases audited and found ALREADY IMPLEMENTED.
+
+### 24.1 Implemented — single-instance guard + true menu-bar app
+- LSUIElement set to true in templates/Info.plist.template and Sources/DexDictate/Info.plist so DexDictate runs as a true accessory (menu-bar only, no Dock icon). The Dock-icon-plus-menu-bar presentation previously contributed to the "looks like two instances" symptom.
+- Sources/DexDictate/Info.plist CFBundle version reconciled 1.5.2 -> 1.5.3 to match the VERSION file (the shipped bundle already used VERSION via the template; the static plist field was stale and unused by the build).
+- New Sources/DexDictateKit/InstanceGuard.swift: pure, unit-testable decision logic (existingInstancePID(allInstancePIDs:currentPID:)). Wired into AppDelegate.applicationDidFinishLaunching (Sources/DexDictate/DexDictateApp.swift): if another running instance of bundle id com.westkitty.dexdictate.macos exists, activate it and terminate this launch.
+- Tests: Tests/DexDictateTests/InstanceGuardTests.swift (5 cases).
+- Validation: swift build; swift test (348 passed, 0 failures); ./build.sh --user (generated bundle confirms LSUIElement=true, version 1.5.3); scripts/validate_release.sh (0 failures, 1 expected Gatekeeper warning).
+
+### 24.2 Audited — insertion reliability fallback chain: ALREADY IMPLEMENTED
+The proposed "AX -> CGEvent Cmd+V -> clipboard-restore + toast" chain already exists and is more thorough than the proposal:
+- AX insertion (two strategies) falling back to clipboard paste: Sources/DexDictateKit/Output/OutputCoordinator.swift:217-224, insertViaAccessibility 231-269.
+- Synthesized Cmd+V / Cmd+A+Cmd+V via CGEvent: Sources/DexDictateKit/Output/ClipboardManager.swift:411-427 and 311-333.
+- Full pasteboard restore (entire payload, 10 MB cap, only if DexDictate still owns it): ClipboardManager.swift:130-171, 440-463.
+- Secure/password-field refusal: OutputCoordinator.swift:204-210 + Output/SecureInputContext.swift.
+- Editable-target detection with AX role classification: ClipboardManager.swift:357-401.
+- Existing coverage: Tests/DexDictateTests/{AccessibilityInsertionTests, ClipboardManagerTests, OutputCoordinatorTests, OutputPipelineHardeningTests}.swift.
+- Decision: no code change. Only a minor potential enhancement remains — surfacing a user-facing toast when an ASYNC paste aborts mid-flight (the coordinator returns .pastedToActiveApp optimistically before the async paste confirms). ToastEvent.clipboardFallback(reason:) already exists; wiring an async-abort callback into it is a delicate change to a well-tested async flow and should be done with manual verification, not autonomously.
+
+### 24.3 Audited — per-app insertion profiles: ALREADY IMPLEMENTED
+- Sources/DexDictateKit/AppInsertionOverridesManager.swift: AppInsertionOverride (per bundleID), InsertionModeOverride (useGlobal/clipboardPaste/clipboardOnly/accessibilityAPI/replaceFieldWithClipboardPaste), effectiveMode(for:), add/remove/persist; UI in Sources/DexDictate/PerAppInsertionSheet.swift.
+- Existing coverage: Tests/DexDictateTests/AppInsertionOverridesManagerTests.swift.
+- Decision: no code change.
+
+### 24.4 Remaining batch-1 phases (NOT started — require authorization + manual verification)
+- Mic pinning + route-change recovery UX; trigger/hotkey modes (push-to-talk/double-tap) + conflict detection; smarter VAD endpointing. These are feature-level changes touching live audio/event-tap behavior and UI; they need on-device manual verification and were intentionally not implemented autonomously.
+
+### 24.5 Implemented — trigger shortcut conflict detection (Phase 5 partial)
+- New Sources/DexDictateKit/TriggerShortcutConflictChecker.swift: pure, AppKit-free classifier returning .systemReserved (names the colliding macOS shortcut: Spotlight, App Switcher, screenshots, Force Quit, etc.) or .firesWhileTyping (bare key, no modifiers), or nil when safe. Mouse-button triggers never conflict; non-standard modifier bits are masked before matching.
+- Tests: Tests/DexDictateTests/TriggerShortcutConflictCheckerTests.swift (8 cases). Full suite: 356 passed, 0 failures.
+- The existing trigger modes (TriggerMode.holdToTalk / .toggle via InputMonitor) already work; this adds the previously-missing conflict signal. Wiring it into Sources/DexDictate/ShortcutRecorder.swift is a small, visually-verified follow-up (display the message under the recorder field).
+
+### 24.6 Audited — remaining batch-1 items deferred (require on-device verification)
+- Phase 4 mic pinning: already functional — inputDeviceUID persisted (AppSettings), preferred-UID handling + route recovery (AudioRecorderRecoveryPlanner), and user feedback via statusText + routeHealthSnapshot (QuickSettingsStatusStrip). Only a transient recovery toast remains, which touches async UI and needs manual verification. No code change made.
+- Phase 5 double-tap trigger mode: would change live event-tap timing behavior; needs on-device verification. Not implemented blind.
+- Phase 6 true VAD endpointing: silence-based endpointing already exists via UtteranceEndPreset. A real energy-VAD endpointer would be additive but must be wired into the live capture loop and verified on-device; an unwired component would be speculative dead code, so it was intentionally not added autonomously.

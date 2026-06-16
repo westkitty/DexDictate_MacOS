@@ -704,6 +704,7 @@ struct CheckboxToggleStyle: ToggleStyle {
 @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
+        if terminateIfDuplicateInstance() { return }
         configureApplicationIcon()
 
         if !AppSettings.shared.hasCompletedOnboarding {
@@ -749,6 +750,29 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+    }
+
+    /// If another DexDictate instance is already running, activate it and terminate this one.
+    /// Prevents the duplicate menu-bar item / popover that occurs when more than one copy of
+    /// the app is launched (most commonly: two installed bundles sharing one bundle id).
+    /// Returns true if this process is terminating as a duplicate.
+    private func terminateIfDuplicateInstance() -> Bool {
+        guard let bundleID = Bundle.main.bundleIdentifier else { return false }
+        let running = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
+        let pids = running.map { $0.processIdentifier }
+        let currentPID = ProcessInfo.processInfo.processIdentifier
+
+        guard let existingPID = InstanceGuard.existingInstancePID(allInstancePIDs: pids, currentPID: currentPID) else {
+            return false
+        }
+
+        Safety.log(
+            "Duplicate DexDictate instance detected (existing pid \(existingPID)); activating it and terminating this launch.",
+            category: .lifecycle
+        )
+        running.first { $0.processIdentifier == existingPID }?.activate(options: [.activateAllWindows])
+        NSApp.terminate(nil)
+        return true
     }
     
     private var onboardingWindow: NSWindow?
