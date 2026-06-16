@@ -5451,3 +5451,49 @@ Rationale:
 - Tests run:
   - swift test
 - Next step: Design a safer pause-tolerance fix that keeps explicit stop control without severing the live stop/collect/transcribe chain.
+
+## Section 23. installTap NSException Crash Hardening Addendum
+
+- Timestamp: Mon Jun 16 2026
+- Scope: Additive crash fix. No product behavior, UI, permission, model, output, signing, or release behavior intentionally changed.
+
+### 23.1 Crash
+
+- Crash ID: `48CE6BEE-99AE-41EC-8D5B-EA70BE5D4932`
+- Version: DexDictate 1.5.3
+- OS: macOS 26.5.1, Apple Silicon
+- Exception: `EXC_CRASH (SIGABRT)`, `abort() called`, Application Specific Information shows an uncaught Objective-C exception.
+- Faulting thread: Thread 11, dispatch queue `com.dexdictate.audioEngine`.
+- Fatal stack: `AVAudioEngineImpl::InstallTapOnNode` → `-[AVAudioNode installTapOnBus:bufferSize:format:block:]` → `AudioRecorderService.performStartAttempt` (installTap call) → `AudioRecorderRecoveryPlanner.execute` → `AudioRecorderService.startRecordingInternal` → `AudioRecorderService.startRecordingAsync`.
+
+### 23.2 Root cause class
+
+NSException from `AVAudioEngine` tap installation during start/recovery. `-[AVAudioNode installTapOnBus:...]` raises an Objective-C `NSException` (not an `NSError`) when an internal precondition fails — most plausibly because, with `format: nil`, it re-reads the input node's hardware bus format *at install time*. A hardware route change in the TOCTOU window between the Swift-side format validation guard and the install call makes that format invalid (0 Hz / 0 channels), and AVFoundation raises. Swift `do/catch` cannot intercept an Objective-C `NSException`, so it reached the uncaught-exception handler and called `abort()`. The branch's pre-existing Swift guards (`isTapInstalled`, `isHandlingConfigChange`, post-prepare format validation) reduce the probability but cannot eliminate it, because the exception originates inside AVFoundation after our last Swift-observable check.
+
+### 23.3 Fix
+
+- Added an Objective-C bridge target `DexDictateObjCSupport` (`DDAudioTapInstaller`) that wraps `installTapOnBus:` and `removeTapOnBus:` in `@try/@catch`, converting any `NSException` into an `NSError` (domain `com.dexdictate.audioTapInstaller`, exception name preserved in `userInfo`). The Swift importer surfaces these as throwing functions, so the exception becomes a recoverable Swift error instead of a crash.
+- `AudioRecorderService.performStartAttempt` now installs the tap via `installInputTapSafely(...)`, which uses the bridge. On a caught failure it logs a structured `audio`-category diagnostic (reason, attempt index, preserveBufferedAudio, selected UID, active UID, deviceID, input format, sample rate, channel count, engine.isRunning, tapWasBelievedInstalled), tears the engine down, resets it, and throws a `DictationError.audioEngineSetupFailed` through the existing planner/completion/recovery path.
+- Tap installation/removal is idempotent: any existing tap is removed (via the exception-safe bridge) before a new install; stop/recovery/sleep/teardown paths clear `isTapInstalled`. `teardownEngineUnsafe` now removes the tap through the bridge too.
+- Added a start/recovery overlap guard (`isStartInProgress`, `beginStartAttempt()/endStartAttempt()`) in `startRecordingInternal` so a start/recovery cannot re-enter tap installation while another attempt is mid-flight. This complements the existing `isHandlingConfigChange` guard.
+
+### 23.4 Files changed
+
+- `Package.swift` — new `DexDictateObjCSupport` target; `DexDictateKit` and the test target depend on it.
+- `Sources/DexDictateObjCSupport/include/AudioTapInstaller.h` — new.
+- `Sources/DexDictateObjCSupport/AudioTapInstaller.m` — new.
+- `Sources/DexDictateKit/Services/AudioRecorderService.swift` — bridge import; `installInputTapSafely`; bridge-routed teardown removeTap; start/recovery overlap guard; DEBUG test seams.
+- `Tests/DexDictateTests/AudioTapInstallerTests.swift` — new; double-install raises NSException → bridge throws instead of aborting (hardware-free via `AVAudioPlayerNode`).
+- `Tests/DexDictateTests/AudioRecorderTapStateTests.swift` — new; tap-state transitions and start-overlap guard.
+
+### 23.5 Validation performed
+
+- `swift test`: 343 tests, 0 failures (includes 7 new tests). The key test `AudioTapInstallerTests.testDoubleInstallThrowsInsteadOfCrashing` forces the real AVFoundation `NSException` and asserts it surfaces as a thrown error — reaching the assertion at all proves the process did not abort.
+- `./build.sh --user`: production/release-config build, codesign, and install succeeded.
+- `scripts/validate_release.sh .build/DexDictate.app`: 0 failures, 1 warning (Gatekeeper assessment — expected for a locally dev-signed, non-notarized build).
+
+### 23.6 Remaining risks
+
+- The bridge guarantees an `installTap`/`removeTap` `NSException` cannot abort the process, but it does not make a failed device usable: if the hardware format is genuinely invalid, capture still fails and is surfaced as a recoverable error that drives the existing bounded recovery / system-default fallback.
+- Other AVFoundation calls that can raise `NSException` (e.g. `engine.attach`/`connect` in unusual states) are not currently bridged; this fix targets the tap path proven by the crash. `engine.start()` already bridges as a Swift `throws` and is unchanged.
+- The `_releases/` artifact names still reference an older version string; unrelated to this fix.

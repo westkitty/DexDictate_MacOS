@@ -1,6 +1,7 @@
 import AppKit
 import AVFoundation
 import CoreAudio
+import DexDictateObjCSupport
 
 // MARK: - Core Audio default-device callback (file-scope C-style function)
 
@@ -74,6 +75,12 @@ public final class AudioRecorderService: ObservableObject {
     /// Guards against calling `installTap` while a tap is already installed, which
     /// throws an uncatchable NSException.
     nonisolated(unsafe) private var isTapInstalled = false
+    /// True while a start or route-recovery attempt is executing inside
+    /// `startRecordingInternal`. Prevents a second start/recovery from overlapping
+    /// (and re-entering tap installation) before the first has finished. The serial
+    /// `audioQueue` already serializes top-level calls; this flag additionally rejects
+    /// genuine reentrancy (a recovery synchronously triggered mid-start).
+    nonisolated(unsafe) private var isStartInProgress = false
 
     private let preferredInputRetryDelays: [TimeInterval] = [0, 0.2, 0.5, 1.0]
 
@@ -239,6 +246,18 @@ public final class AudioRecorderService: ObservableObject {
             category: .audio
         )
 
+        // Reject overlapping start/recovery attempts. On the serial audioQueue this only
+        // fires for genuine reentrancy, but it guarantees the planner can never re-enter
+        // tap installation while another attempt is mid-flight.
+        guard beginStartAttempt() else {
+            Safety.log(
+                "startRecordingInternal() — rejected reentrant start/recovery (one already in progress); reason=\(reason.rawValue)",
+                category: .audio
+            )
+            throw DictationError.audioEngineSetupFailed("A microphone start attempt is already in progress.")
+        }
+        defer { endStartAttempt() }
+
         let planner = AudioRecorderRecoveryPlanner(
             retryDelays: preferredInputRetryDelays,
             sleep: { Thread.sleep(forTimeInterval: $0) },
@@ -311,12 +330,34 @@ public final class AudioRecorderService: ObservableObject {
     /// Must be called on audioQueue.
     private func teardownEngineUnsafe() {
         if isTapInstalled {
-            engine.inputNode.removeTap(onBus: 0)
+            // Route removeTap through the ObjC bridge: removeTapOnBus can also raise an
+            // NSException (e.g. if the node/bus state drifted), which Swift cannot catch.
+            do {
+                try DDAudioTapInstaller.removeTap(on: engine.inputNode, bus: 0)
+            } catch {
+                Safety.log(
+                    "teardownEngineUnsafe() — removeTap raised \((error as NSError).localizedDescription); clearing tap state anyway",
+                    category: .audio
+                )
+            }
             isTapInstalled = false
         }
         if engine.isRunning {
             engine.stop()
         }
+    }
+
+    /// Attempts to acquire the single start/recovery slot. Returns false if another
+    /// attempt is already in progress. Must be called on audioQueue.
+    private func beginStartAttempt() -> Bool {
+        if isStartInProgress { return false }
+        isStartInProgress = true
+        return true
+    }
+
+    /// Releases the start/recovery slot. Must be called on audioQueue.
+    private func endStartAttempt() {
+        isStartInProgress = false
     }
 
     // fileprivate (not private) so the file-scope Core Audio callback can dispatch to this.
@@ -425,7 +466,16 @@ public final class AudioRecorderService: ObservableObject {
         )
 
         if isTapInstalled {
-            inputNode.removeTap(onBus: 0)
+            // Idempotent: always clear any existing tap (via the exception-safe bridge)
+            // before installing a new one, so we never double-install on bus 0.
+            do {
+                try DDAudioTapInstaller.removeTap(on: inputNode, bus: 0)
+            } catch {
+                Safety.log(
+                    "performStartAttempt() — pre-install removeTap raised \((error as NSError).localizedDescription); clearing tap state anyway",
+                    category: .audio
+                )
+            }
             isTapInstalled = false
         }
         engine.prepare()
@@ -451,10 +501,15 @@ public final class AudioRecorderService: ObservableObject {
         // capturedSampleRate is set above; capture it as a local constant so the tap
         // closure never reads the property from the audio thread (data-race fix).
         let sampleRateForTap = capturedSampleRate   // captured once; never read from audio thread
-        inputNode.installTap(onBus: 0, bufferSize: 4096, format: nil) { [weak self] buffer, _ in
-            self?.processAudioBuffer(buffer, sampleRate: sampleRateForTap)
-        }
-        isTapInstalled = true
+        try installInputTapSafely(
+            on: inputNode,
+            sampleRate: sampleRateForTap,
+            finalFormat: finalFormat,
+            selection: selection,
+            reason: reason,
+            attemptIndex: attemptIndex,
+            preserveBufferedAudio: preserveBufferedAudio
+        )
 
         do {
             Safety.log("performStartAttempt() — calling engine.start()", category: .audio)
@@ -476,6 +531,66 @@ public final class AudioRecorderService: ObservableObject {
             category: .audio
         )
         return startedInput
+    }
+
+    /// Installs the input tap through the Objective-C `@try/@catch` bridge so that an
+    /// `NSException` from AVFoundation (invalid format read at install time, tap already
+    /// present, etc.) is caught as a Swift error instead of calling `abort()`.
+    ///
+    /// On failure this logs a structured `audioEngine` diagnostic, tears the engine down
+    /// safely, and throws — letting the existing recovery/completion path handle it.
+    private func installInputTapSafely(
+        on inputNode: AVAudioInputNode,
+        sampleRate: Double,
+        finalFormat: AVAudioFormat,
+        selection: AudioRecorderSelectedInput,
+        reason: AudioRecorderStartReason,
+        attemptIndex: Int,
+        preserveBufferedAudio: Bool
+    ) throws {
+        let tapWasBelievedInstalled = isTapInstalled
+        do {
+            // Pass format: nil so AVAudioEngine uses the input node's hardware format —
+            // the only format guaranteed to match the tap. The bridge guarantees that if
+            // that format is invalid at install time, we get a thrown error, not a crash.
+            try DDAudioTapInstaller.installTap(
+                on: inputNode,
+                bus: 0,
+                bufferSize: 4096,
+                format: nil
+            ) { [weak self] buffer, _ in
+                self?.processAudioBuffer(buffer, sampleRate: sampleRate)
+            }
+            isTapInstalled = true
+        } catch {
+            isTapInstalled = false
+
+            let nsError = error as NSError
+            let selectedUID: String
+            let actualDeviceID: String
+            switch selection {
+            case .systemDefault:
+                selectedUID = "(system default)"
+                actualDeviceID = "nil"
+            case .preferred(let match):
+                selectedUID = match.uid
+                actualDeviceID = String(match.deviceID)
+            }
+
+            Safety.log(
+                "installTap FAILED (NSException bridged to error) — exception=\(nsError.localizedDescription), reason=\(reason.rawValue), attempt=\(attemptIndex + 1), preserveBufferedAudio=\(preserveBufferedAudio), selectedUID='\(selectedUID)', activeInputUID='\(activeInputUID)', deviceID=\(actualDeviceID), inputFormat=\(finalFormat.sampleRate)Hz/\(finalFormat.channelCount)ch, capturedSampleRate=\(sampleRate), engine.isRunning=\(engine.isRunning), tapWasBelievedInstalled=\(tapWasBelievedInstalled)",
+                category: .audio
+            )
+
+            // Leave the engine in a clean, stopped state before propagating the failure
+            // so the next attempt (or recovery) starts from a known-good baseline.
+            teardownEngineUnsafe()
+            engine.reset()
+
+            throw DictationError.audioEngineSetupFailed(
+                "Could not start microphone capture (tap installation failed: \(nsError.localizedDescription))."
+            )
+        }
     }
 
     private func applyInputDevice(match: AudioInputDeviceMatch) throws {
@@ -595,6 +710,25 @@ public final class AudioRecorderService: ObservableObject {
     internal func setCapturedSampleRateForTesting(_ rate: Double) {
         capturedSampleRate = rate
     }
+
+    /// Whether the service believes a tap is currently installed on bus 0.
+    internal var isTapInstalledForTesting: Bool { isTapInstalled }
+
+    /// Forces the believed tap-installed state, for exercising teardown transitions.
+    internal func setTapBelievedInstalledForTesting(_ installed: Bool) {
+        isTapInstalled = installed
+    }
+
+    /// Runs the real engine teardown path so tests can assert tap state is cleared.
+    internal func teardownEngineForTesting() {
+        teardownEngineUnsafe()
+    }
+
+    /// Exposes the real start/recovery overlap guard primitives so tests exercise the
+    /// exact code path used by `startRecordingInternal`.
+    internal func beginStartAttemptForTesting() -> Bool { beginStartAttempt() }
+    internal func endStartAttemptForTesting() { endStartAttempt() }
+    internal var isStartInProgressForTesting: Bool { isStartInProgress }
     #endif
 
     func collectRecording() -> [Float] {
