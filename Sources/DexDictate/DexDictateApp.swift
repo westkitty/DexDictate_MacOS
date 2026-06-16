@@ -34,37 +34,49 @@ struct DexDictateApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            AntiGravityMainView(
-                engine: engine,
-                permissionManager: permissionManager,
-                settings: settings,
-                scanner: scanner,
-                profileManager: profileManager,
-                benchmarkCaptureController: benchmarkCaptureController,
-                menuBarIconController: menuBarIconController,
-                modelCatalog: modelCatalog,
-                adaptiveBenchmarkController: adaptiveBenchmarkController,
-                benchmarkResultsStore: benchmarkResultsStore,
-                onDetachHistory: {
-                    MainActorAction.run {
-                        historyController.show()
-                    }
-                },
-                onOpenHelp: {
-                    MainActorAction.run {
-                        helpController.show()
-                    }
-                },
-                onRequestOnboardingDebug: {
-                    MainActorAction.run {
-                        appDelegate.presentOnboardingForDebug()
-                    }
+            Group {
+                if settings.useExperimentalStateFirstUI {
+                    DexExperimentalEntry(
+                        engine: engine,
+                        permissionManager: permissionManager,
+                        settings: settings,
+                        profileManager: profileManager,
+                        onDetachHistory: {
+                            MainActorAction.run { historyController.show() }
+                        },
+                        onOpenHelp: {
+                            MainActorAction.run { helpController.show() }
+                        },
+                        onRequestOnboardingDebug: {
+                            MainActorAction.run { appDelegate.presentOnboardingForDebug() }
+                        }
+                    )
+                } else {
+                    AntiGravityMainView(
+                        engine: engine,
+                        permissionManager: permissionManager,
+                        settings: settings,
+                        scanner: scanner,
+                        profileManager: profileManager,
+                        benchmarkCaptureController: benchmarkCaptureController,
+                        menuBarIconController: menuBarIconController,
+                        modelCatalog: modelCatalog,
+                        adaptiveBenchmarkController: adaptiveBenchmarkController,
+                        benchmarkResultsStore: benchmarkResultsStore,
+                        onDetachHistory: {
+                            MainActorAction.run { historyController.show() }
+                        },
+                        onOpenHelp: {
+                            MainActorAction.run { helpController.show() }
+                        },
+                        onRequestOnboardingDebug: {
+                            MainActorAction.run { appDelegate.presentOnboardingForDebug() }
+                        }
+                    )
                 }
-            )
+            }
             .onAppear {
-                // .onAppear fires every time the MenuBarExtra popover is opened.
-                // Guard here so one-time setup (model load, engine start) only runs once.
-                // Everything after the guard can fire on every open safely.
+                // Fires every time the MenuBarExtra popover opens.
                 permissionManager.startMonitoring(engine: engine)
                 permissionManager.refreshPermissions()
                 profileManager.synchronizeBundledVocabulary(with: engine.vocabularyManager)
@@ -76,23 +88,29 @@ struct DexDictateApp: App {
                     settings.activeWhisperModelID = "tiny.en"
                 }
 
-                guard engine.state == .stopped else {
-                    // Engine already running — just refresh permissions on each open.
-                    return
-                }
+                // UI controllers require SwiftUI-owned objects so they must be wired here
+                // (not in applicationDidFinishLaunching). Idempotent — safe on every open.
+                hudController.setup(
+                    engine: engine,
+                    profileManager: profileManager,
+                    onDetachHistory: { MainActorAction.run { historyController.show() } },
+                    onOpenHelp: { MainActorAction.run { helpController.show() } }
+                )
+                historyController.setup(engine: engine, vocabularyManager: engine.vocabularyManager)
+                adaptiveBenchmarkController.start(engine: engine)
 
+                // Engine already running (started at launch). Nothing more to do.
+                guard engine.state == .stopped else { return }
+
+                // Fallback: onboarding just completed or launch startup was skipped.
                 permissionManager.requestPermissions()
                 permissionManager.requestMicrophoneIfNeeded()
                 engine.setPermissionManager(permissionManager)
 
-                // Load embedded Whisper model (74 MB, only load once).
-                // Guard against reloading if model is already loaded (e.g. stopSystem() was
-                // called which sets state=.stopped but the model remains loaded).
                 if let activeModel = modelCatalog.activeDescriptor(settings: settings) {
                     engine.loadWhisperModel(descriptor: activeModel)
                 }
 
-                // Load persisted history if opt-in is enabled.
                 if settings.persistHistory {
                     Task {
                         let saved = await HistoryPersistenceManager.loadAsync()
@@ -104,15 +122,9 @@ struct DexDictateApp: App {
                     }
                 }
 
-                // Auto-start: sets up event tap + moves engine to .ready state.
                 Task {
                     await engine.startSystem()
                 }
-
-                // Configure HUD and History controllers (idempotent but guard anyway).
-                hudController.setup(engine: engine, profileManager: profileManager)
-                historyController.setup(engine: engine, vocabularyManager: engine.vocabularyManager)
-                adaptiveBenchmarkController.start(engine: engine)
 
                 if settings.showFloatingHUD {
                     hudController.show()
@@ -120,6 +132,9 @@ struct DexDictateApp: App {
             }
             .onChange(of: settings.showFloatingHUD) { _, newValue in
                 hudController.toggle(shouldShow: newValue)
+            }
+            .onChange(of: settings.useExperimentalNanoHUD) { _, _ in
+                hudController.refresh()
             }
             .onChange(of: settings.localizationMode) { _, _ in
                 profileManager.synchronizeFromSettings()
@@ -658,11 +673,12 @@ struct TriggerSegment: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(.caption).fontWeight(.medium)
+                .font(.caption.weight(.medium))
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-                .background(isSelected ? Color.blue.opacity(0.6) : Color.clear)
-                .foregroundStyle(.white)
+                .frame(height: 30)
+                .background(isSelected ? Color.blue.opacity(0.70) : Color.clear)
+                .foregroundStyle(isSelected ? .white : .white.opacity(0.60))
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
@@ -688,6 +704,7 @@ struct CheckboxToggleStyle: ToggleStyle {
 @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
+        if terminateIfDuplicateInstance() { return }
         configureApplicationIcon()
 
         if !AppSettings.shared.hasCompletedOnboarding {
@@ -698,10 +715,64 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
 
             AVCaptureDevice.requestAccess(for: .audio) { _ in }
+            startEngineAtLaunch()
+        }
+    }
+
+    /// Starts the engine immediately at launch so the trigger works before the
+    /// user opens the menu bar popover for the first time.
+    /// UI-owned objects (hudController, historyController, etc.) are wired later
+    /// in .onAppear when SwiftUI has initialised them.
+    private func startEngineAtLaunch() {
+        let engine = TranscriptionEngine.shared
+        let permissionManager = PermissionManager.shared
+        let settings = AppSettings.shared
+        let modelCatalog = WhisperModelCatalog.shared
+
+        permissionManager.startMonitoring(engine: engine)
+        permissionManager.refreshPermissions()
+        engine.setPermissionManager(permissionManager)
+
+        modelCatalog.refresh()
+        if let activeModel = modelCatalog.activeDescriptor(settings: settings) {
+            engine.loadWhisperModel(descriptor: activeModel)
+        }
+
+        Task {
+            if settings.persistHistory {
+                let saved = await HistoryPersistenceManager.loadAsync()
+                if !saved.isEmpty {
+                    for item in saved { engine.history.insert(item) }
+                }
+            }
+            await engine.startSystem()
         }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+    }
+
+    /// If another DexDictate instance is already running, activate it and terminate this one.
+    /// Prevents the duplicate menu-bar item / popover that occurs when more than one copy of
+    /// the app is launched (most commonly: two installed bundles sharing one bundle id).
+    /// Returns true if this process is terminating as a duplicate.
+    private func terminateIfDuplicateInstance() -> Bool {
+        guard let bundleID = Bundle.main.bundleIdentifier else { return false }
+        let running = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
+        let pids = running.map { $0.processIdentifier }
+        let currentPID = ProcessInfo.processInfo.processIdentifier
+
+        guard let existingPID = InstanceGuard.existingInstancePID(allInstancePIDs: pids, currentPID: currentPID) else {
+            return false
+        }
+
+        Safety.log(
+            "Duplicate DexDictate instance detected (existing pid \(existingPID)); activating it and terminating this launch.",
+            category: .lifecycle
+        )
+        running.first { $0.processIdentifier == existingPID }?.activate(options: [.activateAllWindows])
+        NSApp.terminate(nil)
+        return true
     }
     
     private var onboardingWindow: NSWindow?

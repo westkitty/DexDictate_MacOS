@@ -24,7 +24,15 @@ jobs:
             brew install swiftlint && swiftlint --strict
           fi
 
+      - name: Cache Whisper model
+        uses: actions/cache@v4
+        id: model-cache
+        with:
+          path: Sources/DexDictateKit/Resources/tiny.en.bin
+          key: whisper-tiny-en-${{ runner.os }}-921e4cf8
+
       - name: Fetch Whisper model
+        if: steps.model-cache.outputs.cache-hit != 'true'
         run: bash scripts/fetch_model.sh
 
       - name: Run tests

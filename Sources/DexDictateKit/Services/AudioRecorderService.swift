@@ -1,5 +1,21 @@
 import AppKit
 import AVFoundation
+import CoreAudio
+import DexDictateObjCSupport
+
+// MARK: - Core Audio default-device callback (file-scope C-style function)
+
+/// Fires on an arbitrary Core Audio thread whenever the system default input device changes.
+/// MUST return immediately — no heavyweight work allowed here.
+private let defaultInputDeviceListenerProc: AudioObjectPropertyListenerProc = { _, _, _, context in
+    guard let context else { return noErr }
+    let service = Unmanaged<AudioRecorderService>.fromOpaque(context).takeUnretainedValue()
+    Safety.log("CoreAudio: kAudioHardwarePropertyDefaultInputDevice changed — scheduling recovery", category: .audio)
+    service.audioQueue.async { [weak service] in
+        service?.handleEngineConfigurationChange()
+    }
+    return noErr
+}
 
 /// Service responsible for managing the audio engine and microphone input.
 ///
@@ -22,7 +38,8 @@ public final class AudioRecorderService: ObservableObject {
     @MainActor @Published public var inputLevel: Double = 0
 
     /// All engine lifecycle operations run on this serial queue.
-    private let audioQueue = DispatchQueue(label: "com.dexdictate.audioEngine", qos: .userInitiated)
+    /// `fileprivate` (not `private`) so the file-scope Core Audio callback can dispatch onto it.
+    fileprivate let audioQueue = DispatchQueue(label: "com.dexdictate.audioEngine", qos: .userInitiated)
 
     /// Called on the main actor when AVAudioEngine stops itself due to a hardware
     /// configuration change and recovery ultimately fails.
@@ -35,22 +52,49 @@ public final class AudioRecorderService: ObservableObject {
     private var wakeObserver: NSObjectProtocol?
     private var configChangeObserver: NSObjectProtocol?
 
+    /// Tracks whether the Core Audio default-input-device listener is currently registered.
+    /// Guarded by the Swift runtime (set once in init, read/cleared in deinit).
+    /// Exposed internally so tests can verify single-registration invariant.
+    #if DEBUG
+    internal private(set) var isDefaultDeviceListenerRegistered = false
+    #else
+    private var isDefaultDeviceListenerRegistered = false
+    #endif
+
     // Accessed only on audioQueue.
     nonisolated(unsafe) private var isCaptureSessionActive = false
     nonisolated(unsafe) private var activePreferredInputUID = ""
     nonisolated(unsafe) private var activeInputUID = ""
+    /// True while `handleEngineConfigurationChange()` is executing on audioQueue.
+    /// Prevents a second concurrent route-change event from re-entering recovery
+    /// while the first is still in progress (the two events that always fire together —
+    /// the HAL listener and AVAudioEngineConfigurationChange — would otherwise both
+    /// attempt to install a tap, causing an NSException from AVAudioEngine).
+    nonisolated(unsafe) private var isHandlingConfigChange = false
+    /// True between a successful `installTap` call and the matching `removeTap`.
+    /// Guards against calling `installTap` while a tap is already installed, which
+    /// throws an uncatchable NSException.
+    nonisolated(unsafe) private var isTapInstalled = false
+    /// True while a start or route-recovery attempt is executing inside
+    /// `startRecordingInternal`. Prevents a second start/recovery from overlapping
+    /// (and re-entering tap installation) before the first has finished. The serial
+    /// `audioQueue` already serializes top-level calls; this flag additionally rejects
+    /// genuine reentrancy (a recovery synchronously triggered mid-start).
+    nonisolated(unsafe) private var isStartInProgress = false
 
     private let preferredInputRetryDelays: [TimeInterval] = [0, 0.2, 0.5, 1.0]
 
     public init() {
         setupSleepWakeNotifications()
         setupEngineConfigChangeObserver()
+        setupDefaultDeviceListener()
     }
 
     deinit {
         if let obs = sleepObserver { NSWorkspace.shared.notificationCenter.removeObserver(obs) }
         if let obs = wakeObserver { NSWorkspace.shared.notificationCenter.removeObserver(obs) }
         if let obs = configChangeObserver { NotificationCenter.default.removeObserver(obs) }
+        teardownDefaultDeviceListener()
     }
 
     private func setupSleepWakeNotifications() {
@@ -97,6 +141,69 @@ public final class AudioRecorderService: ObservableObject {
         }
     }
 
+    /// Registers a Core Audio listener for `kAudioHardwarePropertyDefaultInputDevice`.
+    ///
+    /// This supplements `AVAudioEngineConfigurationChange` by catching system-level input
+    /// device switches that AVAudioEngine may not surface immediately (e.g. when the engine
+    /// is idle). Safe to call multiple times — the listener is only registered once.
+    private func setupDefaultDeviceListener() {
+        guard !isDefaultDeviceListenerRegistered else {
+            Safety.log("setupDefaultDeviceListener() — already registered, skipping", category: .audio)
+            return
+        }
+
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultInputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+
+        // Pass `self` as an unretained raw pointer — the listener is removed in deinit
+        // before `self` can be released, so this pointer remains valid for the listener's
+        // entire lifetime.
+        let context = Unmanaged.passUnretained(self).toOpaque()
+        let status = AudioObjectAddPropertyListener(
+            AudioObjectID(kAudioObjectSystemObject),
+            &address,
+            defaultInputDeviceListenerProc,
+            context
+        )
+
+        if status == noErr {
+            isDefaultDeviceListenerRegistered = true
+            Safety.log("setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener", category: .audio)
+        } else {
+            Safety.log("setupDefaultDeviceListener() — AudioObjectAddPropertyListener failed (status=\(status)); relying on AVAudioEngineConfigurationChange only", category: .audio)
+        }
+    }
+
+    // AudioObjectRemovePropertyListener is synchronous on macOS: it blocks until any
+    // in-flight invocation of the proc returns before returning. This makes the
+    // unretained `self` pointer safe for the listener's full lifetime — no callback
+    // can fire after this call returns.
+    private func teardownDefaultDeviceListener() {
+        guard isDefaultDeviceListenerRegistered else { return }
+        isDefaultDeviceListenerRegistered = false
+
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultInputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+
+        let context = Unmanaged.passUnretained(self).toOpaque()
+        let status = AudioObjectRemovePropertyListener(
+            AudioObjectID(kAudioObjectSystemObject),
+            &address,
+            defaultInputDeviceListenerProc,
+            context
+        )
+
+        if status != noErr {
+            Safety.log("teardownDefaultDeviceListener() — AudioObjectRemovePropertyListener returned status=\(status)", category: .audio)
+        }
+    }
+
     // MARK: - Recording
 
     /// Starts the full audio pipeline asynchronously on `audioQueue`.
@@ -138,6 +245,18 @@ public final class AudioRecorderService: ObservableObject {
             "startRecordingInternal() — reason=\(reason.rawValue), micAuthorizationStatus=\(AVCaptureDevice.authorizationStatus(for: .audio).rawValue), preferredUID='\(inputDeviceUID)', engine.isRunning=\(engine.isRunning), preserveBufferedAudio=\(preserveBufferedAudio)",
             category: .audio
         )
+
+        // Reject overlapping start/recovery attempts. On the serial audioQueue this only
+        // fires for genuine reentrancy, but it guarantees the planner can never re-enter
+        // tap installation while another attempt is mid-flight.
+        guard beginStartAttempt() else {
+            Safety.log(
+                "startRecordingInternal() — rejected reentrant start/recovery (one already in progress); reason=\(reason.rawValue)",
+                category: .audio
+            )
+            throw DictationError.audioEngineSetupFailed("A microphone start attempt is already in progress.")
+        }
+        defer { endStartAttempt() }
 
         let planner = AudioRecorderRecoveryPlanner(
             retryDelays: preferredInputRetryDelays,
@@ -210,13 +329,46 @@ public final class AudioRecorderService: ObservableObject {
     /// Removes the tap and stops the engine. Safe to call from any state.
     /// Must be called on audioQueue.
     private func teardownEngineUnsafe() {
-        engine.inputNode.removeTap(onBus: 0)
+        if isTapInstalled {
+            // Route removeTap through the ObjC bridge: removeTapOnBus can also raise an
+            // NSException (e.g. if the node/bus state drifted), which Swift cannot catch.
+            do {
+                try DDAudioTapInstaller.removeTap(on: engine.inputNode, bus: 0)
+            } catch {
+                Safety.log(
+                    "teardownEngineUnsafe() — removeTap raised \((error as NSError).localizedDescription); clearing tap state anyway",
+                    category: .audio
+                )
+            }
+            isTapInstalled = false
+        }
         if engine.isRunning {
             engine.stop()
         }
     }
 
-    private func handleEngineConfigurationChange() {
+    /// Attempts to acquire the single start/recovery slot. Returns false if another
+    /// attempt is already in progress. Must be called on audioQueue.
+    private func beginStartAttempt() -> Bool {
+        if isStartInProgress { return false }
+        isStartInProgress = true
+        return true
+    }
+
+    /// Releases the start/recovery slot. Must be called on audioQueue.
+    private func endStartAttempt() {
+        isStartInProgress = false
+    }
+
+    // fileprivate (not private) so the file-scope Core Audio callback can dispatch to this.
+    fileprivate func handleEngineConfigurationChange() {
+        guard !isHandlingConfigChange else {
+            Safety.log("handleEngineConfigurationChange() — skipping duplicate event (already in progress)", category: .audio)
+            return
+        }
+        isHandlingConfigChange = true
+        defer { isHandlingConfigChange = false }
+
         let wasCaptureSessionActive = isCaptureSessionActive
         let preferredUID = activePreferredInputUID
         let activeUID = activeInputUID
@@ -280,7 +432,20 @@ public final class AudioRecorderService: ObservableObject {
         )
 
         if !preserveBufferedAudio {
-            bufferQueue.sync { _accumulatedSamples = [] }
+            // Capture any pre-trigger audio before resetting accumulated samples.
+            let preTriggerSnapshot = preTriggerBuffer?.snapshot() ?? []
+            preTriggerBuffer?.clear()
+            bufferQueue.sync {
+                if preTriggerSnapshot.isEmpty {
+                    _accumulatedSamples = []
+                } else {
+                    Safety.log(
+                        "performStartAttempt() — prepending \(preTriggerSnapshot.count) pre-trigger samples",
+                        category: .audio
+                    )
+                    _accumulatedSamples = preTriggerSnapshot
+                }
+            }
         } else {
             let bufferedSampleCount = bufferQueue.sync { _accumulatedSamples.count }
             Safety.log("performStartAttempt() — preserving \(bufferedSampleCount) buffered samples across recovery", category: .audio)
@@ -300,11 +465,19 @@ public final class AudioRecorderService: ObservableObject {
             category: .audio
         )
 
-        inputNode.removeTap(onBus: 0)
-        inputNode.installTap(onBus: 0, bufferSize: 4096, format: nil) { [weak self] buffer, _ in
-            self?.processAudioBuffer(buffer)
+        if isTapInstalled {
+            // Idempotent: always clear any existing tap (via the exception-safe bridge)
+            // before installing a new one, so we never double-install on bus 0.
+            do {
+                try DDAudioTapInstaller.removeTap(on: inputNode, bus: 0)
+            } catch {
+                Safety.log(
+                    "performStartAttempt() — pre-install removeTap raised \((error as NSError).localizedDescription); clearing tap state anyway",
+                    category: .audio
+                )
+            }
+            isTapInstalled = false
         }
-
         engine.prepare()
 
         let finalFormat = inputNode.outputFormat(forBus: 0)
@@ -314,13 +487,29 @@ public final class AudioRecorderService: ObservableObject {
         )
 
         guard finalFormat.sampleRate > 0, finalFormat.channelCount > 0 else {
-            inputNode.removeTap(onBus: 0)
             throw DictationError.audioEngineSetupFailed(
                 "Audio input returned an invalid format after prepare() (sampleRate=\(finalFormat.sampleRate), channels=\(finalFormat.channelCount))."
             )
         }
 
+        let previousSampleRate = capturedSampleRate
         capturedSampleRate = finalFormat.sampleRate
+        if capturedSampleRate != previousSampleRate {
+            preTriggerBuffer?.reset(sampleRate: capturedSampleRate)
+        }
+
+        // capturedSampleRate is set above; capture it as a local constant so the tap
+        // closure never reads the property from the audio thread (data-race fix).
+        let sampleRateForTap = capturedSampleRate   // captured once; never read from audio thread
+        try installInputTapSafely(
+            on: inputNode,
+            sampleRate: sampleRateForTap,
+            finalFormat: finalFormat,
+            selection: selection,
+            reason: reason,
+            attemptIndex: attemptIndex,
+            preserveBufferedAudio: preserveBufferedAudio
+        )
 
         do {
             Safety.log("performStartAttempt() — calling engine.start()", category: .audio)
@@ -342,6 +531,66 @@ public final class AudioRecorderService: ObservableObject {
             category: .audio
         )
         return startedInput
+    }
+
+    /// Installs the input tap through the Objective-C `@try/@catch` bridge so that an
+    /// `NSException` from AVFoundation (invalid format read at install time, tap already
+    /// present, etc.) is caught as a Swift error instead of calling `abort()`.
+    ///
+    /// On failure this logs a structured `audioEngine` diagnostic, tears the engine down
+    /// safely, and throws — letting the existing recovery/completion path handle it.
+    private func installInputTapSafely(
+        on inputNode: AVAudioInputNode,
+        sampleRate: Double,
+        finalFormat: AVAudioFormat,
+        selection: AudioRecorderSelectedInput,
+        reason: AudioRecorderStartReason,
+        attemptIndex: Int,
+        preserveBufferedAudio: Bool
+    ) throws {
+        let tapWasBelievedInstalled = isTapInstalled
+        do {
+            // Pass format: nil so AVAudioEngine uses the input node's hardware format —
+            // the only format guaranteed to match the tap. The bridge guarantees that if
+            // that format is invalid at install time, we get a thrown error, not a crash.
+            try DDAudioTapInstaller.installTap(
+                on: inputNode,
+                bus: 0,
+                bufferSize: 4096,
+                format: nil
+            ) { [weak self] buffer, _ in
+                self?.processAudioBuffer(buffer, sampleRate: sampleRate)
+            }
+            isTapInstalled = true
+        } catch {
+            isTapInstalled = false
+
+            let nsError = error as NSError
+            let selectedUID: String
+            let actualDeviceID: String
+            switch selection {
+            case .systemDefault:
+                selectedUID = "(system default)"
+                actualDeviceID = "nil"
+            case .preferred(let match):
+                selectedUID = match.uid
+                actualDeviceID = String(match.deviceID)
+            }
+
+            Safety.log(
+                "installTap FAILED (NSException bridged to error) — exception=\(nsError.localizedDescription), reason=\(reason.rawValue), attempt=\(attemptIndex + 1), preserveBufferedAudio=\(preserveBufferedAudio), selectedUID='\(selectedUID)', activeInputUID='\(activeInputUID)', deviceID=\(actualDeviceID), inputFormat=\(finalFormat.sampleRate)Hz/\(finalFormat.channelCount)ch, capturedSampleRate=\(sampleRate), engine.isRunning=\(engine.isRunning), tapWasBelievedInstalled=\(tapWasBelievedInstalled)",
+                category: .audio
+            )
+
+            // Leave the engine in a clean, stopped state before propagating the failure
+            // so the next attempt (or recovery) starts from a known-good baseline.
+            teardownEngineUnsafe()
+            engine.reset()
+
+            throw DictationError.audioEngineSetupFailed(
+                "Could not start microphone capture (tap installation failed: \(nsError.localizedDescription))."
+            )
+        }
     }
 
     private func applyInputDevice(match: AudioInputDeviceMatch) throws {
@@ -434,7 +683,23 @@ public final class AudioRecorderService: ObservableObject {
     nonisolated(unsafe) private var _accumulatedSamples: [Float] = []
     private(set) var capturedSampleRate: Double = 44100
 
+    // MARK: - Pre-trigger Buffer
+
+    /// Circular audio buffer that retains the last 750ms of audio so that the onset of
+    /// speech is not lost when dictation begins. Allocated lazily; nil when the flag is off.
+    // nonisolated(unsafe): pointer is immutable after init; internal state is guarded by PreTriggerAudioBuffer's os_unfair_lock.
+    // Evaluated once at init; runtime flag changes require a new service instance.
+    nonisolated(unsafe) private var preTriggerBuffer: PreTriggerAudioBuffer? = {
+        ExperimentFlags.enablePreTriggerBuffer ? PreTriggerAudioBuffer(durationSeconds: 0.75) : nil
+    }()
+
     #if DEBUG
+    /// Internal seam that calls `setupDefaultDeviceListener()` for testing the idempotency guard.
+    /// Allows tests to invoke the private method a second time and verify no double-registration occurs.
+    internal func setupDefaultDeviceListenerForTesting() {
+        setupDefaultDeviceListener()
+    }
+
     /// Internal seam to inject mock float samples directly into the buffer queue during testing.
     internal func injectMockSamples(_ samples: [Float]) {
         bufferQueue.sync {
@@ -445,6 +710,25 @@ public final class AudioRecorderService: ObservableObject {
     internal func setCapturedSampleRateForTesting(_ rate: Double) {
         capturedSampleRate = rate
     }
+
+    /// Whether the service believes a tap is currently installed on bus 0.
+    internal var isTapInstalledForTesting: Bool { isTapInstalled }
+
+    /// Forces the believed tap-installed state, for exercising teardown transitions.
+    internal func setTapBelievedInstalledForTesting(_ installed: Bool) {
+        isTapInstalled = installed
+    }
+
+    /// Runs the real engine teardown path so tests can assert tap state is cleared.
+    internal func teardownEngineForTesting() {
+        teardownEngineUnsafe()
+    }
+
+    /// Exposes the real start/recovery overlap guard primitives so tests exercise the
+    /// exact code path used by `startRecordingInternal`.
+    internal func beginStartAttemptForTesting() -> Bool { beginStartAttempt() }
+    internal func endStartAttemptForTesting() { endStartAttempt() }
+    internal var isStartInProgressForTesting: Bool { isStartInProgress }
     #endif
 
     func collectRecording() -> [Float] {
@@ -456,7 +740,7 @@ public final class AudioRecorderService: ObservableObject {
     }
 
     // Called on AVAudioEngine's internal audio thread — never main thread.
-    private func processAudioBuffer(_ buffer: AVAudioPCMBuffer) {
+    private func processAudioBuffer(_ buffer: AVAudioPCMBuffer, sampleRate: Double) {
         // Copy buffer to local array first — tap buffer is only valid during this callback.
         let frameLength = Int(buffer.frameLength)
         guard frameLength > 0, let channelData = buffer.floatChannelData?[0] else { return }
@@ -470,6 +754,11 @@ public final class AudioRecorderService: ObservableObject {
         // Compute RMS from local copy — no lock needed.
         var sumSquares: Float = 0
         for s in chunk { sumSquares += s * s }
+
+        // Pre-trigger buffer: write the chunk with a minimal os_unfair_lock — no await,
+        // no @MainActor crossing, no allocation. Safe on the real-time audio thread.
+        // `sampleRate` is the local constant captured at installTap time — no property read from audio thread.
+        preTriggerBuffer?.append(chunk, sampleRate: sampleRate)
 
         // Async enqueue to bufferQueue — does not block the audio thread.
         bufferQueue.async { [weak self] in
@@ -485,8 +774,7 @@ public final class AudioRecorderService: ObservableObject {
         }
 
         let rms = sqrt(sumSquares / Float(frameLength))
-        let avgPower = rms == 0 ? -100.0 : 20 * log10(rms)
-        let normalized = min(max((Double(avgPower) + 50) / 50, 0), 1)
+        let normalized = AudioLevelNormalizer.normalize(Double(rms))
         MainActorDispatch.async { [weak self] in
             self?.inputLevel = normalized
         }

@@ -77,7 +77,6 @@ public final class BrowserMediaPauseService: BrowserMediaControlling {
     public init(
         runningAppsProvider: @escaping RunningAppsProvider = { NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier) },
         scriptRunner: @escaping ScriptRunner = BrowserMediaPauseService.defaultScriptRunner,
-        // TODO: wire to AppSettings.shared.pauseBrowserMediaDuringDictation
         settingsProvider: @escaping @Sendable () -> Bool = { false }
     ) {
         self.runningAppsProvider = runningAppsProvider

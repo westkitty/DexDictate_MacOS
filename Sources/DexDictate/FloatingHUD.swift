@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import Combine
 import DexDictateKit
 
 /// A transparent, floating panel that shows dictation status.
@@ -27,6 +28,7 @@ class FloatingHUDWindow: NSPanel {
 struct FloatingHUDView: View {
     @ObservedObject var engine: TranscriptionEngine
     @ObservedObject var profileManager: ProfileManager
+    @ObservedObject var toastState: ToastState
 
     @State private var cachedWatermarkImage: NSImage? = nil
 
@@ -49,34 +51,43 @@ struct FloatingHUDView: View {
                 .allowsHitTesting(false)
 
             // Status content (foreground)
-            HStack(spacing: 8) {
-                Image(systemName: engine.statusIcon)
-                    .font(.title2)
-                    .symbolEffect(.pulse, isActive: engine.state == .listening)
-                    .foregroundStyle(statusColor)
+            VStack(spacing: 0) {
+                HStack(spacing: 8) {
+                    Image(systemName: engine.statusIcon)
+                        .font(.title2)
+                        .symbolEffect(.pulse, isActive: engine.state == .listening)
+                        .foregroundStyle(statusColor)
 
-                if engine.state == .listening || engine.state == .transcribing {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(engine.statusText)
-                            .font(.caption)
-                            .bold()
-                            .lineLimit(1)
+                    if engine.state == .listening || engine.state == .transcribing {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(engine.statusText)
+                                .font(.caption)
+                                .bold()
+                                .lineLimit(1)
 
-                        // Mic Level
-                        GeometryReader { geo in
-                            ZStack(alignment: .leading) {
-                                Rectangle()
-                                    .fill(Color.white.opacity(0.2))
-                                Rectangle()
-                                    .fill(statusColor)
-                                    .frame(width: geo.size.width * CGFloat(engine.inputLevel))
-                                    .animation(.linear(duration: 0.1), value: engine.inputLevel)
+                            // Mic Level
+                            GeometryReader { geo in
+                                ZStack(alignment: .leading) {
+                                    Rectangle()
+                                        .fill(Color.white.opacity(0.2))
+                                    Rectangle()
+                                        .fill(statusColor)
+                                        .frame(width: geo.size.width * CGFloat(engine.inputLevel))
+                                        .animation(.linear(duration: 0.1), value: engine.inputLevel)
+                                }
                             }
+                            .frame(height: 4)
+                            .clipShape(RoundedRectangle(cornerRadius: 2))
                         }
-                        .frame(height: 4)
-                        .clipShape(RoundedRectangle(cornerRadius: 2))
+                        .frame(width: 100)
                     }
-                    .frame(width: 100)
+                }
+
+                // Toast notification strip — auto-dismisses after ~2.5 s
+                if let toast = toastState.current {
+                    HUDToastBannerView(event: toast)
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
+                        .padding(.top, 6)
                 }
             }
             .padding(12)
@@ -97,6 +108,7 @@ struct FloatingHUDView: View {
                             .stroke(Color.white.opacity(borderOpacity), lineWidth: 1)
                     )
             }
+            .animation(.easeInOut(duration: 0.22), value: toastState.current != nil)
         }
         .onAppear {
             cachedWatermarkImage = loadWatermarkImage()
@@ -175,49 +187,157 @@ struct FloatingHUDView: View {
     }
 }
 
+/// A small icon + label strip shown at the bottom of a HUD when a toast event is active.
+struct HUDToastBannerView: View {
+    let event: ToastEvent
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Image(systemName: event.symbolName)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.75))
+            Text(event.label)
+                .font(.system(size: 10, weight: .medium, design: .rounded))
+                .foregroundStyle(.white.opacity(0.75))
+                .lineLimit(1)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(event.label)
+    }
+}
+
 @MainActor
 class FloatingHUDController: ObservableObject {
     private var window: FloatingHUDWindow?
+    private var hubPanel: NSPanel?
     private var engine: TranscriptionEngine?
     private var profileManager: ProfileManager?
-    
+    private var onDetachHistory: (() -> Void)?
+    private var onOpenHelp: (() -> Void)?
+
+    /// Drives toast notifications across both HUD variants.
+    let toastState = ToastState()
+
+    /// Retains the Combine subscription that clears the toast when the engine stops.
+    private var stateObserver: AnyCancellable?
+
     init() {}
-    
-    func setup(engine: TranscriptionEngine, profileManager: ProfileManager) {
+
+    func setup(
+        engine: TranscriptionEngine,
+        profileManager: ProfileManager,
+        onDetachHistory: (() -> Void)? = nil,
+        onOpenHelp: (() -> Void)? = nil
+    ) {
         self.engine = engine
         self.profileManager = profileManager
+        self.onDetachHistory = onDetachHistory
+        self.onOpenHelp = onOpenHelp
+
+        // Wire engine toast events → toastState. The closure is called on @MainActor
+        // (TranscriptionEngine is @MainActor) so this is safe.
+        engine.onToast = { [weak self] event in
+            self?.toastState.show(event)
+        }
+
+        // Clear any lingering toast when the engine stops (e.g. user closes HUD).
+        stateObserver = engine.$state
+            .filter { $0 == .stopped }
+            .sink { [weak self] _ in self?.toastState.clear() }
     }
-    
+
     func show() {
         guard let engine = engine, let profileManager = profileManager else { return }
         if window == nil {
-            let view = FloatingHUDView(engine: engine, profileManager: profileManager)
+            let rootView: AnyView
+            if AppSettings.shared.useExperimentalNanoHUD {
+                let nanoView = DexNanoHUDView(
+                    engine: engine,
+                    profileManager: profileManager,
+                    toastState: toastState,
+                    onOpenHub: { [weak self] in self?.showHubPanel() }
+                )
+                rootView = AnyView(nanoView)
+            } else {
+                let stdView = FloatingHUDView(
+                    engine: engine,
+                    profileManager: profileManager,
+                    toastState: toastState
+                )
+                rootView = AnyView(stdView)
+            }
             window = FloatingHUDWindow(
                 contentRect: NSRect(x: 100, y: 100, width: 200, height: 60),
-                rootView: AnyView(view)
+                rootView: rootView
             )
-            // Set window size constraints to prevent invalid resizing
-            window?.minSize = NSSize(width: 150, height: 50)
-            window?.maxSize = NSSize(width: 400, height: 200)
-
-            // Restore saved position or center on first launch
+            window?.minSize = NSSize(width: 150, height: 40)
+            window?.maxSize = NSSize(width: 480, height: 200)
             window?.setFrameAutosaveName("FloatingHUDPosition")
             if window?.frame.origin == .zero {
-                window?.center() // Only center on first launch
+                window?.center()
             }
         }
         window?.orderFront(nil)
     }
-    
+
     func hide() {
         window?.orderOut(nil)
     }
-    
+
     func toggle(shouldShow: Bool) {
-        if shouldShow {
+        if shouldShow { show() } else { hide() }
+    }
+
+    /// Tear down the existing window and reopen it, picking up any flag changes
+    /// (e.g. `useExperimentalNanoHUD`). Safe to call when HUD is hidden — no-op.
+    func refresh() {
+        let wasVisible = window?.isVisible ?? false
+        if wasVisible {
+            window?.close()
+            window = nil
             show()
-        } else {
-            hide()
         }
+    }
+
+    /// Open a floating feature-hub panel from the Nano HUD so the HUD is never a dead end.
+    /// The panel hosts DexExperimentalFeatureHubView and uses the same non-activating style
+    /// as the HUD — no Dock bounce.
+    func showHubPanel() {
+        guard let engine = engine, let profileManager = profileManager else { return }
+        if hubPanel == nil {
+            let hubView = DexExperimentalFeatureHubView(
+                engine: engine,
+                settings: AppSettings.shared,
+                profileManager: profileManager,
+                onBack: { [weak self] in self?.closeHubPanel() },
+                onDetachHistory: onDetachHistory != nil ? { [weak self] in self?.onDetachHistory?(); self?.closeHubPanel() } : nil,
+                onOpenHelp: onOpenHelp != nil ? { [weak self] in self?.onOpenHelp?(); self?.closeHubPanel() } : nil,
+                onQuit: { NSApplication.shared.terminate(nil) }
+            )
+            let panel = NSPanel(
+                contentRect: NSRect(x: 0, y: 0, width: 320, height: 480),
+                styleMask: [.nonactivatingPanel, .titled, .closable, .resizable],
+                backing: .buffered,
+                defer: false
+            )
+            panel.isFloatingPanel = true
+            panel.level = .floating
+            panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+            panel.titleVisibility = .hidden
+            panel.titlebarAppearsTransparent = true
+            panel.isMovableByWindowBackground = true
+            panel.backgroundColor = NSColor(red: 0.09, green: 0.10, blue: 0.14, alpha: 1.0)
+            panel.hasShadow = true
+            panel.contentView = NSHostingView(rootView: AnyView(hubView))
+            panel.setFrameAutosaveName("DexFeatureHubPanelPosition")
+            if panel.frame.origin == .zero { panel.center() }
+            hubPanel = panel
+        }
+        hubPanel?.orderFront(nil)
+    }
+
+    private func closeHubPanel() {
+        hubPanel?.orderOut(nil)
+        hubPanel = nil
     }
 }

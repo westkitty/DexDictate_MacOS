@@ -22,6 +22,7 @@ enum HelpSection: String, CaseIterable, Identifiable, Hashable {
     case benchmarking
     case shortcuts
     case diagnostics
+    case experimentalUI
     case about
 
     var id: String { rawValue }
@@ -45,6 +46,7 @@ enum HelpSection: String, CaseIterable, Identifiable, Hashable {
         case .benchmarking:   return "Benchmarking & Models"
         case .shortcuts:      return "Shortcuts & Siri"
         case .diagnostics:    return "Diagnostics"
+        case .experimentalUI: return "Experimental UI"
         case .about:          return "About"
         }
     }
@@ -68,6 +70,7 @@ enum HelpSection: String, CaseIterable, Identifiable, Hashable {
         case .benchmarking:   return "chart.bar"
         case .shortcuts:      return "sparkles"
         case .diagnostics:    return "stethoscope"
+        case .experimentalUI: return "flask"
         case .about:          return "info.circle"
         }
     }
@@ -92,6 +95,7 @@ enum HelpSection: String, CaseIterable, Identifiable, Hashable {
         case .benchmarking:   return ["benchmark", "wer", "latency", "model", "tiny.en", "accuracy", "corpus", "promote", "auto"]
         case .shortcuts:      return ["siri", "shortcuts", "app intents", "automation", "voice control"]
         case .diagnostics:    return ["logs", "debug", "troubleshoot", "not working", "error", "crash", "broken", "fix", "zoom", "zoom call", "electron", "coreaudiod", "-10868", "core audio", "audio stuck", "microphone blocked", "capability"]
+        case .experimentalUI: return ["experimental", "state-first", "nano hud", "command palette", "dexter feed", "gui switcher", "feature hub", "switch ui", "beta", "experimental popover", "useExperimentalStateFirstUI", "useExperimentalNanoHUD"]
         case .about:          return ["version", "github", "credits", "license", "source"]
         }
     }
@@ -116,6 +120,7 @@ enum HelpSection: String, CaseIterable, Identifiable, Hashable {
         case .benchmarking:   return [.transcription, .diagnostics]
         case .shortcuts:      return [.triggerSetup, .gettingStarted]
         case .diagnostics:    return [.permissions, .safeMode, .outputPasting]
+        case .experimentalUI: return [.floatingHUD, .appearance, .diagnostics]
         case .about:          return [.gettingStarted, .diagnostics]
         }
     }
@@ -278,6 +283,7 @@ struct HelpContentView: View {
         case .benchmarking:   BenchmarkingContent()
         case .shortcuts:      ShortcutsContent()
         case .diagnostics:    DiagnosticsContent()
+        case .experimentalUI: ExperimentalUIContent()
         case .about:          AboutContent()
         }
     }
@@ -964,6 +970,49 @@ private struct DiagnosticsContent: View {
         case .passed:               return "✓ Working"
         case .failed(let reason):   return "✗ Failed — \(reason)"
         case .skipped:              return "— Skipped (permission not granted)"
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EXPERIMENTAL UI
+// ─────────────────────────────────────────────────────────────────────────────
+
+private struct ExperimentalUIContent: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            helpBody("The Experimental UI is an opt-in redesign of the DexDictate popover. All production dictation, transcription, insertion, permission, and model-loading behaviour is unchanged — only the visible surface is different.")
+
+            helpBody("Enable experimental surfaces from Quick Settings → Experimental UI, or from the state-first popover's Switch UI panel.")
+
+            VStack(alignment: .leading, spacing: 10) {
+                HelpRow(key: "State-first Popover", value: "Compact popover led by engine state. Enable in Quick Settings → Experimental UI. Includes Settings & History, All Features, Switch UI, and Command Palette — all inside the popover, no separate windows.")
+                HelpRow(key: "Nano HUD", value: "Small floating strip showing recording state. Appears alongside any popover. Tap Stop to end recording; does not steal focus from the active app.")
+                HelpRow(key: "Command Palette", value: "Searchable action list inside the state-first popover. Enable to show the ⌘K button. Commands run immediately without dismissing the popover.")
+                HelpRow(key: "Dexter Feed", value: "Stateful Dexter commentary inside Settings & History → Dexter. Local quote packs only — no network. Prefers lines from the active profile.")
+                HelpRow(key: "All Features", value: "Opens the full Quick Settings panel inside the state-first popover. Every DexDictate feature is accessible without switching surfaces.")
+                HelpRow(key: "Switch UI", value: "Switch between surfaces without Terminal. Selecting Standard UI closes the experimental popover immediately.")
+            }
+
+            Divider().background(Color.white.opacity(0.08))
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Feature flags").font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                helpBody("If you need to reset flags manually (bundle ID: com.westkitty.dexdictate.macos):")
+                Group {
+                    Text("defaults delete com.westkitty.dexdictate.macos useExperimentalStateFirstUI")
+                    Text("defaults delete com.westkitty.dexdictate.macos useExperimentalNanoHUD")
+                    Text("defaults delete com.westkitty.dexdictate.macos useExperimentalCommandPalette")
+                    Text("defaults delete com.westkitty.dexdictate.macos useExperimentalDexterFeed")
+                }
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundStyle(.cyan.opacity(0.80))
+                .textSelection(.enabled)
+            }
+
+            Divider().background(Color.white.opacity(0.08))
+
+            helpBody("Known limitations: Command Palette does not register a global ⌘K hotkey — it is only accessible from the popover. The Nano HUD cancel button calls stop, not discard. History opened from within the experimental popover calls NSApp.activate() to bring the window forward.")
         }
     }
 }

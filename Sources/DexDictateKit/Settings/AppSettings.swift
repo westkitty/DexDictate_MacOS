@@ -103,6 +103,20 @@ public class AppSettings: ObservableObject {
     /// Whether to show the floating dictation HUD.
     @AppStorage("showFloatingHUD") public var showFloatingHUD: Bool = false
 
+    /// When `true`, shows the experimental state-first compact popover instead of the default popover.
+    /// Defaults to `false` so existing users are unaffected. Safe to toggle at runtime.
+    @AppStorage("useExperimentalStateFirstUI") public var useExperimentalStateFirstUI: Bool = false
+
+    /// When `true`, replaces the floating HUD with the experimental Nano HUD.
+    /// Requires `showFloatingHUD == true` to have any effect.
+    @AppStorage("useExperimentalNanoHUD") public var useExperimentalNanoHUD: Bool = false
+
+    /// When `true`, activates the experimental command palette overlay in the state-first popover.
+    @AppStorage("useExperimentalCommandPalette") public var useExperimentalCommandPalette: Bool = false
+
+    /// When `true`, activates the experimental Dexter stateful feed in the layered reveal.
+    @AppStorage("useExperimentalDexterFeed") public var useExperimentalDexterFeed: Bool = false
+
     /// Controls how the primary menu bar item renders while idle.
     @AppStorage("menuBarDisplayMode_v1") public var menuBarDisplayMode: MenuBarDisplayMode = .micAndText
 
@@ -214,7 +228,11 @@ public class AppSettings: ObservableObject {
     @AppStorage("autoRetrySuspiciousResults_v1") public var autoRetrySuspiciousResults: Bool = true
     @AppStorage("dictationDomainMode_v1") public var dictationDomainMode: DictationDomainMode = .automatic
     @AppStorage("enableCorrectionSheet_v1") public var enableCorrectionSheet: Bool = true
-    
+    /// When on, the last few hundred characters of the focused text field are read (via the
+    /// Accessibility API) and combined with the domain-bias prompt to prime Whisper for
+    /// proper nouns and sentence continuations. Off by default; requires Accessibility permission.
+    @AppStorage("enableContextInjection_v1") public var enableContextInjection: Bool = false
+
     public enum SoundTheme: String, CaseIterable, Identifiable {
         case custom = "Custom"
         case modern = "Modern"

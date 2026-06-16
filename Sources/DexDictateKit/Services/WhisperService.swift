@@ -33,6 +33,12 @@ public class WhisperService: ObservableObject {
     private var _initialPromptCString: UnsafeMutablePointer<CChar>?
     private var currentInitialPrompt: String?
 
+    /// True while a silent warm-up inference is in flight. The completion of that inference
+    /// must NOT be forwarded to `ontranscriptionComplete` (it would clobber the live transcript
+    /// with an empty result). Any real transcription clears this flag, so a warm-up that is
+    /// superseded by a real request never suppresses the real result.
+    private var isWarmingUp = false
+
     public init() {}
 
     deinit {
@@ -98,6 +104,9 @@ public class WhisperService: ObservableObject {
                 loadedDecodeProfileName = resolvedProfile.cliName
                 loadedDecodeProfile = resolvedProfile
                 Safety.log("Whisper model loaded successfully")
+                // Prime whisper.cpp / Metal buffers with a silent inference so the first real
+                // transcription does not pay the cold-start cost.
+                warmup()
             } else {
                 Safety.log("ERROR: Whisper(fromFileURL:) returned nil — model load failed")
                 isModelLoaded = false
@@ -236,10 +245,25 @@ public class WhisperService: ObservableObject {
         applyCurrentInitialPrompt()
     }
     
+    /// Runs a silent inference to prime whisper.cpp's internal buffers (and the Core ML / Metal
+    /// pipeline when present), eliminating first-transcription latency. The result is suppressed
+    /// so it never reaches the UI. Safe to call after every model load; no-ops if a transcription
+    /// is already running.
+    public func warmup() {
+        guard isModelLoaded, whisper != nil, !isTranscribing, !isWarmingUp else { return }
+        isWarmingUp = true
+        Safety.log("Whisper warm-up starting (silent inference)", category: .transcription)
+        configureParams(for: .liveDictation)
+        // 0.5 s of silence at Whisper's required 16 kHz rate.
+        let silenceFrames = [Float](repeating: 0, count: 8000)
+        _ = transcribeWithCurrentParams(audioFrames: silenceFrames)
+    }
+
     public func transcribe(
         audioFrames: [Float],
         decodeProfile: ExperimentFlags.DecodeProfile? = nil
     ) -> Bool {
+        isWarmingUp = false
         configureParams(for: .liveDictation, decodeProfile: decodeProfile)
         return transcribeWithCurrentParams(audioFrames: audioFrames)
     }
@@ -248,6 +272,7 @@ public class WhisperService: ObservableObject {
         audioFrames: [Float],
         decodeProfile: ExperimentFlags.DecodeProfile? = nil
     ) -> Bool {
+        isWarmingUp = false
         configureParams(for: .importedFile, decodeProfile: decodeProfile)
         return transcribeWithCurrentParams(audioFrames: audioFrames)
     }
@@ -283,6 +308,10 @@ public class WhisperService: ObservableObject {
                     MainActorDispatch.async { [weak self] in
                         guard let self, self.transcriptionGeneration == myGen else { return }
                         self.isTranscribing = false
+                        if self.isWarmingUp {
+                            self.isWarmingUp = false
+                            return
+                        }
                         self.ontranscriptionComplete?("")
                     }
                 }
@@ -341,7 +370,13 @@ extension WhisperService: WhisperDelegate {
         Safety.log("Whisper output: [REDACTED — \(text.count) chars]")
 
         MainActorDispatch.async { [weak self] in
-            self?.ontranscriptionComplete?(text)
+            guard let self else { return }
+            if self.isWarmingUp {
+                self.isWarmingUp = false
+                Safety.log("Whisper warm-up complete", category: .transcription)
+                return
+            }
+            self.ontranscriptionComplete?(text)
         }
     }
 
@@ -350,6 +385,10 @@ extension WhisperService: WhisperDelegate {
         MainActorDispatch.async { [weak self] in
             guard let self else { return }
             self.isTranscribing = false
+            if self.isWarmingUp {
+                self.isWarmingUp = false
+                return
+            }
             self.ontranscriptionComplete?("")
         }
     }

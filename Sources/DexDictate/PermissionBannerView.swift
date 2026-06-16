@@ -5,6 +5,9 @@ import DexDictateKit
 ///
 /// The banner is hidden (`EmptyView`) when `permissionManager.allPermissionsGranted` is
 /// `true`, so it imposes no layout cost when permissions are satisfied.
+///
+/// Each missing permission shows its own action button so the user lands directly in the
+/// relevant System Settings pane rather than navigating from a generic Privacy page.
 struct PermissionBannerView: View {
     @ObservedObject var permissionManager: PermissionManager
 
@@ -30,15 +33,38 @@ struct PermissionBannerView: View {
                     Spacer(minLength: 0)
                 }
 
-                Button(NSLocalizedString("Open Privacy Settings", comment: "")) {
-                    if let url = permissionManager.settingsURL {
-                        NSWorkspace.shared.open(url)
+                // Per-permission buttons — only the missing ones are shown.
+                VStack(alignment: .leading, spacing: 4) {
+                    if !permissionManager.accessibilityGranted {
+                        Button(NSLocalizedString("Open Accessibility Settings", comment: "")) {
+                            permissionManager.openAccessibilitySettings()
+                        }
+                        .font(.caption.weight(.semibold))
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+                        .accessibilityLabel("Open Accessibility settings")
+                    }
+
+                    if !permissionManager.microphoneGranted {
+                        Button(NSLocalizedString("Open Microphone Settings", comment: "")) {
+                            permissionManager.openMicrophoneSettings()
+                        }
+                        .font(.caption.weight(.semibold))
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+                        .accessibilityLabel("Open Microphone settings")
+                    }
+
+                    if !permissionManager.inputMonitoringGranted {
+                        Button(NSLocalizedString("Open Input Monitoring Settings", comment: "")) {
+                            permissionManager.openInputMonitoringSettings()
+                        }
+                        .font(.caption.weight(.semibold))
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+                        .accessibilityLabel("Open Input Monitoring settings")
                     }
                 }
-                .font(.caption.weight(.semibold))
-                .buttonStyle(.borderedProminent)
-                .controlSize(.small)
-                .accessibilityLabel("Open privacy settings")
             }
             .padding(SurfaceTokens.cardPadding)
             .background(Color.orange.opacity(0.24))

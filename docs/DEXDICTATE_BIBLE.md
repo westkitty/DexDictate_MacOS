@@ -5451,3 +5451,107 @@ Rationale:
 - Tests run:
   - swift test
 - Next step: Design a safer pause-tolerance fix that keeps explicit stop control without severing the live stop/collect/transcribe chain.
+
+## Section 23. installTap NSException Crash Hardening Addendum
+
+- Timestamp: Mon Jun 16 2026
+- Scope: Additive crash fix. No product behavior, UI, permission, model, output, signing, or release behavior intentionally changed.
+
+### 23.1 Crash
+
+- Crash ID: `48CE6BEE-99AE-41EC-8D5B-EA70BE5D4932`
+- Version: DexDictate 1.5.3
+- OS: macOS 26.5.1, Apple Silicon
+- Exception: `EXC_CRASH (SIGABRT)`, `abort() called`, Application Specific Information shows an uncaught Objective-C exception.
+- Faulting thread: Thread 11, dispatch queue `com.dexdictate.audioEngine`.
+- Fatal stack: `AVAudioEngineImpl::InstallTapOnNode` → `-[AVAudioNode installTapOnBus:bufferSize:format:block:]` → `AudioRecorderService.performStartAttempt` (installTap call) → `AudioRecorderRecoveryPlanner.execute` → `AudioRecorderService.startRecordingInternal` → `AudioRecorderService.startRecordingAsync`.
+
+### 23.2 Root cause class
+
+NSException from `AVAudioEngine` tap installation during start/recovery. `-[AVAudioNode installTapOnBus:...]` raises an Objective-C `NSException` (not an `NSError`) when an internal precondition fails — most plausibly because, with `format: nil`, it re-reads the input node's hardware bus format *at install time*. A hardware route change in the TOCTOU window between the Swift-side format validation guard and the install call makes that format invalid (0 Hz / 0 channels), and AVFoundation raises. Swift `do/catch` cannot intercept an Objective-C `NSException`, so it reached the uncaught-exception handler and called `abort()`. The branch's pre-existing Swift guards (`isTapInstalled`, `isHandlingConfigChange`, post-prepare format validation) reduce the probability but cannot eliminate it, because the exception originates inside AVFoundation after our last Swift-observable check.
+
+### 23.3 Fix
+
+- Added an Objective-C bridge target `DexDictateObjCSupport` (`DDAudioTapInstaller`) that wraps `installTapOnBus:` and `removeTapOnBus:` in `@try/@catch`, converting any `NSException` into an `NSError` (domain `com.dexdictate.audioTapInstaller`, exception name preserved in `userInfo`). The Swift importer surfaces these as throwing functions, so the exception becomes a recoverable Swift error instead of a crash.
+- `AudioRecorderService.performStartAttempt` now installs the tap via `installInputTapSafely(...)`, which uses the bridge. On a caught failure it logs a structured `audio`-category diagnostic (reason, attempt index, preserveBufferedAudio, selected UID, active UID, deviceID, input format, sample rate, channel count, engine.isRunning, tapWasBelievedInstalled), tears the engine down, resets it, and throws a `DictationError.audioEngineSetupFailed` through the existing planner/completion/recovery path.
+- Tap installation/removal is idempotent: any existing tap is removed (via the exception-safe bridge) before a new install; stop/recovery/sleep/teardown paths clear `isTapInstalled`. `teardownEngineUnsafe` now removes the tap through the bridge too.
+- Added a start/recovery overlap guard (`isStartInProgress`, `beginStartAttempt()/endStartAttempt()`) in `startRecordingInternal` so a start/recovery cannot re-enter tap installation while another attempt is mid-flight. This complements the existing `isHandlingConfigChange` guard.
+
+### 23.4 Files changed
+
+- `Package.swift` — new `DexDictateObjCSupport` target; `DexDictateKit` and the test target depend on it.
+- `Sources/DexDictateObjCSupport/include/AudioTapInstaller.h` — new.
+- `Sources/DexDictateObjCSupport/AudioTapInstaller.m` — new.
+- `Sources/DexDictateKit/Services/AudioRecorderService.swift` — bridge import; `installInputTapSafely`; bridge-routed teardown removeTap; start/recovery overlap guard; DEBUG test seams.
+- `Tests/DexDictateTests/AudioTapInstallerTests.swift` — new; double-install raises NSException → bridge throws instead of aborting (hardware-free via `AVAudioPlayerNode`).
+- `Tests/DexDictateTests/AudioRecorderTapStateTests.swift` — new; tap-state transitions and start-overlap guard.
+
+### 23.5 Validation performed
+
+- `swift test`: 343 tests, 0 failures (includes 7 new tests). The key test `AudioTapInstallerTests.testDoubleInstallThrowsInsteadOfCrashing` forces the real AVFoundation `NSException` and asserts it surfaces as a thrown error — reaching the assertion at all proves the process did not abort.
+- `./build.sh --user`: production/release-config build, codesign, and install succeeded.
+- `scripts/validate_release.sh .build/DexDictate.app`: 0 failures, 1 warning (Gatekeeper assessment — expected for a locally dev-signed, non-notarized build).
+
+### 23.6 Remaining risks
+
+- The bridge guarantees an `installTap`/`removeTap` `NSException` cannot abort the process, but it does not make a failed device usable: if the hardware format is genuinely invalid, capture still fails and is surfaced as a recoverable error that drives the existing bounded recovery / system-default fallback.
+- Other AVFoundation calls that can raise `NSException` (e.g. `engine.attach`/`connect` in unusual states) are not currently bridged; this fix targets the tap path proven by the crash. `engine.start()` already bridges as a Swift `throws` and is unchanged.
+- The `_releases/` artifact names still reference an older version string; unrelated to this fix.
+
+## Section 24. Batch-1 Lifecycle Hardening + Insertion Audit Addendum
+
+- Timestamp: Mon Jun 16 2026
+- Branch: improvements/batch1-lifecycle-insertion (off experiment/state-first-popover-nano-hud-20260612-170821)
+- Scope: Additive. Single-instance / menu-bar lifecycle hardening implemented; insertion-reliability and per-app-insertion phases audited and found ALREADY IMPLEMENTED.
+
+### 24.1 Implemented — single-instance guard + true menu-bar app
+- LSUIElement set to true in templates/Info.plist.template and Sources/DexDictate/Info.plist so DexDictate runs as a true accessory (menu-bar only, no Dock icon). The Dock-icon-plus-menu-bar presentation previously contributed to the "looks like two instances" symptom.
+- Sources/DexDictate/Info.plist CFBundle version reconciled 1.5.2 -> 1.5.3 to match the VERSION file (the shipped bundle already used VERSION via the template; the static plist field was stale and unused by the build).
+- New Sources/DexDictateKit/InstanceGuard.swift: pure, unit-testable decision logic (existingInstancePID(allInstancePIDs:currentPID:)). Wired into AppDelegate.applicationDidFinishLaunching (Sources/DexDictate/DexDictateApp.swift): if another running instance of bundle id com.westkitty.dexdictate.macos exists, activate it and terminate this launch.
+- Tests: Tests/DexDictateTests/InstanceGuardTests.swift (5 cases).
+- Validation: swift build; swift test (348 passed, 0 failures); ./build.sh --user (generated bundle confirms LSUIElement=true, version 1.5.3); scripts/validate_release.sh (0 failures, 1 expected Gatekeeper warning).
+
+### 24.2 Audited — insertion reliability fallback chain: ALREADY IMPLEMENTED
+The proposed "AX -> CGEvent Cmd+V -> clipboard-restore + toast" chain already exists and is more thorough than the proposal:
+- AX insertion (two strategies) falling back to clipboard paste: Sources/DexDictateKit/Output/OutputCoordinator.swift:217-224, insertViaAccessibility 231-269.
+- Synthesized Cmd+V / Cmd+A+Cmd+V via CGEvent: Sources/DexDictateKit/Output/ClipboardManager.swift:411-427 and 311-333.
+- Full pasteboard restore (entire payload, 10 MB cap, only if DexDictate still owns it): ClipboardManager.swift:130-171, 440-463.
+- Secure/password-field refusal: OutputCoordinator.swift:204-210 + Output/SecureInputContext.swift.
+- Editable-target detection with AX role classification: ClipboardManager.swift:357-401.
+- Existing coverage: Tests/DexDictateTests/{AccessibilityInsertionTests, ClipboardManagerTests, OutputCoordinatorTests, OutputPipelineHardeningTests}.swift.
+- Decision: no code change. Only a minor potential enhancement remains — surfacing a user-facing toast when an ASYNC paste aborts mid-flight (the coordinator returns .pastedToActiveApp optimistically before the async paste confirms). ToastEvent.clipboardFallback(reason:) already exists; wiring an async-abort callback into it is a delicate change to a well-tested async flow and should be done with manual verification, not autonomously.
+
+### 24.3 Audited — per-app insertion profiles: ALREADY IMPLEMENTED
+- Sources/DexDictateKit/AppInsertionOverridesManager.swift: AppInsertionOverride (per bundleID), InsertionModeOverride (useGlobal/clipboardPaste/clipboardOnly/accessibilityAPI/replaceFieldWithClipboardPaste), effectiveMode(for:), add/remove/persist; UI in Sources/DexDictate/PerAppInsertionSheet.swift.
+- Existing coverage: Tests/DexDictateTests/AppInsertionOverridesManagerTests.swift.
+- Decision: no code change.
+
+### 24.4 Remaining batch-1 phases (NOT started — require authorization + manual verification)
+- Mic pinning + route-change recovery UX; trigger/hotkey modes (push-to-talk/double-tap) + conflict detection; smarter VAD endpointing. These are feature-level changes touching live audio/event-tap behavior and UI; they need on-device manual verification and were intentionally not implemented autonomously.
+
+### 24.5 Implemented — trigger shortcut conflict detection (Phase 5 partial)
+- New Sources/DexDictateKit/TriggerShortcutConflictChecker.swift: pure, AppKit-free classifier returning .systemReserved (names the colliding macOS shortcut: Spotlight, App Switcher, screenshots, Force Quit, etc.) or .firesWhileTyping (bare key, no modifiers), or nil when safe. Mouse-button triggers never conflict; non-standard modifier bits are masked before matching.
+- Tests: Tests/DexDictateTests/TriggerShortcutConflictCheckerTests.swift (8 cases). Full suite: 356 passed, 0 failures.
+- The existing trigger modes (TriggerMode.holdToTalk / .toggle via InputMonitor) already work; this adds the previously-missing conflict signal. Wiring it into Sources/DexDictate/ShortcutRecorder.swift is a small, visually-verified follow-up (display the message under the recorder field).
+
+### 24.6 Audited — remaining batch-1 items deferred (require on-device verification)
+- Phase 4 mic pinning: already functional — inputDeviceUID persisted (AppSettings), preferred-UID handling + route recovery (AudioRecorderRecoveryPlanner), and user feedback via statusText + routeHealthSnapshot (QuickSettingsStatusStrip). Only a transient recovery toast remains, which touches async UI and needs manual verification. No code change made.
+- Phase 5 double-tap trigger mode: would change live event-tap timing behavior; needs on-device verification. Not implemented blind.
+- Phase 6 true VAD endpointing: silence-based endpointing already exists via UtteranceEndPreset. A real energy-VAD endpointer would be additive but must be wired into the live capture loop and verified on-device; an unwired component would be speculative dead code, so it was intentionally not added autonomously.
+
+## Section 25. Salvaged Features — Context Injection + Whisper Warm-up
+
+- Timestamp: Mon Jun 16 2026
+- Source: re-implemented from the retired claude/nifty-wilson branch (origin) against the current diverged codebase; the rest of that branch was already superseded.
+
+### 25.1 Focused-field context injection (opt-in)
+- Sources/DexDictateKit/Output/FocusedTextReader.swift: reads the tail of the focused field via the Accessibility API (nil-safe; nil means "no context").
+- Sources/DexDictateKit/DictationContextPrompt.swift: pure combiner that merges the dynamic focused-field context with the existing DictationDomainBias prompt into a single bounded initial_prompt, preserving the recent tail. Unit-tested (DictationContextPromptTests, 8 cases).
+- Wired in TranscriptionEngine live-transcribe path; gated by AppSettings.enableContextInjection (default false); Quick Settings toggle "Use Context From Focused Field". Requires Accessibility permission.
+
+### 25.2 Whisper warm-up (always on, no UI effect)
+- WhisperService.warmup(): silent 0.5 s inference after each model load to prime whisper.cpp / Metal buffers and remove first-transcription latency. Result suppressed via isWarmingUp guard in didCompleteWithSegments + both error paths; real transcriptions clear the flag first so a superseded warm-up cannot suppress a real result.
+
+### 25.3 Validation + remaining risk
+- swift build; swift test 366 passed/0 failures.
+- FocusedTextReader and the live wiring depend on real AX focus and a loaded model, so they are covered by build + headless-safety tests + the pure combiner unit tests; end-to-end accuracy/latency benefit should be confirmed on-device.

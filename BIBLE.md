@@ -1961,3 +1961,283 @@ Commits pushed and verified visible on `origin/main`:
 `git status` → "nothing to commit, working tree clean".
 
 **Status:** Complete.
+
+---
+
+## Entry 22 — Experimental UI Branch: State-First Popover, Nano HUD, Layered Reveal, Command Palette, Dexter Feed (2026-06-12)
+
+**Timestamp:** 2026-06-12T18:00Z
+**Branch:** `experiment/state-first-popover-nano-hud-20260612-170821`
+**Status:** Hardened and ready for Andrew's manual visual QA. Not yet committed. Not yet merged.
+
+### Summary
+
+Feature-flagged experimental UI branch added and hardened. Four new surfaces were built on top of the existing production UI without modifying any engine code. All flags default to `false`; the production path is fully preserved. No audio capture, Whisper transcription, output insertion, clipboard fallback, permission checking, model loading, history persistence, entitlements, or packaging behavior was changed.
+
+### Feature flags added
+
+All in `Sources/DexDictateKit/Settings/AppSettings.swift` via `@AppStorage`, defaulting to `false`:
+
+| Flag | What it gates |
+|---|---|
+| `useExperimentalStateFirstUI` | Replaces `AntiGravityMainView` with `DexStateFirstPopoverView` |
+| `useExperimentalNanoHUD` | Replaces `FloatingHUDView` with `DexNanoHUDView` |
+| `useExperimentalCommandPalette` | Adds a command palette button to the state-first popover |
+| `useExperimentalDexterFeed` | Shows the stateful Dexter feed in the Layered Reveal settings panel |
+
+### Files changed
+
+**Modified (production files):**
+- `Sources/DexDictateKit/Settings/AppSettings.swift` — four `@AppStorage` flags added
+- `Sources/DexDictate/DexDictateApp.swift` — `MenuBarExtra` routes to `DexExperimentalEntry` when `useExperimentalStateFirstUI` is on; `onChange` wires HUD `refresh()` when Nano HUD flag changes
+- `Sources/DexDictate/FloatingHUD.swift` — `show()` reads `useExperimentalNanoHUD` at window-creation time; `refresh()` method added
+- `Sources/DexDictate/QuickSettingsView.swift` — "Experimental UI" disclosure card with all four toggles added to the settings panel
+
+**Created (experimental UI — app target):**
+- `Sources/DexDictate/ExperimentalUI/DexExperimentalEntry.swift`
+- `Sources/DexDictate/ExperimentalUI/DexExperimentalUIStateAdapter.swift`
+- `Sources/DexDictate/ExperimentalUI/DexStateFirstPopoverView.swift`
+- `Sources/DexDictate/ExperimentalUI/DexStateFirstComponents.swift`
+- `Sources/DexDictate/ExperimentalUI/DexNanoHUDView.swift`
+- `Sources/DexDictate/ExperimentalUI/DexLayeredRevealView.swift`
+- `Sources/DexDictate/ExperimentalUI/DexCommandPaletteView.swift`
+- `Sources/DexDictate/ExperimentalUI/DexDexterFeedView.swift`
+
+**Created (kit — testable pure types):**
+- `Sources/DexDictateKit/ExperimentalUI/DexExperimentalUIState.swift` — pure value types moved here from the app target so tests can reach them
+
+**Created (tests):**
+- `Tests/DexDictateTests/DexExperimentalUITests.swift` — 24 new tests across 5 suites: `EngineDisplayStateTests`, `PermissionDisplayStateTests`, `DexExperimentalUIStateTests`, `TranscriptionFeedbackAdapterContractTests`, `FlavorQuotePacksDexterFeedTests`
+
+**Created (documentation):**
+- `docs/experimental-ui-state-first-nano-hud.md` — handoff document with flags, files, architecture notes, known limitations, manual QA checklist
+- `docs/experimental-ui-manual-qa-runbook.md` — exact shell commands for every test scenario Andrew needs to run
+
+### Bundle ID correction
+
+Previous docs in this session used the wrong bundle ID for `defaults` commands. The correct bundle ID, confirmed from `Sources/DexDictate/Info.plist` and `build.sh`, is:
+
+```
+com.westkitty.dexdictate.macos
+```
+
+Not `au.westcat.DexDictate`. All docs were corrected. The active preferences file on disk is `~/Library/Preferences/com.westkitty.dexdictate.macos.plist`.
+
+### Architecture decisions
+
+- **Adapter pattern:** `DexExperimentalUIStateAdapter` is the single crossing point between production services and experimental views. Views observe only the adapter — they do not import or depend on every core service.
+- **`@StateObject` factory init:** `DexExperimentalEntry` uses the `_adapter = StateObject(wrappedValue: …)` pattern to inject dependencies into `@StateObject`, which SwiftUI requires for this case.
+- **Group routing:** `MenuBarExtra` content is wrapped in `Group { if/else }` so all `.onAppear` / `.onChange` / `.onReceive` handlers fire regardless of which branch is shown.
+- **HUD refresh:** `FloatingHUDController.refresh()` tears down and recreates the window when `useExperimentalNanoHUD` changes while the HUD is visible.
+- **Dexter feed:** `DexDexterFeedView` samples lines from the existing `FlavorQuotePacks` infrastructure across all `AppProfile` cases. No network, no RSS, no new dependencies.
+- **Safe Mode binding:** The Layered Reveal settings layer uses an inline `Binding<Bool>` calling `enableSafeMode()` / `disableSafeMode()` — same pattern as `QuickSettingsView`.
+
+### Known limitations
+
+- Command palette has no global hotkey. `⌘K` is displayed as a hint only. Wiring it would require modifying `InputMonitor`, which is out of scope for this experiment.
+- Nano HUD stop button calls `engine.toggleListening()` and proceeds to transcription. There is no true discard/cancel path in the engine. The button label and inline comments are honest about this.
+- Watermark image lookup is best-effort and silently omits if not found in the bundle.
+- Manual visual QA still required before merging or shipping.
+
+### Validation
+
+```
+swift build   → Build complete
+swift test    → 264 tests, 0 failures
+```
+
+Test count increased from 240 (baseline before this branch) to 264 (24 new tests from this branch).
+
+### Next step
+
+Andrew should run manual QA from `docs/experimental-ui-manual-qa-runbook.md`, then review screenshots and behavior before committing or continuing. The branch is safe to launch with `./build.sh --user`.
+
+---
+
+## Entry 23 — Experimental UI Manual QA Correction Pass
+
+**Date:** 2026-06-12  
+**Branch:** `experiment/state-first-popover-nano-hud-20260612-170821`  
+**Author:** AI session (Claude Sonnet 4.6)
+
+### Context
+
+Andrew ran manual QA after Entry 22. The branch was buildable but not product-ready. This entry records the correction pass that resolved all blocking QA findings.
+
+### Core architectural change: in-popover navigation
+
+The `.sheet` presentation used by `DexLayeredRevealView` and `DexCommandPaletteView` caused `NSApp.activate()` which bounced the Dock — violating the menu-bar-only UX contract.
+
+**Fix:** Replaced both `.sheet` presentations with an `ExperimentalScreen` enum state machine in `DexStateFirstPopoverView`. All sub-panels now live inside the 320×480 popover frame. No `.sheet` is used from any experimental surface.
+
+```swift
+enum ExperimentalScreen: Equatable {
+    case main, settingsAndHistory, commandPalette, featureHub, guiSwitcher
+}
+@State private var screen: ExperimentalScreen = .main
+```
+
+Non-main screens use `Color(red: 0.09, green: 0.10, blue: 0.14)` as an opaque overlay so the watermark background stays behind settings content.
+
+### New: DexExperimentalFeatureHubView
+
+File: `Sources/DexDictate/ExperimentalUI/DexExperimentalHubViews.swift`
+
+Wraps full `QuickSettingsView` inside the popover. Accessible via the "All Features" button on the main screen. The hub owns `AudioDeviceScanner`, `BenchmarkCaptureWindowController`, and `AdaptiveBenchmarkController` as `@StateObject`s, avoiding parameter threading. Singleton services (`MenuBarIconController.shared`, `WhisperModelCatalog.shared`, `BenchmarkResultsStore.shared`) are observed directly.
+
+### New: DexExperimentalGUISwitcherView
+
+File: `Sources/DexDictate/ExperimentalUI/DexExperimentalHubViews.swift`
+
+In-popover surface switcher. Shows a radio-style selection between Standard UI and State-first Popover, plus toggles for Nano HUD, Command Palette, and Dexter Feed. No shell `defaults write` commands needed for testing. Accessible via the "Switch UI" button on the main screen.
+
+### Quit button in title bar
+
+A `power` icon button was added to the top-left of the state-first popover title bar, always visible, not hidden behind settings.
+
+### profileManager threading
+
+`DexExperimentalEntry` now passes `profileManager` to `DexStateFirstPopoverView`, which threads it to `DexLayeredRevealView` and `DexExperimentalFeatureHubView`. Required to give the Dexter feed access to `profileManager.activeProfile`.
+
+### Dexter feed: profile preference
+
+`DexDexterFeedView` now accepts `profileManager: ProfileManager`. `loadLines()` samples 3 lines from the active profile and 2 from all others, shuffled within each pool independently. This eliminates cross-profile line dominance.
+
+### HelpView: .experimentalUI section
+
+New `HelpSection` case with title "Experimental UI", icon `flask`, search aliases, and related sections. Content covers all surfaces, flags, GUI switcher, and manual `defaults delete` commands for reset.
+
+### Files created or modified
+
+| File | Change |
+|---|---|
+| `DexStateFirstPopoverView.swift` | Full rewrite — ExperimentalScreen, profileManager, Quit button, all nav buttons |
+| `DexLayeredRevealView.swift` | Add onBack, add profileManager, remove .sheet frame/background |
+| `DexCommandPaletteView.swift` | Add onBack, add paletteHeader, remove .sheet frame/background |
+| `DexExperimentalEntry.swift` | Pass profileManager to popover |
+| `DexDexterFeedView.swift` | Add profileManager, profile-aware loadLines() |
+| `HelpView.swift` | Add .experimentalUI case end-to-end |
+| `DexExperimentalHubViews.swift` | New — DexExperimentalFeatureHubView + DexExperimentalGUISwitcherView |
+| `docs/experimental-ui-exposure-audit.md` | New — capability exposure table |
+| `docs/experimental-ui-state-first-nano-hud.md` | Appended correction pass section |
+| `docs/experimental-ui-manual-qa-runbook.md` | Appended correction pass findings and re-test checklist |
+
+### Validation
+
+`swift build` — Build complete, 0 errors, 0 warnings  
+`swift test` — 264 tests, 0 failures (unchanged from Entry 22)
+
+### QA pass criteria post-correction
+
+- Settings & History, Command Palette open inside popover — no Dock bounce
+- All Features shows full QuickSettings, scrollable within 320×480
+- Switch UI allows in-app surface selection without Terminal
+- Quit button always visible in title bar
+- Dexter Feed prefers active profile lines
+- Help → Experimental UI section present
+- Standard UI unchanged when all flags are off
+- All hard constraints from Entry 22 remain satisfied
+
+---
+
+## Entry 24 — Experimental UI Phase 7: Complete Feature Access Hardening (2026-06-12)
+
+### Context
+
+Phase 7 followed the Manual QA Correction Pass (Entry 23). The correction pass eliminated
+Dock bounce and added the Feature Hub, but left three gaps:
+
+1. The Nano HUD was still a dead-end surface — it had no path to any feature or setting.
+2. Layered Reveal had no direct header buttons to All Features or GUI Switcher.
+3. The Command Palette had no commands for "Open All Features", "Switch UI Surface", or "Quit".
+4. The exposure audit only covered Standard UI, State-first Popover, and Nano HUD (3 of 6 surfaces).
+5. The QA runbook still had stale "sheet opens" language from before the in-popover conversion.
+
+### UI changes
+
+**Nano HUD — hub button added (`DexNanoHUDView.swift`)**
+
+An always-visible `slider.horizontal.3` button was added to the Nano HUD. It calls
+`onOpenHub?()`, which is wired in `FloatingHUDController.show()` to `showHubPanel()`.
+`showHubPanel()` creates a 320×480 non-activating `NSPanel` containing
+`DexExperimentalFeatureHubView`. The hub panel:
+- Uses `.nonactivatingPanel` + `.floating` — does not steal focus, no Dock bounce
+- Has a Back button that closes the panel without disturbing the HUD
+- Contains full QuickSettingsView with all production controls
+- Has History and Help chips, and a Quit button
+
+`FloatingHUDController` was extended to store `onDetachHistory` and `onOpenHelp` callbacks
+(passed from `DexDictateApp.hudController.setup()`), which are forwarded into the hub panel.
+
+**Layered Reveal — All Features + Switch UI header buttons (`DexLayeredRevealView.swift`)**
+
+A `square.grid.2x2` icon (All Features) and a `switch.2` icon (Switch UI) were added to the
+right side of the header. They call `onOpenFeatureHub?()` and `onOpenGUISwitcher?()`, which
+are supplied by `DexStateFirstPopoverView` and navigate to `.featureHub` and `.guiSwitcher`
+screens via the `ExperimentalScreen` state machine.
+
+**Command Palette — three navigation commands (`DexCommandPaletteView.swift`)**
+
+Added to `allCommands`:
+- "Open All Features" (icon: `square.grid.2x2`, category: `.ui`) — calls `onOpenFeatureHub?()` then `onBack()`
+- "Switch UI Surface" (icon: `switch.2`, category: `.ui`) — calls `onOpenGUISwitcher?()` then `onBack()`
+- "Quit DexDictate" (icon: `power`, category: `.ui`) — calls `NSApplication.shared.terminate(nil)`
+
+Commands are disabled with an explanatory subtitle if the callback is nil.
+
+### Documentation changes
+
+**`docs/experimental-ui-exposure-audit.md` — full rewrite**
+
+Expanded from 3 surfaces to 6. New columns:
+- State-first Popover, Nano HUD, Layered Reveal, Command Palette, Dexter Feed, Shared Feature Hub
+- Plus: Existing production location, Status, Notes / risks
+
+Grouped into 8 capability categories (Dictation, Output/Insertion, Audio/Model, History,
+Appearance, Dexter, System/Permissions, Help/Meta). Navigation matrix table added at top
+showing escape path for every surface. No capability is "only accessible by switching to
+Standard UI." True recording discard is marked `deferred` with documented engine limitation.
+
+**`docs/experimental-ui-manual-qa-runbook.md` — stale language corrected + new section**
+
+All "sheet opens" and "sheet dismissal" references updated to reflect in-popover state-machine
+behavior. New Section 4 added: "Every GUI option complete-access check" with step-by-step
+tables for State-first Popover, Nano HUD, Layered Reveal, Command Palette, and Dexter Feed.
+Phase 7 hardening findings appended in the correction pass section.
+
+**`docs/experimental-ui-state-first-nano-hud.md` — files table + limitations + QA checklist updated**
+
+- Files table now includes `DexExperimentalHubViews.swift` and corrects Layered Reveal description
+- Layered Reveal description changed from "Sheet with…" to "In-popover panel with… header has All Features + Switch UI buttons"
+- Command Palette description updated to reflect 14 commands
+- Known limitations: Nano HUD hub panel GUI Switcher two-hop path documented
+- Nano HUD QA checklist: hub button items added
+
+### Build / test results
+
+`swift build` — Build complete, 0 errors, 0 warnings  
+`swift test` — 264 tests, 0 failures (unchanged from Entry 23)
+
+No new tests were added in this pass. All existing tests pass. No test count change was expected
+because Phase 7 only added UI callbacks and navigation logic — no new pure-logic types to unit test.
+
+### Hard constraints — verified unchanged
+
+Audio capture, Whisper transcription, output insertion, clipboard fallback, permission
+behaviour, model loading, history persistence, entitlements, packaging/signing, onboarding,
+opening animation, watermark support, Dexter/flavor support — none modified.
+
+Experimental UI flags all remain `false` by default.
+
+### Commit deferred
+
+Commit and push are deferred until Andrew completes a second full visual QA pass using
+the updated runbook (particularly Section 4, the complete-access check). No commit has been made.
+
+### Next step
+
+```bash
+./build.sh --user && open ~/Applications/DexDictate.app
+```
+
+Work through `docs/experimental-ui-manual-qa-runbook.md` Section 4 with all 5 surfaces.
