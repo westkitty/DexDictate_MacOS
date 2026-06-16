@@ -228,7 +228,11 @@ public class AppSettings: ObservableObject {
     @AppStorage("autoRetrySuspiciousResults_v1") public var autoRetrySuspiciousResults: Bool = true
     @AppStorage("dictationDomainMode_v1") public var dictationDomainMode: DictationDomainMode = .automatic
     @AppStorage("enableCorrectionSheet_v1") public var enableCorrectionSheet: Bool = true
-    
+    /// When on, the last few hundred characters of the focused text field are read (via the
+    /// Accessibility API) and combined with the domain-bias prompt to prime Whisper for
+    /// proper nouns and sentence continuations. Off by default; requires Accessibility permission.
+    @AppStorage("enableContextInjection_v1") public var enableContextInjection: Bool = false
+
     public enum SoundTheme: String, CaseIterable, Identifiable {
         case custom = "Custom"
         case modern = "Modern"

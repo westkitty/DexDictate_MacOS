@@ -300,6 +300,12 @@ struct QuickSettingsView: View {
                                 isOn: $settings.enableCorrectionSheet
                             )
 
+                            SettingToggleWithInfo(
+                                title: "Use Context From Focused Field",
+                                info: "Reads the text you're currently editing (via the Accessibility API) and uses it to prime Whisper, improving accuracy for proper nouns and continuing sentences. Combined with DexDictate's vocabulary biasing. Off by default; requires Accessibility permission.",
+                                isOn: $settings.enableContextInjection
+                            )
+
                             DisclosureGroup("Context Biasing", isExpanded: $contextBiasExpanded) {
                                 VStack(alignment: .leading, spacing: 8) {
                                     controlRow(label: "Bias Mode") {

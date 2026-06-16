@@ -640,7 +640,15 @@ public final class TranscriptionEngine: ObservableObject {
                 self.currentMetrics.t_resample_done = tResampleDone
 
                 Safety.log("Submitting \(whisperSamples.count) samples @ 16000 Hz to Whisper")
-                self.whisperService.setInitialPrompt(DictationDomainBias.initialPrompt(for: self.pendingDictationDomain))
+                let domainBias = DictationDomainBias.initialPrompt(for: self.pendingDictationDomain)
+                // Opt-in: prime Whisper with the text the user is currently editing (proper nouns,
+                // sentence continuation), combined with the domain-bias vocabulary.
+                let focusedContext = AppSettings.shared.enableContextInjection
+                    ? FocusedTextReader().readTail(maxChars: 200)
+                    : nil
+                self.whisperService.setInitialPrompt(
+                    DictationContextPrompt.combine(domainBias: domainBias, focusedContext: focusedContext)
+                )
 
                 // Wire up result handler before calling transcribe.
                 self.whisperService.ontranscriptionComplete = { [weak self] text in
