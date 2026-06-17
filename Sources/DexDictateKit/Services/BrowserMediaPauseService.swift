@@ -76,7 +76,7 @@ public final class BrowserMediaPauseService: BrowserMediaControlling {
 
     public init(
         runningAppsProvider: @escaping RunningAppsProvider = { NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier) },
-        scriptRunner: @escaping ScriptRunner = BrowserMediaPauseService.defaultScriptRunner,
+        scriptRunner: @escaping ScriptRunner = { await BrowserMediaPauseService.defaultScriptRunner($0) },
         settingsProvider: @escaping @Sendable () -> Bool = { false }
     ) {
         self.runningAppsProvider = runningAppsProvider
