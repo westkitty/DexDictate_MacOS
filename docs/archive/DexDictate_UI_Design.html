@@ -1,0 +1,1403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1500">
+<title>DexDictate — UI Design Reference</title>
+<style>
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── Page ── */
+:root {
+  --canvas:        #0c0c0d;
+  --pop-w:         320px;
+
+  /* Exact overlay bg from DexStateFirstPopoverView.swift overlayBackground */
+  --pop-bg:        rgb(23, 26, 36);
+
+  /* State colours — match SwiftUI Color semantics */
+  --c-stopped:     rgba(180,180,200,0.85);
+  --c-init:        #3b82f6;
+  --c-ready:       #22c55e;
+  --c-listen:      #ef4444;
+  --c-transcribe:  #eab308;
+  --c-error:       #f97316;
+
+  /* Surface layers */
+  --l1:  rgba(255,255,255,0.05);
+  --l2:  rgba(255,255,255,0.08);
+  --l3:  rgba(255,255,255,0.12);
+
+  /* Text */
+  --tp:  rgba(255,255,255,0.95);
+  --ts:  rgba(255,255,255,0.70);
+  --tm:  rgba(255,255,255,0.42);
+  --tf:  rgba(255,255,255,0.28);
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--canvas);
+  color: var(--tp);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+  padding: 48px 48px 96px;
+  background-image: radial-gradient(circle, rgba(255,255,255,0.035) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* ── Page header ── */
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 60px;
+}
+.page-title {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+.page-subtitle {
+  font-size: 13px;
+  color: var(--tm);
+  margin-top: 4px;
+}
+.page-meta {
+  text-align: right;
+  font-size: 11px;
+  color: var(--tf);
+  line-height: 1.9;
+}
+
+/* ── Section ── */
+.section { margin-bottom: 72px; }
+
+.section-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--tm);
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255,255,255,0.06);
+}
+
+/* ── Popover grid ── */
+.popover-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px;
+  align-items: flex-start;
+}
+.popover-frame {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.popover-label {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tm);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.state-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════
+   THE POPOVER SURFACE
+   Matches DexStateFirstPopoverView:
+   – width: 320, overlayBackground, ultraThinMaterial
+   – watermark: "DEXDICTATE" -18deg white 0.08
+══════════════════════════════════════ */
+.popover {
+  width: var(--pop-w);
+  min-height: 390px;
+  border-radius: 14px;
+  background: linear-gradient(155deg,
+    rgba(30, 34, 46, 0.99) 0%,
+    rgba(19, 21, 29, 0.98) 100%
+  );
+  border: 1px solid rgba(255,255,255,0.09);
+  box-shadow:
+    0 0 0 0.5px rgba(0,0,0,0.85),
+    0 28px 64px rgba(0,0,0,0.72),
+    0 4px 16px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(255,255,255,0.09);
+  overflow: hidden;
+  position: relative;
+  padding: 12px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+/* Watermark — matches backgroundLayer in Swift */
+.popover::before {
+  content: 'DEXDICTATE';
+  position: absolute;
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: 4px;
+  color: rgba(255,255,255,0.06);
+  transform: rotate(-18deg) translate(-50%, -50%);
+  pointer-events: none;
+  top: 50%;
+  left: 50%;
+  white-space: nowrap;
+  z-index: 0;
+}
+
+.popover > * { position: relative; z-index: 1; }
+
+/* ── Title bar
+   Matches titleBar in DexStateFirstPopoverView ── */
+.title-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  min-height: 22px;
+}
+.title-bar-center {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tp);
+  pointer-events: none;
+}
+.icon-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: rgba(255,255,255,0.45);
+  cursor: pointer;
+  border: none;
+  flex-shrink: 0;
+}
+
+/* ── State Hero
+   Matches DexStateHero component ── */
+.state-hero {
+  border-radius: 12px;
+  padding: 13px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  text-align: center;
+}
+.hero-icon {
+  font-size: 26px;
+  line-height: 1;
+}
+.hero-label {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* ── Chips
+   Matches DexStatusChip, DexInteractivePill ── */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px 3.5px;
+  border-radius: 100px;
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  border-width: 0.5px;
+  border-style: solid;
+}
+.chip-n { background: var(--l2); color: rgba(255,255,255,0.75); border-color: rgba(255,255,255,0.14); }
+.chip-s { background: rgba(34,197,94,0.15);  color: #22c55e; border-color: rgba(34,197,94,0.28); }
+.chip-w { background: rgba(249,115,22,0.15); color: #f97316; border-color: rgba(249,115,22,0.28); }
+.chip-e { background: rgba(239,68,68,0.15);  color: #ef4444; border-color: rgba(239,68,68,0.28); }
+
+/* ── Transcript card
+   Matches DexTranscriptCard ── */
+.t-card {
+  border-radius: 10px;
+  padding: 10px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.10);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.t-text    { font-size: 11px; color: rgba(255,255,255,0.80); line-height: 1.45; }
+.t-live    { font-size: 11px; font-style: italic; color: rgba(255,255,255,0.65); line-height: 1.45; }
+.t-empty   { font-size: 11px; color: rgba(255,255,255,0.35); }
+.t-meta    { font-size: 9.5px; color: rgba(255,255,255,0.45); }
+.t-error   { font-size: 11px; font-weight: 600; }
+
+.mic-bar {
+  height: 4px;
+  border-radius: 100px;
+  background: rgba(255,255,255,0.12);
+  overflow: hidden;
+}
+.mic-fill {
+  height: 100%;
+  border-radius: 100px;
+  background: rgba(239,68,68,0.72);
+}
+
+/* ── Feedback badge
+   Matches DexFeedbackBadge ── */
+.fbadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 500;
+}
+.fbadge-s { background: rgba(34,197,94,0.15);  color: #22c55e; }
+.fbadge-w { background: rgba(249,115,22,0.18); color: #f97316; }
+
+/* ── Dexter line
+   Matches DexterCommentaryLine ── */
+.dexter {
+  font-size: 10px;
+  font-style: italic;
+  color: rgba(255,255,255,0.40);
+  line-height: 1.4;
+}
+
+/* ── Spacer ── */
+.grow { flex: 1; min-height: 6px; }
+
+/* ── Primary button
+   Matches startDictationButton / stop button ── */
+.btn-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+}
+.btn-green { background: rgba(34,197,94,0.38); color: #fff; box-shadow: inset 0 0 0 1px rgba(34,197,94,0.35); }
+.btn-red   { background: rgba(239,68,68,0.32); color: #fff; box-shadow: inset 0 0 0 1px rgba(239,68,68,0.28); }
+
+/* ── Nav buttons
+   Matches settingsRevealButton, allFeaturesButton, etc. ── */
+.nav-stack { display: flex; flex-direction: column; gap: 5px; }
+.nav-row   { display: flex; gap: 5px; }
+
+.btn-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.70);
+  cursor: pointer;
+  border: none;
+  flex: 1;
+}
+.btn-nav .arr {
+  margin-left: auto;
+  opacity: 0.40;
+  font-style: normal;
+}
+
+/* ── Experiment badge ── */
+.exp-badge {
+  text-align: center;
+  font-size: 9.5px;
+  color: rgba(255,255,255,0.28);
+  padding-top: 2px;
+}
+
+/* ── Divider ── */
+.divider {
+  height: 1px;
+  background: rgba(255,255,255,0.07);
+  margin: 0 -16px;
+}
+
+/* ══════════════════════════════════════
+   NANO HUD
+   Matches DexNanoHUDView
+══════════════════════════════════════ */
+.nano-hud {
+  width: 226px;
+  border-radius: 10px;
+  background: linear-gradient(155deg, rgba(26,30,42,0.97), rgba(16,18,26,0.96));
+  border: 1px solid rgba(255,255,255,0.09);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.68), inset 0 1px 0 rgba(255,255,255,0.08);
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.nano-icon { font-size: 18px; flex-shrink: 0; }
+.nano-info { flex: 1; min-width: 0; }
+.nano-label { font-size: 12px; font-weight: 600; line-height: 1.2; }
+.nano-sub   { font-size: 10px; color: rgba(255,255,255,0.45); margin-top: 1px; }
+.nano-btn {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px;
+  flex-shrink: 0;
+  border: none; cursor: pointer;
+}
+.nano-stop    { background: rgba(239,68,68,0.28); border: 1px solid rgba(239,68,68,0.35); color: #ef4444; }
+.nano-sliders { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.55); }
+
+/* ══════════════════════════════════════
+   FIRST-LAUNCH PERMISSION CARD
+══════════════════════════════════════ */
+.perm-card {
+  width: 300px;
+  border-radius: 14px;
+  background: linear-gradient(155deg, rgba(28,32,44,0.99), rgba(18,20,28,0.98));
+  border: 1px solid rgba(255,255,255,0.09);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.08);
+  padding: 24px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 11px;
+  text-align: center;
+}
+.perm-icon  { font-size: 38px; line-height: 1; }
+.perm-title { font-size: 16px; font-weight: 700; }
+.perm-body  { font-size: 11.5px; color: rgba(255,255,255,0.52); line-height: 1.55; }
+.perm-btn {
+  padding: 9px 0;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: white;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+}
+.perm-skip { font-size: 11px; color: rgba(255,255,255,0.32); cursor: pointer; }
+.step-dots { display: flex; gap: 5px; justify-content: center; }
+.dot {
+  width: 6px; height: 6px;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.20);
+}
+.dot.on { background: #3b82f6; width: 18px; }
+
+/* ══════════════════════════════════════
+   SETTINGS WINDOW
+   Matches QuickSettingsView / DexLayeredRevealView
+══════════════════════════════════════ */
+.settings-win {
+  width: 580px;
+  border-radius: 14px;
+  background: linear-gradient(155deg, rgba(28,32,44,0.99), rgba(18,20,28,0.98));
+  border: 1px solid rgba(255,255,255,0.09);
+  box-shadow: 0 24px 64px rgba(0,0,0,0.72), inset 0 1px 0 rgba(255,255,255,0.09);
+  overflow: hidden;
+}
+.win-titlebar {
+  display: flex;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  position: relative;
+}
+.traffic-lights { display: flex; gap: 7px; }
+.tl {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+}
+.tl-r { background: #ff5f57; }
+.tl-y { background: #febc2e; }
+.tl-g { background: #28c840; }
+.win-title {
+  position: absolute;
+  left: 50%; transform: translateX(-50%);
+  font-size: 13px; font-weight: 600;
+}
+
+.win-body { display: flex; min-height: 340px; }
+
+.win-sidebar {
+  width: 148px;
+  padding: 10px 8px;
+  border-right: 1px solid rgba(255,255,255,0.07);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.62);
+  cursor: pointer;
+}
+.nav-item.on { background: rgba(255,255,255,0.10); color: #fff; }
+.nav-icon { font-size: 13px; }
+
+.win-content {
+  flex: 1;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.s-section-head {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.38);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+  margin-top: 14px;
+}
+.s-section-head:first-child { margin-top: 0; }
+.s-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.s-row:last-child { border-bottom: none; }
+.s-label  { font-size: 12px; color: rgba(255,255,255,0.82); }
+.s-sub    { font-size: 10.5px; color: rgba(255,255,255,0.38); margin-top: 2px; }
+
+.toggle {
+  width: 32px; height: 18px;
+  border-radius: 100px;
+  position: relative;
+  flex-shrink: 0;
+}
+.toggle::after {
+  content: '';
+  position: absolute;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: white;
+  top: 2px;
+}
+.t-on  { background: #22c55e; }
+.t-on::after  { left: 16px; }
+.t-off { background: rgba(255,255,255,0.15); }
+.t-off::after { left: 2px; }
+
+.s-select {
+  font-size: 11px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.80);
+  border-radius: 6px;
+  padding: 4px 8px;
+  appearance: none;
+}
+
+/* ══════════════════════════════════════
+   STATE MAP
+══════════════════════════════════════ */
+.state-map {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0;
+  row-gap: 28px;
+}
+.s-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.s-bubble {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  border-width: 2px;
+  border-style: solid;
+}
+.s-bubble-label {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--tm);
+  text-align: center;
+  max-width: 60px;
+}
+.s-arrow {
+  font-size: 18px;
+  color: rgba(255,255,255,0.18);
+  padding: 0 6px;
+  margin-bottom: 18px;
+  font-style: normal;
+}
+
+/* ══════════════════════════════════════
+   DESIGN TOKENS
+══════════════════════════════════════ */
+.token-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+.token-card {
+  border-radius: 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  overflow: hidden;
+}
+.token-swatch { height: 38px; }
+.token-info { padding: 8px 10px; }
+.token-name  { font-size: 10.5px; font-weight: 600; color: rgba(255,255,255,0.75); }
+.token-value { font-size: 9px; color: var(--tm); font-family: 'SF Mono', Menlo, monospace; margin-top: 2px; }
+
+.footnote {
+  margin-top: 20px;
+  font-size: 11px;
+  color: var(--tf);
+  line-height: 2;
+}
+.footnote strong { color: rgba(255,255,255,0.45); }
+
+</style>
+</head>
+<body>
+
+<!-- ════ PAGE HEADER ════ -->
+<div class="page-header">
+  <div>
+    <div class="page-title">DexDictate UI</div>
+    <div class="page-subtitle">Design reference — state-first popover · Nano HUD · permissions flow · settings</div>
+  </div>
+  <div class="page-meta">
+    State-First UI · ExperimentalUI branch<br>
+    Popover 320 × 480 pt · macOS Sequoia+<br>
+    Dark mode · ultraThinMaterial
+  </div>
+</div>
+
+
+<!-- ════ SECTION 1: POPOVER STATES ════ -->
+<div class="section">
+  <div class="section-label">Popover — all engine states</div>
+  <div class="popover-grid">
+
+
+    <!-- ── STOPPED / IDLE ── -->
+    <div class="popover-frame">
+      <div class="popover">
+        <div class="title-bar">
+          <button class="icon-btn">⏻</button>
+          <div class="title-bar-center">DexDictate</div>
+          <button class="icon-btn">?</button>
+        </div>
+
+        <div class="state-hero" style="background:rgba(160,160,180,0.08);border:1px solid rgba(160,160,180,0.22);">
+          <div class="hero-icon" style="color:var(--c-stopped)">○</div>
+          <div class="hero-label" style="color:var(--c-stopped)">Off</div>
+        </div>
+
+        <div class="chips">
+          <span class="chip chip-s">✓ Permissions OK</span>
+        </div>
+
+        <div class="chips">
+          <span class="chip chip-n">⌥ Space</span>
+          <span class="chip chip-n">tiny</span>
+          <span class="chip chip-n">Hold Mode</span>
+        </div>
+
+        <div class="t-card">
+          <div class="t-empty">No recent transcription</div>
+        </div>
+
+        <div class="dexter">"Ready when you are."</div>
+
+        <div class="grow"></div>
+
+        <button class="btn-primary btn-green">🎙&nbsp; Start Dictation</button>
+
+        <div class="nav-stack">
+          <button class="btn-nav">⚙&nbsp; Settings &amp; History<span class="arr">›</span></button>
+          <button class="btn-nav">⊞&nbsp; All Features<span class="arr">›</span></button>
+          <div class="nav-row">
+            <button class="btn-nav">⇄&nbsp; Switch UI</button>
+          </div>
+        </div>
+
+        <div class="exp-badge">Experimental UI · Switch UI to return to standard</div>
+      </div>
+      <div class="popover-label"><span class="state-dot" style="background:rgba(160,160,180,0.7)"></span>Stopped / Idle</div>
+    </div>
+
+
+    <!-- ── INITIALIZING ── -->
+    <div class="popover-frame">
+      <div class="popover">
+        <div class="title-bar">
+          <button class="icon-btn">⏻</button>
+          <div class="title-bar-center">DexDictate</div>
+          <button class="icon-btn">?</button>
+        </div>
+
+        <div class="state-hero" style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.22);">
+          <div class="hero-icon" style="color:var(--c-init);font-size:22px">↻</div>
+          <div class="hero-label" style="color:var(--c-init)">Initializing</div>
+        </div>
+
+        <div class="chips">
+          <span class="chip chip-s">✓ Permissions OK</span>
+        </div>
+
+        <div class="chips">
+          <span class="chip chip-n">⌥ Space</span>
+          <span class="chip chip-n">tiny.en · loading…</span>
+        </div>
+
+        <div class="t-card">
+          <div class="t-empty">Loading Whisper model…</div>
+        </div>
+
+        <div class="dexter">"Warming up the engine."</div>
+
+        <div class="grow"></div>
+
+        <div class="nav-stack">
+          <button class="btn-nav">⚙&nbsp; Settings &amp; History<span class="arr">›</span></button>
+          <button class="btn-nav">⊞&nbsp; All Features<span class="arr">›</span></button>
+        </div>
+
+        <div class="exp-badge">Experimental UI · Switch UI to return to standard</div>
+      </div>
+      <div class="popover-label"><span class="state-dot" style="background:var(--c-init)"></span>Initializing</div>
+    </div>
+
+
+    <!-- ── READY ── -->
+    <div class="popover-frame">
+      <div class="popover">
+        <div class="title-bar">
+          <button class="icon-btn">⏻</button>
+          <div class="title-bar-center">DexDictate</div>
+          <button class="icon-btn">?</button>
+        </div>
+
+        <div class="state-hero" style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.22);">
+          <div class="hero-icon" style="color:var(--c-ready)">✓</div>
+          <div class="hero-label" style="color:var(--c-ready)">Ready</div>
+        </div>
+
+        <div class="chips">
+          <span class="chip chip-s">✓ Permissions OK</span>
+        </div>
+
+        <div class="chips">
+          <span class="chip chip-n">⌥ Space</span>
+          <span class="chip chip-n">tiny.en</span>
+          <span class="chip chip-n">Hold Mode</span>
+        </div>
+
+        <div class="t-card">
+          <div class="t-empty">No recent transcription</div>
+        </div>
+
+        <div class="dexter">"Hold ⌥ Space to begin."</div>
+
+        <div class="grow"></div>
+
+        <div class="nav-stack">
+          <button class="btn-nav">⚙&nbsp; Settings &amp; History<span class="arr">›</span></button>
+          <button class="btn-nav">⊞&nbsp; All Features<span class="arr">›</span></button>
+          <div class="nav-row">
+            <button class="btn-nav">⌘K&nbsp; Commands</button>
+            <button class="btn-nav">⇄&nbsp; Switch UI</button>
+          </div>
+        </div>
+
+        <div class="exp-badge">Experimental UI · Switch UI to return to standard</div>
+      </div>
+      <div class="popover-label"><span class="state-dot" style="background:var(--c-ready)"></span>Ready</div>
+    </div>
+
+
+    <!-- ── LISTENING ── -->
+    <div class="popover-frame">
+      <div class="popover">
+        <div class="title-bar">
+          <button class="icon-btn">⏻</button>
+          <div class="title-bar-center">DexDictate</div>
+          <button class="icon-btn">?</button>
+        </div>
+
+        <div class="state-hero" style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.22);">
+          <div class="hero-icon" style="color:var(--c-listen);font-size:24px">🎙</div>
+          <div class="hero-label" style="color:var(--c-listen)">Listening</div>
+        </div>
+
+        <div class="chips">
+          <span class="chip chip-s">✓ Permissions OK</span>
+        </div>
+
+        <div class="chips">
+          <span class="chip chip-n">⌥ Space</span>
+          <span class="chip chip-n">tiny.en</span>
+          <span class="chip chip-n">Hold Mode</span>
+        </div>
+
+        <div class="t-card">
+          <div class="t-live">so the main idea here is that we should probably…</div>
+          <div class="mic-bar"><div class="mic-fill" style="width:68%"></div></div>
+          <div class="t-meta">Auto-stop in 4s</div>
+        </div>
+
+        <div class="dexter">"I'm all ears."</div>
+
+        <div class="grow"></div>
+
+        <div class="nav-stack">
+          <button class="btn-nav">⚙&nbsp; Settings &amp; History<span class="arr">›</span></button>
+          <button class="btn-nav">⊞&nbsp; All Features<span class="arr">›</span></button>
+        </div>
+
+        <div class="exp-badge">Experimental UI · Switch UI to return to standard</div>
+      </div>
+      <div class="popover-label"><span class="state-dot" style="background:var(--c-listen)"></span>Listening</div>
+    </div>
+
+
+    <!-- ── TRANSCRIBING ── -->
+    <div class="popover-frame">
+      <div class="popover">
+        <div class="title-bar">
+          <button class="icon-btn">⏻</button>
+          <div class="title-bar-center">DexDictate</div>
+          <button class="icon-btn">?</button>
+        </div>
+
+        <div class="state-hero" style="background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.22);">
+          <div class="hero-icon" style="color:var(--c-transcribe);font-size:22px">↻</div>
+          <div class="hero-label" style="color:var(--c-transcribe)">Transcribing</div>
+        </div>
+
+        <div class="chips">
+          <span class="chip chip-s">✓ Permissions OK</span>
+        </div>
+
+        <div class="chips">
+          <span class="chip chip-n">⌥ Space</span>
+          <span class="chip chip-n">tiny.en</span>
+        </div>
+
+        <div class="t-card">
+          <div class="t-live">so the main idea here is that we should probably…</div>
+          <div class="mic-bar"><div class="mic-fill" style="width:0%;background:rgba(234,179,8,0.45)"></div></div>
+        </div>
+
+        <div class="dexter">"Processing…"</div>
+
+        <div class="grow"></div>
+
+        <div class="nav-stack">
+          <button class="btn-nav">⚙&nbsp; Settings &amp; History<span class="arr">›</span></button>
+          <button class="btn-nav">⊞&nbsp; All Features<span class="arr">›</span></button>
+        </div>
+
+        <div class="exp-badge">Experimental UI · Switch UI to return to standard</div>
+      </div>
+      <div class="popover-label"><span class="state-dot" style="background:var(--c-transcribe)"></span>Transcribing</div>
+    </div>
+
+
+    <!-- ── INSERTED / SUCCESS ── -->
+    <div class="popover-frame">
+      <div class="popover">
+        <div class="title-bar">
+          <button class="icon-btn">⏻</button>
+          <div class="title-bar-center">DexDictate</div>
+          <button class="icon-btn">?</button>
+        </div>
+
+        <div class="state-hero" style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.22);">
+          <div class="hero-icon" style="color:var(--c-ready)">✓</div>
+          <div class="hero-label" style="color:var(--c-ready)">Ready</div>
+        </div>
+
+        <div class="chips">
+          <span class="chip chip-s">✓ Permissions OK</span>
+        </div>
+
+        <div class="chips">
+          <span class="chip chip-n">⌥ Space</span>
+          <span class="chip chip-n">tiny.en</span>
+          <span class="chip chip-n">Toggle Mode</span>
+        </div>
+
+        <div class="t-card">
+          <div class="t-text">so the main idea here is that we should probably consider the long-term implications of this approach and revisit it next quarter.</div>
+        </div>
+
+        <div><span class="fbadge fbadge-s">✓ Inserted · 27 words</span></div>
+
+        <div class="chips">
+          <span class="chip chip-n">📋 Auto-paste</span>
+        </div>
+
+        <div class="dexter">"Done. That went well."</div>
+
+        <div class="grow"></div>
+
+        <button class="btn-primary btn-green">🎙&nbsp; Start Dictation</button>
+
+        <div class="nav-stack">
+          <button class="btn-nav">⚙&nbsp; Settings &amp; History<span class="arr">›</span></button>
+          <button class="btn-nav">⊞&nbsp; All Features<span class="arr">›</span></button>
+        </div>
+
+        <div class="exp-badge">Experimental UI · Switch UI to return to standard</div>
+      </div>
+      <div class="popover-label"><span class="state-dot" style="background:var(--c-ready)"></span>Inserted · Success</div>
+    </div>
+
+
+    <!-- ── CLIPBOARD FALLBACK ── -->
+    <div class="popover-frame">
+      <div class="popover">
+        <div class="title-bar">
+          <button class="icon-btn">⏻</button>
+          <div class="title-bar-center">DexDictate</div>
+          <button class="icon-btn">?</button>
+        </div>
+
+        <div class="state-hero" style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.22);">
+          <div class="hero-icon" style="color:var(--c-ready)">✓</div>
+          <div class="hero-label" style="color:var(--c-ready)">Ready</div>
+        </div>
+
+        <div class="chips">
+          <span class="chip chip-s">✓ Permissions OK</span>
+        </div>
+
+        <div class="chips">
+          <span class="chip chip-n">⌥ Space</span>
+          <span class="chip chip-n">tiny.en</span>
+        </div>
+
+        <div class="t-card">
+          <div class="t-text">meeting is scheduled for next Thursday at 3 PM in the main boardroom.</div>
+        </div>
+
+        <div><span class="fbadge fbadge-w">📋 Secure field — copied only</span></div>
+
+        <div class="chips">
+          <span class="chip chip-w">📋 Secure field — copied</span>
+          <span class="chip chip-w">🛡 Safe Mode</span>
+        </div>
+
+        <div class="dexter">"Password field detected — pasted to clipboard instead."</div>
+
+        <div class="grow"></div>
+
+        <button class="btn-primary btn-green">🎙&nbsp; Start Dictation</button>
+
+        <div class="nav-stack">
+          <button class="btn-nav">⚙&nbsp; Settings &amp; History<span class="arr">›</span></button>
+        </div>
+
+        <div class="exp-badge">Experimental UI · Switch UI to return to standard</div>
+      </div>
+      <div class="popover-label"><span class="state-dot" style="background:var(--c-error)"></span>Clipboard Fallback</div>
+    </div>
+
+
+    <!-- ── PERMISSION MISSING ── -->
+    <div class="popover-frame">
+      <div class="popover">
+        <div class="title-bar">
+          <button class="icon-btn">⏻</button>
+          <div class="title-bar-center">DexDictate</div>
+          <button class="icon-btn">?</button>
+        </div>
+
+        <div class="state-hero" style="background:rgba(160,160,180,0.08);border:1px solid rgba(160,160,180,0.22);">
+          <div class="hero-icon" style="color:var(--c-stopped)">○</div>
+          <div class="hero-label" style="color:var(--c-stopped)">Off</div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:5px;">
+          <span class="chip chip-w" style="justify-content:flex-start;">⚠&nbsp; Microphone permission missing</span>
+          <span class="chip chip-w" style="justify-content:flex-start;">⚠&nbsp; Accessibility permission missing</span>
+          <div style="font-size:11px;color:#f97316;font-weight:600;padding:2px 0;cursor:pointer;">Open System Settings →</div>
+        </div>
+
+        <div class="chips">
+          <span class="chip chip-n">⌥ Space</span>
+          <span class="chip chip-n">tiny.en</span>
+        </div>
+
+        <div class="t-card">
+          <div class="t-empty">No recent transcription</div>
+        </div>
+
+        <div class="grow"></div>
+
+        <div class="nav-stack">
+          <button class="btn-nav">⚙&nbsp; Settings &amp; History<span class="arr">›</span></button>
+          <button class="btn-nav">⊞&nbsp; All Features<span class="arr">›</span></button>
+        </div>
+
+        <div class="exp-badge">Experimental UI · Switch UI to return to standard</div>
+      </div>
+      <div class="popover-label"><span class="state-dot" style="background:var(--c-error)"></span>Permissions Missing</div>
+    </div>
+
+
+    <!-- ── ERROR ── -->
+    <div class="popover-frame">
+      <div class="popover">
+        <div class="title-bar">
+          <button class="icon-btn">⏻</button>
+          <div class="title-bar-center">DexDictate</div>
+          <button class="icon-btn">?</button>
+        </div>
+
+        <div class="state-hero" style="background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.22);">
+          <div class="hero-icon" style="color:var(--c-error)">⚠</div>
+          <div class="hero-label" style="color:var(--c-error)">Error</div>
+        </div>
+
+        <div class="chips">
+          <span class="chip chip-s">✓ Permissions OK</span>
+        </div>
+
+        <div class="chips">
+          <span class="chip chip-n">⌥ Space</span>
+          <span class="chip chip-n">tiny.en</span>
+        </div>
+
+        <div class="t-card" style="border-color:rgba(249,115,22,0.20);">
+          <div class="t-error" style="color:var(--c-error)">Whisper model failed to load</div>
+          <div class="t-meta">tiny.en · Try switching to a different model</div>
+        </div>
+
+        <div><span class="fbadge fbadge-w">⚠ Engine error — tap to retry</span></div>
+
+        <div class="grow"></div>
+
+        <div class="nav-stack">
+          <button class="btn-nav">⚙&nbsp; Settings &amp; History<span class="arr">›</span></button>
+          <button class="btn-nav">⊞&nbsp; All Features<span class="arr">›</span></button>
+        </div>
+
+        <div class="exp-badge">Experimental UI · Switch UI to return to standard</div>
+      </div>
+      <div class="popover-label"><span class="state-dot" style="background:var(--c-error)"></span>Error</div>
+    </div>
+
+
+  </div><!-- /popover-grid -->
+</div><!-- /section 1 -->
+
+
+<!-- ════ SECTION 2: NANO HUD ════ -->
+<div class="section">
+  <div class="section-label">Nano HUD — floating overlay (DexNanoHUDView)</div>
+
+  <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;">
+
+    <div class="popover-frame">
+      <div class="nano-hud">
+        <div class="nano-icon" style="color:var(--c-listen)">🎙</div>
+        <div class="nano-info">
+          <div class="nano-label" style="color:var(--c-listen)">Listening</div>
+          <div class="nano-sub">Hold ⌥ Space to stop</div>
+        </div>
+        <button class="nano-btn nano-stop">■</button>
+        <button class="nano-btn nano-sliders">⊞</button>
+      </div>
+      <div class="popover-label"><span class="state-dot" style="background:var(--c-listen)"></span>Listening · stop visible</div>
+    </div>
+
+    <div class="popover-frame">
+      <div class="nano-hud">
+        <div class="nano-icon" style="color:var(--c-transcribe)">↻</div>
+        <div class="nano-info">
+          <div class="nano-label" style="color:var(--c-transcribe)">Transcribing</div>
+          <div class="nano-sub">tiny.en · ~1s remaining</div>
+        </div>
+        <button class="nano-btn nano-sliders">⊞</button>
+      </div>
+      <div class="popover-label"><span class="state-dot" style="background:var(--c-transcribe)"></span>Transcribing · no stop</div>
+    </div>
+
+    <div class="popover-frame">
+      <div class="nano-hud">
+        <div class="nano-icon" style="color:var(--c-ready)">✓</div>
+        <div class="nano-info">
+          <div class="nano-label" style="color:var(--c-ready)">Inserted</div>
+          <div class="nano-sub">27 words · auto-paste</div>
+        </div>
+        <button class="nano-btn nano-sliders">⊞</button>
+      </div>
+      <div class="popover-label"><span class="state-dot" style="background:var(--c-ready)"></span>Success · fades out</div>
+    </div>
+
+    <div class="popover-frame">
+      <div class="nano-hud">
+        <div class="nano-icon" style="color:var(--c-error)">⚠</div>
+        <div class="nano-info">
+          <div class="nano-label" style="color:var(--c-error)">Engine Error</div>
+          <div class="nano-sub">Tap ⊞ to open settings</div>
+        </div>
+        <button class="nano-btn nano-sliders">⊞</button>
+      </div>
+      <div class="popover-label"><span class="state-dot" style="background:var(--c-error)"></span>Error state</div>
+    </div>
+
+  </div>
+
+  <div style="margin-top:14px;font-size:10.5px;color:var(--tf);line-height:1.8;">
+    ⊞ sliders button is <strong style="color:var(--tm)">always visible</strong> — HUD is never a dead end.<br>
+    Stop button shows only during <code style="font-size:9.5px;color:var(--tm)">.listening</code> · no true discard path (stop → transcription).<br>
+    HUD disappears automatically after engine stops. No focus steal.
+  </div>
+</div>
+
+
+<!-- ════ SECTION 3: PERMISSIONS FLOW ════ -->
+<div class="section">
+  <div class="section-label">First-launch permissions flow</div>
+
+  <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;">
+
+    <div class="popover-frame">
+      <div class="perm-card">
+        <div class="step-dots"><div class="dot on"></div><div class="dot"></div><div class="dot"></div></div>
+        <div class="perm-icon">🎤</div>
+        <div class="perm-title">Microphone Access</div>
+        <div class="perm-body">DexDictate needs your microphone to record audio. Everything is processed locally — nothing leaves your Mac.</div>
+        <button class="perm-btn" style="background:#3b82f6">Allow Microphone Access</button>
+        <div class="perm-skip">Skip for now</div>
+      </div>
+      <div class="popover-label">Step 1 · Microphone</div>
+    </div>
+
+    <div class="popover-frame">
+      <div class="perm-card">
+        <div class="step-dots"><div class="dot"></div><div class="dot on"></div><div class="dot"></div></div>
+        <div class="perm-icon">♿</div>
+        <div class="perm-title">Accessibility</div>
+        <div class="perm-body">To insert text into apps, DexDictate needs Accessibility permission. Enable it in System Settings → Privacy.</div>
+        <button class="perm-btn" style="background:#8b5cf6">Open System Settings</button>
+        <div class="perm-skip">Skip for now</div>
+      </div>
+      <div class="popover-label">Step 2 · Accessibility</div>
+    </div>
+
+    <div class="popover-frame">
+      <div class="perm-card">
+        <div class="step-dots"><div class="dot"></div><div class="dot"></div><div class="dot on" style="background:var(--c-ready)"></div></div>
+        <div class="perm-icon" style="color:var(--c-ready)">✓</div>
+        <div class="perm-title" style="color:var(--c-ready)">All set!</div>
+        <div class="perm-body">DexDictate is ready. Hold ⌥ Space to dictate into any app. Transcription is fully local — no cloud.</div>
+        <button class="perm-btn" style="background:var(--c-ready)">Start Dictating</button>
+      </div>
+      <div class="popover-label">Step 3 · Complete</div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ════ SECTION 4: SETTINGS WINDOW ════ -->
+<div class="section">
+  <div class="section-label">Settings window — Quick Settings (DexLayeredRevealView)</div>
+
+  <div style="display:flex;gap:40px;flex-wrap:wrap;align-items:flex-start;">
+
+    <div class="popover-frame">
+      <div class="settings-win">
+        <div class="win-titlebar">
+          <div class="traffic-lights">
+            <div class="tl tl-r"></div>
+            <div class="tl tl-y"></div>
+            <div class="tl tl-g"></div>
+          </div>
+          <div class="win-title">DexDictate Settings</div>
+        </div>
+
+        <div class="win-body">
+          <div class="win-sidebar">
+            <div class="nav-item on"><span class="nav-icon">🎙</span>Dictation</div>
+            <div class="nav-item"><span class="nav-icon">⌨</span>Shortcut</div>
+            <div class="nav-item"><span class="nav-icon">🧠</span>Model</div>
+            <div class="nav-item"><span class="nav-icon">📋</span>Output</div>
+            <div class="nav-item"><span class="nav-icon">📖</span>Vocabulary</div>
+            <div class="nav-item"><span class="nav-icon">🔬</span>Experimental</div>
+          </div>
+
+          <div class="win-content">
+            <div class="s-section-head">Output</div>
+
+            <div class="s-row">
+              <div>
+                <div class="s-label">Auto-paste</div>
+                <div class="s-sub">Paste directly into the focused field</div>
+              </div>
+              <div class="toggle t-on"></div>
+            </div>
+
+            <div class="s-row">
+              <div>
+                <div class="s-label">Safe Mode</div>
+                <div class="s-sub">Skip paste in secure fields (passwords etc.)</div>
+              </div>
+              <div class="toggle t-on"></div>
+            </div>
+
+            <div class="s-row">
+              <div>
+                <div class="s-label">Floating HUD</div>
+                <div class="s-sub">Show overlay during dictation</div>
+              </div>
+              <div class="toggle t-off"></div>
+            </div>
+
+            <div class="s-section-head">Trigger</div>
+
+            <div class="s-row">
+              <div class="s-label">Trigger mode</div>
+              <select class="s-select"><option>Hold to talk</option></select>
+            </div>
+
+            <div class="s-row">
+              <div class="s-label">Language</div>
+              <select class="s-select"><option>Auto-detect</option></select>
+            </div>
+
+            <div class="s-section-head">Dexter</div>
+
+            <div class="s-row">
+              <div>
+                <div class="s-label">Show Dexter commentary</div>
+                <div class="s-sub">Flavor text while idle or after dictation</div>
+              </div>
+              <div class="toggle t-on"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="popover-label">Settings panel · Dictation</div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ════ SECTION 5: STATE MAP ════ -->
+<div class="section">
+  <div class="section-label">Engine state transitions</div>
+
+  <div class="state-map">
+    <div class="s-node">
+      <div class="s-bubble" style="background:rgba(160,160,180,0.08);border-color:rgba(160,160,180,0.32);color:var(--c-stopped)">○</div>
+      <div class="s-bubble-label">Stopped</div>
+    </div>
+    <span class="s-arrow">→</span>
+    <div class="s-node">
+      <div class="s-bubble" style="background:rgba(59,130,246,0.10);border-color:rgba(59,130,246,0.32);color:var(--c-init)">↻</div>
+      <div class="s-bubble-label">Initializing</div>
+    </div>
+    <span class="s-arrow">→</span>
+    <div class="s-node">
+      <div class="s-bubble" style="background:rgba(34,197,94,0.10);border-color:rgba(34,197,94,0.32);color:var(--c-ready)">✓</div>
+      <div class="s-bubble-label">Ready</div>
+    </div>
+    <span class="s-arrow">→</span>
+    <div class="s-node">
+      <div class="s-bubble" style="background:rgba(239,68,68,0.10);border-color:rgba(239,68,68,0.32);color:var(--c-listen)">🎙</div>
+      <div class="s-bubble-label">Listening</div>
+    </div>
+    <span class="s-arrow">→</span>
+    <div class="s-node">
+      <div class="s-bubble" style="background:rgba(234,179,8,0.10);border-color:rgba(234,179,8,0.32);color:var(--c-transcribe)">↻</div>
+      <div class="s-bubble-label">Transcribing</div>
+    </div>
+    <span class="s-arrow">→</span>
+    <div class="s-node">
+      <div class="s-bubble" style="background:rgba(34,197,94,0.10);border-color:rgba(34,197,94,0.32);color:var(--c-ready)">✓</div>
+      <div class="s-bubble-label">Ready</div>
+    </div>
+  </div>
+
+  <div style="margin-top:18px;display:flex;gap:20px;flex-wrap:wrap;align-items:center;">
+    <div style="display:flex;align-items:center;gap:8px;font-size:10.5px;color:var(--tm);">
+      <div class="s-bubble" style="width:34px;height:34px;border-radius:50%;background:rgba(249,115,22,0.10);border:2px solid rgba(249,115,22,0.32);color:var(--c-error);display:flex;align-items:center;justify-content:center;font-size:14px">⚠</div>
+      Error — any state
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;font-size:10.5px;color:var(--tm);">
+      <div class="s-bubble" style="width:34px;height:34px;border-radius:50%;background:rgba(249,115,22,0.10);border:2px solid rgba(249,115,22,0.32);color:var(--c-error);display:flex;align-items:center;justify-content:center;font-size:14px">🛡</div>
+      Permission needed
+    </div>
+    <div style="font-size:10.5px;color:var(--tf);">All transitions observed by DexExperimentalUIStateAdapter — views are passive.</div>
+  </div>
+</div>
+
+
+<!-- ════ SECTION 6: DESIGN TOKENS ════ -->
+<div class="section">
+  <div class="section-label">Design tokens</div>
+
+  <div class="token-grid">
+    <div class="token-card">
+      <div class="token-swatch" style="background:rgb(19,21,29)"></div>
+      <div class="token-info">
+        <div class="token-name">Overlay BG</div>
+        <div class="token-value">rgb(19, 21, 29)</div>
+      </div>
+    </div>
+    <div class="token-card">
+      <div class="token-swatch" style="background:rgba(255,255,255,0.05);border-bottom:1px solid rgba(255,255,255,0.10)"></div>
+      <div class="token-info">
+        <div class="token-name">Transcript Card</div>
+        <div class="token-value">bg 0.05 / border 0.10</div>
+      </div>
+    </div>
+    <div class="token-card">
+      <div class="token-swatch" style="background:rgba(255,255,255,0.06)"></div>
+      <div class="token-info">
+        <div class="token-name">Nav Button BG</div>
+        <div class="token-value">white 0.06</div>
+      </div>
+    </div>
+    <div class="token-card">
+      <div class="token-swatch" style="background:rgba(255,255,255,0.08)"></div>
+      <div class="token-info">
+        <div class="token-name">Chip / Pill BG</div>
+        <div class="token-value">white 0.08</div>
+      </div>
+    </div>
+    <div class="token-card">
+      <div class="token-swatch" style="background:var(--c-ready)"></div>
+      <div class="token-info">
+        <div class="token-name">Ready / Success</div>
+        <div class="token-value">.green · #22c55e</div>
+      </div>
+    </div>
+    <div class="token-card">
+      <div class="token-swatch" style="background:var(--c-listen)"></div>
+      <div class="token-info">
+        <div class="token-name">Listening</div>
+        <div class="token-value">.red · #ef4444</div>
+      </div>
+    </div>
+    <div class="token-card">
+      <div class="token-swatch" style="background:var(--c-transcribe)"></div>
+      <div class="token-info">
+        <div class="token-name">Transcribing</div>
+        <div class="token-value">.yellow · #eab308</div>
+      </div>
+    </div>
+    <div class="token-card">
+      <div class="token-swatch" style="background:var(--c-init)"></div>
+      <div class="token-info">
+        <div class="token-name">Initializing</div>
+        <div class="token-value">.blue · #3b82f6</div>
+      </div>
+    </div>
+    <div class="token-card">
+      <div class="token-swatch" style="background:var(--c-error)"></div>
+      <div class="token-info">
+        <div class="token-name">Error / Warning</div>
+        <div class="token-value">.orange · #f97316</div>
+      </div>
+    </div>
+    <div class="token-card">
+      <div class="token-swatch" style="background:rgba(34,197,94,0.38);border-bottom:1px solid rgba(34,197,94,0.35)"></div>
+      <div class="token-info">
+        <div class="token-name">Primary Button</div>
+        <div class="token-value">green 0.38 + border 0.35</div>
+      </div>
+    </div>
+    <div class="token-card">
+      <div class="token-swatch" style="background:rgba(34,197,94,0.08);border-bottom:1px solid rgba(34,197,94,0.22)"></div>
+      <div class="token-info">
+        <div class="token-name">Hero BG · Ready</div>
+        <div class="token-value">state-color 0.08 / 0.22</div>
+      </div>
+    </div>
+    <div class="token-card">
+      <div class="token-swatch" style="background:rgba(255,255,255,0.06);border-radius:0;border-bottom:1px solid rgba(255,255,255,0.08)"></div>
+      <div class="token-info">
+        <div class="token-name">Watermark text</div>
+        <div class="token-value">white 0.06 · -18° · ls 4</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footnote">
+    <strong>Frame</strong> · Popover 320 × 480 pt · ExperimentalScreen enum navigation (no .sheet — eliminates Dock bounce)<br>
+    <strong>Background</strong> · overlayBackground = Color(red:0.09, green:0.10, blue:0.14) + .ultraThinMaterial<br>
+    <strong>Typography</strong> · SF Pro Text · Hero title: .title3.bold 17pt · Buttons: .subheadline.semibold 13pt · Chips: .caption2 10.5pt · Dexter: .caption2.italic 10pt<br>
+    <strong>Spacing</strong> · Outer padding: 12–16pt · Section gaps: 9–10pt · Card padding: 10pt · Chip padding: 3/8pt<br>
+    <strong>Radii</strong> · Popover window 14pt · State hero 12pt · Cards 10pt · Nav buttons 8pt · Chips capsule (100pt)
+  </div>
+</div>
+
+</body>
+</html>
