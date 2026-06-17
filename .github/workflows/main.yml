@@ -13,16 +13,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build
-        run: swift build -v
-
-      - name: Lint
-        run: |
-          if command -v swiftlint &>/dev/null; then
-            swiftlint --strict
-          else
-            brew install swiftlint && swiftlint --strict
-          fi
+      - name: Cache SwiftPM
+        uses: actions/cache@v4
+        with:
+          path: .build
+          key: spm-${{ runner.os }}-${{ hashFiles('Package.resolved') }}
+          restore-keys: |
+            spm-${{ runner.os }}-
 
       - name: Cache Whisper model
         uses: actions/cache@v4
@@ -35,6 +32,37 @@ jobs:
         if: steps.model-cache.outputs.cache-hit != 'true'
         run: bash scripts/fetch_model.sh
 
-      - name: Run tests
-        run: swift test -v
-        # UI tests: not yet implemented. See DEXDICTATE_FIX_PLAN.md Issue 10.
+      - name: Verify Package.resolved is committed and up to date
+        run: |
+          swift package resolve
+          if ! git diff --quiet -- Package.resolved; then
+            echo "::error::Package.resolved changed after resolve — commit the updated file."
+            git --no-pager diff -- Package.resolved
+            exit 1
+          fi
+
+      - name: Lint
+        run: |
+          if command -v swiftlint &>/dev/null; then
+            swiftlint --strict
+          else
+            brew install swiftlint && swiftlint --strict
+          fi
+
+      - name: Build (debug)
+        run: swift build -v
+
+      - name: Build (release configuration)
+        run: swift build -c release
+
+      - name: Run tests (with coverage)
+        run: swift test -v --enable-code-coverage
+        # UI / end-to-end tests are not yet implemented (see docs/).
+
+      - name: Coverage data location
+        if: always()
+        run: echo "codecov path is printed by swift test --show-codecov-path"
+
+      # NOTE: signing/notarization/packaging (build.sh --release, validate_release.sh)
+      # is intentionally NOT run in CI — it needs the local "DexDictate Development"
+      # signing identity. Release packaging is a local, credential-free manual step.
