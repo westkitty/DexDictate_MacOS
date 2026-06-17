@@ -29,6 +29,8 @@ struct DexDictateApp: App {
 
     init() {
         Safety.setupDirectories()
+        // Last-resort net: record any uncaught Obj-C exception to local diagnostics before exit.
+        CrashReporter.install()
         _ = ApplicationContextTracker.shared
     }
 

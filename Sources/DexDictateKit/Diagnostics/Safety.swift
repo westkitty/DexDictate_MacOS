@@ -110,6 +110,19 @@ public struct Safety {
         }
     }
 
+    /// Writes a diagnostic message **synchronously** on the calling thread.
+    ///
+    /// Used by the uncaught-exception handler: the process is about to terminate, so the
+    /// normal async logging queue would not get a chance to flush. This bypasses the queue
+    /// and writes directly so the crash record survives.
+    public static func logCrash(_ message: String) {
+        NSLog("[DexDictate] CRASH %@", message)
+        guard let dir = appSupportURL else { return }
+        let record = DiagnosticRecord(timestamp: Date(), category: .general, message: message)
+        DiagnosticsStore(directoryURL: dir).append(record)
+        appendLegacyLogLine(message, in: dir)
+    }
+
     /// Opens Console.app to help the user inspect system logs during troubleshooting.
     public static func openLogs() {
         NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Applications/Utilities/Console.app"))
