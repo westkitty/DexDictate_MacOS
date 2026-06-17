@@ -4,7 +4,7 @@ import Foundation
 ///
 /// Wraps the transcribed text with a stable `UUID` identity so SwiftUI's `ForEach` can
 /// animate insertions and deletions correctly (unlike an index-based approach).
-public struct HistoryItem: Identifiable, Codable {
+public struct HistoryItem: Identifiable, Codable, Sendable {
     public let id: UUID
     public let text: String
     public let createdAt: Date
