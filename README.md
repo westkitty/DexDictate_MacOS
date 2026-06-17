@@ -151,6 +151,7 @@ This is macOS, not a suggestion.
 - User vocabulary layering and correction rules
 - Custom `Dex <keyword>` commands
 - Optional profanity filtering
+- Optional focused-field context injection to prime transcription accuracy for proper nouns and continuing sentences
 
 ### Safety and privacy
 
@@ -172,7 +173,7 @@ This is macOS, not a suggestion.
 - Benchmark scripts and sample corpus
 - Release packaging for `.zip` and `.dmg`
 - Release validation for bundle integrity, architecture, signing, entitlements, and hashes
-- GitHub Actions CI for `swift build` and `swift test` on `main` pushes and pull requests
+- GitHub Actions CI for `swift build` and `swift test` on `main` pushes and pull requests, with required status checks gating merges into `main`
 
 ---
 
@@ -210,6 +211,7 @@ swift run VerificationRunner
 
 Useful commands:
 
+- `make check` (lint + build + test) — local quality gate; run `make help` to list all targets
 - `./build.sh [--user|--system] [--release]`
 - `./scripts/setup_dev_env.sh`
 - `./scripts/fetch_model.sh`
@@ -242,8 +244,8 @@ Useful commands:
 ## Additional Documentation
 
 - [Feature inventory](docs/FEATURE_INVENTORY.md)
-- [Security audit](SECURITY_AUDIT_REPORT.md)
-- [Verification report](VERIFICATION_REPORT.md)
+- [Security audit](docs/archive/SECURITY_AUDIT_REPORT.md)
+- [Verification report](docs/archive/VERIFICATION_REPORT.md)
 - [Contributing guidance](CONTRIBUTING.md)
 - [Moral architecture](BIBLE.md)
 
