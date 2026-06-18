@@ -54,5 +54,19 @@ struct DexExperimentalEntry: View {
             onOpenHelp: onOpenHelp,
             onRequestOnboardingDebug: onRequestOnboardingDebug
         )
+        // Top-left header controls: quit on the far left, then the UI switch.
+        .overlay(alignment: .topLeading) {
+            HStack(spacing: 6) {
+                ChromeIconButton(
+                    systemName: "power",
+                    accessibilityText: "Quit DexDictate"
+                ) {
+                    NSApplication.shared.terminate(nil)
+                }
+                UIModeToggleButton(settings: settings)
+            }
+            .padding(.top, 8)
+            .padding(.leading, 8)
+        }
     }
 }

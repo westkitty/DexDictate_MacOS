@@ -162,14 +162,6 @@ struct DexStateFirstPopoverView: View {
                 .frame(maxWidth: .infinity)
 
             HStack {
-                Button(action: { NSApplication.shared.terminate(nil) }) {
-                    Image(systemName: "power")
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.50))
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Quit DexDictate")
-
                 Spacer()
 
                 ChromeIconButton(
