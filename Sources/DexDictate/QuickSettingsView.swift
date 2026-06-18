@@ -18,7 +18,7 @@ struct QuickSettingsView: View {
     @StateObject private var launchAtLoginController = LaunchAtLoginController()
     @State private var profanityAdditionsText: String = ""
     @State private var profanityRemovalsText: String = ""
-    @State private var inputPanelExpanded = true
+    @State private var inputPanelExpanded = false
     @State private var outputPanelExpanded = false
     @State private var accuracyPanelExpanded = false
     @State private var profilePanelExpanded = false
@@ -237,6 +237,13 @@ struct QuickSettingsView: View {
                                 .labelsHidden()
                                 .pickerStyle(.menu)
                                 .frame(width: 180)
+                            }
+
+                            if let availabilityWarning = modelCatalog.availabilityWarning {
+                                Text(availabilityWarning)
+                                    .font(.caption2)
+                                    .foregroundStyle(.orange.opacity(0.9))
+                                    .fixedSize(horizontal: false, vertical: true)
                             }
 
                             controlRow(label: "Model Selection") {
@@ -893,36 +900,50 @@ private struct QuickSettingsDisclosureCard<Content: View>: View {
     }
 
     var body: some View {
-        DisclosureGroup(isExpanded: $isExpanded) {
-            VStack(alignment: .leading, spacing: 10) {
-                content
-            }
-            .padding(.top, 10)
-        } label: {
-            HStack(alignment: .top, spacing: 10) {
-                Image(systemName: systemImage)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.cyan)
-                    .frame(width: 24, height: 24)
-                    .background(Color.cyan.opacity(0.14))
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
+        VStack(alignment: .leading, spacing: 0) {
+            Button(action: { withAnimation(.easeInOut(duration: 0.18)) { isExpanded.toggle() } }) {
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: systemImage)
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white)
-                    Text(subtitle)
-                        .font(.caption2)
-                        .foregroundStyle(.white.opacity(0.5))
-                        .fixedSize(horizontal: false, vertical: true)
+                        .foregroundStyle(.cyan)
+                        .frame(width: 24, height: 24)
+                        .background(Color.cyan.opacity(0.14))
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(title)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white)
+                        Text(subtitle)
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.5))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.45))
+                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                        .animation(.easeInOut(duration: 0.18), value: isExpanded)
                 }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if isExpanded {
+                VStack(alignment: .leading, spacing: 10) {
+                    content
+                }
+                .padding(.top, 10)
             }
         }
         .padding(12)
         .background(Color.white.opacity(0.04))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                .stroke(Color.white.opacity(isExpanded ? 0.18 : 0.08), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }

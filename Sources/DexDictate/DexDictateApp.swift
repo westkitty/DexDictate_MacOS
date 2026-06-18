@@ -86,8 +86,9 @@ struct DexDictateApp: App {
                 ExperimentFlags.applyRuntimeSettings(settings)
                 modelCatalog.refresh()
 
-                if modelCatalog.descriptor(for: settings.activeWhisperModelID) == nil {
-                    settings.activeWhisperModelID = "tiny.en"
+                let modelResolution = modelCatalog.resolveSelection(savedID: settings.activeWhisperModelID)
+                if modelResolution.resolvedID != settings.activeWhisperModelID {
+                    settings.activeWhisperModelID = modelResolution.resolvedID
                 }
 
                 // UI controllers require SwiftUI-owned objects so they must be wired here
@@ -379,6 +380,35 @@ private struct MenuBarRecordingBadge: View {
 }
 
 
+// MARK: - UI Mode Switch
+
+/// A prominent one-tap switch between the classic and experimental interfaces.
+/// Reads/sets `AppSettings.useExperimentalStateFirstUI`; the MenuBarExtra body swaps the
+/// whole UI live. Designed to sit top-left in both interfaces so you can flip either way.
+struct UIModeToggleButton: View {
+    @ObservedObject var settings: AppSettings
+
+    var body: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                settings.useExperimentalStateFirstUI.toggle()
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: settings.useExperimentalStateFirstUI ? "rectangle.on.rectangle" : "sparkles")
+                Text(settings.useExperimentalStateFirstUI ? "Classic" : "New UI")
+            }
+            .font(.caption2.weight(.bold))
+            .padding(.horizontal, 9)
+            .padding(.vertical, 4)
+            .background(Capsule().fill(Color.accentColor))
+            .foregroundStyle(.white)
+        }
+        .buttonStyle(.plain)
+        .help("Switch between the classic and the new interface")
+    }
+}
+
 // MARK: - Main View
 
 /// Root content view for the menu bar popover.
@@ -397,6 +427,11 @@ struct AntiGravityMainView: View {
     @State private var isDroppingFile: Bool = false
     @State private var cachedWatermarkImage: NSImage? = nil
     @State private var isQuickSettingsExpanded: Bool = false
+
+    // MenuBarExtra(.window) ignores runtime .frame(height:) changes — the window size is
+    // fixed at first presentation. A single constant avoids any attempted resize that macOS
+    // silently drops, which was causing the ScrollView to believe no scrolling was needed.
+    private let popoverHeight: CGFloat = 560
 
     var onDetachHistory: (() -> Void)?
     var onOpenHelp: (() -> Void)?
@@ -433,78 +468,95 @@ struct AntiGravityMainView: View {
                 .rotationEffect(.degrees(-18))
                 .allowsHitTesting(false)
 
+            // Three-region layout:
+            //   1. Pinned title bar (never scrolls off)
+            //   2. Scrollable body (dictation OR settings depending on state)
+            //   3. Pinned status strip
+            // The outer frame is a static constant — MenuBarExtra(.window) ignores runtime
+            // height changes, so there is no dynamic sizing here.
             VStack(spacing: 0) {
-                ScrollView(.vertical, showsIndicators: true) {
-                    VStack(spacing: 15) {
-                        // App title with help button (top-right).
-                        ZStack {
-                            Text("DexDictate")
-                                .font(.headline)
-                                .foregroundStyle(.white)
-                                .frame(maxWidth: .infinity)
 
-                            HStack {
-                                Spacer()
-                                ChromeIconButton(
-                                    systemName: "questionmark.circle",
-                                    accessibilityText: "Open Help"
-                                ) {
-                                    onOpenHelp?()
-                                }
-                            }
-                            .padding(.horizontal, 16)
+                // ── REGION 1: PINNED TITLE ─────────────────────────────────────
+                ZStack {
+                    Text("DexDictate")
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+
+                    HStack {
+                        UIModeToggleButton(settings: settings)
+                        Spacer()
+                        ChromeIconButton(
+                            systemName: "questionmark.circle",
+                            accessibilityText: "Open Help"
+                        ) {
+                            onOpenHelp?()
                         }
-                        .padding(.top, 4)
-
-                        if settings.showFlavorTicker {
-                            FlavorTickerView(
-                                text: profileManager.currentFlavorLine?.text ?? "",
-                                animateWhenNeeded: settings.animateFlavorTicker
-                            )
-                        }
-
-                        if settings.showDictationStats {
-                            StatsTickerView(
-                                history: engine.history,
-                                animateWhenNeeded: settings.animateFlavorTicker
-                            )
-                        }
-
-                        PermissionBannerView(permissionManager: permissionManager)
-
-                        HistoryView(
-                            history: engine.history,
-                            statusText: engine.statusText,
-                            liveTranscript: engine.liveTranscript,
-                            inputLevel: engine.inputLevel,
-                            isListening: engine.state == .listening || engine.state == .transcribing,
-                            expanded: $expandedHistory,
-                            onDetach: onDetachHistory,
-                            silenceCountdown: engine.silenceCountdown
-                        )
-
-                        ControlsView(
-                            engine: engine,
-                            adaptiveBenchmarkController: adaptiveBenchmarkController
-                        )
-
-                        Spacer(minLength: 0)
-
-                        FooterView(
-                            settings: settings,
-                            onHiddenDebugTrigger: {
-                                onRequestOnboardingDebug?()
-                            }
-                        )
                     }
-                    .padding(.vertical, 10)
-                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 16)
                 }
+                .padding(.top, 8)
+                .padding(.bottom, 6)
 
-                Divider().opacity(0.3)
+                Divider().opacity(0.2).padding(.horizontal, 12)
 
+                // ── REGION 2: SCROLLABLE BODY ──────────────────────────────────
+                // When Quick Settings is collapsed this shows dictation content.
+                // When expanded it shows only the settings panels. The two together
+                // are taller than the screen, so we swap — same pattern as the
+                // experimental UI's screen enum. Both regions scroll independently
+                // within the fixed window.
                 ScrollView(.vertical, showsIndicators: true) {
                     VStack(spacing: 0) {
+                        if !isQuickSettingsExpanded {
+                            VStack(spacing: 15) {
+                                if settings.showFlavorTicker {
+                                    FlavorTickerView(
+                                        text: profileManager.currentFlavorLine?.text ?? "",
+                                        animateWhenNeeded: settings.animateFlavorTicker
+                                    )
+                                }
+
+                                if settings.showDictationStats {
+                                    StatsTickerView(
+                                        history: engine.history,
+                                        animateWhenNeeded: settings.animateFlavorTicker
+                                    )
+                                }
+
+                                PermissionBannerView(permissionManager: permissionManager)
+
+                                HistoryView(
+                                    history: engine.history,
+                                    statusText: engine.statusText,
+                                    liveTranscript: engine.liveTranscript,
+                                    inputLevel: engine.inputLevel,
+                                    isListening: engine.state == .listening || engine.state == .transcribing,
+                                    expanded: $expandedHistory,
+                                    onDetach: onDetachHistory,
+                                    silenceCountdown: engine.silenceCountdown
+                                )
+
+                                ControlsView(
+                                    engine: engine,
+                                    adaptiveBenchmarkController: adaptiveBenchmarkController
+                                )
+
+                                FooterView(
+                                    settings: settings,
+                                    onHiddenDebugTrigger: {
+                                        onRequestOnboardingDebug?()
+                                    }
+                                )
+                            }
+                            .padding(.vertical, 10)
+                            .frame(maxWidth: .infinity)
+
+                            Divider().opacity(0.3)
+                                .padding(.horizontal, 12)
+                                .padding(.bottom, 4)
+                        }
+
                         QuickSettingsView(
                             engine: engine,
                             settings: settings,
@@ -518,19 +570,13 @@ struct AntiGravityMainView: View {
                             benchmarkResultsStore: benchmarkResultsStore,
                             isExpanded: $isQuickSettingsExpanded
                         )
-
-                        QuickSettingsStatusStrip(
-                            engine: engine,
-                            settings: settings
-                        )
                     }
                 }
-                .frame(maxHeight: isQuickSettingsExpanded ? 340 : 90)
-                .animation(.spring(response: 0.32, dampingFraction: 0.82), value: isQuickSettingsExpanded)
+
             }
         }
-        .frame(width: 320, height: 540)
-        .animation(.spring(response: 0.32, dampingFraction: 0.82), value: isQuickSettingsExpanded)
+        .frame(width: 320, height: popoverHeight)
+        .animation(.none, value: isQuickSettingsExpanded)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.cyan.opacity(isDroppingFile ? 0.8 : 0), lineWidth: 2)
@@ -736,6 +782,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         engine.setPermissionManager(permissionManager)
 
         modelCatalog.refresh()
+        let resolution = modelCatalog.resolveSelection(savedID: settings.activeWhisperModelID)
+        if resolution.resolvedID != settings.activeWhisperModelID {
+            settings.activeWhisperModelID = resolution.resolvedID
+        }
         if let activeModel = modelCatalog.activeDescriptor(settings: settings) {
             engine.loadWhisperModel(descriptor: activeModel)
         }
