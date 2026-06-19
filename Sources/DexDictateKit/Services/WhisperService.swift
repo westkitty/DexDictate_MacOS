@@ -259,6 +259,17 @@ public class WhisperService: ObservableObject {
         _ = transcribeWithCurrentParams(audioFrames: silenceFrames)
     }
 
+    /// Waits until any in-flight warm-up/transcription task has left the underlying whisper.cpp
+    /// instance idle. This is primarily for benchmark/verification callers that need a clean
+    /// measurement immediately after model load; production dictation still uses `transcribe`.
+    public func waitUntilIdle(timeout: TimeInterval = 5.0) async -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while isTranscribing && Date() < deadline {
+            try? await Task.sleep(nanoseconds: 10_000_000)
+        }
+        return !isTranscribing
+    }
+
     public func transcribe(
         audioFrames: [Float],
         decodeProfile: ExperimentFlags.DecodeProfile? = nil

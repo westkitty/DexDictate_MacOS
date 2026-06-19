@@ -453,6 +453,10 @@ private func runBenchmark(path: String, modelName: String) async {
         exit(1)
     }
     whisper.loadModel(url: modelURL)
+    guard await whisper.waitUntilIdle() else {
+        print("BENCHMARK_FAIL: Whisper warm-up did not finish before benchmark timeout")
+        exit(1)
+    }
     
     let start = Date()
     
@@ -504,6 +508,10 @@ private func runBenchmarkCorpus(
 
     let whisper = WhisperService()
     whisper.loadModel(url: modelURL, modelID: modelName, decodeProfile: decodeProfile)
+    guard await whisper.waitUntilIdle() else {
+        print("BENCHMARK_FAIL: Whisper warm-up did not finish before corpus benchmark timeout")
+        exit(1)
+    }
 
     var latencies: [Double] = []
     var wers: [Double] = []

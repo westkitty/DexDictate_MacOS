@@ -171,7 +171,7 @@ This is macOS, not a suggestion.
 
 - `VerificationRunner` executable for verification checks
 - Benchmark scripts and sample corpus
-- Release packaging for `.zip` and `.dmg`
+- Release packaging for `.zip` and `.dmg` with the local `DexDictate Development` signing identity
 - Release validation for bundle integrity, architecture, signing, entitlements, and hashes
 - GitHub Actions CI for `swift build` and `swift test` on `main` pushes and pull requests, with required status checks gating merges into `main`
 
@@ -212,7 +212,7 @@ swift run VerificationRunner
 Useful commands:
 
 - `make check` (lint + build + test) — local quality gate; run `make help` to list all targets
-- `./build.sh [--user|--system] [--release]`
+- `./build.sh [--user|--system] [--release]` (`--release` requires the `DexDictate Development` signing identity; local non-release builds may use ad-hoc signing)
 - `./scripts/setup_dev_env.sh`
 - `./scripts/fetch_model.sh`
 - `./scripts/run_quality_paths.sh`

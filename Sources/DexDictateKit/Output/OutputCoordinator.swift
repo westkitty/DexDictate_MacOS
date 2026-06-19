@@ -214,7 +214,8 @@ public struct OutputCoordinator: OutputCoordinating {
             return OutputDeliveryDecision(delivery: .pastedToActiveApp)
         }
 
-        if insertionMode == .accessibilityAPI {
+        if insertionMode == .accessibilityAPI,
+           canAttemptDirectAccessibilityInsertion(for: targetApplication) {
             if insertViaAccessibility(text) {
                 return OutputDeliveryDecision(delivery: .pastedToActiveApp)
             }
@@ -279,6 +280,22 @@ public struct OutputCoordinator: OutputCoordinating {
         }
 
         applicationActivator.activate(targetApplication)
+    }
+
+    private func canAttemptDirectAccessibilityInsertion(for targetApplication: OutputTargetApplication?) -> Bool {
+        guard let targetApplication else { return true }
+        let currentProcessIdentifier = ProcessInfo.processInfo.processIdentifier
+        guard targetApplication.processIdentifier != currentProcessIdentifier else {
+            return false
+        }
+        guard targetApplication.processIdentifier == applicationActivator.frontmostProcessIdentifier else {
+            Safety.log(
+                "OutputCoordinator — skipping direct Accessibility insertion because target application is not frontmost; falling back to clipboard paste.",
+                category: .output
+            )
+            return false
+        }
+        return true
     }
 
     /// Returns the character count AX text-range APIs use for cursor advancement.

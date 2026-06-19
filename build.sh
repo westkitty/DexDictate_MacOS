@@ -43,7 +43,7 @@ Usage: ./build.sh [--user | --system] [--release] [--help]
 
   --user      Install the built app into ~/Applications
   --system    Install the built app into /Applications (fails if not writable)
-  --release   Package zip + dmg artifacts into _releases/ and run release validation
+  --release   Package zip + dmg artifacts into _releases/ and run release validation; requires '$CERT_NAME'
   --help      Show this help text
 EOF
 }
@@ -201,6 +201,9 @@ sign_bundle() {
             --timestamp=none \
             "$BUNDLE"
     else
+        if [ "$WANTS_RELEASE" -eq 1 ]; then
+            fail "Release packaging requires signing identity '$CERT_NAME'. Run ./build.sh without --release for an ad-hoc local build, or create the certificate first."
+        fi
         log_warn "'$CERT_NAME' not found. Using ad-hoc signing (-)."
         codesign --force --deep \
             --sign - \

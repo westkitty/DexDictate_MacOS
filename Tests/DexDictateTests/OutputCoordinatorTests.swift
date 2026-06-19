@@ -197,6 +197,36 @@ final class OutputCoordinatorTests: XCTestCase {
         XCTAssertTrue(axOperator.didAttemptSetValue)
     }
 
+    func testAccessibilityModeFallsBackToClipboardPasteWhenTargetIsNotFrontmost() {
+        let writer = MockOutputWriter()
+        let target = OutputTargetApplication(bundleIdentifier: "com.example.chat", processIdentifier: 4242)
+        let axOperator = MockAccessibilityElementOperator(
+            valueIsSettable: true,
+            selectedTextIsSettable: false,
+            setValueResult: .success,
+            setSelectedTextResult: .failure
+        )
+        let coordinator = OutputCoordinator(
+            writer: writer,
+            contextInspector: MockFocusedContextInspector(context: .standard),
+            applicationActivator: MockApplicationActivator(frontmostProcessIdentifier: 9001),
+            axOperator: axOperator
+        )
+
+        let decision = coordinator.deliver(
+            text: "hello",
+            autoPaste: true,
+            protectSensitiveContexts: true,
+            insertionMode: .accessibilityAPI,
+            targetApplication: target
+        )
+
+        XCTAssertEqual(decision.delivery, .pastedToActiveApp)
+        XCTAssertEqual(writer.pastedTexts, ["hello"])
+        XCTAssertEqual(writer.lastPasteTargetApplication, target)
+        XCTAssertFalse(axOperator.didAttemptSetValue)
+    }
+
     func testAccessibilityInsertionFailureFallsBackToClipboardPasteWhenAutoPasteEnabled() {
         let writer = MockOutputWriter()
         let axOperator = MockAccessibilityElementOperator(

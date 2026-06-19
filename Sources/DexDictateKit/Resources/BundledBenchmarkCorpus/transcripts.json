@@ -1,1 +1,1 @@
-{"sample.wav": "this is a test of the benchmark harness"}
+{"sample.wav": "This is a longer, much more relaxed test of the benchmark harness to make sure Whisper doesn't immediately discard the audio as too short."}
