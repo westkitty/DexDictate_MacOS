@@ -29,6 +29,7 @@ node_modules/
 venv/
 .venv/
 .venv*/
+__pycache__/
 dist/
 build/
 target/
@@ -59,3 +60,7 @@ scripts/batch_circle_cutout.py
 
 # Project state snapshot archive (git-ignored, for local reference only)
 SNAPSHOT/
+
+# Benchmark corpus source-download archives (re-downloadable; keep small provenance text only)
+benchmark_samples/**/downloads/*.zip
+benchmark_samples/**/downloads/slr83-line_index_all.csv

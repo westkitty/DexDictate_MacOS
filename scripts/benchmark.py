@@ -5,6 +5,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 
 
 def compute_wer(reference, hypothesis):
@@ -99,6 +100,47 @@ def load_corpus(audio_dir, transcripts_file):
     return corpus
 
 
+def materialize_runner_corpus(audio_dir, transcripts_file):
+    """Adapt list-style corpus manifests to VerificationRunner's legacy map shape."""
+    with open(transcripts_file, "r", encoding="utf-8") as handle:
+        transcripts = json.load(handle)
+
+    if isinstance(transcripts, dict):
+        return audio_dir, None
+
+    if not isinstance(transcripts, list):
+        raise ValueError("transcripts JSON must be a filename map or a list of manifest entries")
+
+    mapping = {}
+    for item in transcripts:
+        if not isinstance(item, dict):
+            continue
+        if item.get("include_in_scoring", True) is False:
+            continue
+        audio_file = item.get("file")
+        reference_text = item.get("expected")
+        if not audio_file or reference_text is None:
+            continue
+        mapping[audio_file] = reference_text
+
+    if not mapping:
+        raise ValueError("list-style transcripts JSON did not contain any scoring entries with file and expected")
+
+    temp_dir = tempfile.TemporaryDirectory(prefix="dexdictate-benchmark-corpus-")
+    temp_audio = os.path.join(temp_dir.name, "audio")
+    source_audio = os.path.abspath(os.path.join(audio_dir, "audio"))
+    if os.path.isdir(source_audio):
+        os.symlink(source_audio, temp_audio)
+    else:
+        raise FileNotFoundError(f"Corpus audio directory not found: {source_audio}")
+
+    with open(os.path.join(temp_dir.name, "transcripts.json"), "w", encoding="utf-8") as handle:
+        json.dump(mapping, handle, indent=2, sort_keys=True)
+        handle.write("\n")
+
+    return temp_dir.name, temp_dir
+
+
 def main():
     parser = argparse.ArgumentParser(description="Run WER benchmark sweep")
     parser.add_argument("audio_dir", nargs="?", help="Directory containing .wav files")
@@ -139,11 +181,16 @@ def main():
     if not os.path.isfile(transcripts_file):
         parser.error(f"Transcripts JSON not found: {transcripts_file}")
 
+    try:
+        runner_audio_dir, runner_corpus_temp = materialize_runner_corpus(audio_dir, transcripts_file)
+    except Exception as error:
+        parser.error(str(error))
+
     runner = build_runner(args.build)
     command = [
         runner,
         "--benchmark-corpus",
-        audio_dir,
+        runner_audio_dir,
         "--model",
         args.model,
         "--decode-profile",
@@ -158,9 +205,17 @@ def main():
     if args.gate_file:
         command.extend(["--gate-file", args.gate_file])
 
+    if runner_corpus_temp is not None:
+        print("BENCHMARK_CORPUS_ADAPTER:list_manifest_to_legacy_map")
+
     result = subprocess.run(command, capture_output=True, text=True, check=False)
     output = (result.stdout or "") + ("\n" + result.stderr if result.stderr else "")
+    if "BENCHMARK_CORPUS_FILES:0" in output:
+        output = output + "\nBenchmark corpus processed zero files."
+        result = subprocess.CompletedProcess(result.args, 1, result.stdout, result.stderr)
 
+    if runner_corpus_temp is not None:
+        runner_corpus_temp.cleanup()
     print(output.strip())
     if result.returncode not in (0, 2):
         raise SystemExit(result.returncode)

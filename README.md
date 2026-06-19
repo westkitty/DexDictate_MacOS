@@ -219,6 +219,7 @@ Useful commands:
 - `./scripts/verify_audio_route_recovery.sh`
 - `./scripts/benchmark.sh --audio <wav>`
 - `python3 scripts/benchmark.py --corpus-dir <dir>`
+- `./scripts/benchmark_speech_matrix.sh --corpus-dir sample_corpus`
 - `./scripts/benchmark_regression.sh <wav> [baseline_ms]`
 - `./scripts/trim_benchmark_corpus.sh <input_dir> [output_dir]`
 - `./scripts/validate_release.sh [path_to_app_bundle]`
@@ -247,6 +248,7 @@ Useful commands:
 - [Security audit](docs/archive/SECURITY_AUDIT_REPORT.md)
 - [Verification report](docs/archive/VERIFICATION_REPORT.md)
 - [Contributing guidance](CONTRIBUTING.md)
+- [Speech engine exploration](docs/speech_engine_exploration/README.md)
 - [Moral architecture](BIBLE.md)
 
 ## Contributing
