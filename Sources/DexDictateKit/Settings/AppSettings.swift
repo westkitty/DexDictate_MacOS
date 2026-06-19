@@ -16,6 +16,10 @@ public class AppSettings: ObservableObject {
             appearanceTheme = theme
         }
 
+        if let storedAccent = UserDefaults.standard.string(forKey: "statusAccentColorHex_stored") {
+            statusAccentColorHex = storedAccent
+        }
+
         let defaults = UserDefaults.standard
         if defaults.object(forKey: "menuBarDisplayMode_v1") == nil,
            !selectedMenuBarIconIdentifier.isEmpty {
@@ -270,6 +274,36 @@ public class AppSettings: ObservableObject {
         }
     }
 
+    /// Persisted hex (`#RRGGBB`) for the user-customizable dictation status accent color.
+    /// An empty string means "use the built-in default" (`statusAccentDefault`).
+    @AppStorage("statusAccentColorHex_stored") public var statusAccentColorHexStored: String = ""
+
+    @Published public var statusAccentColorHex: String = "" {
+        didSet {
+            statusAccentColorHexStored = statusAccentColorHex
+        }
+    }
+
+    /// The built-in default status accent (matches the historical green styling).
+    public static let statusAccentDefault: Color = .green
+
+    /// The effective status/Ready accent color used by the indicators in both UIs.
+    /// Falls back to the default green when unset or unparseable.
+    public var statusAccentColor: Color {
+        get {
+            guard !statusAccentColorHex.isEmpty else { return Self.statusAccentDefault }
+            return Color(hex: statusAccentColorHex) ?? Self.statusAccentDefault
+        }
+        set {
+            statusAccentColorHex = newValue.hexString()
+        }
+    }
+
+    /// Restores the status accent to the built-in default.
+    public func resetStatusAccentColor() {
+        statusAccentColorHex = ""
+    }
+
     // Computed colors
     public var themeBackgroundColor: Color {
         switch appearanceTheme {
@@ -436,6 +470,7 @@ public class AppSettings: ObservableObject {
         selectedTheme = .custom
         appearanceTheme = .system
         appearanceThemeStored = AppearanceTheme.system.rawValue
+        statusAccentColorHex = ""
         menuBarDisplayMode = .micAndText
         localizationMode = .standard
         activeWhisperModelID = "tiny.en"

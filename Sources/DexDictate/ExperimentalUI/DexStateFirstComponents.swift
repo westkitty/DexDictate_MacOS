@@ -6,6 +6,8 @@ import DexDictateKit
 /// Large state readout at the top of the compact popover.
 struct DexStateHero: View {
     let engineState: EngineDisplayState
+    /// User-customizable accent used for the "Ready" state (defaults to green).
+    var accent: Color = .green
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -38,7 +40,7 @@ struct DexStateHero: View {
         switch engineState {
         case .stopped:      return .secondary
         case .initializing: return .blue
-        case .ready:        return .green
+        case .ready:        return accent
         case .listening:    return .red
         case .transcribing: return .yellow
         case .error:        return .orange

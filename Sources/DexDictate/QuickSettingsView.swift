@@ -468,6 +468,29 @@ struct QuickSettingsView: View {
                                 .frame(width: 150)
                             }
 
+                            controlRow(label: "Status Color") {
+                                HStack(spacing: 8) {
+                                    ColorPicker(
+                                        "",
+                                        selection: Binding(
+                                            get: { settings.statusAccentColor },
+                                            set: { settings.statusAccentColor = $0 }
+                                        ),
+                                        supportsOpacity: false
+                                    )
+                                    .labelsHidden()
+                                    .accessibilityLabel("Dictation status accent color")
+
+                                    Button("Reset") {
+                                        settings.resetStatusAccentColor()
+                                    }
+                                    .buttonStyle(.bordered)
+                                    .controlSize(.small)
+                                    .disabled(settings.statusAccentColorHex.isEmpty)
+                                    .accessibilityLabel("Reset status color to default")
+                                }
+                            }
+
                             Toggle("Play Start Sound", isOn: $settings.playStartSound)
                             if settings.playStartSound {
                                 controlRow(label: "Start Sound") {

@@ -431,7 +431,9 @@ struct AntiGravityMainView: View {
     // MenuBarExtra(.window) ignores runtime .frame(height:) changes — the window size is
     // fixed at first presentation. A single constant avoids any attempted resize that macOS
     // silently drops, which was causing the ScrollView to believe no scrolling was needed.
-    private let popoverHeight: CGFloat = 560
+    // The preferred 560 is capped to the usable screen height so the window (and its
+    // scrollbar) always stays on-screen on short displays, keeping every panel reachable.
+    private var popoverHeight: CGFloat { PopoverSizing.cappedHeight(preferred: 560) }
 
     var onDetachHistory: (() -> Void)?
     var onOpenHelp: (() -> Void)?
@@ -483,7 +485,13 @@ struct AntiGravityMainView: View {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
 
-                    HStack {
+                    HStack(spacing: 6) {
+                        ChromeIconButton(
+                            systemName: "power",
+                            accessibilityText: "Quit DexDictate"
+                        ) {
+                            NSApplication.shared.terminate(nil)
+                        }
                         UIModeToggleButton(settings: settings)
                         Spacer()
                         ChromeIconButton(

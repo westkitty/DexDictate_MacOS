@@ -93,7 +93,7 @@ struct DexStateFirstPopoverView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .frame(width: 320, height: 480)
+        .frame(width: 320, height: PopoverSizing.cappedHeight(preferred: 480))
         .onAppear { cachedWatermarkImage = loadWatermarkImage() }
     }
 
@@ -104,7 +104,7 @@ struct DexStateFirstPopoverView: View {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 12) {
                     titleBar
-                    DexStateHero(engineState: adapter.state.engine)
+                    DexStateHero(engineState: adapter.state.engine, accent: settings.statusAccentColor)
                     permissionRow
                     contextChips
                     transcriptCard
@@ -239,12 +239,12 @@ struct DexStateFirstPopoverView: View {
             .font(.subheadline.weight(.semibold))
             .frame(maxWidth: .infinity)
             .padding(.vertical, 10)
-            .background(Color.green.opacity(0.38))
+            .background(settings.statusAccentColor.opacity(0.38))
             .foregroundStyle(.white)
             .clipShape(RoundedRectangle(cornerRadius: 10))
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
-                    .stroke(Color.green.opacity(0.35), lineWidth: 1)
+                    .stroke(settings.statusAccentColor.opacity(0.35), lineWidth: 1)
             )
         }
         .buttonStyle(.plain)

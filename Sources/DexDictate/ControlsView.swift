@@ -12,6 +12,7 @@ import DexDictateKit
 struct ControlsView: View {
     @ObservedObject var engine: TranscriptionEngine
     @ObservedObject var adaptiveBenchmarkController: AdaptiveBenchmarkController
+    @ObservedObject var settings: AppSettings = .shared
     @State private var isCorrectionSheetPresented = false
     @State private var correctionDraft = VocabularyCorrectionDraft()
 
@@ -28,7 +29,7 @@ struct ControlsView: View {
         switch engine.state {
         case .listening:    return .red
         case .transcribing: return .yellow
-        case .ready:        return .green
+        case .ready:        return settings.statusAccentColor
         case .error:        return .orange
         default:            return .white
         }
@@ -45,11 +46,11 @@ struct ControlsView: View {
             .font(.headline)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
-            .background(Color.green.opacity(isStartHovered ? 0.55 : 0.4))
+            .background(settings.statusAccentColor.opacity(isStartHovered ? 0.55 : 0.4))
             .foregroundStyle(.white.opacity(isStartHovered ? 1.0 : 0.9))
             .clipShape(RoundedRectangle(cornerRadius: 10))
-            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.green.opacity(isStartHovered ? 0.45 : 0.3), lineWidth: 1))
-            .shadow(color: .green.opacity(isStartHovered ? 0.45 : 0.3), radius: isStartHovered ? 8 : 5)
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(settings.statusAccentColor.opacity(isStartHovered ? 0.45 : 0.3), lineWidth: 1))
+            .shadow(color: settings.statusAccentColor.opacity(isStartHovered ? 0.45 : 0.3), radius: isStartHovered ? 8 : 5)
             .animation(.easeInOut(duration: 0.15), value: isStartHovered)
         }
         .buttonStyle(.plain)
