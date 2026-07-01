@@ -1,0 +1,1224 @@
+{
+  "git_state": {
+    "available": true,
+    "branch": "speech-engine-exploration-benchmarks",
+    "dirty": true,
+    "head": "bac1bcfb5a54f8607b997e81c66b872ce657abd3",
+    "head_subject": "Add speech engine exploration benchmark lanes",
+    "is_repo": true,
+    "remote_url": "git@github.com:westkitty/DexDictate_MacOS.git",
+    "repo_root": "/Users/andrew/DexDictate_MacOS.nosync",
+    "staged_count": 1,
+    "tracked_modified_count": 3,
+    "untracked_count": 1
+  },
+  "identity": {
+    "name": "DexDictate_MacOS.nosync",
+    "path": "/Users/andrew/DexDictate_MacOS.nosync"
+  },
+  "project_type": {
+    "confidence": 0.75,
+    "evidence": [
+      "Found Package.swift"
+    ],
+    "purpose": "Purpose could not be inferred confidently from filesystem signals.",
+    "type": "swift_package"
+  },
+  "recommended_next_actions": [
+    "Inspect the current uncommitted Git changes before making new edits.",
+    "Review secret-risk findings and move sensitive values out of tracked files.",
+    "Back up or review fragile configuration files before any risky changes.",
+    "Validate the project with the hinted test command: swift test",
+    "Validate the project with the hinted build command: ./build.sh"
+  ],
+  "scan_timestamp": "2026-06-27T18:13:25+00:00",
+  "scanner_version": "1.0.0",
+  "signature": {
+    "git_dirty": {
+      "dirty": true,
+      "staged_count": 1,
+      "tracked_modified_count": 3,
+      "untracked_count": 1
+    },
+    "git_head": "bac1bcfb5a54f8607b997e81c66b872ce657abd3",
+    "project_type": "swift_package",
+    "scanner_version": "1.0.0",
+    "watched_files": {
+      ".build/checkouts/SwiftWhisper/Package.swift": {
+        "mtime_ns": 1779841743710124314,
+        "sha256": "11268a9233b9375729bbad5f39a4d01fe0e410455c999cbc1b91fddcf5329a08",
+        "size": 1114
+      },
+      ".build/checkouts/SwiftWhisper/README.md": {
+        "mtime_ns": 1779841743711009959,
+        "sha256": "770190c993ae6c6a113c737cf364a27e024ae923bd0f5e60846f89466ceb63ae",
+        "size": 5157
+      },
+      ".build/checkouts/SwiftWhisper/whisper.cpp/README.md": {
+        "mtime_ns": 1779841786478313672,
+        "sha256": "1362f2610c711121f30468d9c4c5081bd017b720c2ec22a60ea17ea5f501d52b",
+        "size": 29618
+      },
+      ".build/checkouts/SwiftWhisper/whisper.cpp/bindings/go/README.md": {
+        "mtime_ns": 1779841786479433603,
+        "sha256": "482666727cb2386d206c9d10ec3cddbab5f4de460267b7818472a521ecfb1026",
+        "size": 2821
+      },
+      ".build/checkouts/SwiftWhisper/whisper.cpp/bindings/ios/Package.swift": {
+        "mtime_ns": 1779841786411783732,
+        "sha256": "04eef00d51ace28d782c02f81ccfa221a9be335c33c2e50bd956208924c18e83",
+        "size": 519
+      },
+      ".build/checkouts/SwiftWhisper/whisper.cpp/bindings/ios/README.md": {
+        "mtime_ns": 1779841786411936186,
+        "sha256": "05d22896f0ab2ab59c1cce09025a2b81a5b1f644bb6bf90ac43a006aa12b7b54",
+        "size": 828
+      },
+      ".build/checkouts/SwiftWhisper/whisper.cpp/bindings/javascript/README.md": {
+        "mtime_ns": 1779841786486210894,
+        "sha256": "cc83b13ffa4efd7ece6e098cf0973a0819ff01e83554c5c31fa5c6a78d522cf4",
+        "size": 2547
+      },
+      ".build/checkouts/SwiftWhisper/whisper.cpp/bindings/javascript/package.json": {
+        "mtime_ns": 1779841786487144371,
+        "sha256": "411c6f32bc77ac7dfda05f071ce5d2df3e324d2e6825fcf409b7943b2c294bfc",
+        "size": 600
+      },
+      ".build/checkouts/SwiftWhisper/whisper.cpp/examples/addon.node/README.md": {
+        "mtime_ns": 1779841786493993285,
+        "sha256": "701f8de0d463bfc93d8780cb35f7764ee52a8fb96ba309dbb68e46e8378dce9a",
+        "size": 1001
+      },
+      ".build/checkouts/SwiftWhisper/whisper.cpp/examples/addon.node/package.json": {
+        "mtime_ns": 1779841786494908554,
+        "sha256": "e962c3f1350478eeb6dc7a6bd258e651a60d553006dc7509aa8adcc3333b3ad3",
+        "size": 288
+      },
+      ".build/checkouts/SwiftWhisper/whisper.cpp/examples/bench.wasm/README.md": {
+        "mtime_ns": 1779841786495375876,
+        "sha256": "268b5825e73ee587c040ed953b2a9cd1b3f2624b79226885093e48c63539d1ad",
+        "size": 502
+      },
+      ".build/checkouts/SwiftWhisper/whisper.cpp/examples/bench/README.md": {
+        "mtime_ns": 1779841786496430058,
+        "sha256": "0675f060f04ad1aafdd0de98d4aa55ac673aac6226b2c73a321e4b5f25cbdfa2",
+        "size": 1978
+      },
+      ".build/checkouts/SwiftWhisper/whisper.cpp/examples/command.wasm/README.md": {
+        "mtime_ns": 1779841786497945729,
+        "sha256": "297c3037c11c2d963ee6b6179b06db504283186bb54298fbcb602d9a31b168b0",
+        "size": 585
+      },
+      ".build/checkouts/SwiftWhisper/whisper.cpp/examples/command/README.md": {
+        "mtime_ns": 1779841786498919539,
+        "sha256": "066a5753b24050435ec4b284c792081aaadfc97ecaa15a68c3ba384668e0fe8c",
+        "size": 1766
+      },
+      ".build/checkouts/SwiftWhisper/whisper.cpp/examples/main/README.md": {
+        "mtime_ns": 1779841786502943481,
+        "sha256": "83a7b24f2bed3204926d17d9022aea80fe2ca3285174042a41ac23c40750f939",
+        "size": 2711
+      },
+      ".build/checkouts/SwiftWhisper/whisper.cpp/examples/quantize/README.md": {
+        "mtime_ns": 1779841786503904624,
+        "sha256": "c6b131f7cfbabe17c9cf46056153325d44759d0f82b52ec9837be475997f7327",
+        "size": 75
+      },
+      ".build/checkouts/SwiftWhisper/whisper.cpp/examples/stream.wasm/README.md": {
+        "mtime_ns": 1779841786504638272,
+        "sha256": "be1d487d80737cac2f1188ba6fd329d6df53ef10750ca0ec9d4af3a29a22509a",
+        "size": 443
+      },
+      ".build/checkouts/SwiftWhisper/whisper.cpp/examples/stream/README.md": {
+        "mtime_ns": 1779841786505752536,
+        "sha256": "1dd425cdeef70dc8703db42cdac75d66cc21ff489f7dacda1666e1b40b54d9e7",
+        "size": 1589
+      },
+      ".build/checkouts/SwiftWhisper/whisper.cpp/examples/talk-llama/README.md": {
+        "mtime_ns": 1779841786506745137,
+        "sha256": "d431f7432098caa651ab07b3b8559f47acd0d591d0748f46461c35e51b1ddc53",
+        "size": 2458
+      },
+      ".build/checkouts/SwiftWhisper/whisper.cpp/examples/talk.wasm/README.md": {
+        "mtime_ns": 1779841786509442445,
+        "sha256": "5e55691b4bbae49daed8a66b3a78e9a76a56829f142f64472d48bb011b776fb3",
+        "size": 3341
+      },
+      ".build/checkouts/SwiftWhisper/whisper.cpp/examples/talk/README.md": {
+        "mtime_ns": 1779841786511082905,
+        "sha256": "c6fc1d34fee81667a57314f366fea041af71352ae703577b0906d47db15adea0",
+        "size": 1292
+      },
+      ".build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.android/README.md": {
+        "mtime_ns": 1779841786514053790,
+        "sha256": "d5f21c58873eb598b223949e4a55b509973af88d0ddcdccc73f579fa5fbf5672",
+        "size": 973
+      },
+      ".build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.nvim/README.md": {
+        "mtime_ns": 1779841786521939720,
+        "sha256": "5eafde947a0d22f89a5f17a62814c426b892ea2220f45cddce635c2bb39987b8",
+        "size": 3766
+      },
+      ".build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.objc/README.md": {
+        "mtime_ns": 1779841786522396834,
+        "sha256": "fef1843658aedce6624ecb30a5e39875feb49cf11d65bc93c29a5f663414d05b",
+        "size": 1742
+      },
+      ".build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.swiftui/README.md": {
+        "mtime_ns": 1779841786525682253,
+        "sha256": "6daef71edabc716ec0dcee21368b27b1d131b58b6f638c32508f52a07cdadffa",
+        "size": 1410
+      },
+      ".build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.wasm/README.md": {
+        "mtime_ns": 1779841786530275931,
+        "sha256": "00af20f4bda4ff185e79e6376c91ee59433a0238cd9c8341a93ece0bff7b8645",
+        "size": 1802
+      },
+      ".build/checkouts/SwiftWhisper/whisper.cpp/models/README.md": {
+        "mtime_ns": 1779841786537876285,
+        "sha256": "0934876d85e0877ed5bc483b7a9b2d8322d5b79d18fe8662751a252c7bc21df5",
+        "size": 3785
+      },
+      ".build/checkouts/SwiftWhisper/whisper.cpp/samples/README.md": {
+        "mtime_ns": 1779841786555336812,
+        "sha256": "9a790f7c4375fb71f7d55e5e004883f1e84c376c70ee298b5547a518747611fe",
+        "size": 367
+      },
+      ".venv_mlx_audio/lib/python3.13/site-packages/mlx/include/metal_cpp/README.md": {
+        "mtime_ns": 1781840507028862559,
+        "sha256": "3ba513bd569420bc843fa2064d7d82bf9edeb17261ab3b9678b7cda55bd5d9d5",
+        "size": 14849
+      },
+      ".venv_mlx_audio/lib/python3.13/site-packages/mlx_whisper/requirements.txt": {
+        "mtime_ns": 1781840527495985889,
+        "sha256": "4a02a34b1b24d90502c15a4745b009aa967593eda3734412cd275c9163d03a01",
+        "size": 79
+      },
+      ".venv_mlx_audio/lib/python3.13/site-packages/setuptools/tests/indexes/test_links_priority/simple/foobar/index.html": {
+        "mtime_ns": 1781840501645324175,
+        "sha256": "0c3f932abed4538cc08c71f3e157b1603352033476ee57af4a1d5cfa4dd974b1",
+        "size": 174
+      },
+      ".venv_mlx_audio/lib/python3.13/site-packages/torchgen/packaged/autograd/README.md": {
+        "mtime_ns": 1781840518465231600,
+        "sha256": "846894cc1682b34c33061117077be45945d4e0b8a66bacb9ff03ca8c0a0a43e4",
+        "size": 147
+      },
+      "Package.swift": {
+        "mtime_ns": 1781625977956304576,
+        "sha256": "ae6f7ce1fbe564063edb17cbcd400abe445b01a39e3d36ebada9081009fb3048",
+        "size": 1933
+      },
+      "README.md": {
+        "mtime_ns": 1781833168622768503,
+        "sha256": "feada5b5816059276e38d5de40206b4b64d5dc7745a71d173a9603964ceefb56",
+        "size": 9487
+      },
+      "SNAPSHOT/Package.swift": {
+        "mtime_ns": 1777835932428982019,
+        "sha256": "f61cbd1e3a3d3e1e86d213792d023543a96e2b096227998d6b463b330198cd74",
+        "size": 1399
+      },
+      "SNAPSHOT/README.md": {
+        "mtime_ns": 1777836113583617687,
+        "sha256": "ca47436b236d5dd3fb2a969816eca34196606a8f3b73e3ed053a5686d05ad297",
+        "size": 9263
+      },
+      "benchmark_samples/benchmark_corpus_mixed_v1_2/README.md": {
+        "mtime_ns": 1781837598000000000,
+        "sha256": "4af7916c6951c999e33d398e75ddc9ce451ee56197b1f0e782f91966644a4422",
+        "size": 4362
+      },
+      "build.sh": {
+        "mtime_ns": 1781831566348535983,
+        "sha256": "b0e7cb9fbec44f424fcddc2fe094eed86fd8549491c87203caa81b4856b61284",
+        "size": 9253
+      },
+      "docs/README.md": {
+        "mtime_ns": 1781663663835562922,
+        "sha256": "9d07d6132b35341cb9645ca207fac93d5b0c3516878e440da7834c52bef92af8",
+        "size": 1526
+      },
+      "docs/speech_engine_exploration/README.md": {
+        "mtime_ns": 1781883985834688385,
+        "sha256": "4f1c1b7c3476ec0757a5a18c828c8f95e952b5a0712a186adfd8d712e6b98c04",
+        "size": 8030
+      },
+      "tools/mlx_audio_sidecar/README.md": {
+        "mtime_ns": 1781840355107882523,
+        "sha256": "37279e85e697285f72116817b3d92c4d0f22babec625880c926877ef31500170",
+        "size": 2595
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/EventSource/Package.swift": {
+        "mtime_ns": 1781880665172285030,
+        "sha256": "72f7760425439adf13ba7ef79bb67193be7643bee7596b633dbcb684f985f64b",
+        "size": 1816
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/EventSource/README.md": {
+        "mtime_ns": 1781880665172718385,
+        "sha256": "8008101e822dbfa838ce8c04d8d7e55196af9648c82689e1fa5b626dfddfd30d",
+        "size": 6918
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/WhisperKit/Examples/ServeCLIClient/Curl/README.md": {
+        "mtime_ns": 1781880663528730467,
+        "sha256": "f88ae2065c5175b5a20f0dd868bb525f4ee7f363004d4d901ecd6c8bf592897d",
+        "size": 1675
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/WhisperKit/Examples/ServeCLIClient/Python/README.md": {
+        "mtime_ns": 1781880663529265858,
+        "sha256": "8d5f7e7928f9aedf0b0aac2eddb635f45f43ed5bd48801025acd4b894829caab",
+        "size": 2912
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/WhisperKit/Examples/ServeCLIClient/Python/pyproject.toml": {
+        "mtime_ns": 1781880663529381686,
+        "sha256": "380aeebb95b60ca39317b21306c8e1f65958e92a3746e485f1f3f37792413386",
+        "size": 255
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/WhisperKit/Examples/ServeCLIClient/Swift/Package.swift": {
+        "mtime_ns": 1781880663531003776,
+        "sha256": "4157a66c2b7539b3f263d4de60fd02f491e6c5421e6c7593fe6c745b70e7caaa",
+        "size": 1095
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/WhisperKit/Examples/ServeCLIClient/Swift/README.md": {
+        "mtime_ns": 1781880663531114270,
+        "sha256": "239dd49750a447b445a43f64be708918ffb6fa6ad93b63f2754ae061698055a6",
+        "size": 2832
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/WhisperKit/Examples/TTS/TTSKitExample/README.md": {
+        "mtime_ns": 1781880663532560827,
+        "sha256": "d08e73df9562489c878c92cc9072a7a4bad6f88fbba4c1a9d920f3ed170c49f4",
+        "size": 3164
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/WhisperKit/Package.swift": {
+        "mtime_ns": 1781880663555505405,
+        "sha256": "6b6196ee8a83a3de8c18f607d7b70337db1f5709b7de2cce34bc55a109043352",
+        "size": 4325
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/WhisperKit/README.md": {
+        "mtime_ns": 1781880663555851931,
+        "sha256": "5b35d1773aba3f802ae18709d313f77986c5837510947ee07ee87bb25392afe2",
+        "size": 23331
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/WhisperKit/fastlane/README.md": {
+        "mtime_ns": 1781880663595901573,
+        "sha256": "81f9cdd51f309d07392a9cbdbe815e13a86e123669a1fec9538b809237a55e5f",
+        "size": 1034
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/WhisperKit/scripts/pyproject.toml": {
+        "mtime_ns": 1781880663596276847,
+        "sha256": "8ef6311218d8cb321401cc0b3c60f7b3117b345f02f3699a0f6f391232983d65",
+        "size": 187
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/async-http-client/Examples/Package.swift": {
+        "mtime_ns": 1781880660272013107,
+        "sha256": "7af5a64b5570efc911d8c1628645ee291df934db6594ca577d838e3d40036e1c",
+        "size": 2297
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/async-http-client/Examples/README.md": {
+        "mtime_ns": 1781880660272113435,
+        "sha256": "47e5b7245f5a19f91bde8b3ed5a98b97f63b8141e5809701b0f4a2542bee610d",
+        "size": 1548
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/async-http-client/Package.swift": {
+        "mtime_ns": 1781880660272742322,
+        "sha256": "f4212d8be96d67adf55e18ea2b325e891603d30f20286e374df2be4d4ff7d713",
+        "size": 6550
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/async-http-client/README.md": {
+        "mtime_ns": 1781880660273268589,
+        "sha256": "1f9cadd92b07f293923b8ec75d9f777281b93723ade19b65b7f058856172ef20",
+        "size": 10662
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/async-http-client/Tests/LinkageTest/Package.swift": {
+        "mtime_ns": 1781880660298906290,
+        "sha256": "3dce48169440bcd9ee0efbb4630b6cf0851de084ec2e67fef557e6037e1d6ec5",
+        "size": 406
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/compress-nio/Package.swift": {
+        "mtime_ns": 1781880660454767608,
+        "sha256": "a719202a1679860c8b2be34f96cbc449401560c3b66a1bfb550666cb1e3fb2d8",
+        "size": 801
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/compress-nio/README.md": {
+        "mtime_ns": 1781880660454891393,
+        "sha256": "a8092c1ac129a1f84989e6c416375b56c129f959288cd45365e74f941818387c",
+        "size": 4322
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/hummingbird-websocket/Package.swift": {
+        "mtime_ns": 1781880664492445351,
+        "sha256": "a5642246b9caa8d68ec9c6634ec76d43471be311a92126a21548babff3bd6412",
+        "size": 2693
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/hummingbird-websocket/README.md": {
+        "mtime_ns": 1781880664492553679,
+        "sha256": "9d6fd9e5b616a5cbe5b097d6003fa6a49bc96a48803e1c127a1845508cd819b5",
+        "size": 2757
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/hummingbird/Benchmarks/Package.swift": {
+        "mtime_ns": 1781880666536267142,
+        "sha256": "d385625230c218462bf98829b6ef811c9deb8dca5033d1c99d1f19a27aa6b3fe",
+        "size": 948
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/hummingbird/Package.swift": {
+        "mtime_ns": 1781880666537486960,
+        "sha256": "111b40d0158f7d34f0a74c61564b16e78da454cbccb09ac1f0c077cc0db381a4",
+        "size": 8147
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/hummingbird/README.md": {
+        "mtime_ns": 1781880666537663951,
+        "sha256": "255c5502882cddb93f8aaa4f1d2b123617c9c3d147760be0cfd86e10ecfd00ea",
+        "size": 4231
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/mlx-swift/Package.swift": {
+        "mtime_ns": 1781880667934546253,
+        "sha256": "062cc367fe217874439e75dafa35b1396d2e7d3f6782bb2aef0ce8d41f7d4aec",
+        "size": 11231
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/mlx-swift/README.md": {
+        "mtime_ns": 1781880667934831781,
+        "sha256": "7123ef6acadb58035a6316b5d735a89d2930abcff00cac6a52bef8e4a9e12eed",
+        "size": 7035
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/mlx-swift/Source/Cmlx/fmt/README.md": {
+        "mtime_ns": 1781880667936561908,
+        "sha256": "aa938105a81b0ac41ae2844d5d1bde7521b098172c5992b243a90339041703fa",
+        "size": 19681
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/mlx-swift/Source/Cmlx/fmt/test/fuzzing/README.md": {
+        "mtime_ns": 1781880667951555113,
+        "sha256": "6fbe23b8a3b185e842167eb39a50b28320634f728743a6747be1f7c28b32139d",
+        "size": 789
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/mlx-swift/Source/Cmlx/fmt/test/fuzzing/build.sh": {
+        "mtime_ns": 1781880667951654692,
+        "sha256": "cdc1e779610dc134c78a1184182bd3d997a14cf2c00b9d7abbef86ff19ffef31",
+        "size": 2113
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/mlx-swift/Source/Cmlx/metal-cpp/README.md": {
+        "mtime_ns": 1781880668014790990,
+        "sha256": "3ba513bd569420bc843fa2064d7d82bf9edeb17261ab3b9678b7cda55bd5d9d5",
+        "size": 14849
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/mlx-swift/Source/Cmlx/mlx-c/README.md": {
+        "mtime_ns": 1781880702250239811,
+        "sha256": "ef124b17ec085308c792f932c349c1473ff514eb8cb5e86643e48086f4dfd93b",
+        "size": 1332
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/mlx-swift/Source/Cmlx/mlx-c/docs/README.md": {
+        "mtime_ns": 1781880702250791535,
+        "sha256": "ca63cfcd8531908eb459f4e23cac5a33f1dd57c94bcbe99e9d5aca490602a568",
+        "size": 591
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/mlx-swift/Source/Cmlx/mlx-c/docs/index.html": {
+        "mtime_ns": 1781880702250888489,
+        "sha256": "3b7f0da87a04ec6323274e318b622680e5ecf768633bcdb540afb3fb11d9155c",
+        "size": 71
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/mlx-swift/Source/Cmlx/mlx-c/docs/requirements.txt": {
+        "mtime_ns": 1781880702250987901,
+        "sha256": "99c91072ee8fba2469760077258615add94da74c0f792cd0c6b0a946c1003fd3",
+        "size": 33
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/mlx-swift/Source/Cmlx/mlx/README.md": {
+        "mtime_ns": 1781880702039097032,
+        "sha256": "df7d58237b57e70595c5a19b72acb4053d28a47235033bd2cbfd66eea73e1c7d",
+        "size": 4597
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/mlx-swift/Source/Cmlx/mlx/benchmarks/python/comparative/README.md": {
+        "mtime_ns": 1781880702041136977,
+        "sha256": "9273852fb55b857ebd3060df23458be81318aecbdea4d411214052fc3be8be10",
+        "size": 639
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/mlx-swift/Source/Cmlx/mlx/docs/README.md": {
+        "mtime_ns": 1781880702047041572,
+        "sha256": "8147367686cb056345b6f653d0c0b97746dc07941561da3eb7c37898054935cd",
+        "size": 823
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/mlx-swift/Source/Cmlx/mlx/docs/index.html": {
+        "mtime_ns": 1781880702047157025,
+        "sha256": "3b7f0da87a04ec6323274e318b622680e5ecf768633bcdb540afb3fb11d9155c",
+        "size": 71
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/mlx-swift/Source/Cmlx/mlx/docs/requirements.txt": {
+        "mtime_ns": 1781880702047265520,
+        "sha256": "acba91ad3c7a76f0dd28ca5345fbb7692cbbbc02d8080bec87ad5a69e8966e09",
+        "size": 55
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/mlx-swift/Source/Cmlx/mlx/examples/cmake_project/README.md": {
+        "mtime_ns": 1781880702076384597,
+        "sha256": "d10cc6981613c43a0d9a8eac9e30b5092523e8f556db314c908f5651756e34be",
+        "size": 286
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/mlx-swift/Source/Cmlx/mlx/examples/export/README.md": {
+        "mtime_ns": 1781880702077919816,
+        "sha256": "b6abb9c7a428de204916728828c54190d63c75b584bb2f82bcd211152ffd10dc",
+        "size": 685
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/mlx-swift/Source/Cmlx/mlx/examples/extensions/README.md": {
+        "mtime_ns": 1781880702078709029,
+        "sha256": "f922831664099e9a570ec23cebe3b73001228855e4a9cc8453a5c7fdcf7dbfaf",
+        "size": 256
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/mlx-swift/Source/Cmlx/mlx/examples/extensions/pyproject.toml": {
+        "mtime_ns": 1781880702080225082,
+        "sha256": "2f7b90a624613f80a9b26cebf900e895644d7c13c432c7e921f0bc5b0c04bff1",
+        "size": 146
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/mlx-swift/Source/Cmlx/mlx/examples/extensions/requirements.txt": {
+        "mtime_ns": 1781880702080336951,
+        "sha256": "712b52102dd9cc657530ec73a2ceecc4129b32f384384de04f3d2256a2b0e64e",
+        "size": 56
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/mlx-swift/Source/Cmlx/mlx/pyproject.toml": {
+        "mtime_ns": 1781880702161545809,
+        "sha256": "49b91cace2d44cc7f88115ab3a350259e1e5b918e993178ded4c25c587754040",
+        "size": 130
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/mlx-swift/skills/README.md": {
+        "mtime_ns": 1781880668064228062,
+        "sha256": "eb842f61a46d08d444386e41a3c980777d608fb7f62a7cb87f7b384d6f5c2ebd",
+        "size": 1268
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/speech-swift/AGENTS.md": {
+        "mtime_ns": 1781880665932368529,
+        "sha256": "78f6e2a6ca56f67dccbacc3efe4e1aa36aad0ee6a47cc8cf00fa4281dfdaca4a",
+        "size": 12177
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/speech-swift/Examples/DictateDemo/Package.swift": {
+        "mtime_ns": 1781880665933764838,
+        "sha256": "9def5b8270a0d26f0543230b4441f516b969ec9153f659fcaca5cd259a76a4a6",
+        "size": 1016
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/speech-swift/Examples/DictateDemo/README.md": {
+        "mtime_ns": 1781880665933878457,
+        "sha256": "33827c125b126c5ffa265abddafd82a4a4830a7b92c032fa5ce32b7e77028284",
+        "size": 858
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/speech-swift/Examples/PersonaPlexDemo/Package.swift": {
+        "mtime_ns": 1781880665934280563,
+        "sha256": "2b27009dc9fb51fdb4d6c9a67ff3827164846899c26fe41190d3f80706f6ee75",
+        "size": 878
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/speech-swift/Examples/PersonaPlexDemo/README.md": {
+        "mtime_ns": 1781880665935896445,
+        "sha256": "dea5f8811968e749162bfe9206c5256d65f6ecd2d2e984d64ae0408a325ea20c",
+        "size": 8853
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/speech-swift/Examples/SpeechDemo/Package.swift": {
+        "mtime_ns": 1781880665936432711,
+        "sha256": "0e4b371d7269317bba2ad7bd3102ba1041fe689443a05cbe5ad699e19154c744",
+        "size": 1001
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/speech-swift/Examples/SpeechDemo/README.md": {
+        "mtime_ns": 1781880665936546039,
+        "sha256": "ebc9e43811dc62e2dcf3abecae92bac6f02caaa44d180040f3acfed5aaf55e6f",
+        "size": 2919
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/speech-swift/Examples/iOSEchoDemo/Package.swift": {
+        "mtime_ns": 1781880665938408742,
+        "sha256": "95e76793cca97717862cd19b4de70df2522c3e3897dfe1bdf3d4c6b8e4b3221e",
+        "size": 766
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/speech-swift/Examples/iOSEchoDemo/README.md": {
+        "mtime_ns": 1781880665938524320,
+        "sha256": "f538273dd4c0375f6c85da227d46423d020e1c37d25202d2e931172dfb10d0a0",
+        "size": 576
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/speech-swift/Package.swift": {
+        "mtime_ns": 1781880665940457437,
+        "sha256": "24e420ebbe8c984f2b0d7b15ab0f937ec1dc3c8b7177374d57034b9a154592e7",
+        "size": 24396
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/speech-swift/README.md": {
+        "mtime_ns": 1781880665941452723,
+        "sha256": "90a4a85f4ce806ab55f6b15aa77c66a18a9b6481d5d84e03fa4feb2eb387989c",
+        "size": 27182
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-algorithms/Guides/README.md": {
+        "mtime_ns": 1781880664976439567,
+        "sha256": "0e32b81466b0b25caee60fea12db8ec7fc667f86c49d69dae613f7da00d51582",
+        "size": 6442
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-algorithms/Package.swift": {
+        "mtime_ns": 1781880664980576412,
+        "sha256": "a6477559e0eb388f6bbc251cab7c5bc1535ece2a863d67b2ff82ab36c32a16b8",
+        "size": 1063
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-algorithms/README.md": {
+        "mtime_ns": 1781880664980705656,
+        "sha256": "22d85763906b52e2b4959d9f0529b7c2c77725f24932396071154583ec550fac",
+        "size": 3041
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-algorithms/Xcode/README.md": {
+        "mtime_ns": 1781880664993842700,
+        "sha256": "dd38b2c5c7a8d5e49a3076ddb426ada95c3bed81924e58293eb40076faf33351",
+        "size": 502
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-argument-parser/Package.swift": {
+        "mtime_ns": 1781880660603075200,
+        "sha256": "4eae0e28d24671d6ab75c2c7a0dd0326e6d48f8785510a3e403886fe8cf17d88",
+        "size": 4396
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-argument-parser/README.md": {
+        "mtime_ns": 1781880660604217021,
+        "sha256": "9e5228fd51758b7a5f7328bb29ff3c6527655b074b3a986eb078f322116736bb",
+        "size": 5713
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-asn1/Benchmarks/Package.swift": {
+        "mtime_ns": 1781880660980314561,
+        "sha256": "cb6fe5e118952e775455fc788857fbc4fa71e9d12d63d9227584239736c0b581",
+        "size": 1323
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-asn1/Package.swift": {
+        "mtime_ns": 1781880660983023058,
+        "sha256": "c46482de4edb5c21c263682d102e52b180c1420be592d6c957cdc06f8fc4e516",
+        "size": 2222
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-asn1/README.md": {
+        "mtime_ns": 1781880660983141094,
+        "sha256": "7ce59c3e72a8dc66ad70109945cf69b24621573ddddb4eb36abc38c0a61c6c2e",
+        "size": 2500
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-async-algorithms/Package.swift": {
+        "mtime_ns": 1781880667439045083,
+        "sha256": "4dc555ed848c1dcde14e2128d18951f2be8d4ba39172d66b8844268b029c63c5",
+        "size": 5787
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-async-algorithms/README.md": {
+        "mtime_ns": 1781880667439580724,
+        "sha256": "d89eb0c5b61b84b99ac79188b62afc2bcac166aa52ea8a4f773565fc9bb627d8",
+        "size": 9915
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-atomics/Package.swift": {
+        "mtime_ns": 1781880665337980964,
+        "sha256": "99359621b74cbd0aca68d494716770df91f8f774e11ab3066234009aa54780f0",
+        "size": 3171
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-atomics/README.md": {
+        "mtime_ns": 1781880665338326740,
+        "sha256": "17a766ca892c9724bb94347f52985ed71c73041868c5811099daf56591eadd50",
+        "size": 18150
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-atomics/Xcode/README.md": {
+        "mtime_ns": 1781880665365709400,
+        "sha256": "bbb15351b9f0b688e03972d6c31ab23e952f3f20b896b5475e7580fd82002fd6",
+        "size": 572
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-certificates/Benchmarks/Package.swift": {
+        "mtime_ns": 1781880665711170518,
+        "sha256": "66962281c822fa2d076158087cedc04f0ef789a371b04580e6f236b626a3b354",
+        "size": 1664
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-certificates/Package.swift": {
+        "mtime_ns": 1781880665715390277,
+        "sha256": "86a26981a80f158acafb1783f3cffb8a63559a4c7a24e8b2237a2051114f739f",
+        "size": 3652
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-certificates/README.md": {
+        "mtime_ns": 1781880665715510354,
+        "sha256": "f2ad496e3ec08ea5d08335d2e8c378692514c269ca0d76a9f6f732d4398a89b0",
+        "size": 2771
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-collections/Benchmarks/Package.swift": {
+        "mtime_ns": 1781880663789893958,
+        "sha256": "8e8348c71cd00a4f43f64064987695675b0fbecd94ff358189cc534072b12d1d",
+        "size": 5042
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-collections/Documentation/Announcement-benchmarks/README.md": {
+        "mtime_ns": 1781880663798920904,
+        "sha256": "9128ee76dad8a6ab9c35bf2b578d49f21ea91a913b565ed899eb602dfc3e18a6",
+        "size": 1429
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-collections/Documentation/Internals/README.md": {
+        "mtime_ns": 1781880663843938645,
+        "sha256": "64b53817c04bb22210cc67fbd91212048995ceadab4462eb9f365b6dd9d61875",
+        "size": 7475
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-collections/Package.swift": {
+        "mtime_ns": 1781880663854074664,
+        "sha256": "a4853db28f2e773357b41a14a0f0eda28e9de75e3d0ffdaaa04f222b7566693d",
+        "size": 12145
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-collections/README.md": {
+        "mtime_ns": 1781880663854403565,
+        "sha256": "494ea988ba584b7f5eb5f150c7c4b03d3d40409f7851997d54b50a879bc82a19",
+        "size": 26197
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-collections/Tests/README.md": {
+        "mtime_ns": 1781880663945637322,
+        "sha256": "bd022568040c567648cc25d8bd0bf6b414672c621b933dd4525f920935740c5d",
+        "size": 304
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-collections/Utils/Debugger/FormatterFixtures/Package.swift": {
+        "mtime_ns": 1781880663954503193,
+        "sha256": "527b73743da30b0a0e2b16674cf5ab54245feb70887cd564348231243501257b",
+        "size": 2114
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-collections/Utils/README.md": {
+        "mtime_ns": 1781880663955466314,
+        "sha256": "08cb728a42996da76895ce18c61f7ef02fb9749c4f7ef0c450ef07c62f2d1244",
+        "size": 952
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-collections/Xcode/README.md": {
+        "mtime_ns": 1781880663959709530,
+        "sha256": "02f0cb3ddaae271f8caa55cb83650393962f3e4612210810f10ab053a6a42a0e",
+        "size": 620
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-configuration/Benchmarks/Package.swift": {
+        "mtime_ns": 1781880666328980305,
+        "sha256": "bfae13ed868ae964040d3a5ecf01346d6718c101bad6975fa215bfdb0d909cb9",
+        "size": 734
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-configuration/Examples/README.md": {
+        "mtime_ns": 1781880666331351276,
+        "sha256": "9347ced700508133e7af6619cfc92732ad2f6cedef7a1da129989770c75a20b3",
+        "size": 1179
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-configuration/Examples/hello-world-cli-example/Package.swift": {
+        "mtime_ns": 1781880666331623096,
+        "sha256": "ae9f64ddef710e6265a0a755c589b9c039486c50007b7c44131a3a717bc0976d",
+        "size": 571
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-configuration/Examples/hello-world-cli-example/README.md": {
+        "mtime_ns": 1781880666331727008,
+        "sha256": "302f1050dc27b39c31c7e15ebe4af1b06bfec78217ec578bae29f9e3a0f7a73a",
+        "size": 2167
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-configuration/Examples/reloading-example/Package.swift": {
+        "mtime_ns": 1781880666332651048,
+        "sha256": "96d29dea1ccdbb3c15a913fe729610f87b26173b944b2c60bb5aaddedaf6416c",
+        "size": 1316
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-configuration/Examples/reloading-example/README.md": {
+        "mtime_ns": 1781880666332802624,
+        "sha256": "ce8fadd33a9ecb19fda141a1e54543e4ace10aac23fe474190318d5d202060b9",
+        "size": 4297
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-configuration/Package.swift": {
+        "mtime_ns": 1781880666334475336,
+        "sha256": "9ad9a65a433b6697b96bb0548b67efd7d76020c2ec639430ab60eb20a1d89997",
+        "size": 7812
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-configuration/README.md": {
+        "mtime_ns": 1781880666334651495,
+        "sha256": "658e9af4f83c7bda6b1db41c0c5c9148d56c0b8c013d88bb9d65ff325a162b1e",
+        "size": 9091
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-configuration/Tests/LinkageTest/Package.swift": {
+        "mtime_ns": 1781880666363785738,
+        "sha256": "33eb2e9f7040b171bc5308091c5eb75d20c77d344c77828bcb01cdf4502edafc",
+        "size": 1420
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-crypto/Benchmarks/Package.swift": {
+        "mtime_ns": 1781880662977314573,
+        "sha256": "cfcf22f9948e22647c4fc52472f7e7de0b252fc62e7f214fc0fd7a6f0017a520",
+        "size": 823
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-crypto/Package.swift": {
+        "mtime_ns": 1781880662978224654,
+        "sha256": "78563df9020b2bf273172ace10da2a45275a0fe6856d10b3b4d873f67da7b588",
+        "size": 10448
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-crypto/README.md": {
+        "mtime_ns": 1781880662978388980,
+        "sha256": "d6e5cc174347a80b0bd6ab10c0b5f065f5b73093d5010d81a7633bb550b8e7b2",
+        "size": 11029
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-distributed-tracing/Benchmarks/Package.swift": {
+        "mtime_ns": 1781880666727676983,
+        "sha256": "b2bd04b0b99314dd4179f15c93f5ab8f2ea8097d5cb7f926ad7588b806401140",
+        "size": 1305
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-distributed-tracing/Docs/README.md": {
+        "mtime_ns": 1781880666729938625,
+        "sha256": "cdaa4f8fe650d398e0c59f92321b239dcc2abc208fe53ffa8e5e8272823c83e5",
+        "size": 126
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-distributed-tracing/Package.swift": {
+        "mtime_ns": 1781880666730642925,
+        "sha256": "6b204dde671a16b3eca6bd17d59bcf06babcab5c007196e59f7c0fb5788134ef",
+        "size": 2410
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-distributed-tracing/README.md": {
+        "mtime_ns": 1781880666730752920,
+        "sha256": "4b94dd051e59fef467b2e8ca2deb9afe785330fd44b9d3d0171d663a5ab2f94a",
+        "size": 3558
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-distributed-tracing/Samples/Dinner/Package.swift": {
+        "mtime_ns": 1781880666731059072,
+        "sha256": "7faca5d8282bb1f4d0f080b818b01b456ce0c9f9b13cd6e01aaddb53022252a4",
+        "size": 1393
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-distributed-tracing/Samples/Dinner/README.md": {
+        "mtime_ns": 1781880666731161484,
+        "sha256": "2edf1cdaf9168989378c21d96204de31516b6952637446e81c0494cb3f3c95fa",
+        "size": 511
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-http-structured-headers/Package.swift": {
+        "mtime_ns": 1781880662197965404,
+        "sha256": "e7e1ad8bd80af84e26e0962d53a1ae8a9a71565653a07f92ad7af5a7f34f0590",
+        "size": 2745
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-http-structured-headers/README.md": {
+        "mtime_ns": 1781880662198162603,
+        "sha256": "a6bd8f7a32ebf8a00a433d5435fb7ce6961505cdb95feede95392016af07e884",
+        "size": 9148
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-http-types/Benchmarks/Package.swift": {
+        "mtime_ns": 1781880665524229216,
+        "sha256": "7b67dfdf1891c4360014f7907a84c6685e67a97833c45f852d3636d0b740e5d6",
+        "size": 750
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-http-types/Package.swift": {
+        "mtime_ns": 1781880665525738978,
+        "sha256": "bc7362c73dcceca1037a3790ea0beafc87f04512badcfb6d4f97a54318c71487",
+        "size": 1787
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-http-types/README.md": {
+        "mtime_ns": 1781880665525854597,
+        "sha256": "fd14b37baf12a2a9e76a88fb9cf957bca4fb498bc8e975cf09cfe04dc0af1941",
+        "size": 3774
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-http-types/Tests/LinkageTest/Package.swift": {
+        "mtime_ns": 1781880665529204772,
+        "sha256": "df4f3efc234d11ac8c4ef73f0002dd462b651a4bc20a7a09c60007460aeff7e9",
+        "size": 410
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-huggingface/Package.swift": {
+        "mtime_ns": 1781880664792146223,
+        "sha256": "543b793a4fedd6358f23c7191ff28174ffdb3396391f76f608bfa061bafd2e2b",
+        "size": 1880
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-huggingface/README.md": {
+        "mtime_ns": 1781880664792483707,
+        "sha256": "dce6692854981814b7cef3cff65ff92f9bd39cd09d7f8056efcb09a90cabaf0c",
+        "size": 34077
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-jinja/Package.swift": {
+        "mtime_ns": 1781880664345639812,
+        "sha256": "c7ad37066329649ad87577b9b8e48c2dc3f3f667ca39aa5023d97a928449f18f",
+        "size": 1140
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-jinja/README.md": {
+        "mtime_ns": 1781880664345803805,
+        "sha256": "2d3b429adb912d9d9e42e9703bde9bfe52c795cb3a0849c9fc2b910922278d1a",
+        "size": 12975
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-log/Benchmarks/MaxLogLevelNone/Package.swift": {
+        "mtime_ns": 1781880666905764246,
+        "sha256": "dfbffda49562c95e5c13d55328862fc165ce3a049f985b91bef94e98735db0d1",
+        "size": 1195
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-log/Benchmarks/MaxLogLevelWarning/Package.swift": {
+        "mtime_ns": 1781880666907752902,
+        "sha256": "398a46c645790c70dc0aae4196524e119fadce9084d9f23fc74c4f820286cbb0",
+        "size": 1213
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-log/Benchmarks/NoTraits/Package.swift": {
+        "mtime_ns": 1781880666908831851,
+        "sha256": "f67bfbd45110b9a88fb7f9aca680adc2de5b15ad1e3e4102afc246f721719560",
+        "size": 1118
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-log/Benchmarks/Package.swift": {
+        "mtime_ns": 1781880666909618480,
+        "sha256": "11e70e88b652548d5b8960a172f3d32808993bf80972e1e99a244802c44c2de3",
+        "size": 785
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-log/Package.swift": {
+        "mtime_ns": 1781880666910785675,
+        "sha256": "30f408ef56579ae47094879cde31c35bcb4916e6bbc294a3403fafe6f5f7292b",
+        "size": 2808
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-log/README.md": {
+        "mtime_ns": 1781880666911160574,
+        "sha256": "c4aaf3d2ead07fd844cf0a5fab3b719b414359be1f423801ba0df7a2ab8456a1",
+        "size": 2675
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-metrics/Package.swift": {
+        "mtime_ns": 1781880660810836307,
+        "sha256": "76a41a252d58c6a8fc492158cd4763426c27fce3ca80cad5f34ab2afcc675b60",
+        "size": 1650
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-metrics/README.md": {
+        "mtime_ns": 1781880660810995757,
+        "sha256": "362417c4f92d82bf57fc4d2cdbe7785afe4e7a41207737c4e7429d397d5e9a6e",
+        "size": 18622
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-nio-extras/Package.swift": {
+        "mtime_ns": 1781880661533652906,
+        "sha256": "e283f25c885c0b233f143c6697f38641a6e2a1bd538890e317d9e8176d251a5a",
+        "size": 13859
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-nio-extras/README.md": {
+        "mtime_ns": 1781880661533799399,
+        "sha256": "a51b093287ad83aa15417c8198fa27724c033045bc9f8ddb024a895feb5f284a",
+        "size": 5197
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-nio-http2/Benchmarks/Package.swift": {
+        "mtime_ns": 1781880662551747712,
+        "sha256": "7f0ff2b22b6da25853cc70826967cdb9ea970c248a516aa802d7c1c2e6892711",
+        "size": 1408
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-nio-http2/FuzzTesting/Package.swift": {
+        "mtime_ns": 1781880662553913234,
+        "sha256": "708225e7fb2c5c626336b22a523c7a0799503ef07b0ae7eb8025226a0b63a788",
+        "size": 1149
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-nio-http2/FuzzTesting/README.md": {
+        "mtime_ns": 1781880662554024395,
+        "sha256": "9039553c2b29276c307c2cd3101ecde7a105ef78fedfc35b69a04a5b2ab1f9d8",
+        "size": 1233
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-nio-http2/Package.swift": {
+        "mtime_ns": 1781880662558165740,
+        "sha256": "a652a5d50eced09ce6b75059620452bf0f3322c95424b94d6264020c2f0214a8",
+        "size": 4995
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-nio-http2/README.md": {
+        "mtime_ns": 1781880662558287610,
+        "sha256": "93e92d5e0d047e76d631cc69892cfbda51faac9e375d2d1b26d15936ae876553",
+        "size": 2305
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-nio-http2/Tests/hpack-test-case/README.md": {
+        "mtime_ns": 1781880662584305542,
+        "sha256": "1a49ff9fcb402da84f4bd15a5fc7561d86dd76233b075f72dfee80fbde7f2eae",
+        "size": 2448
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-nio-ssl/Benchmarks/Package.swift": {
+        "mtime_ns": 1781880661751783687,
+        "sha256": "8748ca71fb3fdfb310e70520924775aae71d9a9bf3a22ffff5ede034e9253138",
+        "size": 961
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-nio-ssl/Package.swift": {
+        "mtime_ns": 1781880661755779998,
+        "sha256": "e3f4561be547c5685f0378cd6956ecdaf28602f0f09335364755b82cc193315a",
+        "size": 7475
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-nio-ssl/README.md": {
+        "mtime_ns": 1781880661755987196,
+        "sha256": "6a0c788a5b5b75c3ef1df539e540d1f0192ff2e3f196f3e0bc2eb212b2bbe636",
+        "size": 3066
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-nio-ssl/Sources/NIOSSLHTTP1Client/README.md": {
+        "mtime_ns": 1781880661921691714,
+        "sha256": "6c8085ee53e3bbf55c0980d7ade2bf414c61bf9329ac2604c8b3c1444e640ebd",
+        "size": 467
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-nio-ssl/Sources/NIOTLSServer/README.md": {
+        "mtime_ns": 1781880661922948071,
+        "sha256": "0dc01ef4685ea4014578f597a76100c979cb5b1adafab6321c7d516c59e33958",
+        "size": 199
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-nio-transport-services/Package.swift": {
+        "mtime_ns": 1781880667770906680,
+        "sha256": "36fe34742e6faa5948a31a25f4a8d0675a8ad574e39d0d7e0c48c6fd0fb4fe48",
+        "size": 4070
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-nio-transport-services/README.md": {
+        "mtime_ns": 1781880667771042674,
+        "sha256": "1d6cd4a1bf0c976ce50479d2451ae9343c68754c4c19e50a6a5fe910b6e415d4",
+        "size": 5785
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-nio/Benchmarks/Package.swift": {
+        "mtime_ns": 1781880661173807261,
+        "sha256": "14ad60f19e15f13744c3ae9e453e855309ee6059ddf94e71c035465bc7375cb8",
+        "size": 1364
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-nio/IntegrationTests/allocation-counter-tests-framework/template/AtomicCounter/Package.swift": {
+        "mtime_ns": 1781880661176851075,
+        "sha256": "4731589a3e46a4f022b405351ee46a1df450452215768b4cbb5cd59b4da71b17",
+        "size": 942
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-nio/IntegrationTests/allocation-counter-tests-framework/template/HookedFunctionsDoHook/Package.swift": {
+        "mtime_ns": 1781880661177522418,
+        "sha256": "032f836353c339ab019943e68a81f6b84272e9994c0f785150686061bdd23520",
+        "size": 979
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-nio/IntegrationTests/allocation-counter-tests-framework/template/HookedFunctionsDoNotHook/Package.swift": {
+        "mtime_ns": 1781880661178315839,
+        "sha256": "032f836353c339ab019943e68a81f6b84272e9994c0f785150686061bdd23520",
+        "size": 979
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-nio/IntegrationTests/tests_04_performance/test_01_resources/README.md": {
+        "mtime_ns": 1781880661185405086,
+        "sha256": "a680f5c605223b9f2930a4b643e11ba783aa5dd8887c9054ec3bf64c243744a5",
+        "size": 3538
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-nio/Package.swift": {
+        "mtime_ns": 1781880661192778820,
+        "sha256": "e8b3a3fc50ff2e21acf2613dd433400f68336bf0754a224eb21bdbc98186f9df",
+        "size": 20767
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-nio/README.md": {
+        "mtime_ns": 1781880661192979185,
+        "sha256": "b86846bb1a0da699382a06051e921f6bf1d18a4b70f973859e0781c3dd136107",
+        "size": 30804
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-nio/Sources/NIOChatClient/README.md": {
+        "mtime_ns": 1781880661200689111,
+        "sha256": "24c488de642b3f09a01a0087a6cfdc9ff8ebccee0cab3c00a6ac543af2197400",
+        "size": 475
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-nio/Sources/NIOChatServer/README.md": {
+        "mtime_ns": 1781880661200967556,
+        "sha256": "b02cf681372b188bc2232da4726cd57c59445911c56a1c99f2d1cf1abad26612",
+        "size": 480
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-nio/Sources/NIOEchoClient/README.md": {
+        "mtime_ns": 1781880661217641974,
+        "sha256": "9562cbdbf35e1bae6eb530b83f87c5ebc4b9607bcb52475d8af29af35ed4fae7",
+        "size": 534
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-nio/Sources/NIOEchoServer/README.md": {
+        "mtime_ns": 1781880661217948418,
+        "sha256": "7431c8aa24d58d0a2f8d7104d1abbd8cccaa52e16430c86cfd2ebe27b4b09f47",
+        "size": 488
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-nio/Sources/NIOHTTP1Client/README.md": {
+        "mtime_ns": 1781880661231619936,
+        "sha256": "d15daba62f73d0b1397a8ff9939576f4bcaeddeb212299fa3d457a1c23c6b5d9",
+        "size": 577
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-nio/Sources/NIOHTTP1Server/README.md": {
+        "mtime_ns": 1781880661231865258,
+        "sha256": "8afbd9955a3738d51dbc187f1d78d02263d81be835c15456396a832eb8dfe471",
+        "size": 1767
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-nio/Sources/NIOTCPEchoClient/README.md": {
+        "mtime_ns": 1781880661244799728,
+        "sha256": "3d43a8886fb3308f2db29a3bda10b857cea5a9e504c15ac963cc791bcf974711",
+        "size": 355
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-nio/Sources/NIOTCPEchoServer/README.md": {
+        "mtime_ns": 1781880661244986177,
+        "sha256": "63d35c8eee7710b58a74771d33caf0bfe0d14824b1c5cd43889c851e3acef784",
+        "size": 308
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-nio/Sources/NIOUDPEchoClient/README.md": {
+        "mtime_ns": 1781880661246746802,
+        "sha256": "60c231165881dec185ebdf2eb5d0d424bd28bf9d7590f741923f89eaa2136fb1",
+        "size": 562
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-nio/Sources/NIOUDPEchoServer/README.md": {
+        "mtime_ns": 1781880661247042288,
+        "sha256": "3db5b2bd8b53f0be763d78805a9d51cf2407d5ed6ae4993dc7b7d1813960b03a",
+        "size": 507
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-nio/Sources/NIOWebSocketClient/README.md": {
+        "mtime_ns": 1781880661249118773,
+        "sha256": "beea969450ff554cdd251cd0af120d616474170a92f6429d385aacb1e697224d",
+        "size": 742
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-nio/Sources/NIOWebSocketServer/README.md": {
+        "mtime_ns": 1781880661249264891,
+        "sha256": "a6747285c65984470380ced518b7cd675ed45acf2982fc23b9ccdd0bc6ff3c5e",
+        "size": 1117
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-nio/Tests/NIOFSIntegrationTests/Test Data/README.md": {
+        "mtime_ns": 1781880661269035204,
+        "sha256": "0558f190085213165019c05a3af09f8288c009efadf33032aa65ed8e59636f42",
+        "size": 216
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-nio/dev/stackdiff/Package.swift": {
+        "mtime_ns": 1781880661290595515,
+        "sha256": "c0072edfae11ab7f36a5782c0dd4fa9b86a3169b297c957a112bd294d33fc85e",
+        "size": 1296
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-numerics/Package.swift": {
+        "mtime_ns": 1781880664191558244,
+        "sha256": "a1613f1fdf148fb8c824c3a8f3e92928f8224bac25bfc3190d206c701087a6b9",
+        "size": 1871
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-numerics/README.md": {
+        "mtime_ns": 1781880664191689529,
+        "sha256": "7906fc152e74a517df5e44567d6f826de1d19014807a97b034887e925063f799",
+        "size": 7001
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-numerics/Sources/ComplexModule/README.md": {
+        "mtime_ns": 1781880664194395193,
+        "sha256": "9fd75d404fc4c61920fdfb6ad263d629028f53fff6d10ad8e8e6639f2ad81a60",
+        "size": 5860
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-numerics/Sources/Numerics/README.md": {
+        "mtime_ns": 1781880664194955874,
+        "sha256": "2daba1bb506e237b69e58e661fdea9ae92e3ba59cc340bc0110727c1146fd081",
+        "size": 159
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-numerics/Sources/RealModule/README.md": {
+        "mtime_ns": 1781880664196817661,
+        "sha256": "4f511c5436901d337f0ad2a1342d480928de4c14ed4b371462fbee3a94d7c569",
+        "size": 3953
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-numerics/Sources/_NumericsShims/README.md": {
+        "mtime_ns": 1781880664197398675,
+        "sha256": "8d82204dec4e841c8ea26f8b99ac8a1103514eb00548b92b69037125908d9afc",
+        "size": 445
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-service-context/Benchmarks/Package.swift": {
+        "mtime_ns": 1781880667621413644,
+        "sha256": "5b0318f6032021c4170f1d62875c12a0b96d3fa8441049ab02d09b63ea7ca9f6",
+        "size": 1297
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-service-context/Package.swift": {
+        "mtime_ns": 1781880667624447583,
+        "sha256": "275b8e2ac48ec2d369e9fcb930d380828033f3e22db30a582772441e96f43523",
+        "size": 1256
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-service-context/README.md": {
+        "mtime_ns": 1781880667624558203,
+        "sha256": "6c1797b42e43b8919243804c633e62e31927264dee48971ab7f0e5b2c1f0bdd0",
+        "size": 2684
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-service-lifecycle/Package.swift": {
+        "mtime_ns": 1781880662379733035,
+        "sha256": "570aaefbc52a3352be1cfced71aea577854542464241ceb1f445ca73ee9c1fb0",
+        "size": 2303
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-service-lifecycle/README.md": {
+        "mtime_ns": 1781880662379860321,
+        "sha256": "6c186513a3696bdf0bb35b02c325c4a6cac998916bb04ad778e7e31105a62287",
+        "size": 4119
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-system/Package.swift": {
+        "mtime_ns": 1781880667073451878,
+        "sha256": "c88cdcff93a03e2e632ed6c4d00659a468a7c46905f20d87995ddb4ecd568234",
+        "size": 4796
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-system/README.md": {
+        "mtime_ns": 1781880667074214050,
+        "sha256": "121bcd93b3ea6556029662ec35dfba3095767125cd64008a93c99c017f99c4e8",
+        "size": 6687
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-transformers/Examples/Mistral7B/README.md": {
+        "mtime_ns": 1781880667234512407,
+        "sha256": "1a32bcd5e2d1cd1f61c276a93a57fba9bf4063836c3a04f80c3288be88bf9ac0",
+        "size": 1525
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-transformers/Examples/Mistral7B/requirements.txt": {
+        "mtime_ns": 1781880667234927554,
+        "sha256": "497aa26efb5b28b71f40638dd8c695d673679fc73750748fa1dc99ca3fadaab0",
+        "size": 56
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-transformers/Examples/transformers-cli/Package.swift": {
+        "mtime_ns": 1781880667235097379,
+        "sha256": "4a1fc86e0ab9f70aff7aa977ab2c233ef87297d2d444e4bf7dde74fff3d2a259",
+        "size": 876
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-transformers/Package.swift": {
+        "mtime_ns": 1781880667235807721,
+        "sha256": "f7bbf4a5ab76142eacbb791f66e5713c711600e3fe8db8e7c7cd0f98096fafab",
+        "size": 2531
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-transformers/README.md": {
+        "mtime_ns": 1781880667236066625,
+        "sha256": "0f93cc027a5678a6bbfa77f8496eb075b7cbcd839dadac8e7a26b12ba6300ee7",
+        "size": 8130
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-websocket/Package.swift": {
+        "mtime_ns": 1781880664639639705,
+        "sha256": "b7b642db80355b09cd60ebdc1a5fa16c6823abcbbd44615aa0e1ce82d66b3e4a",
+        "size": 3435
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/swift-websocket/README.md": {
+        "mtime_ns": 1781880664639760324,
+        "sha256": "adaac41cb6618618b31ff0c4422f54c1b45c2a30bb08a08ae5b62e9f06a0eb83",
+        "size": 1081
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/yyjson/Package.swift": {
+        "mtime_ns": 1781880702721549254,
+        "sha256": "86c8ce8c0c4a0e5325a49c4ab35b65017ce376ce2c9318e04cd0bfce9e14af34",
+        "size": 810
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/yyjson/README.md": {
+        "mtime_ns": 1781880702721831074,
+        "sha256": "d80f1b4b6d5a8e32af5df5e2cc06fe618db67962c9e1015c5d607c4a105b8259",
+        "size": 11556
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/yyjson/doc/doxygen/html/index.html": {
+        "mtime_ns": 1781880702732469445,
+        "sha256": "e82461b55c38ffac5a1bf9e4b149c8f991c8205d3baac4c9ba241e7fa5fceec9",
+        "size": 50453
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/yyjson/test/data/json/README.md": {
+        "mtime_ns": 1781880702759585450,
+        "sha256": "577d46f50523252bad1c222db96f411650001d45ba6cffe4e64b4eee86b3781e",
+        "size": 2088
+      },
+      "tools/speech_swift_sidecar/.build/checkouts/yyjson/test/data/num/README.md": {
+        "mtime_ns": 1781880702827814673,
+        "sha256": "64fe04a6ac3aef672e4031d238806afdd62112e9e4ec3410ecb26a8cb3c8d4ca",
+        "size": 586
+      },
+      "tools/speech_swift_sidecar/Package.swift": {
+        "mtime_ns": 1781880451894454437,
+        "sha256": "1e2622ad171cde13a2490794e3e834137c239ddbce7bfe1569abba73bb2ba5ae",
+        "size": 1604
+      },
+      "tools/whisperkit_sidecar/.build/checkouts/WhisperKit/Examples/ServeCLIClient/Curl/README.md": {
+        "mtime_ns": 1781850340267999725,
+        "sha256": "f88ae2065c5175b5a20f0dd868bb525f4ee7f363004d4d901ecd6c8bf592897d",
+        "size": 1675
+      },
+      "tools/whisperkit_sidecar/.build/checkouts/WhisperKit/Examples/ServeCLIClient/Python/README.md": {
+        "mtime_ns": 1781850340268664620,
+        "sha256": "8d5f7e7928f9aedf0b0aac2eddb635f45f43ed5bd48801025acd4b894829caab",
+        "size": 2912
+      },
+      "tools/whisperkit_sidecar/.build/checkouts/WhisperKit/Examples/ServeCLIClient/Python/pyproject.toml": {
+        "mtime_ns": 1781850340268789332,
+        "sha256": "380aeebb95b60ca39317b21306c8e1f65958e92a3746e485f1f3f37792413386",
+        "size": 255
+      },
+      "tools/whisperkit_sidecar/.build/checkouts/WhisperKit/Examples/ServeCLIClient/Swift/Package.swift": {
+        "mtime_ns": 1781850340272666740,
+        "sha256": "4157a66c2b7539b3f263d4de60fd02f491e6c5421e6c7593fe6c745b70e7caaa",
+        "size": 1095
+      },
+      "tools/whisperkit_sidecar/.build/checkouts/WhisperKit/Examples/ServeCLIClient/Swift/README.md": {
+        "mtime_ns": 1781850340272802619,
+        "sha256": "239dd49750a447b445a43f64be708918ffb6fa6ad93b63f2754ae061698055a6",
+        "size": 2832
+      },
+      "tools/whisperkit_sidecar/.build/checkouts/WhisperKit/Examples/TTS/TTSKitExample/README.md": {
+        "mtime_ns": 1781850340275869419,
+        "sha256": "d08e73df9562489c878c92cc9072a7a4bad6f88fbba4c1a9d920f3ed170c49f4",
+        "size": 3164
+      },
+      "tools/whisperkit_sidecar/.build/checkouts/WhisperKit/Package.swift": {
+        "mtime_ns": 1781850340314439368,
+        "sha256": "6b6196ee8a83a3de8c18f607d7b70337db1f5709b7de2cce34bc55a109043352",
+        "size": 4325
+      },
+      "tools/whisperkit_sidecar/.build/checkouts/WhisperKit/README.md": {
+        "mtime_ns": 1781850340315052845,
+        "sha256": "5b35d1773aba3f802ae18709d313f77986c5837510947ee07ee87bb25392afe2",
+        "size": 23331
+      },
+      "tools/whisperkit_sidecar/.build/checkouts/WhisperKit/fastlane/README.md": {
+        "mtime_ns": 1781850340424521170,
+        "sha256": "81f9cdd51f309d07392a9cbdbe815e13a86e123669a1fec9538b809237a55e5f",
+        "size": 1034
+      },
+      "tools/whisperkit_sidecar/.build/checkouts/WhisperKit/scripts/pyproject.toml": {
+        "mtime_ns": 1781850340425064770,
+        "sha256": "8ef6311218d8cb321401cc0b3c60f7b3117b345f02f3699a0f6f391232983d65",
+        "size": 187
+      },
+      "tools/whisperkit_sidecar/.build/checkouts/swift-argument-parser/Package.swift": {
+        "mtime_ns": 1781850339989874424,
+        "sha256": "4eae0e28d24671d6ab75c2c7a0dd0326e6d48f8785510a3e403886fe8cf17d88",
+        "size": 4396
+      },
+      "tools/whisperkit_sidecar/.build/checkouts/swift-argument-parser/README.md": {
+        "mtime_ns": 1781850339991076376,
+        "sha256": "9e5228fd51758b7a5f7328bb29ff3c6527655b074b3a986eb078f322116736bb",
+        "size": 5713
+      },
+      "tools/whisperkit_sidecar/Package.swift": {
+        "mtime_ns": 1781850420308321948,
+        "sha256": "724aaf9b1dd281b4570b45c2dcd31bb6f66f9d18561dc1a64c0dfe4ed2f8996e",
+        "size": 1216
+      }
+    }
+  }
+}

@@ -41,7 +41,7 @@ Inspected `soniqo/speech-swift` at tag **v0.0.21** (latest; the package is early
 | `swift-tools-version` | 5.10 |
 | **macOS minimum** | **`.macOS("15.0")`** (iOS 18.0) |
 | **macOS 15+ required?** | **Yes** |
-| **Conflicts with DexDictate's macOS 14 floor?** | **Yes** — see "Production implications" |
+| **Conflicts with DexDictate's macOS 14 floor?** | A compatibility note, **not a blocker by itself** — see "Production implications" (DexDictate is a 2-user private tool; raising the floor is acceptable if the capability earns it) |
 | `ParakeetStreamingASR` product exists? | **Yes** (also `ParakeetASR`, `NemotronStreamingASR`, and ~25 other products incl. TTS/VAD/diarization/separation) |
 | Importable/buildable in isolation? | Target depends only on `AudioCommon` → `Hub` (swift-transformers); no hummingbird/server stack, no SpeechCore binary |
 | Audio input | 16 kHz mono `[Float]` buffers; `AudioFileLoader.loadWAV(url:)` → `(samples, sampleRate)`; resamples internally |
@@ -154,18 +154,24 @@ estimated/extrapolated figures are included.
 
 ## Production implications
 
-- **macOS floor conflict is the headline risk.** speech-swift requires macOS 15;
-  DexDictate ships a macOS 14 floor. Production use would require one of:
-  1. **raising DexDictate's macOS floor to 15** (drops macOS 14 users),
-  2. shipping it as an **optional macOS 15+ streaming backend** (added complexity,
-     two engine paths), or
-  3. **rejecting it** for production and keeping it benchmark-only.
+- **macOS 15+ is acceptable for this project if the capability earns it — it is
+  NOT a rejection reason by itself.** DexDictate is a small private-use tool with
+  exactly two known users (Andrew and Bryan's mother). Raising the floor to macOS
+  15 is a fine trade if streaming ASR / partials / EOU prove meaningfully better.
+  It remains an **explicit production decision** to make deliberately, not a
+  silent default — but the OS version is a compatibility note, not a blocker.
+- **The real blockers are build + evidence, not the OS floor:**
+  1. the isolated SwiftPM build stalls before compilation (see "Build blocker"),
+  2. there are no benchmark results yet,
+  3. the dependency/build weight is large (monolithic `0.0.x` toolkit), and
+  4. streaming/partial/EOU runtime quality is unknown (unverified).
 - **Early-stage + broad surface.** `0.0.x` versioning implies API churn; the
-  package bundles a large, server-including toolkit. Even with isolated imports,
-  this is a heavier and less stable dependency than WhisperKit.
-- **Value is the streaming axis.** If streaming/partials/EOU prove valuable for
-  DexDictate's UX, that capability — not necessarily this package — is the thing to
-  pursue.
+  package bundles a large toolkit (incl. a hummingbird/websocket server stack).
+  Even with isolated imports this is a heavier, less stable dependency than
+  WhisperKit — a build/maintenance cost, weighed against the capability gain.
+- **Value is the streaming axis.** speech-swift is specifically about streaming
+  ASR / partials / EOU — a capability WhisperKit's batch lane does not cover. It is
+  not a blind replacement for WhisperKit; the two address different axes.
 
 ## SpeechVAD (separate future experiment)
 
@@ -178,23 +184,22 @@ blocker is resolved.
 
 ## Recommendation
 
-**Defer speech-swift; it is not a near-term production candidate, and it is not even
-benchmarkable in this environment yet.** Reasoning (skeptical, evidence-based):
+**Keep pursuing speech-swift as a benchmark-only lane; the goal is to beat the
+build stall, not to reject it over the OS floor.** Reasoning (skeptical,
+evidence-based):
 
-1. **macOS 15+ floor** conflicts with DexDictate's macOS 14 floor — already a hard
-   production gate (would require raising the floor, an optional 15+ backend, or
-   rejection).
-2. **Build does not come up here** — the monolithic `0.0.x` toolkit package stalls
-   in planning over a huge graph (mlx-swift/hummingbird/WhisperKit/…). Even the
-   single streaming module drags the whole toolkit.
-3. **Early-stage + broad surface + server deps** make it a heavier, less stable
-   dependency than WhisperKit, which is already the lead native candidate and
-   builds cleanly.
+1. **macOS 15+ is acceptable** for this 2-user private tool if streaming value is
+   proven — no longer a rejection reason (see "Production implications").
+2. **Build does not come up here yet** — this is the real blocker. The build
+   stalls before compilation; the diagnosis and narrower-build attempts are
+   tracked in "Build blocker" below.
+3. **No runtime evidence yet** — streaming/partial/EOU quality is unverified until
+   the build succeeds and a benchmark runs.
 
-The **capability** speech-swift targets (streaming ASR, partial hypotheses, EOU) is
-still worth pursuing — but the next step is to evaluate that capability through a
-**lighter path**, not this package as-is. Concretely: keep the tool/scripts/docs in
-place (they're correct and ready), and revisit only if (a) a clean long build proves
-the stall is just slowness, or (b) upstream splits `ParakeetStreamingASR` out of the
-toolkit. Meanwhile **WhisperKit remains the lead production-shaped candidate** and
-SwiftWhisper remains production.
+The **capability** speech-swift targets (streaming ASR, partial hypotheses, EOU)
+is genuinely worth proving — it is the one axis WhisperKit's batch lane does not
+cover. Next step: continue the build-unblock work (narrower package / vendoring /
+tag bump) rather than re-running the same monolithic build. Meanwhile **WhisperKit
+remains the lead production-shaped candidate for batch dictation** and SwiftWhisper
+remains production; speech-swift is specifically about streaming, not a blind
+WhisperKit replacement.

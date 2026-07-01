@@ -217,15 +217,17 @@ steady-state (median/p95) except where noted.
 | WhisperKit | whisper-tiny | 0.375 | 135 ms median / 269 p95 | ✅ Swift/CoreML |
 | WhisperKit | whisper-base | 0.344 | 219 ms median / 455 p95 | ✅ Swift/CoreML |
 | WhisperKit | whisper-small | 0.325 | 782 ms median / 1464 p95 | ✅ Swift/CoreML |
-| speech-swift | ParakeetStreamingASR | — not benchmarked — | — | ⚠️ macOS 15+; build blocked |
+| speech-swift | ParakeetStreamingASR | — not benchmarked — | — | build stall (real blocker); macOS 15+ acceptable |
 
 > **speech-swift (ParakeetStreamingASR) — not yet benchmarked.** A full isolated
 > streaming-ASR lane was built (`tools/speech_swift_sidecar/`,
 > `scripts/benchmark_speech_swift.{py,sh}`), but **no numbers were produced**: the
 > isolated package **stalls in `swift build` planning** (after a clean dependency
-> resolution, before any compilation) across three attempts, so the streaming
-> model never executed. speech-swift also requires **macOS 15+** (vs DexDictate's
-> macOS 14 floor). No estimated figures are given. See
+> resolution, before any compilation), so the streaming model never executed —
+> that build stall is the **real blocker**. speech-swift requires **macOS 15+**,
+> which for this 2-user private tool is an **acceptable explicit decision if the
+> capability is proven**, not a blocker by itself. No estimated figures are given.
+> Streaming/partials/EOU is a different axis than the batch lanes above. See
 > [`SPEECH_SWIFT_BENCHMARK.md`](SPEECH_SWIFT_BENCHMARK.md).
 
 ## Interpretation

@@ -138,6 +138,10 @@ def main():
     tool = args.speech_swift_tool
     tool_ok = bool(tool) and os.path.isfile(tool) and os.access(tool, os.X_OK)
     output_dir = Path(args.output_dir)
+    # Ensure the output dir exists before the Swift tool's atomic --out write
+    # (the tool swallows write errors, so a missing dir would look like a tool error).
+    if not args.dry_run:
+        output_dir.mkdir(parents=True, exist_ok=True)
 
     categories = None
     limit = args.limit

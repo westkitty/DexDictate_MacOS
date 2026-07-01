@@ -137,12 +137,15 @@ production root `Package.swift`.
 > **Update:** the isolated lane now exists (`tools/speech_swift_sidecar/`,
 > `scripts/benchmark_speech_swift.{py,sh}`), but the benchmark **did not run**: the
 > isolated package **stalls in `swift build` planning** (after a full successful
-> dependency resolution, before compiling anything) across three attempts. Also
-> confirmed: speech-swift requires **macOS 15+** (conflicts with the macOS 14
-> floor). Full findings + blocker analysis:
-> [`SPEECH_SWIFT_BENCHMARK.md`](SPEECH_SWIFT_BENCHMARK.md). speech-swift is
-> **deferred**; WhisperKit remains the lead native candidate. The original roadmap
-> intent below is retained for context.
+> dependency resolution, before compiling anything). That build stall — plus the
+> lack of runtime evidence and the dependency weight — is the **real blocker**.
+> speech-swift requires **macOS 15+**, which for this 2-user private tool is an
+> **acceptable, explicit production decision if the streaming capability earns it
+> — not a rejection reason by itself**. Active work: unblock the build (narrower
+> package / vendoring / tag bump), not reject over the OS version. Full findings +
+> blocker analysis: [`SPEECH_SWIFT_BENCHMARK.md`](SPEECH_SWIFT_BENCHMARK.md).
+> WhisperKit remains the lead candidate for *batch* dictation; speech-swift is
+> specifically about *streaming/partials/EOU*.
 
 - `soniqo/speech-swift` should be evaluated as a **future isolated benchmark lane**.
 - It is relevant because it is a **Swift Package Manager-native, Apple Silicon
@@ -158,13 +161,13 @@ production root `Package.swift`.
     batch-after-recording engines benchmarked so far).
   - **Second candidate (later): `SpeechVAD`** — keep VAD separate from ASR
     accuracy testing so the two concerns don't confound each other.
-- **Verify its macOS requirement before any production discussion.** If
-  `speech-swift` requires **macOS 15+**, that conflicts with DexDictate's current
-  **macOS 14+** floor and keeps it benchmark-only unless we explicitly choose to
-  raise the floor.
+- **macOS requirement (resolved decision):** speech-swift requires **macOS 15+**.
+  For this 2-user private tool, raising DexDictate's floor to macOS 15 is an
+  **acceptable explicit decision if the capability is proven** — it is a
+  compatibility note, not a blocker by itself.
 
-This note is documentation for the roadmap; the `speech-swift` lane is deferred to
-a future turn.
+This note is documentation for the roadmap; the build-unblock investigation is
+active (see [`SPEECH_SWIFT_BENCHMARK.md`](SPEECH_SWIFT_BENCHMARK.md)).
 
 ## Evidence Required Before Production Consideration
 
