@@ -166,7 +166,39 @@ struct DexStatusChip: View {
 struct DexContextChips: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var modelCatalog: WhisperModelCatalog
+    @ObservedObject var registry: TranscriptionProviderRegistry
     @State private var showingTriggerPopover = false
+    @State private var isApplyingSelection = false
+
+    /// Same union used by Classic's "Choose Model" list — see `ModelSelectionActions`.
+    private var whisperRows: [ModelSelectionActions.WhisperRow] {
+        ModelSelectionActions.whisperRows(modelCatalog: modelCatalog)
+    }
+
+    private var providerIDs: [TranscriptionProviderID] {
+        [.parakeetTDT06Bv3, .nemotron35ASRStreaming06B, .moonshineV2, .appleSpeech]
+    }
+
+    private func providerObject(for id: TranscriptionProviderID) -> any TranscriptionProvider {
+        switch id {
+        case .parakeetTDT06Bv3: return registry.parakeetProvider
+        case .nemotron35ASRStreaming06B: return registry.nemotronProvider
+        case .moonshineV2: return registry.moonshineProvider
+        case .appleSpeech: return registry.appleSpeechProvider
+        case .whisperKit: return registry.whisperKitProvider
+        }
+    }
+
+    /// Compact pill text: the current primary engine (Whisper size, or another engine's name)
+    /// while idle, or a busy indicator while a tap is downloading/applying a selection.
+    private var modelPillText: String {
+        if isApplyingSelection { return "Working…" }
+        let primary = ModelSelectionActions.primaryEngineID(settings: settings, registry: registry)
+        if primary == .whisperKit {
+            return settings.activeWhisperModelID
+        }
+        return providerObject(for: primary).displayName
+    }
 
     var body: some View {
         HStack(spacing: 6) {
@@ -182,15 +214,37 @@ struct DexContextChips: View {
             }
 
             Menu {
-                ForEach(modelCatalog.availableModels) { model in
-                    Button(model.displayName) { settings.activeWhisperModelID = model.id }
+                Section("Whisper") {
+                    ForEach(whisperRows) { row in
+                        Button {
+                            selectWhisper(row)
+                        } label: {
+                            Text(row.isInstalled ? row.displayName : "\(row.displayName) — Download")
+                        }
+                    }
+                }
+                Section("Other Engines") {
+                    ForEach(providerIDs, id: \.self) { pid in
+                        let isHealthy = registry.healthReport[pid]?.isAvailable == true
+                        Button {
+                            selectProvider(pid)
+                        } label: {
+                            Text(isHealthy
+                                ? providerObject(for: pid).displayName
+                                : "\(providerObject(for: pid).displayName) — Download")
+                        }
+                    }
                 }
             } label: {
-                DexInteractivePill(icon: "brain", text: settings.activeWhisperModelID)
+                DexInteractivePill(icon: "brain", text: modelPillText)
             }
             .menuStyle(.borderlessButton)
             .fixedSize()
-            .accessibilityLabel("Model: \(settings.activeWhisperModelID). Tap to change.")
+            .disabled(isApplyingSelection)
+            .accessibilityLabel("Model: \(modelPillText). Tap to change.")
+            .onAppear {
+                registry.resolveActiveProvider(liveTranscriptionEnabled: settings.liveTranscriptionEnabled)
+            }
 
             Button {
                 settings.triggerMode = settings.triggerMode == .holdToTalk ? .toggle : .holdToTalk
@@ -204,6 +258,26 @@ struct DexContextChips: View {
             .accessibilityLabel("Trigger mode: \(settings.triggerMode.rawValue). Tap to switch.")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func selectWhisper(_ row: ModelSelectionActions.WhisperRow) {
+        guard !isApplyingSelection else { return }
+        isApplyingSelection = true
+        Task {
+            await ModelSelectionActions.selectWhisper(
+                id: row.id, isInstalled: row.isInstalled, settings: settings, modelCatalog: modelCatalog
+            )
+            isApplyingSelection = false
+        }
+    }
+
+    private func selectProvider(_ pid: TranscriptionProviderID) {
+        guard !isApplyingSelection else { return }
+        isApplyingSelection = true
+        Task {
+            await ModelSelectionActions.selectProvider(pid, settings: settings, registry: registry)
+            isApplyingSelection = false
+        }
     }
 }
 

@@ -186,7 +186,8 @@ struct DexStateFirstPopoverView: View {
     private var contextChips: some View {
         DexContextChips(
             settings: settings,
-            modelCatalog: WhisperModelCatalog.shared
+            modelCatalog: WhisperModelCatalog.shared,
+            registry: engine.transcriptionProviderRegistry
         )
     }
 

@@ -222,6 +222,45 @@ struct DexLayeredRevealView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
 
+                // -- Transcription --
+                sectionHeader("Transcription")
+
+                DexRevealToggleRow(
+                    icon: "waveform.badge.mic",
+                    title: "Live Transcription",
+                    detail: "Live partial captions while you speak (Nemotron, then Apple Speech). Doesn't affect what actually gets typed — see Primary Dictation Engine below.",
+                    isOn: $settings.liveTranscriptionEnabled
+                )
+
+                DexRevealToggleRow(
+                    icon: "command",
+                    title: "Command Mode",
+                    detail: "Short recordings (under 2.5s) are checked against Moonshine for a recognized command phrase before falling through to the primary engine.",
+                    isOn: $settings.commandModeEnabled
+                )
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Primary dictation engine: \(primaryEngineDisplayName)")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.75))
+                    if let resolution = engine.transcriptionProviderRegistry.lastResolution {
+                        Text("Live preview: \(resolution.selectedProviderDisplayName) (\(resolution.modeName))")
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.5))
+                    }
+                }
+                .padding(.horizontal, 2)
+                .onAppear {
+                    engine.transcriptionProviderRegistry.resolveActiveProvider(
+                        liveTranscriptionEnabled: settings.liveTranscriptionEnabled
+                    )
+                }
+
+                Text("Pick which model/engine is active, and download new ones, from the \"brain\" chip in the main screen or Quick Settings → Transcription Engines.")
+                    .font(.caption2)
+                    .foregroundStyle(.white.opacity(0.30))
+                    .fixedSize(horizontal: false, vertical: true)
+
                 // -- Output --
                 sectionHeader("Output")
 
@@ -263,6 +302,13 @@ struct DexLayeredRevealView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
         }
+    }
+
+    // -- Same primary-engine logic Classic and the model chip use — see `ModelSelectionActions`.
+    private var primaryEngineDisplayName: String {
+        let registry = engine.transcriptionProviderRegistry
+        let primary = ModelSelectionActions.primaryEngineID(settings: settings, registry: registry)
+        return primary == .parakeetTDT06Bv3 ? registry.parakeetProvider.displayName : registry.whisperKitProvider.displayName
     }
 
     // -- Safe mode binding mirrors QuickSettingsView pattern --

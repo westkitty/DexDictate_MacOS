@@ -1520,12 +1520,10 @@ private struct LiveTranscriptionStatusView: View {
     }
 
     /// The engine currently producing the committed/pasted transcript: the explicit pin if one
-    /// is set, otherwise the automatic Parakeet-if-healthy-else-Whisper default.
+    /// is set, otherwise the automatic Parakeet-if-healthy-else-Whisper default. Shared with
+    /// the Experimental UI's `DexContextChips` via `ModelSelectionActions`.
     private var primaryEngineID: TranscriptionProviderID {
-        if let pin = TranscriptionProviderID(rawValue: settings.preferredPrimaryEngineID) {
-            return pin
-        }
-        return primaryEngineIsParakeet ? .parakeetTDT06Bv3 : .whisperKit
+        ModelSelectionActions.primaryEngineID(settings: settings, registry: registry)
     }
 
     private var primaryEngineStatusExplanation: String {
@@ -1568,21 +1566,12 @@ private struct LiveTranscriptionStatusView: View {
     }
 
     /// Whisper sizes already on disk, unioned with the full downloadable catalog — de-duplicated
-    /// by id so an installed size never appears twice.
+    /// by id so an installed size never appears twice. Shared logic lives in
+    /// `ModelSelectionActions` so this list can't drift from the Experimental UI's version.
     private var whisperRows: [ModelRow] {
-        var seen = Set<String>()
-        var rows: [ModelRow] = []
-        for model in modelCatalog.availableModels where seen.insert(model.id).inserted {
-            rows.append(.whisper(id: model.id, displayName: model.displayName, isInstalled: true))
+        ModelSelectionActions.whisperRows(modelCatalog: modelCatalog).map {
+            .whisper(id: $0.id, displayName: $0.displayName, isInstalled: $0.isInstalled)
         }
-        for entry in WhisperModelCatalog.downloadableCatalog where seen.insert(entry.id).inserted {
-            rows.append(.whisper(
-                id: entry.id,
-                displayName: "\(entry.displayName) (\(entry.approximateSizeMB) MB)",
-                isInstalled: false
-            ))
-        }
-        return rows
     }
 
     private var providerRows: [ModelRow] {
@@ -1746,65 +1735,21 @@ private struct LiveTranscriptionStatusView: View {
     private func selectRow(_ row: ModelRow) {
         switch row {
         case .whisper(let id, _, let isInstalled):
-            if isInstalled {
-                applyWhisperSelection(id: id)
-            } else {
-                downloadWhisperModel(id: id)
+            guard downloadingWhisperID == nil else { return }
+            downloadingWhisperID = id
+            Task {
+                await ModelSelectionActions.selectWhisper(id: id, isInstalled: isInstalled, settings: settings, modelCatalog: modelCatalog)
+                downloadingWhisperID = nil
+                refreshStatus()
             }
         case .provider(let pid):
-            if registry.healthReport[pid]?.isAvailable != true, Self.downloadableProviderIDs.contains(pid) {
-                downloadModel(providerID: pid, thenApply: true)
-            } else {
-                applyProviderSelection(pid)
+            guard !downloadingIDs.contains(pid) else { return }
+            downloadingIDs.insert(pid)
+            Task {
+                await ModelSelectionActions.selectProvider(pid, settings: settings, registry: registry)
+                downloadingIDs.remove(pid)
+                refreshStatus()
             }
-        }
-    }
-
-    private func applyWhisperSelection(id: String) {
-        settings.activeWhisperModelID = id
-        settings.preferredPrimaryEngineID = TranscriptionProviderID.whisperKit.rawValue
-        refreshStatus()
-    }
-
-    private func applyProviderSelection(_ pid: TranscriptionProviderID) {
-        switch pid {
-        case .parakeetTDT06Bv3:
-            settings.preferredPrimaryEngineID = pid.rawValue
-        case .nemotron35ASRStreaming06B, .appleSpeech:
-            settings.liveTranscriptionEnabled = true
-        case .moonshineV2:
-            settings.commandModeEnabled = true
-        case .whisperKit:
-            break
-        }
-        refreshStatus()
-    }
-
-    private func downloadWhisperModel(id: String) {
-        guard downloadingWhisperID == nil,
-              let entry = WhisperModelCatalog.downloadableCatalog.first(where: { $0.id == id }) else { return }
-        downloadingWhisperID = id
-        Task {
-            do {
-                _ = try await modelCatalog.downloadModel(entry)
-                applyWhisperSelection(id: id)
-            } catch {
-                Safety.log("Whisper model download failed for \(id): \(error.localizedDescription)", category: .settings)
-            }
-            downloadingWhisperID = nil
-        }
-    }
-
-    private func downloadModel(providerID: TranscriptionProviderID, thenApply: Bool) {
-        guard !downloadingIDs.contains(providerID) else { return }
-        downloadingIDs.insert(providerID)
-        Task {
-            await registry.downloadModelsIfNeeded(for: providerID)
-            downloadingIDs.remove(providerID)
-            if thenApply, registry.healthReport[providerID]?.isAvailable == true {
-                applyProviderSelection(providerID)
-            }
-            refreshStatus()
         }
     }
 }
