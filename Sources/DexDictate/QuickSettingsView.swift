@@ -421,7 +421,8 @@ struct QuickSettingsView: View {
                     ) {
                         LiveTranscriptionStatusView(
                             settings: settings,
-                            registry: engine.transcriptionProviderRegistry
+                            registry: engine.transcriptionProviderRegistry,
+                            modelCatalog: modelCatalog
                         )
                     }
 
@@ -1505,7 +1506,10 @@ private struct SettingToggleWithInfo: View {
 private struct LiveTranscriptionStatusView: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var registry: TranscriptionProviderRegistry
+    @ObservedObject var modelCatalog: WhisperModelCatalog
     @State private var downloadingIDs: Set<TranscriptionProviderID> = []
+    @State private var downloadingWhisperID: String?
+    @State private var isModelListExpanded = true
 
     private static let downloadableProviderIDs: Set<TranscriptionProviderID> = [
         .parakeetTDT06Bv3, .nemotron35ASRStreaming06B, .moonshineV2
@@ -1513,6 +1517,119 @@ private struct LiveTranscriptionStatusView: View {
 
     private var primaryEngineIsParakeet: Bool {
         registry.healthReport[.parakeetTDT06Bv3]?.isAvailable == true
+    }
+
+    /// The engine currently producing the committed/pasted transcript: the explicit pin if one
+    /// is set, otherwise the automatic Parakeet-if-healthy-else-Whisper default.
+    private var primaryEngineID: TranscriptionProviderID {
+        if let pin = TranscriptionProviderID(rawValue: settings.preferredPrimaryEngineID) {
+            return pin
+        }
+        return primaryEngineIsParakeet ? .parakeetTDT06Bv3 : .whisperKit
+    }
+
+    private var primaryEngineStatusExplanation: String {
+        let isPinned = !settings.preferredPrimaryEngineID.isEmpty
+        switch primaryEngineID {
+        case .parakeetTDT06Bv3:
+            return isPinned
+                ? "Pinned to Parakeet in the model list below."
+                : "Parakeet is downloaded and healthy, so it produces the text that gets typed automatically. Whisper is the fallback if it ever becomes unavailable."
+        default:
+            if isPinned {
+                return "Pinned to Whisper in the model list below."
+            }
+            return primaryEngineIsParakeet
+                ? "Whisper produces the text that gets typed."
+                : "Whisper produces the text that gets typed. Download Parakeet below to make it the primary engine instead."
+        }
+    }
+
+    /// One row in the unified model list — a specific Whisper size, or one of the other engines.
+    private enum ModelRow: Identifiable {
+        case whisper(id: String, displayName: String, isInstalled: Bool)
+        case provider(TranscriptionProviderID)
+
+        var id: String {
+            switch self {
+            case .whisper(let id, _, _): return "whisper:\(id)"
+            case .provider(let pid): return pid.rawValue
+            }
+        }
+    }
+
+    private struct RowDisplay {
+        let title: String
+        let subtitle: String
+        let isSelected: Bool
+        let health: TranscriptionProviderHealth?
+        let isDownloading: Bool
+        let canDownload: Bool
+    }
+
+    /// Whisper sizes already on disk, unioned with the full downloadable catalog — de-duplicated
+    /// by id so an installed size never appears twice.
+    private var whisperRows: [ModelRow] {
+        var seen = Set<String>()
+        var rows: [ModelRow] = []
+        for model in modelCatalog.availableModels where seen.insert(model.id).inserted {
+            rows.append(.whisper(id: model.id, displayName: model.displayName, isInstalled: true))
+        }
+        for entry in WhisperModelCatalog.downloadableCatalog where seen.insert(entry.id).inserted {
+            rows.append(.whisper(
+                id: entry.id,
+                displayName: "\(entry.displayName) (\(entry.approximateSizeMB) MB)",
+                isInstalled: false
+            ))
+        }
+        return rows
+    }
+
+    private var providerRows: [ModelRow] {
+        [.provider(.parakeetTDT06Bv3), .provider(.nemotron35ASRStreaming06B), .provider(.moonshineV2), .provider(.appleSpeech)]
+    }
+
+    private func providerObject(for id: TranscriptionProviderID) -> any TranscriptionProvider {
+        switch id {
+        case .parakeetTDT06Bv3: return registry.parakeetProvider
+        case .nemotron35ASRStreaming06B: return registry.nemotronProvider
+        case .moonshineV2: return registry.moonshineProvider
+        case .appleSpeech: return registry.appleSpeechProvider
+        case .whisperKit: return registry.whisperKitProvider
+        }
+    }
+
+    private func display(for row: ModelRow) -> RowDisplay {
+        switch row {
+        case .whisper(let id, let name, let isInstalled):
+            let health: TranscriptionProviderHealth = isInstalled
+                ? .available()
+                : .unavailable("Not downloaded yet — tap to fetch.")
+            return RowDisplay(
+                title: name,
+                subtitle: "Compatibility",
+                isSelected: primaryEngineID == .whisperKit && settings.activeWhisperModelID == id,
+                health: health,
+                isDownloading: downloadingWhisperID == id,
+                canDownload: !isInstalled
+            )
+        case .provider(let pid):
+            let selected: Bool
+            switch pid {
+            case .parakeetTDT06Bv3: selected = primaryEngineID == .parakeetTDT06Bv3
+            case .nemotron35ASRStreaming06B, .appleSpeech: selected = settings.liveTranscriptionEnabled
+            case .moonshineV2: selected = settings.commandModeEnabled
+            case .whisperKit: selected = false
+            }
+            return RowDisplay(
+                title: providerObject(for: pid).displayName,
+                subtitle: providerObject(for: pid).userFacingModeName,
+                isSelected: selected,
+                health: registry.healthReport[pid],
+                isDownloading: downloadingIDs.contains(pid),
+                canDownload: Self.downloadableProviderIDs.contains(pid)
+            )
+        }
     }
 
     var body: some View {
@@ -1535,15 +1652,13 @@ private struct LiveTranscriptionStatusView: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
                     Circle()
-                        .fill(primaryEngineIsParakeet ? Color.green.opacity(0.8) : Color.white.opacity(0.35))
+                        .fill(primaryEngineID == .parakeetTDT06Bv3 ? Color.green.opacity(0.8) : Color.white.opacity(0.35))
                         .frame(width: 6, height: 6)
-                    Text("Primary dictation engine: \(primaryEngineIsParakeet ? registry.parakeetProvider.displayName : registry.whisperKitProvider.displayName)")
+                    Text("Primary dictation engine: \(primaryEngineID == .parakeetTDT06Bv3 ? registry.parakeetProvider.displayName : registry.whisperKitProvider.displayName)")
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(.white.opacity(0.75))
                 }
-                Text(primaryEngineIsParakeet
-                    ? "Parakeet is downloaded and healthy, so it produces the text that gets typed. Whisper is the fallback if Parakeet ever becomes unavailable."
-                    : "Whisper produces the text that gets typed. Download Parakeet below to make it the primary engine instead.")
+                Text(primaryEngineStatusExplanation)
                     .font(.caption2)
                     .foregroundStyle(.white.opacity(0.5))
                     .fixedSize(horizontal: false, vertical: true)
@@ -1569,39 +1684,17 @@ private struct LiveTranscriptionStatusView: View {
                 }
             }
 
-            DisclosureGroup("Provider Diagnostics") {
-                VStack(alignment: .leading, spacing: 6) {
-                    ForEach(registry.allProviders, id: \.id) { provider in
-                        let health = registry.healthReport[provider.id]
-                        let isDownloading = downloadingIDs.contains(provider.id)
-                        HStack(alignment: .top, spacing: 6) {
-                            Image(systemName: health?.isAvailable == true ? "checkmark.circle.fill" : "xmark.circle")
-                                .foregroundStyle(health?.isAvailable == true ? .green : .white.opacity(0.35))
-                                .font(.system(size: 11))
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text("\(provider.displayName) — \(provider.userFacingModeName)")
-                                    .font(.caption2.weight(.semibold))
-                                    .foregroundStyle(.white.opacity(0.8))
-                                if let reason = health?.reason {
-                                    Text(reason)
-                                        .font(.caption2)
-                                        .foregroundStyle(.white.opacity(0.5))
-                                        .fixedSize(horizontal: false, vertical: true)
-                                }
-                            }
+            DisclosureGroup("Choose Model", isExpanded: $isModelListExpanded) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Tap a model to use it. Not downloaded yet? Tapping it downloads it first, then selects it. Picking a model sets sensible defaults for it below — you can still change those manually afterward.")
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.5))
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.bottom, 4)
 
-                            Spacer()
-
-                            if Self.downloadableProviderIDs.contains(provider.id), health?.isAvailable != true {
-                                Button(isDownloading ? "Downloading..." : "Download") {
-                                    downloadModel(providerID: provider.id)
-                                }
-                                .buttonStyle(.bordered)
-                                .controlSize(.mini)
-                                .disabled(isDownloading)
-                            }
-                        }
-                    }
+                    ForEach(whisperRows) { row in rowView(row) }
+                    Divider().padding(.vertical, 2)
+                    ForEach(providerRows) { row in rowView(row) }
                 }
                 .padding(.top, 6)
             }
@@ -1611,16 +1704,106 @@ private struct LiveTranscriptionStatusView: View {
         .onAppear { refreshStatus() }
     }
 
+    private func rowView(_ row: ModelRow) -> some View {
+        let d = display(for: row)
+        return Button {
+            selectRow(row)
+        } label: {
+            HStack(alignment: .top, spacing: 6) {
+                Image(systemName: d.isSelected ? "checkmark.circle.fill" : (d.health?.isAvailable == true ? "circle" : "xmark.circle"))
+                    .foregroundStyle(d.isSelected ? .green : (d.health?.isAvailable == true ? .white.opacity(0.5) : .white.opacity(0.3)))
+                    .font(.system(size: 11))
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("\(d.title) — \(d.subtitle)")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.85))
+                    if let reason = d.health?.reason, d.health?.isAvailable != true {
+                        Text(reason)
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.5))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                Spacer()
+                if d.isDownloading {
+                    ProgressView()
+                        .controlSize(.mini)
+                } else if d.canDownload, d.health?.isAvailable != true {
+                    Text("Download")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.blue)
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
     private func refreshStatus() {
         registry.resolveActiveProvider(liveTranscriptionEnabled: settings.liveTranscriptionEnabled)
     }
 
-    private func downloadModel(providerID: TranscriptionProviderID) {
+    private func selectRow(_ row: ModelRow) {
+        switch row {
+        case .whisper(let id, _, let isInstalled):
+            if isInstalled {
+                applyWhisperSelection(id: id)
+            } else {
+                downloadWhisperModel(id: id)
+            }
+        case .provider(let pid):
+            if registry.healthReport[pid]?.isAvailable != true, Self.downloadableProviderIDs.contains(pid) {
+                downloadModel(providerID: pid, thenApply: true)
+            } else {
+                applyProviderSelection(pid)
+            }
+        }
+    }
+
+    private func applyWhisperSelection(id: String) {
+        settings.activeWhisperModelID = id
+        settings.preferredPrimaryEngineID = TranscriptionProviderID.whisperKit.rawValue
+        refreshStatus()
+    }
+
+    private func applyProviderSelection(_ pid: TranscriptionProviderID) {
+        switch pid {
+        case .parakeetTDT06Bv3:
+            settings.preferredPrimaryEngineID = pid.rawValue
+        case .nemotron35ASRStreaming06B, .appleSpeech:
+            settings.liveTranscriptionEnabled = true
+        case .moonshineV2:
+            settings.commandModeEnabled = true
+        case .whisperKit:
+            break
+        }
+        refreshStatus()
+    }
+
+    private func downloadWhisperModel(id: String) {
+        guard downloadingWhisperID == nil,
+              let entry = WhisperModelCatalog.downloadableCatalog.first(where: { $0.id == id }) else { return }
+        downloadingWhisperID = id
+        Task {
+            do {
+                _ = try await modelCatalog.downloadModel(entry)
+                applyWhisperSelection(id: id)
+            } catch {
+                Safety.log("Whisper model download failed for \(id): \(error.localizedDescription)", category: .settings)
+            }
+            downloadingWhisperID = nil
+        }
+    }
+
+    private func downloadModel(providerID: TranscriptionProviderID, thenApply: Bool) {
         guard !downloadingIDs.contains(providerID) else { return }
         downloadingIDs.insert(providerID)
         Task {
             await registry.downloadModelsIfNeeded(for: providerID)
             downloadingIDs.remove(providerID)
+            if thenApply, registry.healthReport[providerID]?.isAvailable == true {
+                applyProviderSelection(providerID)
+            }
             refreshStatus()
         }
     }

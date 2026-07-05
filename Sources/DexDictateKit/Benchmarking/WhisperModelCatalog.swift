@@ -294,6 +294,99 @@ public final class WhisperModelCatalog: ObservableObject {
             )
     }
 
+    /// A Whisper model that can be fetched by URL, whether or not it's currently downloaded.
+    /// Distinct from `WhisperModelDescriptor`, which only describes models already on disk.
+    public struct WhisperDownloadableModel: Identifiable, Equatable {
+        public let id: String
+        public let displayName: String
+        public let approximateSizeMB: Int
+        public let downloadURL: URL
+    }
+
+    /// Every Whisper size DexDictate knows how to fetch, regardless of install state. Hosted at
+    /// ggerganov/whisper.cpp's stable HuggingFace model mirror — the same files `whisper.cpp`
+    /// itself documents downloading (`models/download-ggml-model.sh`).
+    public static let downloadableCatalog: [WhisperDownloadableModel] = [
+        "tiny.en": ("Tiny English", 75),
+        "base.en": ("Base English", 142),
+        "small.en": ("Small English", 466),
+        "medium.en": ("Medium English", 1500),
+        "large-v3": ("Large v3", 2900),
+    ].compactMap { id, info in
+        guard let url = URL(string: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-\(id).bin") else {
+            return nil
+        }
+        return WhisperDownloadableModel(id: id, displayName: info.0, approximateSizeMB: info.1, downloadURL: url)
+    }
+
+    /// The downloadable-catalog id currently being fetched, if any. Published for UI progress display.
+    @Published public private(set) var downloadingModelID: String?
+    public private(set) var lastDownloadError: String?
+
+    /// Downloads a model from `WhisperModelCatalog.downloadableCatalog` and registers it exactly
+    /// like a manually-imported one (same metadata sidecar, same `.imported` origin, discoverable
+    /// afterward through `availableModels`). No-ops (returns the existing descriptor) if already
+    /// downloaded. Explicit, user-triggered — never called automatically.
+    @discardableResult
+    public func downloadModel(_ entry: WhisperDownloadableModel) async throws -> WhisperModelDescriptor {
+        if let existing = descriptor(for: entry.id) {
+            return existing
+        }
+        guard downloadingModelID == nil else {
+            throw DictationError.unknown("Another model download is already in progress.")
+        }
+        downloadingModelID = entry.id
+        lastDownloadError = nil
+        defer { downloadingModelID = nil }
+
+        do {
+            let (tempURL, response) = try await URLSession.shared.download(from: entry.downloadURL)
+            defer { try? fileManager.removeItem(at: tempURL) }
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                throw DictationError.unknown("Failed to download \(entry.displayName) (unexpected server response).")
+            }
+
+            try fileManager.createDirectory(at: modelsDirectoryURL, withIntermediateDirectories: true)
+            try fileManager.createDirectory(at: metadataDirectoryURL, withIntermediateDirectories: true)
+
+            let storedFileName = "\(entry.id).bin"
+            let destinationURL = modelsDirectoryURL.appendingPathComponent(storedFileName)
+            if fileManager.fileExists(atPath: destinationURL.path) {
+                try fileManager.removeItem(at: destinationURL)
+            }
+            try fileManager.moveItem(at: tempURL, to: destinationURL)
+
+            let size = try fileSizeOrThrow(for: destinationURL)
+            let sha256 = try Self.sha256(for: destinationURL)
+            let metadata = ImportedModelMetadata(
+                id: entry.id,
+                originalFileName: storedFileName,
+                storedFileName: storedFileName,
+                fileSizeBytes: size,
+                sha256: sha256,
+                importedAt: Date()
+            )
+            let metadataURL = metadataDirectoryURL.appendingPathComponent("\(entry.id).json")
+            let encoded = try JSONEncoder().encode(metadata)
+            try encoded.write(to: metadataURL, options: .atomic)
+
+            refresh()
+            return descriptor(for: entry.id)
+                ?? WhisperModelDescriptor(
+                    id: entry.id,
+                    displayName: "\(entry.displayName) (Imported)",
+                    fileName: storedFileName,
+                    origin: .imported,
+                    url: destinationURL,
+                    fileSizeBytes: size,
+                    sha256: sha256
+                )
+        } catch {
+            lastDownloadError = error.localizedDescription
+            throw error
+        }
+    }
+
     public func removeImportedModel(id: String) {
         guard let model = descriptor(for: id), model.origin == .imported else { return }
         try? fileManager.removeItem(at: model.url)

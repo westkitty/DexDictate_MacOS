@@ -782,15 +782,28 @@ public final class TranscriptionEngine: ObservableObject {
         return command != .none || processedText != trimmed
     }
 
-    /// Primary dictation engine: Parakeet when its model is downloaded and healthy,
-    /// otherwise Whisper. `sessionId` — see `dispatchCommittedTranscription`.
+    /// Primary dictation engine: Parakeet when its model is downloaded and healthy, otherwise
+    /// Whisper — unless `AppSettings.preferredPrimaryEngineID` pins a specific choice (set by
+    /// picking an entry in the unified model list). `sessionId` — see `dispatchCommittedTranscription`.
     private func runPrimaryEngine(samples: [Float], sessionId: UUID) {
         guard currentSessionId == sessionId else {
             Safety.log("runPrimaryEngine: stale session, discarding", category: .transcription)
             return
         }
         let registry = transcriptionProviderRegistry
-        guard registry.parakeetProvider.healthCheck().isAvailable else {
+        let pin = TranscriptionProviderID(rawValue: AppSettings.shared.preferredPrimaryEngineID)
+
+        // Pinned explicitly to Whisper: skip Parakeet entirely, even if it's healthy.
+        if pin == .whisperKit {
+            runWhisperTranscription(samples: samples, sessionId: sessionId)
+            return
+        }
+
+        // Auto (no pin) or pinned to Parakeet: use Parakeet if healthy, else Whisper.
+        guard registry.parakeetProvider.healthCheck().isAvailable, pin == nil || pin == .parakeetTDT06Bv3 else {
+            if pin == .parakeetTDT06Bv3 {
+                Safety.log("Primary engine pinned to Parakeet but it's unavailable; falling back to Whisper", category: .transcription)
+            }
             runWhisperTranscription(samples: samples, sessionId: sessionId)
             return
         }

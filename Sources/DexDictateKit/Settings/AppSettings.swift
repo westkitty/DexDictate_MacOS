@@ -110,6 +110,15 @@ public class AppSettings: ObservableObject {
     /// Longer recordings always skip straight to the primary engine. Defaults ON.
     @AppStorage("commandModeEnabled") public var commandModeEnabled: Bool = true
 
+    /// Explicit pin for which engine produces the committed/pasted transcript, set by picking
+    /// an entry in the unified model list. Empty string means "Auto" — the existing automatic
+    /// behavior (Parakeet if its model is downloaded and healthy, else Whisper). A non-empty
+    /// value is a `TranscriptionProviderID.rawValue` that forces that specific engine even if a
+    /// higher-priority one would otherwise be chosen automatically; if the pinned engine turns
+    /// out unhealthy when needed, `TranscriptionEngine` falls back to Whisper and reports why —
+    /// never a silent fallback.
+    @AppStorage("preferredPrimaryEngineID") public var preferredPrimaryEngineID: String = ""
+
     // MARK: - System
 
     /// Mirrors whether DexDictate is currently configured to launch at login.

@@ -22,7 +22,16 @@ public struct ExperimentFlags {
         case accuracy
     }
     /// Controls greedy.best_of, speed_up phase vocoder, and temperature retries.
-    public static var whisperDecodeProfile: DecodeProfile = .accuracy
+    ///
+    /// Default is `.balanced`, not `.accuracy`: `.accuracy` (best_of=2) roughly doubles
+    /// decode work on every single dictation regardless of length — confirmed in production
+    /// logs where a 1.5s utterance and a 22s utterance both took ~3-3.9s to transcribe, a flat
+    /// tax rather than length-proportional. `.balanced` drops best_of to 1 (no double-decode)
+    /// while still leaving `speed_up` off, so it doesn't take the phase-vocoder quality hit
+    /// `.speed` does. This only affects the *default* — `retryLastUtteranceInAccuracyMode()`
+    /// and the automatic suspicious-result retry both already explicitly request `.accuracy`
+    /// as an override for that one attempt, so accuracy-on-demand is unaffected.
+    public static var whisperDecodeProfile: DecodeProfile = .balanced
     
     public enum ResampleMethod {
         case linear
