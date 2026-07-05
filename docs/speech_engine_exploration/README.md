@@ -4,6 +4,96 @@ This directory is for benchmark-only speech engine experiments. It is not produc
 architecture, not a replacement for SwiftWhisper, and not a change to dictation output
 behavior.
 
+## 2026-07-04 update: production provider architecture now exists (narrow, disclosed exception)
+
+A production `TranscriptionProvider` abstraction was added at
+`Sources/DexDictateKit/Transcription/` along with a user-facing, default-ON "Live
+Transcription" setting. This is a deliberate, explicitly-approved exception to the
+"not production architecture" / "not routing live dictation through an experimental
+engine" rules below — recorded here so the exception is never mistaken for drift.
+
+What actually changed, precisely:
+
+- **SwiftWhisper remains the sole engine that produces the committed/pasted transcript.**
+  Nothing about command handling, vocabulary correction, punctuation, or output delivery
+  changed. `WhisperKitTranscriptionProvider` wraps the existing `WhisperService` for
+  reporting/health purposes only — the live dictation flow still calls `WhisperService`
+  directly, unchanged.
+- **Apple Speech (`AppleSpeechTranscriptionProvider`) is real, not a stub.** It drives only
+  the live *partial preview* text shown while the user is talking. It never touches the
+  final transcript, never opens its own `AVAudioEngine`/tap (it consumes buffers already
+  captured for Whisper), and refuses to run unless on-device recognition is available
+  (no server-based Apple Speech calls — offline policy preserved).
+- **Parakeet, Nemotron, and Moonshine are honest unavailable stubs**
+  (`UnavailableTranscriptionProvider`) — they report a clear reason, throw instead of running,
+  and are not wired to any real runtime. This directory's benchmark evidence bar (see below)
+  still applies before any of them could become real.
+- No cloud provider was added. No default model changed. No entitlements, signing, or
+  packaging behavior changed except adding `NSSpeechRecognitionUsageDescription` (required
+  for the real, on-device-only Apple Speech usage above).
+
+The rest of this document's boundary still governs everything in this directory —
+benchmark-only sidecar experiments still must not touch production output/audio/signing.
+
+## 2026-07-04 (later same day) update: Parakeet, Nemotron, and Moonshine are now real too
+
+Explicitly requested and approved: Parakeet, Nemotron, and Moonshine were upgraded from
+`UnavailableTranscriptionProvider` stubs to real, native Swift implementations, added
+straight into production (skipping this directory's usual isolated-sidecar-first process,
+by explicit choice). Two new production dependencies were added to the root `Package.swift`:
+
+- **`FluidInference/FluidAudio`** (Apache 2.0, native Swift/CoreML on the Apple Neural
+  Engine) — backs both `ParakeetTranscriptionProvider` (`AsrManager`/`AsrModels`, batch,
+  fast-local mode) and `NemotronTranscriptionProvider` (`StreamingNemotronAsrManager`,
+  true streaming with cache-aware encoder state).
+- **`moonshine-ai/moonshine-swift`** (MIT, first-party, Swift + ONNX Runtime) — backs
+  `MoonshineTranscriptionProvider` (`Transcriber.transcribeWithoutStreaming`, batch,
+  command mode). Model weights are fetched directly from `download.moonshine.ai` by a
+  small Swift downloader (component list/URL shape verified against the upstream Python
+  downloader) — no Python dependency required at runtime.
+
+**`soniqo/speech-swift` was deliberately NOT used**, even though the user accepted the risk
+of attempting it: FluidAudio already ships a native `StreamingNemotronAsrManager` that
+achieves the same real-Nemotron goal without speech-swift's documented risks (macOS 15+
+floor, the `swift build` planning stall recorded in `SPEECH_SWIFT_BENCHMARK.md`, and the
+heavy hummingbird/duplicate-WhisperKit dependency graph). This is a pivot, not a rejection —
+if FluidAudio's Nemotron support is ever removed or found lacking, speech-swift's tradeoffs
+above are exactly what will need re-litigating.
+
+**None of the three models are bundled or downloaded automatically.** Each provider's
+`healthCheck()` reports unavailable until its model files are confirmed present on disk;
+`TranscriptionProviderRegistry.downloadModelsIfNeeded(for:)` — triggered only by an explicit
+"Download" button in the Live Transcription diagnostics UI — fetches them. This keeps "no
+automatic network calls as a default path" intact even though the download is now real.
+
+## 2026-07-04 (third update, same day): Parakeet and Moonshine now drive committed output
+
+Explicitly requested: the two updates above stopped short of using Parakeet/Moonshine for
+anything but diagnostics. That undershot what was actually wanted — each mode is supposed to
+run for real when its conditions are met, not just report "available." `TranscriptionEngine`
+was changed accordingly (`dispatchCommittedTranscription` / `runPrimaryEngine` /
+`runWhisperTranscription`, called from `stopListening()`):
+
+- **Primary dictation engine, every normal utterance:** Parakeet when its model is downloaded
+  and healthy, **Whisper as the fallback** when it isn't. This is the biggest behavioral
+  change in this whole effort — until a user explicitly downloads the Parakeet model,
+  `healthCheck()` reports unavailable and behavior is byte-identical to before (Whisper
+  only); once downloaded, Parakeet becomes what actually gets typed.
+- **Command Mode** (`AppSettings.commandModeEnabled`, default ON): for recordings under 2.5s,
+  Moonshine transcribes first and the result is checked against the existing
+  `CommandProcessor` (built-in commands + custom "Dex [keyword]" hot words) purely as a
+  read/no-side-effect check. If it's a recognized command, Moonshine's text is used and
+  Whisper/Parakeet are skipped entirely. If not, Moonshine's result is discarded and the
+  utterance proceeds through the primary-engine path above exactly as any other recording
+  would. Only engages once Moonshine's model is downloaded.
+- Nemotron's role is unchanged from the prior update — it only drives the live *partial
+  preview* text (`TranscriptionEngine.liveTranscript`), never the committed transcript.
+
+Both Parakeet and Moonshine's blocking, non-async native calls (`transcribeWithoutStreaming`,
+etc.) are dispatched off the main actor/thread — see the `Task.detached` wrapper in
+`MoonshineTranscriptionProvider.transcribeBatch` and the fact that `AsrManager` is itself a
+plain (non-`@MainActor`) actor with its own executor.
+
 ## Boundary
 
 Allowed here:

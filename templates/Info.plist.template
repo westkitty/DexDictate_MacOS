@@ -14,5 +14,6 @@
     <key>LSMinimumSystemVersion</key><string>14.0</string>
     <key>NSMicrophoneUsageDescription</key><string>DexDictate needs microphone access to transcribe your speech into text.</string>
     <key>NSAccessibilityUsageDescription</key><string>DexDictate needs accessibility access to monitor global keyboard/mouse events.</string>
+    <key>NSSpeechRecognitionUsageDescription</key><string>DexDictate uses on-device Speech Recognition for optional live transcription previews. Audio never leaves your Mac.</string>
 </dict>
 </plist>

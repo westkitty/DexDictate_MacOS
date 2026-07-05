@@ -105,6 +105,15 @@ public final class TranscriptionEngine: ObservableObject {
 
     private let audioService = AudioRecorderService()
     private let whisperService = WhisperService()
+    /// Transcription provider architecture (Whisper, Apple Speech, and real implementations
+    /// of Parakeet/Nemotron/Moonshine). See `TranscriptionProviderRegistry` for the fallback
+    /// order Live Transcription uses, and `dispatchCommittedTranscription` for the order
+    /// that decides which engine's text actually gets committed/pasted.
+    public let transcriptionProviderRegistry: TranscriptionProviderRegistry
+    /// Set for the duration of a listening session when a streaming provider (Apple Speech or
+    /// Nemotron) is driving the live partial preview in `liveTranscript`. `nil` means the
+    /// session is plain Whisper-only, identical to Live Transcription being off.
+    private var activeLiveProviderID: TranscriptionProviderID?
     private let outputCoordinator: OutputCoordinating
     private let browserMediaController: BrowserMediaControlling
     private var activeBrowserMediaPauseSession: BrowserMediaPauseSession?
@@ -178,6 +187,7 @@ public final class TranscriptionEngine: ObservableObject {
     ) {
         self.outputCoordinator = outputCoordinator
         self.browserMediaController = browserMediaController
+        self.transcriptionProviderRegistry = TranscriptionProviderRegistry(whisperService: whisperService)
         // AudioRecorderService.inputLevel is @MainActor @Published — safe to bind directly.
         audioService.$inputLevel
             .assign(to: &$inputLevel)
@@ -247,7 +257,13 @@ public final class TranscriptionEngine: ObservableObject {
         }
         Safety.log("startSystem() called — setting up input monitor", category: .lifecycle)
         statusText = NSLocalizedString("Requesting Access...", comment: "Status: Requesting permissions")
-        // DexDictate uses Whisper (local CoreML) exclusively — no Apple Speech Recognition.
+        // Whisper (local CoreML) is always the engine that produces the committed transcript.
+        // When Live Transcription is on and Apple Speech is healthy, it additionally drives the
+        // live partial preview — see TranscriptionProviderRegistry. Ask for its permission (if
+        // undetermined) up front so the first dictation isn't mid-prompt.
+        if AppSettings.shared.liveTranscriptionEnabled {
+            transcriptionProviderRegistry.appleSpeechProvider.requestAuthorizationIfNeeded()
+        }
         setupInputMonitor()
         Safety.log("startSystem() complete — state=\(state)", category: .lifecycle)
     }
@@ -259,6 +275,10 @@ public final class TranscriptionEngine: ObservableObject {
         resumeActiveBrowserMediaSession()
         inputMonitor?.stop()
         audioService.stopRecording()
+        audioService.onRawAudioBuffer = nil
+        activeStreamingProvider?.stopTranscription()
+        transcriptionProviderRegistry.appleSpeechProvider.cancelTranscription()
+        activeLiveProviderID = nil
         _ = applyLifecycle(.systemStopped, context: "stopSystem")
         statusText = NSLocalizedString("Idle", comment: "Status: Idle")
         liveTranscript = ""
@@ -441,6 +461,12 @@ public final class TranscriptionEngine: ObservableObject {
         currentRecordingStartedAt = Date()
         automaticRetryOriginalText = nil
 
+        let providerResolution = transcriptionProviderRegistry.resolveActiveProvider(
+            liveTranscriptionEnabled: AppSettings.shared.liveTranscriptionEnabled
+        )
+        activeLiveProviderID = providerResolution.usesLiveStreaming ? providerResolution.selectedProviderID : nil
+        startLiveProviderSessionIfNeeded()
+
         if AppSettings.shared.playStartSound {
             SoundPlayer.play(AppSettings.shared.selectedStartSound)
         }
@@ -496,6 +522,54 @@ public final class TranscriptionEngine: ObservableObject {
                 }
             }
         }
+    }
+
+    /// Returns the concrete streaming provider for `activeLiveProviderID`, if it's one that
+    /// can actually drive the live preview (Apple Speech or Nemotron — both real, both
+    /// `TranscriptionProvider & StreamingAudioReceiving`). `nil` for anything else (e.g. plain
+    /// Whisper compatibility, or a provider that turned out unavailable).
+    private var activeStreamingProvider: (any TranscriptionProvider & StreamingAudioReceiving)? {
+        switch activeLiveProviderID {
+        case .appleSpeech: return transcriptionProviderRegistry.appleSpeechProvider
+        case .nemotron35ASRStreaming06B: return transcriptionProviderRegistry.nemotronProvider
+        default: return nil
+        }
+    }
+
+    /// Starts a live-preview streaming session on `activeLiveProviderID` if the resolver picked
+    /// one for this listening session (Apple Speech or Nemotron). The Whisper batch pipeline
+    /// below is unaffected either way: it still produces the committed transcript exactly as
+    /// before this provider architecture existed.
+    private func startLiveProviderSessionIfNeeded() {
+        guard let provider = activeStreamingProvider else { return }
+        let providerName = provider.displayName
+        do {
+            try provider.startTranscription()
+            provider.onPartialResult = { [weak self] text in
+                guard let self, self.state == .listening else { return }
+                self.liveTranscript = text
+            }
+            provider.onFinalResult = nil
+            provider.onError = { error in
+                Safety.log("Live preview — \(providerName) error: \(error.localizedDescription)", category: .transcription)
+            }
+            audioService.onRawAudioBuffer = { [weak provider] buffer in
+                provider?.appendAudioBuffer(buffer)
+            }
+            Safety.log("Live preview — \(providerName) session started", category: .transcription)
+        } catch {
+            activeLiveProviderID = nil
+            Safety.log("Live preview — \(providerName) failed to start: \(error.localizedDescription)", category: .transcription)
+        }
+    }
+
+    /// Tears down the live-preview session, if one is active, before the Whisper batch flow
+    /// takes over to produce the committed transcript.
+    private func stopLiveProviderSessionIfNeeded() {
+        guard let provider = activeStreamingProvider else { return }
+        audioService.onRawAudioBuffer = nil
+        provider.stopTranscription()
+        activeLiveProviderID = nil
     }
 
     private func resumeActiveBrowserMediaSession() {
@@ -572,6 +646,7 @@ public final class TranscriptionEngine: ObservableObject {
         silenceCountdown = nil
         statusText = NSLocalizedString("Transcribing...", comment: "Status: Transcribing")
         inputLevel = 0
+        stopLiveProviderSessionIfNeeded()
 
         // 1. Stop the audio engine and atomically collect the full utterance buffer.
         // stopAndCollect() runs on audioQueue.sync — safe from @MainActor because
@@ -639,35 +714,144 @@ public final class TranscriptionEngine: ObservableObject {
                 self.currentMetrics.resample_samples = whisperSamples.count
                 self.currentMetrics.t_resample_done = tResampleDone
 
-                Safety.log("Submitting \(whisperSamples.count) samples @ 16000 Hz to Whisper")
-                let domainBias = DictationDomainBias.initialPrompt(for: self.pendingDictationDomain)
-                // Opt-in: prime Whisper with the text the user is currently editing (proper nouns,
-                // sentence continuation), combined with the domain-bias vocabulary.
-                let focusedContext = AppSettings.shared.enableContextInjection
-                    ? FocusedTextReader().readTail(maxChars: 200)
-                    : nil
-                self.whisperService.setInitialPrompt(
-                    DictationContextPrompt.combine(domainBias: domainBias, focusedContext: focusedContext)
-                )
-
-                // Wire up result handler before calling transcribe.
-                self.whisperService.ontranscriptionComplete = { [weak self] text in
-                    self?.currentMetrics.t_whisper_done = Date()
-                    self?.handleWhisperResult(text)
-                }
-
+                Safety.log("Submitting \(whisperSamples.count) samples @ 16000 Hz for transcription")
                 self.currentMetrics.t_whisper_submit = Date()
                 self.activityPhase = .transcribing
-                if !self.whisperService.transcribe(audioFrames: whisperSamples) {
-                    Safety.log("stopListening() — Whisper refused transcription; resetting to ready state")
-                    self.statusText = NSLocalizedString("Ready", comment: "Status: Ready to dictate")
-                    self.liveTranscript = ""
-                    self.resultFeedback = .idle
-                    self.activityPhase = .ready
-                    self.resumeActiveBrowserMediaSession()
-                    _ = self.applyLifecycle(.transcriptionCompleted, context: "whisper unavailable")
-                }
+                self.dispatchCommittedTranscription(samples: whisperSamples, sessionId: sessionId)
             }
+        }
+    }
+
+    /// Duration under which a recording is eligible for Command Mode's Moonshine
+    /// pre-check before falling through to the primary dictation engine.
+    private static let commandModeMaxDurationSeconds: Double = 2.5
+
+    /// Decides which engine produces the committed transcript for this utterance and kicks
+    /// off transcription. Order: Moonshine (Command Mode, short utterances, recognized
+    /// commands only) → Parakeet (if its model is downloaded and healthy) → Whisper (always
+    /// available, never requires a download). Until a user explicitly downloads the Parakeet
+    /// or Moonshine models, both health checks report unavailable and this is byte-identical
+    /// to calling Whisper directly, as before this provider architecture existed.
+    ///
+    /// `sessionId` guards against a late-arriving result being committed/pasted after the
+    /// user has already started a new recording (or the system was stopped) while Moonshine/
+    /// Parakeet's async inference was still in flight — mirroring the stale-session check the
+    /// resample worker above already does before calling this.
+    private func dispatchCommittedTranscription(samples: [Float], sessionId: UUID) {
+        let durationSeconds = Double(samples.count) / 16000.0
+        let registry = transcriptionProviderRegistry
+
+        guard AppSettings.shared.commandModeEnabled,
+              durationSeconds < Self.commandModeMaxDurationSeconds,
+              registry.moonshineProvider.healthCheck().isAvailable else {
+            runPrimaryEngine(samples: samples, sessionId: sessionId)
+            return
+        }
+
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                let text = try await registry.moonshineProvider.transcribeBatch(samples: samples)
+                guard self.currentSessionId == sessionId else {
+                    Safety.log("Command Mode — stale session, discarding Moonshine result", category: .transcription)
+                    return
+                }
+                if self.isRecognizedCommand(text) {
+                    Safety.log("Command Mode — Moonshine recognized a command; skipping the primary engine", category: .transcription)
+                    self.currentMetrics.t_whisper_done = Date()
+                    self.handleTranscriptionResult(text)
+                    return
+                }
+                Safety.log("Command Mode — Moonshine result wasn't a recognized command; continuing to primary engine", category: .transcription)
+            } catch {
+                Safety.log("Command Mode — Moonshine failed (\(error.localizedDescription)); continuing to primary engine", category: .transcription)
+            }
+            self.runPrimaryEngine(samples: samples, sessionId: sessionId)
+        }
+    }
+
+    /// True if `CommandProcessor` would treat `text` as a command (built-in like "scratch
+    /// that"/"new line"/"all caps", or a custom "Dex [keyword]" hot word) rather than as
+    /// plain dictation content. Side-effect-free — `CommandProcessor.process` is pure text
+    /// analysis; the real command action (e.g. removing the last history item) still runs
+    /// exactly once, later, inside `prepareTranscriptionResult` via `handleTranscriptionResult`.
+    private func isRecognizedCommand(_ text: String) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+        let (processedText, command) = commandProcessor.process(trimmed, customCommands: customCommandsManager.commands)
+        return command != .none || processedText != trimmed
+    }
+
+    /// Primary dictation engine: Parakeet when its model is downloaded and healthy,
+    /// otherwise Whisper. `sessionId` — see `dispatchCommittedTranscription`.
+    private func runPrimaryEngine(samples: [Float], sessionId: UUID) {
+        guard currentSessionId == sessionId else {
+            Safety.log("runPrimaryEngine: stale session, discarding", category: .transcription)
+            return
+        }
+        let registry = transcriptionProviderRegistry
+        guard registry.parakeetProvider.healthCheck().isAvailable else {
+            runWhisperTranscription(samples: samples, sessionId: sessionId)
+            return
+        }
+
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                let text = try await registry.parakeetProvider.transcribeBatch(samples: samples)
+                guard self.currentSessionId == sessionId else {
+                    Safety.log("Parakeet: stale session, discarding result", category: .transcription)
+                    return
+                }
+                self.currentMetrics.t_whisper_done = Date()
+                self.handleTranscriptionResult(text)
+            } catch {
+                Safety.log("Parakeet failed (\(error.localizedDescription)); falling back to Whisper", category: .transcription)
+                guard self.currentSessionId == sessionId else {
+                    Safety.log("Parakeet fallback: stale session, discarding", category: .transcription)
+                    return
+                }
+                self.runWhisperTranscription(samples: samples, sessionId: sessionId)
+            }
+        }
+    }
+
+    /// DexDictate's original engine — always available, never requires a model download.
+    ///
+    /// `sessionId` closes a pre-existing gap (not introduced this session, but now inconsistent
+    /// with the guard the Parakeet/Moonshine paths above have): `stopSystem()` doesn't cancel an
+    /// in-flight Whisper transcription, so without this check a transcription that completes
+    /// after the user force-stopped mid-utterance (or started a new recording before the old one
+    /// resolved) would still commit/paste — the same class of bug fixed for Parakeet/Moonshine.
+    private func runWhisperTranscription(samples: [Float], sessionId: UUID) {
+        let domainBias = DictationDomainBias.initialPrompt(for: pendingDictationDomain)
+        // Opt-in: prime Whisper with the text the user is currently editing (proper nouns,
+        // sentence continuation), combined with the domain-bias vocabulary.
+        let focusedContext = AppSettings.shared.enableContextInjection
+            ? FocusedTextReader().readTail(maxChars: 200)
+            : nil
+        whisperService.setInitialPrompt(
+            DictationContextPrompt.combine(domainBias: domainBias, focusedContext: focusedContext)
+        )
+
+        // Wire up result handler before calling transcribe.
+        whisperService.ontranscriptionComplete = { [weak self] text in
+            guard let self, self.currentSessionId == sessionId else {
+                Safety.log("Whisper: stale session, discarding result", category: .transcription)
+                return
+            }
+            self.currentMetrics.t_whisper_done = Date()
+            self.handleTranscriptionResult(text)
+        }
+
+        if !whisperService.transcribe(audioFrames: samples) {
+            Safety.log("stopListening() — Whisper refused transcription; resetting to ready state")
+            statusText = NSLocalizedString("Ready", comment: "Status: Ready to dictate")
+            liveTranscript = ""
+            resultFeedback = .idle
+            activityPhase = .ready
+            resumeActiveBrowserMediaSession()
+            _ = applyLifecycle(.transcriptionCompleted, context: "whisper unavailable")
         }
     }
 
@@ -689,7 +873,7 @@ public final class TranscriptionEngine: ObservableObject {
         activityPhase = .transcribing
 
         whisperService.ontranscriptionComplete = { [weak self] text in
-            self?.handleWhisperResult(text)
+            self?.handleTranscriptionResult(text)
         }
 
         Task.detached(priority: .userInitiated) { [weak self] in
@@ -722,11 +906,11 @@ public final class TranscriptionEngine: ObservableObject {
         }
     }
 
-    private func handleWhisperResult(_ text: String) {
+    private func handleTranscriptionResult(_ text: String) {
         let importedFileName = pendingImportedFileName
         pendingImportedFileName = nil
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        Safety.log("handleWhisperResult — \(trimmed.isEmpty ? "empty" : "\(trimmed.count) chars")")
+        Safety.log("handleTranscriptionResult — \(trimmed.isEmpty ? "empty" : "\(trimmed.count) chars")")
         if trimmed.isEmpty {
             resumeActiveBrowserMediaSession()
             _ = applyLifecycle(.transcriptionCompleted, context: "empty whisper result")

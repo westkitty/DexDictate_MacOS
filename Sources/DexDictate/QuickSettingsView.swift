@@ -21,6 +21,7 @@ struct QuickSettingsView: View {
     @State private var inputPanelExpanded = false
     @State private var outputPanelExpanded = false
     @State private var accuracyPanelExpanded = false
+    @State private var transcriptionProvidersPanelExpanded = false
     @State private var profilePanelExpanded = false
     @State private var appearancePanelExpanded = false
     @State private var routeHealthExpanded = false
@@ -410,6 +411,18 @@ struct QuickSettingsView: View {
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.white.opacity(0.82))
                         }
+                    }
+
+                    QuickSettingsDisclosureCard(
+                        title: "Transcription Engines",
+                        subtitle: "Live-preview captions, command detection, and which engine dictates.",
+                        systemImage: "waveform.badge.mic",
+                        isExpanded: $transcriptionProvidersPanelExpanded
+                    ) {
+                        LiveTranscriptionStatusView(
+                            settings: settings,
+                            registry: engine.transcriptionProviderRegistry
+                        )
                     }
 
                     QuickSettingsDisclosureCard(
@@ -1485,6 +1498,130 @@ private struct SettingToggleWithInfo: View {
                 .padding(12)
                 .frame(width: 240)
             }
+        }
+    }
+}
+
+private struct LiveTranscriptionStatusView: View {
+    @ObservedObject var settings: AppSettings
+    @ObservedObject var registry: TranscriptionProviderRegistry
+    @State private var downloadingIDs: Set<TranscriptionProviderID> = []
+
+    private static let downloadableProviderIDs: Set<TranscriptionProviderID> = [
+        .parakeetTDT06Bv3, .nemotron35ASRStreaming06B, .moonshineV2
+    ]
+
+    private var primaryEngineIsParakeet: Bool {
+        registry.healthReport[.parakeetTDT06Bv3]?.isAvailable == true
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SettingToggleWithInfo(
+                title: "Live Transcription",
+                info: "Uses streaming transcription when available. When on, DexDictate shows live partial captions while you speak, preferring Nemotron (if installed), then Apple Speech (on-device). This only affects the live preview — see \"Primary dictation engine\" below for what actually gets typed.",
+                isOn: $settings.liveTranscriptionEnabled
+            )
+            .onChange(of: settings.liveTranscriptionEnabled) { _, _ in
+                refreshStatus()
+            }
+
+            SettingToggleWithInfo(
+                title: "Command Mode",
+                info: "When on, short recordings (under 2.5s) are tried against Moonshine first to catch a recognized command phrase (\"scratch that\", \"new line\", a custom Dex command) before falling through to the primary dictation engine. Longer recordings always skip straight to the primary engine. Only applies once Moonshine's model is downloaded below.",
+                isOn: $settings.commandModeEnabled
+            )
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(primaryEngineIsParakeet ? Color.green.opacity(0.8) : Color.white.opacity(0.35))
+                        .frame(width: 6, height: 6)
+                    Text("Primary dictation engine: \(primaryEngineIsParakeet ? registry.parakeetProvider.displayName : registry.whisperKitProvider.displayName)")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.75))
+                }
+                Text(primaryEngineIsParakeet
+                    ? "Parakeet is downloaded and healthy, so it produces the text that gets typed. Whisper is the fallback if Parakeet ever becomes unavailable."
+                    : "Whisper produces the text that gets typed. Download Parakeet below to make it the primary engine instead.")
+                    .font(.caption2)
+                    .foregroundStyle(.white.opacity(0.5))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if let resolution = registry.lastResolution {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(resolution.usesLiveStreaming ? Color.green.opacity(0.8) : Color.white.opacity(0.35))
+                            .frame(width: 6, height: 6)
+                        Text("Live preview: \(resolution.selectedProviderDisplayName) (\(resolution.modeName))")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.75))
+                    }
+
+                    if let explanation = resolution.fallbackExplanation {
+                        Text(explanation)
+                            .font(.caption2)
+                            .foregroundStyle(.orange.opacity(0.9))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+
+            DisclosureGroup("Provider Diagnostics") {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(registry.allProviders, id: \.id) { provider in
+                        let health = registry.healthReport[provider.id]
+                        let isDownloading = downloadingIDs.contains(provider.id)
+                        HStack(alignment: .top, spacing: 6) {
+                            Image(systemName: health?.isAvailable == true ? "checkmark.circle.fill" : "xmark.circle")
+                                .foregroundStyle(health?.isAvailable == true ? .green : .white.opacity(0.35))
+                                .font(.system(size: 11))
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text("\(provider.displayName) — \(provider.userFacingModeName)")
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(.white.opacity(0.8))
+                                if let reason = health?.reason {
+                                    Text(reason)
+                                        .font(.caption2)
+                                        .foregroundStyle(.white.opacity(0.5))
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+
+                            Spacer()
+
+                            if Self.downloadableProviderIDs.contains(provider.id), health?.isAvailable != true {
+                                Button(isDownloading ? "Downloading..." : "Download") {
+                                    downloadModel(providerID: provider.id)
+                                }
+                                .buttonStyle(.bordered)
+                                .controlSize(.mini)
+                                .disabled(isDownloading)
+                            }
+                        }
+                    }
+                }
+                .padding(.top, 6)
+            }
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.white.opacity(0.82))
+        }
+        .onAppear { refreshStatus() }
+    }
+
+    private func refreshStatus() {
+        registry.resolveActiveProvider(liveTranscriptionEnabled: settings.liveTranscriptionEnabled)
+    }
+
+    private func downloadModel(providerID: TranscriptionProviderID) {
+        guard !downloadingIDs.contains(providerID) else { return }
+        downloadingIDs.insert(providerID)
+        Task {
+            await registry.downloadModelsIfNeeded(for: providerID)
+            downloadingIDs.remove(providerID)
+            refreshStatus()
         }
     }
 }

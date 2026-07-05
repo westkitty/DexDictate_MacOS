@@ -24,11 +24,10 @@ final class BuildMetadataConsistencyTests: XCTestCase {
         assertEqual(source, template, key: "LSMinimumSystemVersion")
         assertEqual(source, template, key: "NSMicrophoneUsageDescription")
         assertEqual(source, template, key: "NSAccessibilityUsageDescription")
+        assertEqual(source, template, key: "NSSpeechRecognitionUsageDescription")
 
         XCTAssertNil(source["NSAppleEventsUsageDescription"])
         XCTAssertNil(template["NSAppleEventsUsageDescription"])
-        XCTAssertNil(source["NSSpeechRecognitionUsageDescription"])
-        XCTAssertNil(template["NSSpeechRecognitionUsageDescription"])
 
         XCTAssertNil(source["CFBundleDisplayName"])
         XCTAssertNil(template["CFBundleDisplayName"])

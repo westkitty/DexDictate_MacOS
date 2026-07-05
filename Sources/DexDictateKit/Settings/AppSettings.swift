@@ -96,6 +96,20 @@ public class AppSettings: ObservableObject {
     @AppStorage("safeModeEnabled") public var safeModeEnabled: Bool = false
     @AppStorage("safeModeSnapshotData") public var safeModeSnapshotData: Data = Data()
 
+    // MARK: - Transcription Providers
+
+    /// When `true`, DexDictate prefers a streaming-capable transcription provider (Nemotron,
+    /// then Apple Speech) for live partial captions while listening, falling back to Whisper
+    /// compatibility mode when none are available. Defaults ON for new users. Whisper always
+    /// remains the engine that produces the committed/pasted transcript in this pass —
+    /// see `TranscriptionProviderRegistry`.
+    @AppStorage("liveTranscriptionEnabled") public var liveTranscriptionEnabled: Bool = true
+
+    /// When `true`, short recordings are tried against Moonshine first to catch a
+    /// recognized command phrase before falling through to the primary dictation engine.
+    /// Longer recordings always skip straight to the primary engine. Defaults ON.
+    @AppStorage("commandModeEnabled") public var commandModeEnabled: Bool = true
+
     // MARK: - System
 
     /// Mirrors whether DexDictate is currently configured to launch at login.
@@ -152,9 +166,10 @@ public class AppSettings: ObservableObject {
     /// Persisted selection for the emoji-based menu bar icon.
     @AppStorage("selectedMenuBarEmoji_v1") public var selectedMenuBarEmoji: String = "🐶"
 
-    /// Controls which transcription engine to use.
-    /// DexDictate uses Whisper exclusively — no Apple Speech Recognition.
-    /// This enum is kept for UserDefaults compatibility;  is the only valid value.
+    /// Controls which engine produces the committed/pasted transcript. Whisper is the only
+    /// value here — this enum predates `TranscriptionProviderRegistry` and is kept for
+    /// UserDefaults compatibility. Apple Speech (see `liveTranscriptionEnabled`) only drives
+    /// the live partial preview; it does not participate in this selection.
     public enum TranscriptionEngineType: String, CaseIterable, Identifiable {
         case whisper = "Whisper (Local CoreML)"
         public var id: String { rawValue }

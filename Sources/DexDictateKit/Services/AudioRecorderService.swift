@@ -48,6 +48,15 @@ public final class AudioRecorderService: ObservableObject {
     /// Called on the main actor when a hardware-route recovery attempt succeeds or fails.
     @MainActor public var onRouteRecoveryResult: ((Result<AudioRecorderStartReport, AudioRecorderRecoveryFailure>) -> Void)?
 
+    /// Optional passthrough of the raw tap buffer for opt-in features that need live audio
+    /// alongside Whisper's own accumulation — currently only the Apple Speech live-preview
+    /// provider. `nil` by default (zero cost, zero behavior change). Invoked synchronously on
+    /// AVAudioEngine's real-time audio thread, same as the rest of `processAudioBuffer` —
+    /// consumers must not block, allocate unboundedly, or throw. Set only from the main actor;
+    /// read only from the audio thread (single-writer/single-reader), matching this file's
+    /// existing `nonisolated(unsafe)` pattern for cross-thread audio state.
+    nonisolated(unsafe) public var onRawAudioBuffer: ((AVAudioPCMBuffer) -> Void)?
+
     private var sleepObserver: NSObjectProtocol?
     private var wakeObserver: NSObjectProtocol?
     private var configChangeObserver: NSObjectProtocol?
@@ -741,6 +750,8 @@ public final class AudioRecorderService: ObservableObject {
 
     // Called on AVAudioEngine's internal audio thread — never main thread.
     private func processAudioBuffer(_ buffer: AVAudioPCMBuffer, sampleRate: Double) {
+        onRawAudioBuffer?(buffer)
+
         // Copy buffer to local array first — tap buffer is only valid during this callback.
         let frameLength = Int(buffer.frameLength)
         guard frameLength > 0, let channelData = buffer.floatChannelData?[0] else { return }
