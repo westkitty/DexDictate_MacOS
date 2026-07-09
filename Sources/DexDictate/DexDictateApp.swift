@@ -74,7 +74,8 @@ struct DexDictateApp: App {
                                 settingsWindowController.show(
                                     scanner: scanner,
                                     benchmarkCaptureController: benchmarkCaptureController,
-                                    historyController: historyController
+                                    historyController: historyController,
+                                    profileManager: profileManager
                                 )
                             }
                         },
@@ -105,7 +106,8 @@ struct DexDictateApp: App {
                                 settingsWindowController.show(
                                     scanner: scanner,
                                     benchmarkCaptureController: benchmarkCaptureController,
-                                    historyController: historyController
+                                    historyController: historyController,
+                                    profileManager: profileManager
                                 )
                             }
                         },
@@ -473,6 +475,15 @@ struct AntiGravityMainView: View {
     // scrollbar) always stays on-screen on short displays, keeping every panel reachable.
     private var popoverHeight: CGFloat { PopoverSizing.cappedHeight(preferred: 560) }
 
+    /// Fixes the Minimalist theme seam (Packet 11): the header sat on the same
+    /// theme-following background as the rest of the popover but its text/icons were
+    /// hardcoded white, so under Minimalist (white background) the header title and
+    /// buttons were invisible. Follows the same pattern already used a few lines below
+    /// for the giant "DEXDICTATE" watermark text.
+    private var headerForegroundColor: Color {
+        settings.appearanceTheme == .minimalist ? .black : .white
+    }
+
     var onDetachHistory: (() -> Void)?
     var onOpenHelp: (() -> Void)?
     var onOpenSettings: (() -> Void)?
@@ -521,13 +532,14 @@ struct AntiGravityMainView: View {
                 ZStack {
                     Text("DexDictate")
                         .font(.headline)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(headerForegroundColor)
                         .frame(maxWidth: .infinity)
 
                     HStack(spacing: 6) {
                         ChromeIconButton(
                             systemName: "power",
-                            accessibilityText: "Quit DexDictate"
+                            accessibilityText: "Quit DexDictate",
+                            tint: headerForegroundColor
                         ) {
                             NSApplication.shared.terminate(nil)
                         }
@@ -535,14 +547,16 @@ struct AntiGravityMainView: View {
                         Spacer()
                         ChromeIconButton(
                             systemName: "gearshape",
-                            accessibilityText: "Open Settings"
+                            accessibilityText: "Open Settings",
+                            tint: headerForegroundColor
                         ) {
                             onOpenSettings?()
                         }
                         .help(NSLocalizedString("Settings…", comment: ""))
                         ChromeIconButton(
                             systemName: "questionmark.circle",
-                            accessibilityText: "Open Help"
+                            accessibilityText: "Open Help",
+                            tint: headerForegroundColor
                         ) {
                             onOpenHelp?()
                         }

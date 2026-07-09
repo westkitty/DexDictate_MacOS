@@ -28,40 +28,51 @@ struct PopoverRootView: View {
     private var popoverHeight: CGFloat { PopoverSizing.cappedHeight(preferred: 480) }
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
-
-            if settings.showFlavorTicker {
-                FlavorTickerView(
-                    text: profileManager.currentFlavorLine?.text ?? "",
-                    animateWhenNeeded: settings.animateFlavorTicker
-                )
+        ZStack {
+            if settings.appearanceTheme == .system {
+                Color.clear
+                    .background(.ultraThinMaterial)
+                    .ignoresSafeArea()
+            } else {
+                settings.themeBackgroundColor
+                    .ignoresSafeArea()
             }
 
-            Divider().opacity(0.2).padding(.horizontal, 12)
+            VStack(spacing: 0) {
+                header
 
-            ScrollView {
-                VStack(spacing: 12) {
-                    if !permissionManager.allPermissionsGranted {
-                        errorBanner
-                    } else {
-                        PopoverHeroView(engine: engine, settings: settings, watermarkImage: cachedWatermarkImage)
-                    }
-
-                    PopoverResultView(engine: engine, settings: settings)
-
-                    Divider().opacity(0.2).padding(.horizontal, 12)
-
-                    PopoverHistoryTeaser(history: engine.history, onOpenHistory: onDetachHistory)
-
-                    statusLine
+                if settings.showFlavorTicker {
+                    FlavorTickerView(
+                        text: profileManager.currentFlavorLine?.text ?? "",
+                        animateWhenNeeded: settings.animateFlavorTicker
+                    )
                 }
-                .padding(.vertical, 10)
+
+                Divider().opacity(0.2).padding(.horizontal, 12)
+
+                ScrollView {
+                    VStack(spacing: 12) {
+                        if !permissionManager.allPermissionsGranted {
+                            errorBanner
+                        } else {
+                            PopoverHeroView(engine: engine, settings: settings, watermarkImage: cachedWatermarkImage)
+                        }
+
+                        PopoverResultView(engine: engine, settings: settings)
+
+                        Divider().opacity(0.2).padding(.horizontal, 12)
+
+                        PopoverHistoryTeaser(history: engine.history, onOpenHistory: onDetachHistory)
+
+                        statusLine
+                    }
+                    .padding(.vertical, 10)
+                }
+
+                Divider().opacity(0.2).padding(.horizontal, 12)
+
+                footer
             }
-
-            Divider().opacity(0.2).padding(.horizontal, 12)
-
-            footer
         }
         .frame(width: 320, height: popoverHeight)
         .onAppear {
@@ -72,25 +83,31 @@ struct PopoverRootView: View {
         }
     }
 
+    /// Fixes the Minimalist theme seam (Packet 11) — same pattern as the classic popover's
+    /// `headerForegroundColor` in `DexDictateApp.swift`.
+    private var headerForegroundColor: Color {
+        settings.appearanceTheme == .minimalist ? .black : .white
+    }
+
     // MARK: - Header
 
     private var header: some View {
         ZStack {
             Text("DexDictate")
                 .font(.headline)
-                .foregroundStyle(.white)
+                .foregroundStyle(headerForegroundColor)
                 .frame(maxWidth: .infinity)
 
             HStack(spacing: 6) {
-                ChromeIconButton(systemName: "power", accessibilityText: "Quit DexDictate") {
+                ChromeIconButton(systemName: "power", accessibilityText: "Quit DexDictate", tint: headerForegroundColor) {
                     isQuitConfirmPresented = true
                 }
                 Spacer()
-                ChromeIconButton(systemName: "gearshape", accessibilityText: "Open Settings") {
+                ChromeIconButton(systemName: "gearshape", accessibilityText: "Open Settings", tint: headerForegroundColor) {
                     onOpenSettings?()
                 }
                 .help(NSLocalizedString("Settings…", comment: ""))
-                ChromeIconButton(systemName: "questionmark.circle", accessibilityText: "Open Help") {
+                ChromeIconButton(systemName: "questionmark.circle", accessibilityText: "Open Help", tint: headerForegroundColor) {
                     onOpenHelp?()
                 }
             }

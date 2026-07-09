@@ -85,6 +85,10 @@ struct QuickSettingsView: View {
     private let showLegacyTranscriptionEnginesCard = false
     private let showLegacyShowDictationStatsRow = false
     private let showLegacyPersistHistoryRow = false
+    /// Packet 11 — Profile picker, Return to Standard, ticker toggles, and the theme
+    /// picker now live in Settings → Dexter & Personality.
+    private let showLegacyProfileTickerRows = false
+    private let showLegacyThemePickerRow = false
     @State private var advancedPanelExpanded = false
     @State private var isResettingCoreAudio = false
     @State private var coreAudioResetStatus: String?
@@ -529,27 +533,29 @@ struct QuickSettingsView: View {
                         isExpanded: $profilePanelExpanded
                     ) {
                         VStack(alignment: .leading, spacing: 10) {
-                            controlRow(label: "Profile") {
-                                Picker("", selection: profileBinding) {
-                                    ForEach(AppProfile.allCases) { profile in
-                                        Text(profile.title).tag(profile)
+                            if showLegacyProfileTickerRows {
+                                controlRow(label: "Profile") {
+                                    Picker("", selection: profileBinding) {
+                                        ForEach(AppProfile.allCases) { profile in
+                                            Text(profile.title).tag(profile)
+                                        }
                                     }
+                                    .labelsHidden()
+                                    .pickerStyle(.menu)
+                                    .frame(width: 160)
                                 }
-                                .labelsHidden()
-                                .pickerStyle(.menu)
-                                .frame(width: 160)
-                            }
 
-                            if profileManager.activeProfile != .standard {
-                                Button("Return to Standard") {
-                                    returnToStandardProfile()
+                                if profileManager.activeProfile != .standard {
+                                    Button("Return to Standard") {
+                                        returnToStandardProfile()
+                                    }
+                                    .buttonStyle(.bordered)
+                                    .controlSize(.small)
                                 }
-                                .buttonStyle(.bordered)
-                                .controlSize(.small)
-                            }
 
-                            Toggle("Show Flavor Ticker", isOn: $settings.showFlavorTicker)
-                            Toggle("Animate Flavor Ticker", isOn: $settings.animateFlavorTicker)
+                                Toggle("Show Flavor Ticker", isOn: $settings.showFlavorTicker)
+                                Toggle("Animate Flavor Ticker", isOn: $settings.animateFlavorTicker)
+                            }
                             if showLegacyShowDictationStatsRow {
                                 Toggle("Show Dictation Stats", isOn: $settings.showDictationStats)
                             }
@@ -571,15 +577,17 @@ struct QuickSettingsView: View {
                         isExpanded: $appearancePanelExpanded
                     ) {
                         VStack(alignment: .leading, spacing: 10) {
-                            controlRow(label: "Appearance") {
-                                Picker("", selection: $settings.appearanceTheme) {
-                                    ForEach(AppSettings.AppearanceTheme.allCases) { theme in
-                                        Text(theme.rawValue).tag(theme)
+                            if showLegacyThemePickerRow {
+                                controlRow(label: "Appearance") {
+                                    Picker("", selection: $settings.appearanceTheme) {
+                                        ForEach(AppSettings.AppearanceTheme.allCases) { theme in
+                                            Text(theme.rawValue).tag(theme)
+                                        }
                                     }
+                                    .labelsHidden()
+                                    .pickerStyle(.menu)
+                                    .frame(width: 150)
                                 }
-                                .labelsHidden()
-                                .pickerStyle(.menu)
-                                .frame(width: 150)
                             }
 
                             // Status Color, sounds, Launch at Login, and Menu Bar Style

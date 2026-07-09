@@ -14,15 +14,18 @@ class SettingsWindowController: ObservableObject {
     @Published var selection: SettingsPage = .general
 
     /// Opens the Settings window, or brings it forward and restores its last-viewed
-    /// page if already open. `scanner`, `benchmarkCaptureController`, and `historyController`
-    /// are the app's single existing instances (the same ones the popover uses) — passed in
-    /// rather than re-instantiated here. `historyController` in particular has already been
-    /// `.setup(engine:vocabularyManager:)` by the app's onAppear; a fresh instance would
-    /// silently no-op on `.show()`.
+    /// page if already open. `scanner`, `benchmarkCaptureController`, `historyController`,
+    /// and `profileManager` are the app's single existing instances (the same ones the
+    /// popover uses) — passed in rather than re-instantiated here. `historyController` in
+    /// particular has already been `.setup(engine:vocabularyManager:)` by the app's
+    /// onAppear; a fresh instance would silently no-op on `.show()`. `profileManager` must
+    /// be the same instance so a profile switch made in Settings is immediately visible in
+    /// the popover's ticker/watermark, not just in a disconnected copy.
     func show(
         scanner: AudioDeviceScanner,
         benchmarkCaptureController: BenchmarkCaptureWindowController,
-        historyController: HistoryWindowController
+        historyController: HistoryWindowController,
+        profileManager: ProfileManager
     ) {
         if window == nil {
             let hosting = NSHostingController(
@@ -33,7 +36,8 @@ class SettingsWindowController: ObservableObject {
                     ),
                     scanner: scanner,
                     benchmarkCaptureController: benchmarkCaptureController,
-                    historyController: historyController
+                    historyController: historyController,
+                    profileManager: profileManager
                 )
             )
             let newWindow = NSWindow(contentViewController: hosting)

@@ -112,3 +112,14 @@ Sequential record of the autonomous packet run authorized 2026-07-09. Ungated pa
 - Manual validations: not performed (visual read-through) — see `packet_10/NEEDS_ANDREW.md`
 - NEEDS_ANDREW: forbidden-file string in `TranscriptionEngine.swift:1262` not editable; NEW finding — four more orphaned benchmark controls (Run Benchmarks Now, Restore Stable Defaults, Open Captured Corpus, BenchmarkResultsSection) hidden by Packet 07 with no new home, distinct from the original 7; 34 other stale Help "Quick Settings →" paths left for a separate documentation pass — see `packet_10/NEEDS_ANDREW.md`
 - Safe to continue: Yes
+
+## Packet 11 — Dexter & Personality
+- Start commit: a48584bc
+- Final commit: (see commit immediately following this entry)
+- Pushed: Yes
+- Tests: 382 passed, 0 failures (matches baseline); targeted ProfileContent 6/6 passed
+- Screenshots: none — blocked, same automation gap as every prior packet
+- Manual validations: not performed (profile matrix, theme matrix, shuffle) — see `packet_11/NEEDS_ANDREW.md`
+- NEEDS_ANDREW: no watermark on/off setting exists (Shuffle Now only); no separate regional-icon asset (used watermark thumbnails); no ticker speed setting; theme seam root-caused and fixed in both popovers (PopoverRootView had zero theme handling before this packet) — see `packet_11/NEEDS_ANDREW.md`
+- **Packet 09 Stage B now unblocked** — fresh inventory shows every hide-flag in QuickSettingsView.swift is false; the 4 orphaned benchmark controls from Packet 10 were already hidden since Packet 07 and unaffected by the Stage B flip
+- Safe to continue: Yes
