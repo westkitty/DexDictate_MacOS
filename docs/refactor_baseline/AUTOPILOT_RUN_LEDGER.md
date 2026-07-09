@@ -55,7 +55,7 @@ Sequential record of the autonomous packet run authorized 2026-07-09. Ungated pa
 
 ## Packet 06 — Vocabulary + Commands
 - Start commit: c74f07d3
-- Final commit: (see commit immediately following this entry)
+- Final commit: 0ed3962b
 - Pushed: Yes
 - Tests: 382 passed, 0 failures (matches baseline); targeted Vocabulary/CommandProcessor 17/17 passed
 - Screenshots: none — blocked, see `packet_06/NEEDS_ANDREW.md`
