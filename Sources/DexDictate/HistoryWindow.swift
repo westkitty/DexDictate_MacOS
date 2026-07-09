@@ -209,6 +209,17 @@ struct HistoryItemRow: View {
     let item: HistoryItem
     var onLearnCorrection: () -> Void
 
+    /// Display-level only (Packet 13) — `item.text` (raw) is never mutated or deleted;
+    /// this just decides which variant this row currently shows.
+    @State private var showRaw = false
+
+    private var displayText: String {
+        if let cleaned = item.cleanedText, !showRaw {
+            return cleaned
+        }
+        return item.text
+    }
+
     var body: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 4) {
@@ -216,10 +227,24 @@ struct HistoryItemRow: View {
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.secondary)
 
-                Text(item.text)
+                Text(displayText)
                     .font(.body)
                     .textSelection(.enabled)
                     .fixedSize(horizontal: false, vertical: true)
+
+                if item.cleanedText != nil {
+                    HStack(spacing: 6) {
+                        Text(showRaw ? "Raw" : "Cleaned")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.cyan)
+                        Button(showRaw ? "Use cleaned" : "Use raw") {
+                            showRaw.toggle()
+                        }
+                        .buttonStyle(.plain)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    }
+                }
 
                 if item.isAccuracyRetry {
                     Text("Quality retry")
@@ -231,7 +256,7 @@ struct HistoryItemRow: View {
             VStack(spacing: 6) {
                 ChromeIconButton(systemName: "doc.on.doc", accessibilityText: "Copy history item") {
                     NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(item.text, forType: .string)
+                    NSPasteboard.general.setString(displayText, forType: .string)
                 }
 
                 if AppSettings.shared.enableCorrectionSheet {

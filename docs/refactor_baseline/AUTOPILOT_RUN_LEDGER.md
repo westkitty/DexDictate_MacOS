@@ -185,3 +185,17 @@ Sequential record of the autonomous packet run authorized 2026-07-09. Ungated pa
 - No storage-key changes (3 flags' keys untouched, only their now-inert UI rows removed)
 - Judgment call: `DexExperimentalHubViews.swift` split rather than wholesale-removed per the handoff's literal list, since `FloatingHUD.swift` has a real pre-existing dependency on `DexExperimentalFeatureHubView` — see `packet_12b/NEEDS_ANDREW.md`
 - Safe to continue: Yes (to Packet 13, per Andrew's separate approval for this campaign)
+
+## Packet 13 — Smart Cleanup / Remote Ollama (Final Remaining Campaign, GATED — Andrew approved)
+- Start commit: 574b053d
+- Final commit: (pending)
+- Pushed: Yes
+- Tests: 407 passed, 0 failures (382 baseline + 25 new SmartCleanup tests). Targeted `--filter SmartCleanup`: 20/20 passed.
+- Screenshots: none — blocked, same automation gap as every prior packet
+- Manual validations: no live Ollama tunnel available (environmental gap, not code gap); dead-endpoint behavior confirmed via curl connection-refused + client catch-all error path — see `packet_13/PACKET_RESULT.md` and `packet_13/NEEDS_ANDREW.md`
+- New isolated module: `Sources/DexDictateKit/SmartCleanup/` (Settings, Keychain, Client, Coordinator) — zero edits to `AppSettings.swift` or any forbidden file
+- `TranscriptionHistory.swift` gained an additive `cleanedText` field + `setCleanedText(_:forItemID:)` — confirmed backward-compatible decode, no `SettingsMigration.swift` involvement
+- Smart Cleanup Settings page built out (replacing Packet 02 placeholder); Diagnostics gained one status row; History window shows cleaned/raw swap
+- Default off; zero network activity confirmed by code guarantee + unit test when disabled
+- No hard-coded BigMac/westcat/11435 — confirmed via grep + dedicated regression test
+- Safe to continue: Yes (to Packet 14, per Andrew's separate approval for this campaign)

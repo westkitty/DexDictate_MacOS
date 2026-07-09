@@ -10,19 +10,27 @@ public struct HistoryItem: Identifiable, Codable, Sendable {
     public let createdAt: Date
     public let sourceHistoryItemID: UUID?
     public let isAccuracyRetry: Bool
+    /// Smart Cleanup's post-processed variant, set asynchronously after this item is
+    /// already in history (Packet 13). `nil` when Smart Cleanup is off, still pending, or
+    /// failed. `text` above is always the raw transcript and is never overwritten — this
+    /// field is purely additive and optional so existing persisted history (and any test
+    /// fixture) decodes unchanged without it.
+    public var cleanedText: String?
 
     public init(
         id: UUID = UUID(),
         text: String,
         createdAt: Date = Date(),
         sourceHistoryItemID: UUID? = nil,
-        isAccuracyRetry: Bool = false
+        isAccuracyRetry: Bool = false,
+        cleanedText: String? = nil
     ) {
         self.id = id
         self.text = text
         self.createdAt = createdAt
         self.sourceHistoryItemID = sourceHistoryItemID
         self.isAccuracyRetry = isAccuracyRetry
+        self.cleanedText = cleanedText
     }
 }
 
@@ -79,6 +87,15 @@ public final class TranscriptionHistory: ObservableObject {
     public func clear() {
         items.removeAll(keepingCapacity: false)
         lastRemovedItem = nil
+    }
+
+    /// Attaches a Smart Cleanup variant to an existing item, found by id (Packet 13). A
+    /// no-op if the item has since scrolled out of the capped list (e.g. many dictations
+    /// happened before the cleanup round-trip returned) — the raw item is unaffected
+    /// either way, so a missed attachment never loses data, just the cleaned display.
+    public func setCleanedText(_ cleanedText: String, forItemID id: UUID) {
+        guard let index = items.firstIndex(where: { $0.id == id }) else { return }
+        items[index].cleanedText = cleanedText
     }
     
     @discardableResult

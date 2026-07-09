@@ -127,6 +127,9 @@ struct DexDictateApp: App {
                 )
                 historyController.setup(engine: engine, vocabularyManager: engine.vocabularyManager)
                 adaptiveBenchmarkController.start(engine: engine)
+                // Packet 13: observes TranscriptionHistory (not TranscriptionEngine) for
+                // newly-committed transcripts. Idempotent — safe on every popover open.
+                SmartCleanupCoordinator.shared.start(history: engine.history)
 
                 // Engine already running (started at launch). Nothing more to do.
                 guard engine.state == .stopped else { return }

@@ -14,6 +14,8 @@ struct DiagnosticsPage: View {
     @ObservedObject private var settings = AppSettings.shared
     @ObservedObject private var permissionManager = PermissionManager.shared
     @ObservedObject var scanner: AudioDeviceScanner
+    @ObservedObject private var smartCleanupSettings = SmartCleanupSettings.shared
+    @ObservedObject private var smartCleanupCoordinator = SmartCleanupCoordinator.shared
     private let engine = TranscriptionEngine.shared
     private let coreAudioResetService = CoreAudioResetService()
 
@@ -68,6 +70,12 @@ struct DiagnosticsPage: View {
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+
+                Divider()
+
+                Text("Smart Cleanup")
+                    .font(.headline)
+                diagnosticRow(label: "Smart Cleanup endpoint", value: smartCleanupStatusLabel)
 
                 Divider()
 
@@ -170,6 +178,16 @@ struct DiagnosticsPage: View {
             return "Failed"
         case .none:
             return "No recovery yet"
+        }
+    }
+
+    private var smartCleanupStatusLabel: String {
+        guard smartCleanupSettings.enabled else { return "disabled" }
+        switch smartCleanupCoordinator.reachability {
+        case .disabled: return "disabled"
+        case .unknown: return "unknown — no check yet"
+        case .reachable: return "reachable"
+        case .unreachable: return "unreachable"
         }
     }
 
