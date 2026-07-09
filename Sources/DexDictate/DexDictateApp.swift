@@ -74,7 +74,12 @@ struct DexDictateApp: App {
                             MainActorAction.run { helpController.show() }
                         },
                         onOpenSettings: {
-                            MainActorAction.run { settingsWindowController.show(scanner: scanner) }
+                            MainActorAction.run {
+                                settingsWindowController.show(
+                                    scanner: scanner,
+                                    benchmarkCaptureController: benchmarkCaptureController
+                                )
+                            }
                         },
                         onRequestOnboardingDebug: {
                             MainActorAction.run { appDelegate.presentOnboardingForDebug() }

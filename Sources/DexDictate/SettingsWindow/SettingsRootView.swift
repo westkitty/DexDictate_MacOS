@@ -6,6 +6,7 @@ import DexDictateKit
 struct SettingsRootView: View {
     @Binding var selection: SettingsPage
     @ObservedObject var scanner: AudioDeviceScanner
+    @ObservedObject var benchmarkCaptureController: BenchmarkCaptureWindowController
 
     var body: some View {
         NavigationSplitView {
@@ -24,7 +25,7 @@ struct SettingsRootView: View {
         case .audioMicrophone: AudioSettingsPage(scanner: scanner)
         case .outputInsertion: OutputSettingsPage()
         case .vocabularyCommands: VocabularyCommandsPage()
-        case .modelsAccuracy: ModelsAccuracyPage()
+        case .modelsAccuracy: ModelsAccuracyPage(benchmarkCaptureController: benchmarkCaptureController)
         case .smartCleanup: SmartCleanupPage()
         case .history: HistorySettingsPage()
         case .dexterPersonality: DexterPersonalityPage()

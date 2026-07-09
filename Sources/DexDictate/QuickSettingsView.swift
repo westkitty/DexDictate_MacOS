@@ -52,6 +52,17 @@ struct QuickSettingsView: View {
     /// Vocabulary & Commands (Packet 06). Their window-opening functions stay in place
     /// (unused by these hidden buttons) in case another path still calls them.
     private let showLegacyVocabularyCommandsButtons = false
+    /// Active Model / Model Selection pickers, Accuracy Retry (+auto-retry), and Use
+    /// Context From Focused Field now live in Settings → Models & Accuracy (Packet 07).
+    /// Trailing Trim Experiment (→ Packet 08 Advanced) and Context Biasing (unassigned;
+    /// left for Packet 08's pre-removal inventory to catch) stay here.
+    private let showLegacyModelAccuracyRows = false
+    /// The entire Benchmarks & Corpus group (including Import Model) is hidden from the
+    /// popover per Packet 07 — no benchmark status, session IDs, or run buttons remain
+    /// there. Its content is not deleted, just unreachable from the popover; the Settings
+    /// → Models & Accuracy page opens the same Benchmark Capture window and calls the same
+    /// `importModelFromOpenPanel()` via new call sites, not by moving this group.
+    private let showLegacyBenchmarksCorpusGroup = false
     @State private var advancedPanelExpanded = false
     @State private var isResettingCoreAudio = false
     @State private var coreAudioResetStatus: String?
@@ -266,6 +277,7 @@ struct QuickSettingsView: View {
                         isExpanded: $accuracyPanelExpanded
                     ) {
                         VStack(alignment: .leading, spacing: 10) {
+                            if showLegacyModelAccuracyRows {
                             controlRow(label: "Active Model") {
                                 Picker("", selection: $settings.activeWhisperModelID) {
                                     ForEach(modelCatalog.availableModels) { model in
@@ -293,6 +305,7 @@ struct QuickSettingsView: View {
                                 .labelsHidden()
                                 .pickerStyle(.menu)
                                 .frame(width: 180)
+                            }
                             }
 
                             if showLegacyTailTimingRows {
@@ -326,19 +339,21 @@ struct QuickSettingsView: View {
                                 isOn: $settings.enableTrailingTrimExperiment
                             )
 
-                            SettingToggleWithInfo(
-                                title: "Accuracy Retry",
-                                info: "When transcription produces a suspiciously short or low-confidence result, DexDictate silently re-runs Whisper on the same audio at a higher quality level. Costs extra processing time but catches utterances where the first pass stumbled.",
-                                isOn: $settings.enableAccuracyRetry
-                            )
-
-                            if settings.enableAccuracyRetry {
+                            if showLegacyModelAccuracyRows {
                                 SettingToggleWithInfo(
-                                    title: "Retry Suspicious Results Automatically",
-                                    info: "When Accuracy Retry is on, this fires the retry without asking you first. Turn it off if you'd rather decide manually — you'll see a 'Retry Last in Accuracy Mode' button after each suspicious result instead.",
-                                    isOn: $settings.autoRetrySuspiciousResults
+                                    title: "Accuracy Retry",
+                                    info: "When transcription produces a suspiciously short or low-confidence result, DexDictate silently re-runs Whisper on the same audio at a higher quality level. Costs extra processing time but catches utterances where the first pass stumbled.",
+                                    isOn: $settings.enableAccuracyRetry
                                 )
-                                .padding(.leading, 16)
+
+                                if settings.enableAccuracyRetry {
+                                    SettingToggleWithInfo(
+                                        title: "Retry Suspicious Results Automatically",
+                                        info: "When Accuracy Retry is on, this fires the retry without asking you first. Turn it off if you'd rather decide manually — you'll see a 'Retry Last in Accuracy Mode' button after each suspicious result instead.",
+                                        isOn: $settings.autoRetrySuspiciousResults
+                                    )
+                                    .padding(.leading, 16)
+                                }
                             }
 
                             if showLegacyCorrectionSheetRow {
@@ -349,11 +364,13 @@ struct QuickSettingsView: View {
                                 )
                             }
 
-                            SettingToggleWithInfo(
-                                title: "Use Context From Focused Field",
-                                info: "Reads the text you're currently editing (via the Accessibility API) and uses it to prime Whisper, improving accuracy for proper nouns and continuing sentences. Combined with DexDictate's vocabulary biasing. Off by default; requires Accessibility permission.",
-                                isOn: $settings.enableContextInjection
-                            )
+                            if showLegacyModelAccuracyRows {
+                                SettingToggleWithInfo(
+                                    title: "Use Context From Focused Field",
+                                    info: "Reads the text you're currently editing (via the Accessibility API) and uses it to prime Whisper, improving accuracy for proper nouns and continuing sentences. Combined with DexDictate's vocabulary biasing. Off by default; requires Accessibility permission.",
+                                    isOn: $settings.enableContextInjection
+                                )
+                            }
 
                             DisclosureGroup("Context Biasing", isExpanded: $contextBiasExpanded) {
                                 VStack(alignment: .leading, spacing: 8) {
@@ -378,6 +395,7 @@ struct QuickSettingsView: View {
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.white.opacity(0.82))
 
+                            if showLegacyBenchmarksCorpusGroup {
                             DisclosureGroup("Benchmarks & Corpus", isExpanded: $benchmarkPanelExpanded) {
                                 VStack(alignment: .leading, spacing: 8) {
                                     Text("Open the local capture tool to record the strict corpus, then benchmark it with the existing scripts.")
@@ -451,6 +469,7 @@ struct QuickSettingsView: View {
                             }
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.white.opacity(0.82))
+                            }
                         }
                     }
 

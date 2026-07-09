@@ -14,11 +14,11 @@ class SettingsWindowController: ObservableObject {
     @Published var selection: SettingsPage = .general
 
     /// Opens the Settings window, or brings it forward and restores its last-viewed
-    /// page if already open. `scanner` is the app's single `AudioDeviceScanner` instance
-    /// (the same one the popover uses) — passed in rather than re-instantiated here so the
-    /// Audio & Microphone page reads live state instead of standing up a second CoreAudio
-    /// device-change listener.
-    func show(scanner: AudioDeviceScanner) {
+    /// page if already open. `scanner` and `benchmarkCaptureController` are the app's
+    /// single existing instances (the same ones the popover uses) — passed in rather than
+    /// re-instantiated here so the Audio & Microphone / Models & Accuracy pages read live
+    /// state instead of standing up duplicate controllers.
+    func show(scanner: AudioDeviceScanner, benchmarkCaptureController: BenchmarkCaptureWindowController) {
         if window == nil {
             let hosting = NSHostingController(
                 rootView: SettingsRootView(
@@ -26,7 +26,8 @@ class SettingsWindowController: ObservableObject {
                         get: { [weak self] in self?.selection ?? .general },
                         set: { [weak self] in self?.selection = $0 }
                     ),
-                    scanner: scanner
+                    scanner: scanner,
+                    benchmarkCaptureController: benchmarkCaptureController
                 )
             )
             let newWindow = NSWindow(contentViewController: hosting)

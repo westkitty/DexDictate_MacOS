@@ -1,0 +1,18 @@
+## Packet Result
+- Packet: 07 — Models + Accuracy + Benchmark Relocation
+- Branch: speech-engine-exploration-benchmarks
+- Commit hash: (see AUTOPILOT_RUN_LEDGER.md)
+- Pushed: Yes
+- Files changed: `Sources/DexDictate/SettingsWindow/ModelsAccuracyPage.swift` (built out: Active Model picker, availability warning, Import Model button, Model Selection picker, Accuracy Retry + auto-retry, Use Context From Focused Field, Open Benchmark Lab button); `Sources/DexDictate/QuickSettingsView.swift` (migrated rows hidden behind `showLegacyModelAccuracyRows`; entire Benchmarks & Corpus group hidden behind `showLegacyBenchmarksCorpusGroup`); `Sources/DexDictate/SettingsWindow/SettingsWindowController.swift` + `SettingsRootView.swift` + `Sources/DexDictate/DexDictateApp.swift` (threaded the app's existing `BenchmarkCaptureWindowController` instance through, same pattern as the Packet 04 scanner threading)
+- Files inspected but not changed: `Sources/DexDictateKit/Benchmarking/ModelBenchmarking.swift` (read-only, confirmed `AdaptiveBenchmarkController` has no `.shared` and is started from the app's top-level onAppear — informed the decision to skip the status summary), `Sources/DexDictate/BenchmarkCaptureWindow.swift` (read-only, confirmed `.show(engine:)` entry point and no singleton), `Sources/DexDictate/ModelSelectionActions.swift` (read-only, not needed — model switching is done via direct `settings.activeWhisperModelID` binding, same as the popover), `Sources/DexDictateKit/Settings/AppSettings.swift` (confirmed storage keys: `activeWhisperModelID_v1`, `modelSelectionMode_v1`, `enableAccuracyRetry_v1`-family, `enableContextInjection` — all unchanged)
+- Forbidden files touched: No
+- Tests run: full `swift test`; targeted `swift test --filter "BenchmarkPromotion|AdaptiveBenchmark"`
+- Test result: 382 passed, 0 failures (full suite); 8/8 passed (targeted)
+- Targeted tests: `AdaptiveBenchmarkControllerTests`, `BenchmarkPromotionPolicyTests` — 8/8 passed
+- Manual validations: not performed (model switch persistence, Import Model with a real .bin, retry-button surfacing, Benchmark Lab run) — see `NEEDS_ANDREW.md`
+- Screenshots captured: none — blocked, see `NEEDS_ANDREW.md`
+- Feature-loss checklist rows completed: Model Benchmarking & Promotion, Smart Quality Retry (Accuracy Retry), Context Injection — verified at the code/test level only (same bindings, same storage keys, same targeted test suites green, zero logic edits to any forbidden file); not manually round-tripped
+- Dexter preservation checks: not exercised (no Dexter-adjacent files touched)
+- Known issues: **Lifecycle inventory + automation-cadence location** — see `NEEDS_ANDREW.md` for the full writeup. Summary: no hidden behavior found in the two cards' own view lifecycle; `AdaptiveBenchmarkController`'s idle-benchmark scheduling is armed by the app's top-level onAppear (not a card's), has no singleton, and its status summary was deliberately skipped (not threaded) per the packet's own "if trivially readable" allowance rather than risk a duplicate scheduler instance. "Trailing Trim Experiment" toggle remains in the popover's Accuracy & Speed card — explicitly assigned to Packet 08 Advanced, noted here as instructed. "Context Biasing" (Bias Mode) also remains, unassigned by this packet's goal text; left for Packet 08's mandatory pre-removal inventory to catch.
+- Rollback required: No
+- Next recommended packet: 08 — Diagnostics + Recovery + Advanced

@@ -62,3 +62,13 @@ Sequential record of the autonomous packet run authorized 2026-07-09. Ungated pa
 - Manual validations: not performed (foo→bar round-trip, scratch-that command, learn-correction round-trip) — see `packet_06/NEEDS_ANDREW.md`
 - NEEDS_ANDREW: same LSUIElement/accessibility automation gap; no "Learned" badge (no provenance field — schema change out of scope); pipeline-order caption verified against `TranscriptionEngine.swift` — see `packet_06/PACKET_RESULT.md` Known issues
 - Safe to continue: Yes
+
+## Packet 07 — Models + Accuracy + Benchmark Relocation
+- Start commit: 5afd8dd2
+- Final commit: (see commit immediately following this entry)
+- Pushed: Yes
+- Tests: 382 passed, 0 failures (matches baseline); targeted BenchmarkPromotion/AdaptiveBenchmark 8/8 passed
+- Screenshots: none — blocked, see `packet_07/NEEDS_ANDREW.md`
+- Manual validations: not performed (model switch persistence, Import Model, retry-button surfacing, Benchmark Lab run) — see `packet_07/NEEDS_ANDREW.md`
+- NEEDS_ANDREW: same LSUIElement/accessibility automation gap; lifecycle inventory completed (AdaptiveBenchmarkController armed by app-level onAppear, no singleton — status summary deliberately skipped rather than duplicate the scheduler); Trailing Trim Experiment + Context Biasing left for Packet 08's inventory — see `packet_07/PACKET_RESULT.md` Known issues
+- Safe to continue: Yes
