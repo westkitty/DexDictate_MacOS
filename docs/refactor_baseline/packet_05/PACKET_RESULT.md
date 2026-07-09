@@ -1,0 +1,18 @@
+## Packet Result
+- Packet: 05 — Output + Per-App Rules
+- Branch: speech-engine-exploration-benchmarks
+- Commit hash: (see AUTOPILOT_RUN_LEDGER.md)
+- Pushed: Yes
+- Files changed: `Sources/DexDictate/SettingsWindow/OutputSettingsPage.swift` (built out: "Where text goes" group — Auto-Paste, Use Accessibility API for Insertion; "Safety" group — Copy Only in Sensitive Fields, Correction Sheet, Filter Profanity + editors, clipboard-restore note; "Per-App Rules" group — Manage button); `Sources/DexDictate/QuickSettingsView.swift` (migrated rows hidden behind `showLegacyOutputRows` and `showLegacyCorrectionSheetRow`; Safe Mode and Show Floating HUD left visible, out of scope)
+- Files inspected but not changed: `Sources/DexDictate/PerAppInsertionSheet.swift` (read in full to make the button-vs-embed call — zero edits), `Sources/DexDictateKit/TranscriptionEngine.swift` (read-only, confirmed `appInsertionOverridesManager` is a public stored property on the `.shared` singleton — used, not modified), `Sources/DexDictateKit/Settings/AppSettings.swift` (confirmed storage keys: `autoPaste`, `copyOnlyInSensitiveFields`, `useAccessibilityInsertion`, `profanityFilter`, `customProfanityWords_v1`/`customProfanityRemovals_v1`, `enableCorrectionSheet_v1` — all unchanged)
+- Forbidden files touched: No (`PerAppInsertionSheet.swift` and its backing `AppInsertionOverridesManager` — zero edits)
+- Tests run: full `swift test`; targeted `swift test --filter "AppInsertionOverrides|SecureInputContext|OutputCoordinator|ClipboardManager"`
+- Test result: 382 passed, 0 failures (full suite); 59/59 passed (targeted)
+- Targeted tests: `SecureInputContextTests` and related — 59/59 passed
+- Manual validations: not performed (per-app rule round-trip, password-field fallback, clipboard-restore test, toggle round-trips) — see `NEEDS_ANDREW.md`
+- Screenshots captured: none — blocked, see `NEEDS_ANDREW.md`
+- Feature-loss checklist rows completed: Per-App Insertion Overrides, Secure-Field Copy-Only Fallback, Clipboard Restoration & Payload Cap, Accessibility API Direct Insertion — verified at the code/test level only (same bindings, same storage keys, same targeted test suites green); not manually round-tripped
+- Dexter preservation checks: not exercised (no Dexter-adjacent files touched)
+- Known issues: **Button-vs-embed decision** and reasoning — see `NEEDS_ANDREW.md`. **Scope note**: "Correction Sheet" is declared inside the popover's Accuracy & Speed card in the actual codebase, not an Output card as the packet's file-scope guess assumed; migrated it to Output & Insertion per the packet's explicit goal text, hiding it behind its own flag (`showLegacyCorrectionSheetRow`) separate from the Output-card flag since it lives in a different card. "Show Floating HUD" and "Safe Mode" toggles remain in the popover's Output card — neither is listed in this packet's goal text (Safe Mode explicitly stays until Packet 08; Floating HUD isn't assigned to any packet's goal text so far and was left alone to avoid scope creep).
+- Rollback required: No
+- Next recommended packet: 06 — Vocabulary + Commands

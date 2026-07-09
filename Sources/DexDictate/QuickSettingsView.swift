@@ -40,6 +40,14 @@ struct QuickSettingsView: View {
     /// live in Settings → Dictation / Audio & Microphone (Packet 04). Everything else in
     /// Accuracy & Speed stays until Packet 07/08.
     private let showLegacyTailTimingRows = false
+    /// Auto-Paste, Copy Only in Sensitive Fields, Use Accessibility API for Insertion,
+    /// Filter Profanity, and the Per-App Insertion Rules button now live in Settings →
+    /// Output & Insertion (Packet 05). Safe Mode and Show Floating HUD stay here.
+    private let showLegacyOutputRows = false
+    /// Correction Sheet toggle now lives in Settings → Output & Insertion (Packet 05),
+    /// grouped with the other output-safety controls even though it's declared in the
+    /// Accuracy & Speed card.
+    private let showLegacyCorrectionSheetRow = false
     @State private var advancedPanelExpanded = false
     @State private var isResettingCoreAudio = false
     @State private var coreAudioResetStatus: String?
@@ -189,55 +197,58 @@ struct QuickSettingsView: View {
                     ) {
                         VStack(alignment: .leading, spacing: 10) {
                             Toggle("Safe Mode", isOn: safeModeBinding)
-                            Toggle("Auto-Paste", isOn: $settings.autoPaste)
-                            Toggle("Copy Only in Sensitive Fields", isOn: $settings.copyOnlyInSensitiveFields)
-                            Toggle("Use Accessibility API for Insertion", isOn: $settings.useAccessibilityInsertion)
                             Toggle("Show Floating HUD", isOn: $settings.showFloatingHUD)
-                            Toggle("Filter Profanity", isOn: $settings.profanityFilter)
 
-                            if settings.profanityFilter {
-                                VStack(alignment: .leading, spacing: 6) {
-                                    let bundled = ProfanityFilter.bundledWordCount
-                                    let custom = settings.customProfanityWords.count
-                                    Text("Filtering \(bundled + custom) words (\(bundled) bundled + \(custom) custom)")
-                                        .font(.caption2)
-                                        .foregroundStyle(.white.opacity(0.5))
+                            if showLegacyOutputRows {
+                                Toggle("Auto-Paste", isOn: $settings.autoPaste)
+                                Toggle("Copy Only in Sensitive Fields", isOn: $settings.copyOnlyInSensitiveFields)
+                                Toggle("Use Accessibility API for Insertion", isOn: $settings.useAccessibilityInsertion)
+                                Toggle("Filter Profanity", isOn: $settings.profanityFilter)
 
-                                    Text("Add words to filter (comma-separated)")
-                                        .font(.caption2)
-                                        .foregroundStyle(.white.opacity(0.6))
-                                    TextEditor(text: $profanityAdditionsText)
-                                        .font(.caption2)
-                                        .frame(height: 44)
-                                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                                if settings.profanityFilter {
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        let bundled = ProfanityFilter.bundledWordCount
+                                        let custom = settings.customProfanityWords.count
+                                        Text("Filtering \(bundled + custom) words (\(bundled) bundled + \(custom) custom)")
+                                            .font(.caption2)
+                                            .foregroundStyle(.white.opacity(0.5))
 
-                                    Text("Un-filter bundled words (comma-separated)")
-                                        .font(.caption2)
-                                        .foregroundStyle(.white.opacity(0.6))
-                                    TextEditor(text: $profanityRemovalsText)
-                                        .font(.caption2)
-                                        .frame(height: 44)
-                                        .clipShape(RoundedRectangle(cornerRadius: 4))
-                                }
-                            }
+                                        Text("Add words to filter (comma-separated)")
+                                            .font(.caption2)
+                                            .foregroundStyle(.white.opacity(0.6))
+                                        TextEditor(text: $profanityAdditionsText)
+                                            .font(.caption2)
+                                            .frame(height: 44)
+                                            .clipShape(RoundedRectangle(cornerRadius: 4))
 
-                            HStack {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("Per-App Insertion Rules")
-                                        .font(.caption.weight(.semibold))
-                                        .foregroundStyle(.white.opacity(0.82))
-                                    Text("Use app-specific presets and insertion overrides without bloating the main surface.")
-                                        .font(.caption2)
-                                        .foregroundStyle(.white.opacity(0.5))
+                                        Text("Un-filter bundled words (comma-separated)")
+                                            .font(.caption2)
+                                            .foregroundStyle(.white.opacity(0.6))
+                                        TextEditor(text: $profanityRemovalsText)
+                                            .font(.caption2)
+                                            .frame(height: 44)
+                                            .clipShape(RoundedRectangle(cornerRadius: 4))
+                                    }
                                 }
 
-                                Spacer()
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Per-App Insertion Rules")
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(.white.opacity(0.82))
+                                        Text("Use app-specific presets and insertion overrides without bloating the main surface.")
+                                            .font(.caption2)
+                                            .foregroundStyle(.white.opacity(0.5))
+                                    }
 
-                                Button("Manage...") {
-                                    openPerAppInsertionWindow()
+                                    Spacer()
+
+                                    Button("Manage...") {
+                                        openPerAppInsertionWindow()
+                                    }
+                                    .buttonStyle(.bordered)
+                                    .controlSize(.small)
                                 }
-                                .buttonStyle(.bordered)
-                                .controlSize(.small)
                             }
                         }
                     }
@@ -324,11 +335,13 @@ struct QuickSettingsView: View {
                                 .padding(.leading, 16)
                             }
 
-                            SettingToggleWithInfo(
-                                title: "Correction Sheet",
-                                info: "After each dictation, shows a compact review sheet where you can confirm, edit, or reject the transcript before it gets inserted. Adds one extra step but lets you catch mistakes before they reach the target app.",
-                                isOn: $settings.enableCorrectionSheet
-                            )
+                            if showLegacyCorrectionSheetRow {
+                                SettingToggleWithInfo(
+                                    title: "Correction Sheet",
+                                    info: "After each dictation, shows a compact review sheet where you can confirm, edit, or reject the transcript before it gets inserted. Adds one extra step but lets you catch mistakes before they reach the target app.",
+                                    isOn: $settings.enableCorrectionSheet
+                                )
+                            }
 
                             SettingToggleWithInfo(
                                 title: "Use Context From Focused Field",

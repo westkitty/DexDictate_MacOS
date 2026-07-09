@@ -42,3 +42,13 @@ Sequential record of the autonomous packet run authorized 2026-07-09. Ungated pa
 - Manual validations: not performed (trigger matrix, shortcut re-recording, mic switch/unplug, silence timeout/tail preset persistence) — see `packet_04/NEEDS_ANDREW.md`
 - NEEDS_ANDREW: same LSUIElement/accessibility automation gap; mandatory lifecycle inventory completed and documented (no hidden behavior found; threaded existing `AudioDeviceScanner` instance instead of duplicating it) — see `packet_04/PACKET_RESULT.md` Known issues
 - Safe to continue: Yes
+
+## Packet 05 — Output + Per-App Rules
+- Start commit: a3a119fa
+- Final commit: (see commit immediately following this entry)
+- Pushed: Yes
+- Tests: 382 passed, 0 failures (matches baseline); targeted AppInsertionOverrides/SecureInputContext/OutputCoordinator/ClipboardManager 59/59 passed
+- Screenshots: none — blocked, see `packet_05/NEEDS_ANDREW.md`
+- Manual validations: not performed (per-app rule round-trip, password-field fallback, clipboard-restore test, toggle round-trips) — see `packet_05/NEEDS_ANDREW.md`
+- NEEDS_ANDREW: same LSUIElement/accessibility automation gap; button-vs-embed decision documented (button — `PerAppInsertionSheet.swift` untouched); Correction Sheet migrated cross-card from Accuracy & Speed per goal text — see `packet_05/PACKET_RESULT.md` Known issues
+- Safe to continue: Yes
