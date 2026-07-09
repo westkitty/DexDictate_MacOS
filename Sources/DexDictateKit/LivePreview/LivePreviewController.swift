@@ -59,8 +59,12 @@ public final class LivePreviewController: ObservableObject {
         self.engine = engine
         self.registry = engine.transcriptionProviderRegistry
 
+        // No `.receive(on:)` here — `TranscriptionEngine` is itself `@MainActor`, so
+        // `state` changes are already guaranteed to publish on the main actor. Adding an
+        // explicit redispatch only delayed the "Finalizing…" handoff by one run-loop tick
+        // for no benefit (bug sweep fix — this delay also made a lifecycle regression
+        // test flaky, since the assignment was no longer synchronous with the state change).
         engine.$state
-            .receive(on: DispatchQueue.main)
             .sink { [weak self] state in self?.handleStateChanged(state) }
             .store(in: &lifecycleCancellables)
     }
@@ -79,7 +83,13 @@ public final class LivePreviewController: ObservableObject {
             isFinalizing = true
             stopThrottledSubscriptions()
         default:
-            endSession(clearImmediately: false)
+            // Bug sweep fix: once the engine leaves .listening/.transcribing there is
+            // nothing left to preview or finalize — always fully reset here. Passing
+            // `false` previously left `isFinalizing` stuck `true` forever after the first
+            // completed dictation (the (.transcribing, .transcriptionCompleted) -> .ready
+            // transition hit this branch), showing a permanent "Finalizing…" badge until
+            // the next listening session reset it in `beginSession()`.
+            endSession(clearImmediately: true)
         }
     }
 
@@ -94,8 +104,8 @@ public final class LivePreviewController: ObservableObject {
             .sink { [weak self] text in self?.caption = text }
             .store(in: &sessionCancellables)
 
+        // Same reasoning as the `$state` subscription above — no redispatch needed.
         engine.$inputLevel
-            .receive(on: DispatchQueue.main)
             .sink { [weak self] level in self?.micLevel = level }
             .store(in: &sessionCancellables)
 

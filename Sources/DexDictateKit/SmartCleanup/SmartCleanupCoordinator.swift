@@ -30,8 +30,13 @@ public final class SmartCleanupCoordinator: ObservableObject {
     private var cancellable: AnyCancellable?
     private var didStart = false
 
-    init(settings: SmartCleanupSettings = .shared) {
-        self.settings = settings
+    /// Bug sweep fix: a default-argument expression referencing a `@MainActor`-isolated
+    /// static (`SmartCleanupSettings.shared`) is evaluated in a nonisolated context by
+    /// Swift's own default-argument rules — a warning today ("this is an error in the
+    /// Swift 6 language mode"). Resolving the default inside the (actor-isolated) body
+    /// instead avoids the mismatch entirely.
+    init(settings: SmartCleanupSettings? = nil) {
+        self.settings = settings ?? .shared
     }
 
     /// Idempotent — safe to call on every popover open, matching the app's existing

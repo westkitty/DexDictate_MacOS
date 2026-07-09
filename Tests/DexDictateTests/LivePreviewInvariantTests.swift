@@ -117,4 +117,30 @@ final class LivePreviewInvariantTests: XCTestCase {
         XCTAssertEqual(controller.caption, "")
         XCTAssertEqual(controller.micLevel, 0)
     }
+
+    /// Regression test for BUG-002 (post-campaign bug sweep): the "Finalizing…" badge
+    /// must clear once the engine returns to `.ready` after `.transcribing` completes —
+    /// it previously stuck `true` forever, since the `default:` branch of
+    /// `handleStateChanged` called `endSession(clearImmediately: false)`.
+    func testFinalizingBadgeClearsAfterTranscriptionCompletes() {
+        let settings = AppSettings.shared
+        let wasEnabled = settings.livePreviewEnabled
+        settings.livePreviewEnabled = true
+        defer { settings.livePreviewEnabled = wasEnabled }
+
+        let engine = TranscriptionEngine()
+        let controller = LivePreviewController(settings: settings)
+        controller.start(engine: engine)
+
+        engine.state = .listening
+        engine.liveTranscript = "some live caption"
+        XCTAssertFalse(controller.isFinalizing)
+
+        engine.state = .transcribing
+        XCTAssertTrue(controller.isFinalizing, "should show the Finalizing handoff while transcribing")
+
+        engine.state = .ready
+        XCTAssertFalse(controller.isFinalizing, "Finalizing badge must clear once transcription completes")
+        XCTAssertEqual(controller.caption, "", "stale caption must not persist into idle state")
+    }
 }
