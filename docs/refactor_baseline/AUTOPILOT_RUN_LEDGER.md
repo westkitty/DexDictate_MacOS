@@ -105,7 +105,7 @@ Sequential record of the autonomous packet run authorized 2026-07-09. Ungated pa
 
 ## Packet 12A — Experimental Adoption Inventory + Safe Adoption
 - Start commit: d489c19d
-- Final commit: (see commit immediately following this entry)
+- Final commit: fbd19a15
 - Pushed: Yes
 - Tests: 382 passed, 0 failures (matches baseline)
 - Screenshots: none — blocked, same automation gap as every prior packet
