@@ -45,7 +45,7 @@ Sequential record of the autonomous packet run authorized 2026-07-09. Ungated pa
 
 ## Packet 05 — Output + Per-App Rules
 - Start commit: a3a119fa
-- Final commit: (see commit immediately following this entry)
+- Final commit: 2b1f1fea
 - Pushed: Yes
 - Tests: 382 passed, 0 failures (matches baseline); targeted AppInsertionOverrides/SecureInputContext/OutputCoordinator/ClipboardManager 59/59 passed
 - Screenshots: none — blocked, see `packet_05/NEEDS_ANDREW.md`
