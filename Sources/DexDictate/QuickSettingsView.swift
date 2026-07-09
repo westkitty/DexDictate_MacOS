@@ -63,6 +63,20 @@ struct QuickSettingsView: View {
     /// → Models & Accuracy page opens the same Benchmark Capture window and calls the same
     /// `importModelFromOpenPanel()` via new call sites, not by moving this group.
     private let showLegacyBenchmarksCorpusGroup = false
+    /// Route Health now lives in Settings → Diagnostics & Recovery (Packet 08).
+    private let showLegacyRouteHealthGroup = false
+    /// Safe Mode toggle now lives in Settings → Diagnostics & Recovery (Packet 08). Its
+    /// duplicate in the pinned controls strip is left as-is (out of this packet's scope —
+    /// pinned strip duplicates are not part of any card being retired).
+    private let showLegacySafeModeRow = false
+    /// Reset Core Audio now lives in Settings → Diagnostics & Recovery, under "System
+    /// Repair" (Packet 08). The entire "Advanced" card is now empty and hidden.
+    private let showLegacyAdvancedCard = false
+    /// Trailing Trim Experiment now lives in Settings → Advanced (Packet 08).
+    private let showLegacyTrailingTrimExperimentRow = false
+    /// All four Experimental UI flags now live in Settings → Advanced (Packet 08); moved as
+    /// one group since the popover presents them as a single card.
+    private let showLegacyExperimentalUICard = false
     @State private var advancedPanelExpanded = false
     @State private var isResettingCoreAudio = false
     @State private var coreAudioResetStatus: String?
@@ -152,37 +166,39 @@ struct QuickSettingsView: View {
                                 isOn: $settings.pauseBrowserMediaDuringDictation
                             )
 
-                            DisclosureGroup("Route Health", isExpanded: $routeHealthExpanded) {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    QuickSettingsSummaryValue(
-                                        label: "Active Input",
-                                        value: engine.routeHealthSnapshot.activeInputLabel
-                                    )
-                                    QuickSettingsSummaryValue(
-                                        label: "Recoveries",
-                                        value: "\(engine.routeHealthSnapshot.recoveryCount)"
-                                    )
-                                    QuickSettingsSummaryValue(
-                                        label: "Last Recovery",
-                                        value: routeRecoveryStatusLabel
-                                    )
+                            if showLegacyRouteHealthGroup {
+                                DisclosureGroup("Route Health", isExpanded: $routeHealthExpanded) {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        QuickSettingsSummaryValue(
+                                            label: "Active Input",
+                                            value: engine.routeHealthSnapshot.activeInputLabel
+                                        )
+                                        QuickSettingsSummaryValue(
+                                            label: "Recoveries",
+                                            value: "\(engine.routeHealthSnapshot.recoveryCount)"
+                                        )
+                                        QuickSettingsSummaryValue(
+                                            label: "Last Recovery",
+                                            value: routeRecoveryStatusLabel
+                                        )
 
-                                    if let recoveryNotice = scanner.recoveryNotice {
-                                        Text(recoveryNotice)
+                                        if let recoveryNotice = scanner.recoveryNotice {
+                                            Text(recoveryNotice)
+                                                .font(.caption2)
+                                                .foregroundStyle(.orange.opacity(0.9))
+                                                .fixedSize(horizontal: false, vertical: true)
+                                        }
+
+                                        Text(engine.routeHealthSnapshot.detail)
                                             .font(.caption2)
-                                            .foregroundStyle(.orange.opacity(0.9))
+                                            .foregroundStyle(.white.opacity(0.5))
                                             .fixedSize(horizontal: false, vertical: true)
                                     }
-
-                                    Text(engine.routeHealthSnapshot.detail)
-                                        .font(.caption2)
-                                        .foregroundStyle(.white.opacity(0.5))
-                                        .fixedSize(horizontal: false, vertical: true)
+                                    .padding(.top, 8)
                                 }
-                                .padding(.top, 8)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.white.opacity(0.82))
                             }
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.white.opacity(0.82))
 
                             if showLegacyVocabularyCommandsButtons {
                                 HStack {
@@ -213,7 +229,9 @@ struct QuickSettingsView: View {
                         isExpanded: $outputPanelExpanded
                     ) {
                         VStack(alignment: .leading, spacing: 10) {
-                            Toggle("Safe Mode", isOn: safeModeBinding)
+                            if showLegacySafeModeRow {
+                                Toggle("Safe Mode", isOn: safeModeBinding)
+                            }
                             Toggle("Show Floating HUD", isOn: $settings.showFloatingHUD)
 
                             if showLegacyOutputRows {
@@ -333,11 +351,13 @@ struct QuickSettingsView: View {
                                 )
                             }
 
-                            SettingToggleWithInfo(
-                                title: "Trailing Trim Experiment",
-                                info: "An experimental variation that trims silence only at the end of the recording, after your last spoken word. May improve accuracy on the final word of an utterance by preventing Whisper from continuing to 'hear' noise after speech ends. Best used alongside Trim Leading/Trailing Silence.",
-                                isOn: $settings.enableTrailingTrimExperiment
-                            )
+                            if showLegacyTrailingTrimExperimentRow {
+                                SettingToggleWithInfo(
+                                    title: "Trailing Trim Experiment",
+                                    info: "An experimental variation that trims silence only at the end of the recording, after your last spoken word. May improve accuracy on the final word of an utterance by preventing Whisper from continuing to 'hear' noise after speech ends. Best used alongside Trim Leading/Trailing Silence.",
+                                    isOn: $settings.enableTrailingTrimExperiment
+                                )
+                            }
 
                             if showLegacyModelAccuracyRows {
                                 SettingToggleWithInfo(
@@ -628,6 +648,7 @@ struct QuickSettingsView: View {
                         }
                     }
 
+                    if showLegacyExperimentalUICard {
                     QuickSettingsDisclosureCard(
                         title: "Experimental UI",
                         subtitle: "Preview surfaces — off by default. No dictation behavior changes.",
@@ -679,7 +700,9 @@ struct QuickSettingsView: View {
                             }
                         }
                     }
+                    }
 
+                    if showLegacyAdvancedCard {
                     QuickSettingsDisclosureCard(
                         title: "Advanced",
                         subtitle: "Recovery actions for stuck macOS audio routes.",
@@ -724,6 +747,7 @@ struct QuickSettingsView: View {
                                     .fixedSize(horizontal: false, vertical: true)
                             }
                         }
+                    }
                     }
                 }
                 .padding(SurfaceTokens.cardPadding)

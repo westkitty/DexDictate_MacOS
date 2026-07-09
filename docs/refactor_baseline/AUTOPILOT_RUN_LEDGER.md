@@ -72,3 +72,13 @@ Sequential record of the autonomous packet run authorized 2026-07-09. Ungated pa
 - Manual validations: not performed (model switch persistence, Import Model, retry-button surfacing, Benchmark Lab run) — see `packet_07/NEEDS_ANDREW.md`
 - NEEDS_ANDREW: same LSUIElement/accessibility automation gap; lifecycle inventory completed (AdaptiveBenchmarkController armed by app-level onAppear, no singleton — status summary deliberately skipped rather than duplicate the scheduler); Trailing Trim Experiment + Context Biasing left for Packet 08's inventory — see `packet_07/PACKET_RESULT.md` Known issues
 - Safe to continue: Yes
+
+## Packet 08 — Diagnostics + Recovery + Advanced
+- Start commit: 6152be96
+- Final commit: (see commit immediately following this entry)
+- Pushed: Yes
+- Tests: 382 passed, 0 failures (matches baseline); targeted AudioRecorderRecovery 11/11 passed, untouched-green
+- Screenshots: none — blocked, same automation gap as every prior packet
+- Manual validations: not performed (Reset Core Audio prompt, Safe Mode matrix, route-change count) — see `packet_08/NEEDS_ANDREW.md`
+- NEEDS_ANDREW: **MANDATORY PRE-REMOVAL INVENTORY TRIGGERED THE PACKET'S OWN STOP CONDITION.** Seven controls/areas have no assigned packet anywhere in the approved 02–12A/15 sequence (Pause Browser Media toggle, Show Floating HUD toggle, Context Biasing picker, entire Transcription Engines card, Show Dictation Stats toggle, Persist History Across Sessions toggle, whole History settings page). Quick Settings entry point was deliberately NOT hidden — everything else in Packet 08 is complete and pushed. See `packet_08/NEEDS_ANDREW.md` for full detail.
+- **Safe to continue: NO — autopilot run PAUSED here.** Packet 09 assumes Quick Settings is fully retired; running it now would strand the seven items above. Needs Andrew's decision before Packet 09 proceeds.

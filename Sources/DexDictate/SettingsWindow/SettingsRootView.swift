@@ -29,7 +29,7 @@ struct SettingsRootView: View {
         case .smartCleanup: SmartCleanupPage()
         case .history: HistorySettingsPage()
         case .dexterPersonality: DexterPersonalityPage()
-        case .diagnosticsRecovery: DiagnosticsPage()
+        case .diagnosticsRecovery: DiagnosticsPage(scanner: scanner)
         case .advanced: AdvancedPage()
         }
     }
