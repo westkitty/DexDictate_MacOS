@@ -15,7 +15,7 @@ Sequential record of the autonomous packet run authorized 2026-07-09. Ungated pa
 
 ## Packet 02 — Settings Window Shell
 - Start commit: 93a9d523
-- Final commit: (see commit immediately following this entry)
+- Final commit: 64bb643c
 - Pushed: Yes
 - Tests: 382 passed, 0 failures (matches baseline)
 - Screenshots: none — blocked, see `packet_02/NEEDS_ANDREW.md`
