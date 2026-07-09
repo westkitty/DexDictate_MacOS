@@ -85,7 +85,7 @@ Sequential record of the autonomous packet run authorized 2026-07-09. Ungated pa
 
 ## Packet 08B — Orphaned Quick Settings Migration (bridge packet, Andrew's mapping)
 - Start commit: 4a01b9bd
-- Final commit: (see commit immediately following this entry)
+- Final commit: 380212fb
 - Pushed: Yes
 - Tests: 382 passed, 0 failures (matches baseline); targeted SettingsMigration/TranscriptionHistory/AppSettingsRestoreDefaults/PermissionSettingsLinker 14/14 passed
 - Screenshots: none — blocked, same automation gap as every prior packet
