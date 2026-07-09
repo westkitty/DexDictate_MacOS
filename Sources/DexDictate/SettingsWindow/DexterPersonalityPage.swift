@@ -65,6 +65,15 @@ struct DexterPersonalityPage: View {
 
                 Divider()
 
+                Text("Dexter Feed")
+                    .font(.headline)
+                DexDexterFeedView(settings: settings, profileManager: profileManager)
+                Text("Adopted from the experimental UI (Packet 12A-B). A shuffled sample of quote-pack lines — mostly the active profile, a couple from others. Local only, no network. Distinct from the single-line ticker/inline quote above.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+
+                Divider()
+
                 Text("Watermark Backdrop")
                     .font(.headline)
                 if let asset = profileManager.currentWatermarkAsset, let nsImage = NSImage(contentsOf: asset.url) {

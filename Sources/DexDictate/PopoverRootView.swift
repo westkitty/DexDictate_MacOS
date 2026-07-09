@@ -73,6 +73,11 @@ struct PopoverRootView: View {
                                 errorBanner
                             } else {
                                 PopoverHeroView(engine: engine, settings: settings, watermarkImage: cachedWatermarkImage)
+                                compactControlsRow
+                                if engine.state == .listening {
+                                    DexTranscriptCard(transcript: liveTranscriptState)
+                                        .padding(.horizontal)
+                                }
                             }
 
                             PopoverResultView(engine: engine, settings: settings, profileManager: profileManager)
@@ -282,6 +287,60 @@ struct PopoverRootView: View {
             guard panel.runModal() == .OK, let url = panel.url else { return }
             engine.transcribeAudioFile(url: url)
         }
+    }
+
+    // MARK: - Packet 12A-B adoption: compact controls + live transcript
+
+    /// "Daily six" one-tap pills (trigger/model/mode + auto-paste/safe-mode/clipboard-
+    /// fallback status), flagged MISSING from the default popover in Packet 12A's
+    /// inventory. Re-hosts `DexContextChips`/`DexOutputChips` unchanged from
+    /// `ExperimentalUI/DexStateFirstComponents.swift` — zero edits to either view, only
+    /// the params they already declare (`settings`, `WhisperModelCatalog.shared`,
+    /// `engine.transcriptionProviderRegistry`), all already available in this popover
+    /// without new threading.
+    private var compactControlsRow: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            DexContextChips(
+                settings: settings,
+                modelCatalog: WhisperModelCatalog.shared,
+                registry: engine.transcriptionProviderRegistry
+            )
+            DexOutputChips(output: outputDisplayState)
+        }
+        .padding(.horizontal)
+    }
+
+    private var outputDisplayState: OutputDisplayState {
+        let feedback = engine.resultFeedback
+        let isClipboardFallback: Bool
+        if case .copiedOnlySensitiveContext = feedback { isClipboardFallback = true } else { isClipboardFallback = false }
+        let isFailure: Bool
+        if case .noSpeechDetected = feedback { isFailure = true } else { isFailure = false }
+        return OutputDisplayState(
+            autoPaste: settings.autoPaste,
+            safeMode: settings.safeModeEnabled,
+            lastFeedbackTitle: feedback.title,
+            lastFeedbackIcon: feedback.symbolName,
+            isFailure: isFailure,
+            isClipboardFallback: isClipboardFallback
+        )
+    }
+
+    /// Live partial transcript + mic level while actively listening — the other item
+    /// Packet 12A's inventory flagged MISSING. Reads `engine.liveTranscript` /
+    /// `engine.inputLevel`, both already-`@Published` properties on the existing
+    /// `TranscriptionEngine` singleton (no new audio tap, no forbidden-file edits — the
+    /// same read-only-consumer pattern `DiagnosticsPage` already uses for
+    /// `engine.routeHealthSnapshot`). `recentText: nil` keeps this card strictly to
+    /// "what's happening right now"; the completed-result display stays
+    /// `PopoverResultView`'s job, avoiding a duplicate "last transcription" line.
+    private var liveTranscriptState: TranscriptDisplayState {
+        TranscriptDisplayState(
+            liveText: engine.liveTranscript,
+            recentText: nil,
+            inputLevel: engine.inputLevel,
+            silenceCountdown: engine.silenceCountdown
+        )
     }
 
     private func loadWatermarkImage() -> NSImage? {

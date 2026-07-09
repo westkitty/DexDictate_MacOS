@@ -159,3 +159,15 @@ Sequential record of the autonomous packet run authorized 2026-07-09. Ungated pa
 - Resolved: Run Benchmarks Now + Restore Stable Defaults + BenchmarkResultsSection re-homed to Settings → Models & Accuracy → new "Benchmark Tools" section; Open Captured Corpus confirmed already reachable via Benchmark Lab's "Open Corpus Folder" button (no new UI needed); 2 stale Help entries updated to point at the new location
 - Not in scope: broader 34-reference Help-text audit (same boundary Packet 10 drew); forbidden-file string in `TranscriptionEngine.swift:1262` remains untouched
 - Safe to continue: Yes (to Packet 12A-B)
+
+## Packet 12A-B — Missing Experimental Adoption Bridge (Final Remaining Campaign)
+- Start commit: c6cd0915
+- Final commit: (pending)
+- Pushed: Yes
+- Tests: 382 passed, 0 failures (matches baseline)
+- Screenshots: none — blocked, same automation gap as every prior packet
+- Manual validations: not performed — see `packet_12ab/NEEDS_ANDREW.md`
+- Resolved all 3 MISSING items from Packet 12A: pinned "daily six" compact controls (`DexContextChips`/`DexOutputChips` re-hosted into `PopoverRootView`); live transcript + mic level meter while listening (`DexTranscriptCard` reading already-published `engine.liveTranscript`/`engine.inputLevel`, listening-only); Dexter Feed (`DexDexterFeedView` re-hosted into Settings → Dexter & Personality)
+- Zero files under `ExperimentalUI/` touched — experimental UI fully intact
+- **Packet 12B readiness: Ready** — see `packet_12ab/ADOPTION_PLAN.md`
+- Safe to continue: Yes (to Packet 12B)
