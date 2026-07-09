@@ -39,23 +39,7 @@ struct DexDictateApp: App {
     var body: some Scene {
         MenuBarExtra {
             Group {
-                if settings.useExperimentalStateFirstUI {
-                    DexExperimentalEntry(
-                        engine: engine,
-                        permissionManager: permissionManager,
-                        settings: settings,
-                        profileManager: profileManager,
-                        onDetachHistory: {
-                            MainActorAction.run { historyController.show() }
-                        },
-                        onOpenHelp: {
-                            MainActorAction.run { helpController.show() }
-                        },
-                        onRequestOnboardingDebug: {
-                            MainActorAction.run { appDelegate.presentOnboardingForDebug() }
-                        }
-                    )
-                } else if settings.useSlimPopover {
+                if settings.useSlimPopover {
                     // Packet 09 — new slim popover contract. Stage A: reachable only via
                     // this debug flag (default off). Stage B flips the default to true.
                     PopoverRootView(
@@ -422,35 +406,6 @@ private struct MenuBarRecordingBadge: View {
 }
 
 
-// MARK: - UI Mode Switch
-
-/// A prominent one-tap switch between the classic and experimental interfaces.
-/// Reads/sets `AppSettings.useExperimentalStateFirstUI`; the MenuBarExtra body swaps the
-/// whole UI live. Designed to sit top-left in both interfaces so you can flip either way.
-struct UIModeToggleButton: View {
-    @ObservedObject var settings: AppSettings
-
-    var body: some View {
-        Button {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                settings.useExperimentalStateFirstUI.toggle()
-            }
-        } label: {
-            HStack(spacing: 4) {
-                Image(systemName: settings.useExperimentalStateFirstUI ? "rectangle.on.rectangle" : "sparkles")
-                Text(settings.useExperimentalStateFirstUI ? "Classic" : "New UI")
-            }
-            .font(.caption2.weight(.bold))
-            .padding(.horizontal, 9)
-            .padding(.vertical, 4)
-            .background(Capsule().fill(Color.accentColor))
-            .foregroundStyle(.white)
-        }
-        .buttonStyle(.plain)
-        .help("Switch between the classic and the new interface")
-    }
-}
-
 // MARK: - Main View
 
 /// Root content view for the menu bar popover.
@@ -545,7 +500,6 @@ struct AntiGravityMainView: View {
                         ) {
                             NSApplication.shared.terminate(nil)
                         }
-                        UIModeToggleButton(settings: settings)
                         Spacer()
                         ChromeIconButton(
                             systemName: "gearshape",

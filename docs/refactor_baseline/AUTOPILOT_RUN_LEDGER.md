@@ -171,3 +171,17 @@ Sequential record of the autonomous packet run authorized 2026-07-09. Ungated pa
 - Zero files under `ExperimentalUI/` touched — experimental UI fully intact
 - **Packet 12B readiness: Ready** — see `packet_12ab/ADOPTION_PLAN.md`
 - Safe to continue: Yes (to Packet 12B)
+
+## Packet 12B — Experimental UI Retirement (Final Remaining Campaign, GATED — Andrew approved)
+- Start commit: ed6a0f55
+- Final commit: (pending)
+- Pushed: Yes
+- Tests: 382 passed, 0 failures (matches baseline)
+- Screenshots: none — blocked, same automation gap as every prior packet
+- Manual validations: not performed live; full feature-loss checklist verified at code level — see `packet_12b/PACKET_RESULT.md`
+- Deleted: `DexStateFirstPopoverView.swift`, `DexExperimentalEntry.swift`, `DexExperimentalUIStateAdapter.swift`, `DexLayeredRevealView.swift`, `DexExperimentalGUISwitcherView` (split out of `DexExperimentalHubViews.swift`), `UIModeToggleButton`, the `useExperimentalStateFirstUI` app-body branch, 3 now-inert Advanced-page toggle rows
+- Moved out of `ExperimentalUI/` (load-bearing for standard UI, kept): `DexCommandPaletteView.swift`, `DexNanoHUDView.swift`, `DexStateFirstComponents.swift`, `DexDexterFeedView.swift`, `DexExperimentalHubViews.swift` (trimmed to just `DexExperimentalFeatureHubView`, load-bearing via `FloatingHUD.swift`'s hub panel)
+- `ExperimentalUI/` directory no longer exists
+- No storage-key changes (3 flags' keys untouched, only their now-inert UI rows removed)
+- Judgment call: `DexExperimentalHubViews.swift` split rather than wholesale-removed per the handoff's literal list, since `FloatingHUD.swift` has a real pre-existing dependency on `DexExperimentalFeatureHubView` — see `packet_12b/NEEDS_ANDREW.md`
+- Safe to continue: Yes (to Packet 13, per Andrew's separate approval for this campaign)

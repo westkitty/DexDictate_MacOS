@@ -36,12 +36,14 @@ struct DexPaletteCommand: Identifiable {
 
 // MARK: - Command Palette View
 
-/// Experimental isolated command palette.
+/// Isolated command palette.
 ///
-/// Shown when `AppSettings.useExperimentalCommandPalette == true` and accessed
-/// from the state-first popover. It lists local commands only — no global hotkey
-/// listener is added, `InputMonitor` is not modified, and production trigger
-/// behavior is unchanged.
+/// Adopted into the standard slim popover (Packet 12A) as an unconditional feature —
+/// reachable via ⌘K or the footer overflow menu, no longer flag-gated (the
+/// `useExperimentalCommandPalette` flag's only reader lived in the now-retired
+/// state-first popover; Packet 12B removed that reader). It lists local commands
+/// only — no global hotkey listener is added, `InputMonitor` is not modified, and
+/// production trigger behavior is unchanged.
 ///
 /// Actions that cannot be safely wired (no public engine method) are shown as
 /// disabled with an explanatory subtitle rather than silently hidden.
@@ -92,15 +94,6 @@ struct DexCommandPaletteView: View {
         ),
 
         // UI
-        DexPaletteCommand(
-            title: "Toggle State-first Popover",
-            subtitle: settings.useExperimentalStateFirstUI
-                ? "Currently ON — tap to disable."
-                : "Currently OFF — tap to enable.",
-            icon: "rectangle.on.rectangle",
-            category: .ui,
-            action: .live { settings.useExperimentalStateFirstUI.toggle(); onBack() }
-        ),
         DexPaletteCommand(
             title: "Toggle Nano HUD",
             subtitle: settings.useExperimentalNanoHUD

@@ -2,8 +2,9 @@ import Foundation
 import DexDictateKit
 
 /// Shared "what does picking this model/engine mean" logic, used by both the Classic
-/// (`QuickSettingsView`'s "Choose Model" list) and Experimental (`DexContextChips`) UIs so
-/// the two surfaces can't drift into different behavior for the same underlying settings.
+/// (`QuickSettingsView`'s "Choose Model" list) and the slim popover's (`DexContextChips`,
+/// re-hosted from the former experimental UI in Packet 12A-B) model pill so the two
+/// surfaces can't drift into different behavior for the same underlying settings.
 enum ModelSelectionActions {
     /// Every Whisper size already on disk, unioned with the full downloadable catalog —
     /// de-duplicated by id so an installed size never appears twice.

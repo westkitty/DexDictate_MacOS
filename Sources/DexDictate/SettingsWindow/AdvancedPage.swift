@@ -26,30 +26,15 @@ struct AdvancedPage: View {
 
                 Text("Experimental UI")
                     .font(.headline)
-                Text("These flags activate prototype UI surfaces. The dictation engine, audio, transcription, insertion, and permissions are unchanged.")
+                Text("Packet 12B: the state-first compact popover surface has been retired — every capability it introduced now lives permanently in the standard popover and Settings (Command Palette via ⌘K, compact controls, live transcript/mic meter, Dexter Feed in Settings → Dexter & Personality). Only Nano HUD remains an opt-in alternative to the Floating HUD below. The dictation engine, audio, transcription, insertion, and permissions were unchanged throughout.")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
                 experimentToggle(
-                    title: "State-first compact popover",
-                    isOn: $settings.useExperimentalStateFirstUI,
-                    caption: "Replaces the standard menu-bar popover while enabled."
-                )
-                experimentToggle(
                     title: "Nano HUD (active dictation strip)",
                     isOn: $settings.useExperimentalNanoHUD,
                     caption: "Replaces the floating HUD when a new HUD window is created. Requires Show Floating HUD to be on. Toggle while HUD is hidden for cleanest switch."
-                )
-                experimentToggle(
-                    title: "Command palette (power-user overlay)",
-                    isOn: $settings.useExperimentalCommandPalette,
-                    caption: "Adds a searchable command overlay accessible from the state-first popover."
-                )
-                experimentToggle(
-                    title: "Dexter stateful feed",
-                    isOn: $settings.useExperimentalDexterFeed,
-                    caption: "Shows Dexter commentary feed in the Settings & History panel. Local quote packs only — no network."
                 )
             }
             .padding(SurfaceTokens.settingsPagePadding)

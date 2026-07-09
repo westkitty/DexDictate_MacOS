@@ -95,7 +95,7 @@ enum HelpSection: String, CaseIterable, Identifiable, Hashable {
         case .benchmarking:   return ["benchmark", "wer", "latency", "model", "tiny.en", "accuracy", "corpus", "promote", "auto"]
         case .shortcuts:      return ["siri", "shortcuts", "app intents", "automation", "voice control"]
         case .diagnostics:    return ["logs", "debug", "troubleshoot", "not working", "error", "crash", "broken", "fix", "zoom", "zoom call", "electron", "coreaudiod", "-10868", "core audio", "audio stuck", "microphone blocked", "capability"]
-        case .experimentalUI: return ["experimental", "state-first", "nano hud", "command palette", "dexter feed", "gui switcher", "feature hub", "switch ui", "beta", "experimental popover", "useExperimentalStateFirstUI", "useExperimentalNanoHUD"]
+        case .experimentalUI: return ["experimental", "nano hud", "command palette", "dexter feed", "compact controls", "live transcript", "mic level", "beta", "useExperimentalNanoHUD"]
         case .about:          return ["version", "github", "credits", "license", "source"]
         }
     }
@@ -968,38 +968,30 @@ private struct DiagnosticsContent: View {
 private struct ExperimentalUIContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            helpBody("The Experimental UI is an opt-in redesign of the DexDictate popover. All production dictation, transcription, insertion, permission, and model-loading behaviour is unchanged — only the visible surface is different.")
-
-            helpBody("Enable experimental surfaces from Quick Settings → Experimental UI, or from the state-first popover's Switch UI panel.")
+            helpBody("DexDictate previously offered a full alternate \"state-first\" popover as an opt-in experiment. That surface has been retired (Packet 12B) — every capability it introduced now lives permanently in the standard popover and Settings window. All production dictation, transcription, insertion, permission, and model-loading behaviour was unchanged throughout.")
 
             VStack(alignment: .leading, spacing: 10) {
-                HelpRow(key: "State-first Popover", value: "Compact popover led by engine state. Enable in Quick Settings → Experimental UI. Includes Settings & History, All Features, Switch UI, and Command Palette — all inside the popover, no separate windows.")
-                HelpRow(key: "Nano HUD", value: "Small floating strip showing recording state. Appears alongside any popover. Tap Stop to end recording; does not steal focus from the active app.")
-                HelpRow(key: "Command Palette", value: "Searchable action list inside the state-first popover. Enable to show the ⌘K button. Commands run immediately without dismissing the popover.")
-                HelpRow(key: "Dexter Feed", value: "Stateful Dexter commentary inside Settings & History → Dexter. Local quote packs only — no network. Prefers lines from the active profile.")
-                HelpRow(key: "All Features", value: "Opens the full Quick Settings panel inside the state-first popover. Every DexDictate feature is accessible without switching surfaces.")
-                HelpRow(key: "Switch UI", value: "Switch between surfaces without Terminal. Selecting Standard UI closes the experimental popover immediately.")
+                HelpRow(key: "Command Palette", value: "Searchable action list. Press ⌘K from the popover, or use the footer overflow menu's \"Command Palette\" item. Always available now — no longer a flag.")
+                HelpRow(key: "Compact controls", value: "One-tap trigger/model/mode pills and output status chips, shown in the popover below the state hero.")
+                HelpRow(key: "Live transcript & mic level", value: "Shown in the popover while actively listening, when the active engine supports live partial results.")
+                HelpRow(key: "Dexter Feed", value: "Stateful Dexter commentary. Settings → Dexter & Personality → Dexter Feed. Local quote packs only — no network. Always available now — no longer a flag.")
+                HelpRow(key: "Nano HUD", value: "Small floating strip showing recording state, as an alternative to the standard Floating HUD. Still opt-in: Settings → Advanced → Nano HUD (active dictation strip). Requires Show Floating HUD to be on. Tap Stop to end recording; does not steal focus from the active app.")
             }
 
             Divider().background(Color.white.opacity(0.08))
 
             VStack(alignment: .leading, spacing: 6) {
-                Text("Feature flags").font(.subheadline.weight(.semibold)).foregroundStyle(.white)
-                helpBody("If you need to reset flags manually (bundle ID: com.westkitty.dexdictate.macos):")
-                Group {
-                    Text("defaults delete com.westkitty.dexdictate.macos useExperimentalStateFirstUI")
-                    Text("defaults delete com.westkitty.dexdictate.macos useExperimentalNanoHUD")
-                    Text("defaults delete com.westkitty.dexdictate.macos useExperimentalCommandPalette")
-                    Text("defaults delete com.westkitty.dexdictate.macos useExperimentalDexterFeed")
-                }
-                .font(.system(size: 11, design: .monospaced))
-                .foregroundStyle(.cyan.opacity(0.80))
-                .textSelection(.enabled)
+                Text("Feature flag").font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                helpBody("If you need to reset the remaining flag manually (bundle ID: com.westkitty.dexdictate.macos):")
+                Text("defaults delete com.westkitty.dexdictate.macos useExperimentalNanoHUD")
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(.cyan.opacity(0.80))
+                    .textSelection(.enabled)
             }
 
             Divider().background(Color.white.opacity(0.08))
 
-            helpBody("Known limitations: Command Palette does not register a global ⌘K hotkey — it is only accessible from the popover. The Nano HUD cancel button calls stop, not discard. History opened from within the experimental popover calls NSApp.activate() to bring the window forward.")
+            helpBody("Known limitation: the Nano HUD's cancel button calls stop, not discard.")
         }
     }
 }

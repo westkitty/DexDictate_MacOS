@@ -1771,7 +1771,7 @@ struct LiveTranscriptionStatusView: View {
 
     /// The engine currently producing the committed/pasted transcript: the explicit pin if one
     /// is set, otherwise the automatic Parakeet-if-healthy-else-Whisper default. Shared with
-    /// the Experimental UI's `DexContextChips` via `ModelSelectionActions`.
+    /// the slim popover's `DexContextChips` model pill via `ModelSelectionActions`.
     private var primaryEngineID: TranscriptionProviderID {
         ModelSelectionActions.primaryEngineID(settings: settings, registry: registry)
     }

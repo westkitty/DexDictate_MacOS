@@ -1,12 +1,14 @@
 import SwiftUI
 import DexDictateKit
 
-/// Experimental Dexter stateful feed — local quote-pack driven, no network.
+/// Dexter stateful feed — local quote-pack driven, no network.
 ///
-/// Shown inside `DexLayeredRevealView` when `AppSettings.useExperimentalDexterFeed == true`.
-/// Sources lines from the existing `FlavorQuotePacks` infrastructure; no RSS or remote
-/// fetching is performed. If the repo gains verified network support later, this view
-/// can be extended without changing the production dictation path.
+/// Adopted into Settings → Dexter & Personality (Packet 12A-B) as an unconditional
+/// feature — the `useExperimentalDexterFeed` flag's only reader lived in the now-retired
+/// `DexLayeredRevealView.swift` (Packet 12B). Sources lines from the existing
+/// `FlavorQuotePacks` infrastructure; no RSS or remote fetching is performed. If the repo
+/// gains verified network support later, this view can be extended without changing the
+/// production dictation path.
 ///
 /// Dexter copy guidelines (from 01_FINAL_UIUX_DECISION_REPORT):
 /// - Event-driven: one short line after success, error, or idle.
