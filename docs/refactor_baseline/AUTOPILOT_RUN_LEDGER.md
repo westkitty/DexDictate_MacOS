@@ -97,7 +97,7 @@ Sequential record of the autonomous packet run authorized 2026-07-09. Ungated pa
 ## Packet 09 — Popover Slim-Down (Stage A complete; Stage B completed after Packet 11)
 - Start commit: aace4f35
 - Stage A commit: 8978dfe7 (pushed)
-- Stage B commit: (see commit immediately following this entry) — completed after Packet 11 gave Profile/Theme/Ticker a Settings-window home. Fresh inventory confirmed clean before flipping.
+- Stage B commit: abcbb57a — completed after Packet 11 gave Profile/Theme/Ticker a Settings-window home. Fresh inventory confirmed clean before flipping.
 - Tests: Stage A 382 passed; Stage B first run hit known-flaky MainActorActionTests alone, rerun clean 382/382
 - Screenshots: none — blocked, same automation gap as every prior packet
 - Manual validations: not performed — see `packet_09/NEEDS_ANDREW.md`
