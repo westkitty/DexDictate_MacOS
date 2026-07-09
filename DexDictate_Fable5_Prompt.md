@@ -8,13 +8,14 @@ You are Fable 5, a high-reasoning software architect and UI/UX strategist. Your 
 
 Analyze DexDictate's architecture, existing features, user experience issues, and future directions as described in the accompanying source grounded assessment packet. Produce a comprehensive UI/UX recovery plan, a settings/navigation taxonomy, a staged behavior-preserving refactor roadmap, and sequential execution TODO cards (packets) that can be executed by developer tools.
 
-## 3. Source Packet Reference
+## 3. Source Documents & Context Attachment
 
-Please read and ground all recommendations in the following documents:
-- [DexDictate_Fable5_Assessment_Packet.md](file:///Users/andrew/DexDictate_MacOS.nosync/DexDictate_Fable5_Assessment_Packet.md)
-- [DexDictate_Feature_Function_Baseline.md](file:///Users/andrew/DexDictate_MacOS.nosync/DexDictate_Feature_Function_Baseline.md)
-- [DexDictate_Feature_Loss_Checklist.md](file:///Users/andrew/DexDictate_MacOS.nosync/DexDictate_Feature_Loss_Checklist.md)
-- [DexDictate_Remote_Ollama_Stack_Baseline.md](file:///Users/andrew/DexDictate_MacOS.nosync/DexDictate_Remote_Ollama_Stack_Baseline.md)
+> [!IMPORTANT]
+> The source documents mapping the current state, baselines, and feature preservation matrices are attached alongside this prompt. Do not rely solely on the local filesystem path links (`file://...`). Please read, ingest, and ground all your recommendations in the following attached context files:
+> 1. **Assessment Packet:** `DexDictate_Fable5_Assessment_Packet.md` (macOS menu bar popover state, test run status, user intent, boundaries)
+> 2. **Feature/Function Baseline:** `DexDictate_Feature_Function_Baseline.md` (The complete inventory of all 10+ core hidden app features)
+> 3. **Feature Loss Checklist:** `DexDictate_Feature_Loss_Checklist.md` (The checklist validation steps to prevent regression)
+> 4. **Remote Ollama Stack Baseline:** `DexDictate_Remote_Ollama_Stack_Baseline.md` (SSH Tunnel port mapping context and requirements)
 
 ## 4. Confirmed Constraints
 
@@ -63,23 +64,50 @@ Please read and ground all recommendations in the following documents:
 - No commercial metering or user licensing systems.
 - No active implementation of Swift file edits in this phase.
 
-## 10. Required Deliverables
+## 10. Required Deliverables & Output Format
 
-Produce a single markdown document containing:
-1. **UI/UX Recovery Plan:** Mockups and wireframe layout descriptions for the menu-bar popover, tabs, HUD, and settings.
-2. **Product Architecture Diagnosis:** Mapping the current files to their functional roles.
-3. **Proposed Mode Taxonomy:** Clear names for dictation modes to resolve terminology overlaps.
-4. **Settings & Navigation Architecture:** A proposed tabbed or paginated settings layout.
-5. **Dexter Identity Integration Plan:** How onboarding, animations, RSS marquee, and watermarks integrate into the clean layout.
-6. **Live Transcription Architecture Plan:** Staged roadmaps (Phases 1-4) detailing how to implement previews and fallbacks safely.
-7. **Remote Ollama Stack Integration Plan:** Configurable settings endpoints and client SSH tunnel diagnostics setup.
-8. **Feature Preservation Plan:** Mapping how the 10+ core capabilities will be protected during refactoring.
-9. **Staged Behavior-Preserving Refactor Roadmap:** Segmented stages of refactoring to isolate risk.
-10. **Google Antigravity-Ready Implementation Packets:** Phased TODO lists (checklists) for sequential developer tool execution.
-11. **Validation Checklist:** Exact commands and tests to run to ensure zero functional regression.
+You must output a single, comprehensive Markdown document containing the following sections:
 
-## 11. Stopping Point & Review Path
+### a. Executive Verdict
+High-level summary of the refactor readiness and UI/UX state of DexDictate.
 
-- **Stop immediately** after generating this markdown report.
-- Do not write code files, execute git commits, or modify resources.
-- Deliver the report to Andrew for review and sign-off.
+### b. UI/UX Diagnosis
+Detailed critique of card fatigue, discoverability limits, and layout alignment of the current `QuickSettingsView` and popover.
+
+### c. Proposed Product/Navigation Architecture
+A conceptual wireframe and layout description of how the menu-bar popover, tabs, detached sheets, and floating HUD are organized.
+
+### d. Mode Taxonomy
+Clear, standardized user-facing labels for the dictation modes (resolving overlaps between Voice Commands, Vocabulary, and Auto-Correction/smart retries).
+
+### e. Dexter Identity Integration Plan
+How onboarding animations, the launch panels, background watermarks, regional profiles, and tickers are polished and natively integrated.
+
+### f. Live Transcription Architecture
+A technical proposal for a staged (Phases 1-4) low-latency live caption feed without disrupting the batch Whisper commit flow.
+
+### g. Remote Ollama Smart-Cleanup Architecture
+An integration design outlining API key configuration, base URL settings, and client SSH tunnel diagnostics.
+
+### h. Feature Preservation Map
+A matrix mapping all 10+ core hidden capabilities to their respective code modules, outlining exactly how their execution remains unaltered.
+
+### i. Risk Register
+Key technical risks associated with Accessibility APIs, focus shifts, serial audio queues, and system permissions.
+
+### j. Phased Antigravity Implementation Packets
+Segmented, step-by-step TODO cards/checklists for sequential execution by the agentic coder.
+> [!CAUTION]
+> **Hard Rule:** Every implementation packet (card) MUST list:
+> - **Files Likely Touched:** Specific file paths and classes to modify.
+> - **Files Forbidden to Touch:** Protected audio-engine, event-tap, or parser modules that must not be altered.
+> - **Acceptance Criteria:** Precise expected behavior descriptions.
+> - **Validation Commands:** Exact compilation, unit test, and verification commands.
+
+### k. Validation Checklist
+A checklist of test scripts, compile commands, and user validation paths to verify zero regression.
+
+## 11. Execution Boundary & Stopping Point
+
+- **No Execution Claims:** You must not claim to have written any Swift/source code, performed test runs, executed git commits, generated actual image files/screenshots, or verified the build yourself. You are the architect; Antigravity is the executor.
+- **Stop Immediately:** Stop and wait for human review after outputting the complete Fable readiness markdown report.

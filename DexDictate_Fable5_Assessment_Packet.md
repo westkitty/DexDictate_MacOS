@@ -28,7 +28,7 @@ Assess DexDictate as a macOS-native local-first dictation product with existing 
   - [DexDictate_Feature_Loss_Checklist.md](file:///Users/andrew/DexDictate_MacOS.nosync/DexDictate_Feature_Loss_Checklist.md)
   - [DexDictate_Remote_Ollama_Stack_Baseline.md](file:///Users/andrew/DexDictate_MacOS.nosync/DexDictate_Remote_Ollama_Stack_Baseline.md)
 - **Tests/Validation Commands Run:**
-  - `swift test` (381/382 passed; 1 environmental failure in `MainActorActionTests.testRunAsyncExecutesOnMainActor` on line 37)
+  - `swift test` (Reconciled: 382/382 passed with 0 failures; a prior transient `MainActorActionTests.testRunAsyncExecutesOnMainActor` failure was observed historically but passed cleanly in the reconciled run)
 - **Key Source Files Inspected:**
   - [Package.swift](file:///Users/andrew/DexDictate_MacOS.nosync/Package.swift)
   - [DexDictateApp.swift](file:///Users/andrew/DexDictate_MacOS.nosync/Sources/DexDictate/DexDictateApp.swift)
@@ -340,7 +340,7 @@ The prior documentation contained minor contradictions regarding test counts and
 | Initial Fable Baselines Commit | `6a96852f6b0344851df8a624f6ea64f661ce0aea` | Yes | Added the first four baselines and assessment packet. |
 | Dexter Preservation Update | `a8f1f94de204c1448835a6b7488799d12c867303` | Yes | Added governing Dexter brand constraints. |
 | Live Transcription Update | `83a1100208755b4a1fe05dcabeca9e967639feae` | Yes | Formulated live transcription gaps and staged path. |
-| Fable Readiness Completion | `26bdc318954e5f5b9e2d0a9dc434eb8438e0c090` | Yes | Final Fable packet update with boundaries, screenshots, test details. |
+| Fable Readiness Completion | `900df4cdedbef184e0a3ce9f5ca016763aa22ca5` | Yes | Final Fable packet update with boundaries, screenshots, test details. |
 
 ## 18. Constraints for Fable
 
@@ -360,7 +360,7 @@ The prior documentation contained minor contradictions regarding test counts and
 ## 20. Unknowns / Missing Inputs
 
 - **UI Screenshots:** Visual previews of the popovers are unavailable to the remote model. Visual QA requires human validation or visual scripts.
-- **MainActorActionTests Failure:** The test `testRunAsyncExecutesOnMainActor` fails due to an environmental async timing discrepancy on lines 37-40 of `MainActorActionTests.swift`.
+- **MainActorActionTests Async Timing:** The test `testRunAsyncExecutesOnMainActor` has been resolved/passed, but historically exhibited transient timing dependencies under load on lines 37-40 of `MainActorActionTests.swift`.
 - **Tailscale/SSH Setup:** The local app cannot automate SSH tunnel creation; it must assume the user configures the tunnel externally.
 
 ## 21. Contradictions or Tensions
