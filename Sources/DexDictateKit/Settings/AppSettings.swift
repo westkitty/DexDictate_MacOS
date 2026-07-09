@@ -144,6 +144,13 @@ public class AppSettings: ObservableObject {
     /// When `true`, activates the experimental Dexter stateful feed in the layered reveal.
     @AppStorage("useExperimentalDexterFeed") public var useExperimentalDexterFeed: Bool = false
 
+    /// Packet 09 (Popover Slim-Down): when `true`, shows the new slim `PopoverRootView`
+    /// instead of the classic `AntiGravityMainView`. Stage A ships this default `false`
+    /// (old popover stays default); Stage B flips the default to `true` in a separate,
+    /// independently revertible commit. Distinct from `useExperimentalStateFirstUI`, which
+    /// selects the older state-first experimental UI.
+    @AppStorage("useSlimPopover") public var useSlimPopover: Bool = false
+
     /// Controls how the primary menu bar item renders while idle.
     @AppStorage("menuBarDisplayMode_v1") public var menuBarDisplayMode: MenuBarDisplayMode = .micAndText
 

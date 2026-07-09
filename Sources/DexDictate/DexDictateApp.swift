@@ -55,6 +55,33 @@ struct DexDictateApp: App {
                             MainActorAction.run { appDelegate.presentOnboardingForDebug() }
                         }
                     )
+                } else if settings.useSlimPopover {
+                    // Packet 09 — new slim popover contract. Stage A: reachable only via
+                    // this debug flag (default off). Stage B flips the default to true.
+                    PopoverRootView(
+                        engine: engine,
+                        permissionManager: permissionManager,
+                        settings: settings,
+                        profileManager: profileManager,
+                        onDetachHistory: {
+                            MainActorAction.run { historyController.show() }
+                        },
+                        onOpenHelp: {
+                            MainActorAction.run { helpController.show() }
+                        },
+                        onOpenSettings: {
+                            MainActorAction.run {
+                                settingsWindowController.show(
+                                    scanner: scanner,
+                                    benchmarkCaptureController: benchmarkCaptureController,
+                                    historyController: historyController
+                                )
+                            }
+                        },
+                        onRequestOnboardingDebug: {
+                            MainActorAction.run { appDelegate.presentOnboardingForDebug() }
+                        }
+                    )
                 } else {
                     AntiGravityMainView(
                         engine: engine,
