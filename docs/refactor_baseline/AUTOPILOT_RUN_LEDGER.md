@@ -162,7 +162,7 @@ Sequential record of the autonomous packet run authorized 2026-07-09. Ungated pa
 
 ## Packet 12A-B — Missing Experimental Adoption Bridge (Final Remaining Campaign)
 - Start commit: c6cd0915
-- Final commit: (pending)
+- Final commit: 0398351
 - Pushed: Yes
 - Tests: 382 passed, 0 failures (matches baseline)
 - Screenshots: none — blocked, same automation gap as every prior packet
