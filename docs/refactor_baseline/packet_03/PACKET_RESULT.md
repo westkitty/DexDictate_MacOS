@@ -1,0 +1,18 @@
+## Packet Result
+- Packet: 03 — General + Appearance Migration
+- Branch: speech-engine-exploration-benchmarks
+- Commit hash: (see AUTOPILOT_RUN_LEDGER.md)
+- Pushed: Yes
+- Files changed: `Sources/DexDictate/QuickSettingsView.swift` (migrated rows hidden behind `showLegacyGeneralRows = false`; `MenuBarSettingsSection`/`MenuBarIconPreview`/`MenuBarDisplayPreview`/`EmojiIconPicker` widened from fileprivate to internal so they're reusable); `Sources/DexDictate/SettingsWindow/GeneralSettingsPage.swift` (built out: Status Color + Reset, Play Start/Stop Sound + pickers, Launch at Login + status + Open Login Items, Menu Bar Style section, Replay Onboarding, Restore Defaults)
+- Files inspected but not changed: `Sources/DexDictateKit/Settings/LaunchAtLogin.swift` (confirmed `LaunchAtLoginController` wraps `SMAppService.mainApp`, a system-wide singleton, so a second `@StateObject` instance is safe), `Sources/DexDictate/MenuBarIconController.swift` (confirmed `.shared` singleton, reused directly rather than instantiated), `Sources/DexDictate/FooterView.swift` (found the five-tap gesture's target: `onHiddenDebugTrigger` → `AppDelegate.presentOnboardingForDebug()`), `Sources/DexDictate/DexDictateApp.swift` (confirmed `AppDelegate` is reachable via `NSApp.delegate as? AppDelegate` from any file), `Sources/DexDictateKit/Settings/AppSettings.swift` (confirmed storage keys: `playStartSound`, `playStopSound`, `selectedStartSound`, `selectedStopSound`, `launchAtLogin`, `statusAccentColorHex_stored`, `menuBarDisplayMode_v1` — all unchanged)
+- Forbidden files touched: No (`OnboardingView.swift` internals untouched — Replay button only calls the existing `AppDelegate.presentOnboardingForDebug()` entry point, exactly as the five-tap gesture does)
+- Tests run: full `swift test`
+- Test result: 382 passed, 0 failures — matches Packet 01 baseline exactly
+- Targeted tests: n/a (no `LaunchAtLogin`-specific test target exists; full suite covers `AppSettings` storage round-trips)
+- Manual validations: not performed (control round-trips, Replay Onboarding, visual card check) — see `NEEDS_ANDREW.md`
+- Screenshots captured: none — blocked, see `NEEDS_ANDREW.md`
+- Feature-loss checklist rows completed: Launch at Login (code-level: same controller, same storage key, same binding logic — not manually round-tripped); Onboarding & Permission Polling (replay path calls the identical entry point, not manually exercised)
+- Dexter preservation checks: not exercised (theme picker and Dexter profile controls intentionally NOT touched this packet — they move in Packet 11 per the packet's own scope boundary)
+- Known issues: **Lifecycle finding** — `QuickSettingsView`'s top-level `.onAppear` (line ~673) calls `launchAtLoginController.refresh()`, `launchAtLoginController.syncStoredPreference(into:)`, and `menuBarIconController.refreshAssets()`; this only fires when the popover opens. Since `GeneralSettingsPage` is a separate view hosted in its own window, it can be opened without the popover ever having appeared in that session. Rather than hard-stopping on this discovery, I replicated the same two `LaunchAtLoginController` calls and the `MenuBarIconController.refreshAssets()` call in `GeneralSettingsPage`'s own `.onAppear` — both are idempotent, side-effect-free reads of system/shared-singleton state (no logic changed, no forbidden file touched), so this preserves behavior faithfully rather than leaving the new page able to show stale state. Documented here per the autopilot run's transparency requirement.
+- Rollback required: No
+- Next recommended packet: 04 — Dictation + Audio Migration

@@ -28,6 +28,10 @@ struct QuickSettingsView: View {
     @State private var contextBiasExpanded = false
     @State private var benchmarkPanelExpanded = false
     @State private var experimentalPanelExpanded = false
+    /// Status Color, sounds, Launch at Login, and Menu Bar Style now live in
+    /// Settings → General (Packet 03). Rows stay in the codebase, hidden, until
+    /// Packet 12B retires the legacy Quick Settings stack entirely.
+    private let showLegacyGeneralRows = false
     @State private var advancedPanelExpanded = false
     @State private var isResettingCoreAudio = false
     @State private var coreAudioResetStatus: String?
@@ -486,83 +490,89 @@ struct QuickSettingsView: View {
                                 .frame(width: 150)
                             }
 
-                            controlRow(label: "Status Color") {
-                                HStack(spacing: 8) {
-                                    ColorPicker(
-                                        "",
-                                        selection: Binding(
-                                            get: { settings.statusAccentColor },
-                                            set: { settings.statusAccentColor = $0 }
-                                        ),
-                                        supportsOpacity: false
-                                    )
-                                    .labelsHidden()
-                                    .accessibilityLabel("Dictation status accent color")
+                            // Status Color, sounds, Launch at Login, and Menu Bar Style
+                            // moved to Settings → General in Packet 03. Rows are hidden,
+                            // not deleted, until Packet 12B. Theme picker above stays
+                            // here until Packet 11.
+                            if showLegacyGeneralRows {
+                                controlRow(label: "Status Color") {
+                                    HStack(spacing: 8) {
+                                        ColorPicker(
+                                            "",
+                                            selection: Binding(
+                                                get: { settings.statusAccentColor },
+                                                set: { settings.statusAccentColor = $0 }
+                                            ),
+                                            supportsOpacity: false
+                                        )
+                                        .labelsHidden()
+                                        .accessibilityLabel("Dictation status accent color")
 
-                                    Button("Reset") {
-                                        settings.resetStatusAccentColor()
+                                        Button("Reset") {
+                                            settings.resetStatusAccentColor()
+                                        }
+                                        .buttonStyle(.bordered)
+                                        .controlSize(.small)
+                                        .disabled(settings.statusAccentColorHex.isEmpty)
+                                        .accessibilityLabel("Reset status color to default")
+                                    }
+                                }
+
+                                Toggle("Play Start Sound", isOn: $settings.playStartSound)
+                                if settings.playStartSound {
+                                    controlRow(label: "Start Sound") {
+                                        Picker("", selection: $settings.selectedStartSound) {
+                                            ForEach(AppSettings.SystemSound.allCases) { sound in
+                                                Text(sound.rawValue).tag(sound)
+                                            }
+                                        }
+                                        .labelsHidden()
+                                        .pickerStyle(.menu)
+                                        .frame(width: 150)
+                                        .onChange(of: settings.selectedStartSound) { _, newValue in
+                                            SoundPlayer.play(newValue)
+                                        }
+                                    }
+                                }
+
+                                Toggle("Play Stop Sound", isOn: $settings.playStopSound)
+                                if settings.playStopSound {
+                                    controlRow(label: "Stop Sound") {
+                                        Picker("", selection: $settings.selectedStopSound) {
+                                            ForEach(AppSettings.SystemSound.allCases) { sound in
+                                                Text(sound.rawValue).tag(sound)
+                                            }
+                                        }
+                                        .labelsHidden()
+                                        .pickerStyle(.menu)
+                                        .frame(width: 150)
+                                        .onChange(of: settings.selectedStopSound) { _, newValue in
+                                            SoundPlayer.play(newValue)
+                                        }
+                                    }
+                                }
+
+                                Toggle("Launch at Login", isOn: launchAtLoginBinding)
+                                    .disabled(!launchAtLoginController.canAttemptRegistration)
+
+                                Text(launchAtLoginController.statusMessage)
+                                    .font(.caption2)
+                                    .foregroundStyle(launchAtLoginController.lastError == nil ? .white.opacity(0.5) : .red.opacity(0.85))
+                                    .fixedSize(horizontal: false, vertical: true)
+
+                                if launchAtLoginController.needsSystemApproval {
+                                    Button("Open Login Items Settings") {
+                                        openLoginItemsSettings()
                                     }
                                     .buttonStyle(.bordered)
                                     .controlSize(.small)
-                                    .disabled(settings.statusAccentColorHex.isEmpty)
-                                    .accessibilityLabel("Reset status color to default")
                                 }
+
+                                MenuBarSettingsSection(
+                                    settings: settings,
+                                    menuBarIconController: menuBarIconController
+                                )
                             }
-
-                            Toggle("Play Start Sound", isOn: $settings.playStartSound)
-                            if settings.playStartSound {
-                                controlRow(label: "Start Sound") {
-                                    Picker("", selection: $settings.selectedStartSound) {
-                                        ForEach(AppSettings.SystemSound.allCases) { sound in
-                                            Text(sound.rawValue).tag(sound)
-                                        }
-                                    }
-                                    .labelsHidden()
-                                    .pickerStyle(.menu)
-                                    .frame(width: 150)
-                                    .onChange(of: settings.selectedStartSound) { _, newValue in
-                                        SoundPlayer.play(newValue)
-                                    }
-                                }
-                            }
-
-                            Toggle("Play Stop Sound", isOn: $settings.playStopSound)
-                            if settings.playStopSound {
-                                controlRow(label: "Stop Sound") {
-                                    Picker("", selection: $settings.selectedStopSound) {
-                                        ForEach(AppSettings.SystemSound.allCases) { sound in
-                                            Text(sound.rawValue).tag(sound)
-                                        }
-                                    }
-                                    .labelsHidden()
-                                    .pickerStyle(.menu)
-                                    .frame(width: 150)
-                                    .onChange(of: settings.selectedStopSound) { _, newValue in
-                                        SoundPlayer.play(newValue)
-                                    }
-                                }
-                            }
-
-                            Toggle("Launch at Login", isOn: launchAtLoginBinding)
-                                .disabled(!launchAtLoginController.canAttemptRegistration)
-
-                            Text(launchAtLoginController.statusMessage)
-                                .font(.caption2)
-                                .foregroundStyle(launchAtLoginController.lastError == nil ? .white.opacity(0.5) : .red.opacity(0.85))
-                                .fixedSize(horizontal: false, vertical: true)
-
-                            if launchAtLoginController.needsSystemApproval {
-                                Button("Open Login Items Settings") {
-                                    openLoginItemsSettings()
-                                }
-                                .buttonStyle(.bordered)
-                                .controlSize(.small)
-                            }
-
-                            MenuBarSettingsSection(
-                                settings: settings,
-                                menuBarIconController: menuBarIconController
-                            )
                         }
                     }
 
@@ -1110,7 +1120,7 @@ private struct QuickSettingsSummaryValue: View {
     }
 }
 
-private struct MenuBarSettingsSection: View {
+struct MenuBarSettingsSection: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var menuBarIconController: MenuBarIconController
     @State private var isEmojiPickerPresented = false
@@ -1455,7 +1465,7 @@ private struct BenchmarkResultsSection: View {
     }
 }
 
-private struct MenuBarIconPreview: View {
+struct MenuBarIconPreview: View {
     let image: NSImage?
     let emoji: String?
 
@@ -1497,7 +1507,7 @@ private struct MenuBarIconPreview: View {
     }
 }
 
-private struct MenuBarDisplayPreview: View {
+struct MenuBarDisplayPreview: View {
     let mode: AppSettings.MenuBarDisplayMode
     let dexImage: NSImage?
     let logoImage: NSImage?
@@ -1861,7 +1871,7 @@ private struct LiveTranscriptionStatusView: View {
     }
 }
 
-private struct EmojiIconPicker: View {
+struct EmojiIconPicker: View {
     @Binding var selectedEmoji: String
     @Binding var isPresented: Bool
     @State private var draftEmoji: String
