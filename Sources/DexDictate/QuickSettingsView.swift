@@ -77,6 +77,14 @@ struct QuickSettingsView: View {
     /// All four Experimental UI flags now live in Settings → Advanced (Packet 08); moved as
     /// one group since the popover presents them as a single card.
     private let showLegacyExperimentalUICard = false
+    /// Packet 08B — orphaned controls found by Packet 08's mandatory pre-removal
+    /// inventory, migrated to Settings homes assigned by Andrew.
+    private let showLegacyPauseBrowserMediaRow = false
+    private let showLegacyShowFloatingHUDRow = false
+    private let showLegacyContextBiasingGroup = false
+    private let showLegacyTranscriptionEnginesCard = false
+    private let showLegacyShowDictationStatsRow = false
+    private let showLegacyPersistHistoryRow = false
     @State private var advancedPanelExpanded = false
     @State private var isResettingCoreAudio = false
     @State private var coreAudioResetStatus: String?
@@ -160,11 +168,13 @@ struct QuickSettingsView: View {
                                 }
                             }
 
-                                    SettingToggleWithInfo(
-                                title: "Pause browser media during dictation",
-                                info: "Pauses video and audio in Chrome, Brave, or Edge tabs when recording starts, then resumes them when you stop. macOS will ask for Automation permission the first time it runs. Skips automatically when Zoom is active. Safari and Firefox are not supported.",
-                                isOn: $settings.pauseBrowserMediaDuringDictation
-                            )
+                            if showLegacyPauseBrowserMediaRow {
+                                SettingToggleWithInfo(
+                                    title: "Pause browser media during dictation",
+                                    info: "Pauses video and audio in Chrome, Brave, or Edge tabs when recording starts, then resumes them when you stop. macOS will ask for Automation permission the first time it runs. Skips automatically when Zoom is active. Safari and Firefox are not supported.",
+                                    isOn: $settings.pauseBrowserMediaDuringDictation
+                                )
+                            }
 
                             if showLegacyRouteHealthGroup {
                                 DisclosureGroup("Route Health", isExpanded: $routeHealthExpanded) {
@@ -232,7 +242,9 @@ struct QuickSettingsView: View {
                             if showLegacySafeModeRow {
                                 Toggle("Safe Mode", isOn: safeModeBinding)
                             }
-                            Toggle("Show Floating HUD", isOn: $settings.showFloatingHUD)
+                            if showLegacyShowFloatingHUDRow {
+                                Toggle("Show Floating HUD", isOn: $settings.showFloatingHUD)
+                            }
 
                             if showLegacyOutputRows {
                                 Toggle("Auto-Paste", isOn: $settings.autoPaste)
@@ -392,28 +404,30 @@ struct QuickSettingsView: View {
                                 )
                             }
 
-                            DisclosureGroup("Context Biasing", isExpanded: $contextBiasExpanded) {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    controlRow(label: "Bias Mode") {
-                                        Picker("", selection: $settings.dictationDomainMode) {
-                                            ForEach(AppSettings.DictationDomainMode.allCases) { mode in
-                                                Text(mode.rawValue).tag(mode)
+                            if showLegacyContextBiasingGroup {
+                                DisclosureGroup("Context Biasing", isExpanded: $contextBiasExpanded) {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        controlRow(label: "Bias Mode") {
+                                            Picker("", selection: $settings.dictationDomainMode) {
+                                                ForEach(AppSettings.DictationDomainMode.allCases) { mode in
+                                                    Text(mode.rawValue).tag(mode)
+                                                }
                                             }
+                                            .labelsHidden()
+                                            .pickerStyle(.menu)
+                                            .frame(width: 180)
                                         }
-                                        .labelsHidden()
-                                        .pickerStyle(.menu)
-                                        .frame(width: 180)
-                                    }
 
-                                    Text("Automatic detects which app is in focus and applies a light domain-specific vocabulary hint — coding terms for Xcode, email phrasing for Mail, chat style for Slack. Manual lets you pin a domain yourself. Off disables all biasing. Everything runs locally; no text leaves your machine.")
-                                        .font(.caption2)
-                                        .foregroundStyle(.white.opacity(0.5))
-                                        .fixedSize(horizontal: false, vertical: true)
+                                        Text("Automatic detects which app is in focus and applies a light domain-specific vocabulary hint — coding terms for Xcode, email phrasing for Mail, chat style for Slack. Manual lets you pin a domain yourself. Off disables all biasing. Everything runs locally; no text leaves your machine.")
+                                            .font(.caption2)
+                                            .foregroundStyle(.white.opacity(0.5))
+                                            .fixedSize(horizontal: false, vertical: true)
+                                    }
+                                    .padding(.top, 8)
                                 }
-                                .padding(.top, 8)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.white.opacity(0.82))
                             }
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.white.opacity(0.82))
 
                             if showLegacyBenchmarksCorpusGroup {
                             DisclosureGroup("Benchmarks & Corpus", isExpanded: $benchmarkPanelExpanded) {
@@ -493,17 +507,19 @@ struct QuickSettingsView: View {
                         }
                     }
 
-                    QuickSettingsDisclosureCard(
-                        title: "Transcription Engines",
-                        subtitle: "Live-preview captions, command detection, and which engine dictates.",
-                        systemImage: "waveform.badge.mic",
-                        isExpanded: $transcriptionProvidersPanelExpanded
-                    ) {
-                        LiveTranscriptionStatusView(
-                            settings: settings,
-                            registry: engine.transcriptionProviderRegistry,
-                            modelCatalog: modelCatalog
-                        )
+                    if showLegacyTranscriptionEnginesCard {
+                        QuickSettingsDisclosureCard(
+                            title: "Transcription Engines",
+                            subtitle: "Live-preview captions, command detection, and which engine dictates.",
+                            systemImage: "waveform.badge.mic",
+                            isExpanded: $transcriptionProvidersPanelExpanded
+                        ) {
+                            LiveTranscriptionStatusView(
+                                settings: settings,
+                                registry: engine.transcriptionProviderRegistry,
+                                modelCatalog: modelCatalog
+                            )
+                        }
                     }
 
                     QuickSettingsDisclosureCard(
@@ -534,8 +550,12 @@ struct QuickSettingsView: View {
 
                             Toggle("Show Flavor Ticker", isOn: $settings.showFlavorTicker)
                             Toggle("Animate Flavor Ticker", isOn: $settings.animateFlavorTicker)
-                            Toggle("Show Dictation Stats", isOn: $settings.showDictationStats)
-                            Toggle("Persist History Across Sessions", isOn: $settings.persistHistory)
+                            if showLegacyShowDictationStatsRow {
+                                Toggle("Show Dictation Stats", isOn: $settings.showDictationStats)
+                            }
+                            if showLegacyPersistHistoryRow {
+                                Toggle("Persist History Across Sessions", isOn: $settings.persistHistory)
+                            }
 
                             Text("Ticker motion still yields to macOS Reduce Motion even when animation stays enabled here. Stats show word count, session duration, and words per minute for the current session.")
                                 .font(.caption2)
@@ -1696,7 +1716,7 @@ struct SettingToggleWithInfo: View {
     }
 }
 
-private struct LiveTranscriptionStatusView: View {
+struct LiveTranscriptionStatusView: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var registry: TranscriptionProviderRegistry
     @ObservedObject var modelCatalog: WhisperModelCatalog

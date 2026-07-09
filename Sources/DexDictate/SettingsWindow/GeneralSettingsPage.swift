@@ -35,6 +35,12 @@ struct GeneralSettingsPage: View {
 
                 Divider()
 
+                Text("Interface")
+                    .font(.headline)
+                Toggle("Show Floating HUD", isOn: $settings.showFloatingHUD)
+
+                Divider()
+
                 MenuBarSettingsSection(
                     settings: settings,
                     menuBarIconController: menuBarIconController

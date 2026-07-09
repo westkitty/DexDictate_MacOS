@@ -77,7 +77,8 @@ struct DexDictateApp: App {
                             MainActorAction.run {
                                 settingsWindowController.show(
                                     scanner: scanner,
-                                    benchmarkCaptureController: benchmarkCaptureController
+                                    benchmarkCaptureController: benchmarkCaptureController,
+                                    historyController: historyController
                                 )
                             }
                         },

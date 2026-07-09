@@ -8,6 +8,11 @@ import DexDictateKit
 /// policy, `BenchmarkCaptureWindow.swift` internals) is untouched — only its entry point
 /// and status display relocate. The popover's Benchmarks & Corpus group is hidden
 /// entirely; benchmark automation cadence controls stay there for now (Packet 08 Advanced).
+///
+/// Context Biasing and Transcription Engines (Packet 08B) were orphaned by Packet 07 —
+/// they're adjacent to Context Injection and model selection but weren't in that packet's
+/// goal text. `LiveTranscriptionStatusView` is re-hosted intact (it manages its own
+/// `onAppear`-triggered status refresh and its own download side effects internally).
 struct ModelsAccuracyPage: View {
     @ObservedObject private var settings = AppSettings.shared
     @ObservedObject private var modelCatalog = WhisperModelCatalog.shared
@@ -95,6 +100,20 @@ struct ModelsAccuracyPage: View {
 
                 Divider()
 
+                contextBiasingSection
+
+                Divider()
+
+                Text("Transcription Engines")
+                    .font(.headline)
+                LiveTranscriptionStatusView(
+                    settings: settings,
+                    registry: engine.transcriptionProviderRegistry,
+                    modelCatalog: modelCatalog
+                )
+
+                Divider()
+
                 Button("Open Benchmark Lab…") {
                     benchmarkCaptureController.show(engine: engine)
                 }
@@ -103,6 +122,37 @@ struct ModelsAccuracyPage: View {
             }
             .padding(24)
             .frame(maxWidth: .infinity, alignment: .topLeading)
+        }
+    }
+
+    /// Distinct from "Use Context From Focused Field" (Context Injection) above: this
+    /// applies a light domain-specific vocabulary hint based on which app is frontmost,
+    /// rather than reading live cursor content. Migrated verbatim from the popover's
+    /// "Context Biasing" disclosure group (Packet 08B — was orphaned by Packet 07).
+    private var contextBiasingSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Context Biasing")
+                .font(.headline)
+
+            HStack {
+                Text("Bias Mode")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Picker("", selection: $settings.dictationDomainMode) {
+                    ForEach(AppSettings.DictationDomainMode.allCases) { mode in
+                        Text(mode.rawValue).tag(mode)
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .frame(width: 220)
+            }
+
+            Text("Automatic detects which app is in focus and applies a light domain-specific vocabulary hint — coding terms for Xcode, email phrasing for Mail, chat style for Slack. Manual lets you pin a domain yourself. Off disables all biasing. Everything runs locally; no text leaves your machine.")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }

@@ -1,0 +1,21 @@
+## Packet Result
+- Packet: 08B — Orphaned Quick Settings Migration
+- Branch: speech-engine-exploration-benchmarks
+- Commit hash: (see AUTOPILOT_RUN_LEDGER.md)
+- Pushed: Yes
+- Files changed: `Sources/DexDictate/SettingsWindow/DictationSettingsPage.swift` (added "During Dictation" section: Pause browser media toggle); `Sources/DexDictate/SettingsWindow/GeneralSettingsPage.swift` (added "Interface" section: Show Floating HUD toggle); `Sources/DexDictate/SettingsWindow/ModelsAccuracyPage.swift` (added Context Biasing section and Transcription Engines section, embedding `LiveTranscriptionStatusView`); `Sources/DexDictate/SettingsWindow/HistorySettingsPage.swift` (built out from placeholder: Open History Window button, Show Dictation Stats toggle, Persist History Across Sessions toggle, explanatory copy); `Sources/DexDictate/QuickSettingsView.swift` (all seven items hidden behind new flags; `LiveTranscriptionStatusView` widened fileprivate → internal); `Sources/DexDictate/SettingsWindow/SettingsWindowController.swift` + `SettingsRootView.swift` + `Sources/DexDictate/DexDictateApp.swift` (threaded the app's existing `HistoryWindowController` instance through, same pattern as scanner/benchmarkCaptureController)
+- Files inspected but not changed: `Sources/DexDictate/HistoryWindow.swift` (read-only, confirmed `HistoryWindowController.show()` silently no-ops without a prior `.setup()` call — informed the decision to thread the existing instance rather than construct a new one), `Sources/DexDictateKit/Settings/AppSettings.swift` (confirmed storage keys: `pauseBrowserMediaDuringDictation_v1`, `showFloatingHUD`, `dictationDomainMode_v1`, `showDictationStats_v1`, `persistHistory_v1`, `liveTranscriptionEnabled`, `commandModeEnabled`, `preferredPrimaryEngineID` — all unchanged), `Sources/DexDictateKit/TranscriptionEngine.swift` (read-only, confirmed `transcriptionProviderRegistry` is a public stored property)
+- Forbidden files touched: No
+- Storage keys changed: No
+- Tests run: full `swift test`; targeted `swift test --filter "SettingsMigration|TranscriptionHistory|AppSettingsRestoreDefaults|PermissionSettingsLinker"`
+- Test result: 382 passed, 0 failures (full suite); 14/14 passed (targeted)
+- Targeted tests: `SettingsMigrationTests`, `TranscriptionHistoryTests`, `AppSettingsRestoreDefaultsTests`, `PermissionSettingsLinkerTests` — 14/14 passed. No test class exists for `LiveTranscriptionStatusView`/`TranscriptionProviderRegistry`/Command Mode specifically — stated honestly rather than inventing a filter.
+- Manual validations: not performed (all seven migrated controls' round-trips, real provider download, History window open-from-Settings) — see `NEEDS_ANDREW.md`
+- Screenshots captured: none — blocked, same automation gap as every prior packet
+- Final Quick Settings inventory result: all seven originally-orphaned items now have durable Settings-window homes (see `QUICK_SETTINGS_FINAL_INVENTORY.md`). Five additional controls (Profile picker, Return to Standard, two ticker toggles, Theme picker) remain in Quick Settings — these are not new orphans, they're explicitly assigned to Packet 11, which has not run yet.
+- Quick Settings entry hidden: **No** — deliberately withheld. Hiding it now would strand the five Packet-11-assigned controls (including profile switching and theme selection) until Packet 11 completes later in this run. Treating "hide the entry point" as a condition to satisfy once Packet 11 lands, not this packet.
+- Feature-loss checklist rows completed: n/a (no specific checklist rows named for this bridge packet; the seven migrated controls preserve their existing storage-key-backed behavior by construction)
+- Dexter preservation checks: not exercised (no Dexter-adjacent files touched)
+- Known issues: see `QUICK_SETTINGS_FINAL_INVENTORY.md` and `NEEDS_ANDREW.md` for the full sequencing note. Summary: Quick Settings entry point intentionally not hidden; will revisit after Packet 11. Packet 09's own "profile switch" Dexter validation check may surface this same gap — will report there if it blocks Packet 09's acceptance criteria rather than silently working around it.
+- Rollback required: No
+- Next recommended packet: 09 — Popover Slim-Down

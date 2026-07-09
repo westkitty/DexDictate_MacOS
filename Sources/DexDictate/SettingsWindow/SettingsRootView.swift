@@ -7,6 +7,7 @@ struct SettingsRootView: View {
     @Binding var selection: SettingsPage
     @ObservedObject var scanner: AudioDeviceScanner
     @ObservedObject var benchmarkCaptureController: BenchmarkCaptureWindowController
+    @ObservedObject var historyController: HistoryWindowController
 
     var body: some View {
         NavigationSplitView {
@@ -27,7 +28,7 @@ struct SettingsRootView: View {
         case .vocabularyCommands: VocabularyCommandsPage()
         case .modelsAccuracy: ModelsAccuracyPage(benchmarkCaptureController: benchmarkCaptureController)
         case .smartCleanup: SmartCleanupPage()
-        case .history: HistorySettingsPage()
+        case .history: HistorySettingsPage(historyController: historyController)
         case .dexterPersonality: DexterPersonalityPage()
         case .diagnosticsRecovery: DiagnosticsPage(scanner: scanner)
         case .advanced: AdvancedPage()

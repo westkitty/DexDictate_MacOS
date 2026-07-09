@@ -82,3 +82,14 @@ Sequential record of the autonomous packet run authorized 2026-07-09. Ungated pa
 - Manual validations: not performed (Reset Core Audio prompt, Safe Mode matrix, route-change count) — see `packet_08/NEEDS_ANDREW.md`
 - NEEDS_ANDREW: **MANDATORY PRE-REMOVAL INVENTORY TRIGGERED THE PACKET'S OWN STOP CONDITION.** Seven controls/areas have no assigned packet anywhere in the approved 02–12A/15 sequence (Pause Browser Media toggle, Show Floating HUD toggle, Context Biasing picker, entire Transcription Engines card, Show Dictation Stats toggle, Persist History Across Sessions toggle, whole History settings page). Quick Settings entry point was deliberately NOT hidden — everything else in Packet 08 is complete and pushed. See `packet_08/NEEDS_ANDREW.md` for full detail.
 - **Safe to continue: NO — autopilot run PAUSED here.** Packet 09 assumes Quick Settings is fully retired; running it now would strand the seven items above. Needs Andrew's decision before Packet 09 proceeds.
+
+## Packet 08B — Orphaned Quick Settings Migration (bridge packet, Andrew's mapping)
+- Start commit: 4a01b9bd
+- Final commit: (see commit immediately following this entry)
+- Pushed: Yes
+- Tests: 382 passed, 0 failures (matches baseline); targeted SettingsMigration/TranscriptionHistory/AppSettingsRestoreDefaults/PermissionSettingsLinker 14/14 passed
+- Screenshots: none — blocked, same automation gap as every prior packet
+- Manual validations: not performed (seven migrated controls' round-trips) — see `packet_08b/NEEDS_ANDREW.md`
+- Final Quick Settings inventory: all seven originally-orphaned items now homed (Dictation, General, Models & Accuracy ×2, History ×2, History page itself). Five Packet-11-assigned controls (Profile, Return to Standard, ticker ×2, Theme) remain in Quick Settings — not new orphans, just not yet migrated.
+- Quick Settings entry hidden: No — deliberately withheld until Packet 11 lands (would strand profile/theme/ticker controls otherwise). See `packet_08b/QUICK_SETTINGS_FINAL_INVENTORY.md`.
+- Safe to continue: Yes (to Packet 09 — will watch for its "profile switch" Dexter check surfacing this same gap)

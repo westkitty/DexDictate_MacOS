@@ -4,8 +4,8 @@ import DexDictateKit
 /// Settings → Dictation. Migrated verbatim (same bindings, same storage keys) from the
 /// popover's pinned Trigger Mode control and the "Input" / "Accuracy & Speed" cards:
 /// trigger style, the shortcut recorder, silence timeout, and the adaptive tail preset.
-/// Route Health and the Vocabulary/Voice Commands buttons stay in the popover until
-/// Packets 08/06.
+/// "Pause browser media during dictation" (Packet 08B) also lives here — it was an
+/// orphaned Input-card control with no home until Andrew assigned it during Packet 08.
 struct DictationSettingsPage: View {
     @ObservedObject private var settings = AppSettings.shared
 
@@ -40,6 +40,16 @@ struct DictationSettingsPage: View {
                     title: "Adaptive Tail Delay",
                     info: "After you stop speaking, DexDictate waits a moment before cutting off the recording. Adaptive Tail Delay learns how long you typically pause between words and adjusts this wait automatically — so it doesn't clip the end of what you said or make you wait too long before transcription starts.",
                     isOn: $settings.adaptiveTailDelayEnabled
+                )
+
+                Divider()
+
+                Text("During Dictation")
+                    .font(.headline)
+                SettingToggleWithInfo(
+                    title: "Pause browser media during dictation",
+                    info: "Pauses video and audio in Chrome, Brave, or Edge tabs when recording starts, then resumes them when you stop. macOS will ask for Automation permission the first time it runs. Skips automatically when Zoom is active. Safari and Firefox are not supported.",
+                    isOn: $settings.pauseBrowserMediaDuringDictation
                 )
             }
             .padding(24)
