@@ -21,7 +21,7 @@ struct ModelsAccuracyPage: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: SurfaceTokens.settingsSectionSpacing) {
                 Text(SettingsPage.modelsAccuracy.title)
                     .font(.title2.bold())
 
@@ -120,7 +120,7 @@ struct ModelsAccuracyPage: View {
                 .buttonStyle(.bordered)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(24)
+            .padding(SurfaceTokens.settingsPagePadding)
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
     }

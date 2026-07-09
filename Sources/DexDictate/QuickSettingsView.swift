@@ -1239,21 +1239,11 @@ struct MenuBarSettingsSection: View {
                 .foregroundStyle(.white.opacity(0.5))
                 .fixedSize(horizontal: false, vertical: true)
 
-            HStack(spacing: 10) {
-                Text("Style")
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.8))
-
-                Spacer(minLength: 8)
-
-                Picker("", selection: $settings.menuBarDisplayMode) {
-                    ForEach(AppSettings.MenuBarDisplayMode.allCases) { mode in
-                        Text(displayLabel(for: mode)).tag(mode)
-                    }
+            // Packet 15: visual icon grid, same binding/key as the picker it replaces.
+            HStack(spacing: 8) {
+                ForEach(AppSettings.MenuBarDisplayMode.allCases) { mode in
+                    menuBarStyleCell(for: mode)
                 }
-                .labelsHidden()
-                .pickerStyle(.menu)
-                .controlSize(.small)
             }
 
             MenuBarDisplayPreview(
@@ -1447,6 +1437,45 @@ struct MenuBarSettingsSection: View {
         case .emojiIcon:
             return "Emoji"
         }
+    }
+
+    private func styleIconName(for mode: AppSettings.MenuBarDisplayMode) -> String {
+        switch mode {
+        case .micAndText: return "mic.fill"
+        case .micOnly: return "mic"
+        case .customIcon: return "person.crop.square"
+        case .logoOnly: return "app.fill"
+        case .emojiIcon: return "face.smiling"
+        }
+    }
+
+    /// One tappable cell in the Packet 15 visual icon grid — same
+    /// `settings.menuBarDisplayMode` binding/key the picker it replaces used.
+    private func menuBarStyleCell(for mode: AppSettings.MenuBarDisplayMode) -> some View {
+        let isSelected = settings.menuBarDisplayMode == mode
+        return Button {
+            settings.menuBarDisplayMode = mode
+        } label: {
+            VStack(spacing: 4) {
+                Image(systemName: styleIconName(for: mode))
+                    .font(.system(size: 16))
+                Text(displayLabel(for: mode))
+                    .font(.caption2)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .background(isSelected ? Color.cyan.opacity(0.22) : Color.white.opacity(0.05))
+            .foregroundStyle(isSelected ? Color.cyan : Color.white.opacity(0.65))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(isSelected ? Color.cyan.opacity(0.4) : Color.white.opacity(0.08), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(displayLabel(for: mode)) menu bar style\(isSelected ? ", selected" : "")")
     }
 }
 

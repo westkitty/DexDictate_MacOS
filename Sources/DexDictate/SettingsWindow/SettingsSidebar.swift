@@ -10,6 +10,8 @@ struct SettingsSidebar: View {
                 .tag(page)
         }
         .listStyle(.sidebar)
-        .frame(minWidth: 190)
+        // Packet 15: 190 truncated the longest labels ("Diagnostics & Recovery",
+        // "Vocabulary & Commands"); 210 comfortably fits all 11 without wrapping.
+        .frame(minWidth: 210)
     }
 }

@@ -10,7 +10,7 @@ struct AudioSettingsPage: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: SurfaceTokens.settingsSectionSpacing) {
                 Text(SettingsPage.audioMicrophone.title)
                     .font(.title2.bold())
 
@@ -38,7 +38,7 @@ struct AudioSettingsPage: View {
                     isOn: $settings.enableSilenceTrim
                 )
             }
-            .padding(24)
+            .padding(SurfaceTokens.settingsPagePadding)
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
     }

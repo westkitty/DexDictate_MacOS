@@ -136,3 +136,15 @@ Sequential record of the autonomous packet run authorized 2026-07-09. Ungated pa
 - NEEDS_ANDREW: no watermark on/off setting exists (Shuffle Now only); no separate regional-icon asset (used watermark thumbnails); no ticker speed setting; theme seam root-caused and fixed in both popovers (PopoverRootView had zero theme handling before this packet) — see `packet_11/NEEDS_ANDREW.md`
 - **Packet 09 Stage B now unblocked** — fresh inventory shows every hide-flag in QuickSettingsView.swift is false; the 4 orphaned benchmark controls from Packet 10 were already hidden since Packet 07 and unaffected by the Stage B flip
 - Safe to continue: Yes
+
+## Packet 15 — Visual Polish
+- Start commit: fd61f4d2
+- Final commit: (pending)
+- Pushed: Yes
+- Tests: 382 passed, 0 failures (matches baseline)
+- Screenshots: none — blocked, same automation gap as every prior packet
+- Manual validations: not performed (menu bar style grid, Settings window Light/Dark, WarningCallout rendering, sidebar truncation) — see `packet_15/NEEDS_ANDREW.md`
+- Changes: SurfaceTokens padding/spacing tokens applied across all 10 built-out Settings pages; SettingsSidebar minWidth 190→210 (truncation fix); Menu Bar Style Picker → visual icon grid (same binding); new `WarningCallout.swift` component applied to Reset Core Audio and "Replace Entire Field" warnings (byte-identical text); `.preferredColorScheme(.dark)` added to SettingsRootView (systemic hardcoded-white-styling fix, documented in code)
+- No new `@AppStorage` keys. No forbidden files touched.
+- Per approved autopilot sequence: this is the **final ungated packet**. Stopping here — Packets 12B, 13, 14 remain gated and require Andrew's separate explicit written approval.
+- Safe to continue: N/A — autopilot run complete pending Andrew's direction on gated packets

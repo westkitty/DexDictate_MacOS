@@ -17,6 +17,14 @@ struct SettingsRootView: View {
             detailView
         }
         .frame(minWidth: 640, minHeight: 420)
+        // Packet 15: most controls migrated into this window were re-hosted verbatim from
+        // the always-dark popover (hardcoded `.white`-opacity text/backgrounds throughout
+        // `SettingToggleWithInfo`, `MenuBarSettingsSection`, etc.). Under system Light Mode
+        // this window would otherwise render washed-out/illegible. Forcing dark here is the
+        // minimal, consumer-side fix — matches how the popover's own `system` theme already
+        // renders dark, and avoids a much larger multi-file rewrite of every reused
+        // component's colors to adaptive semantic colors.
+        .preferredColorScheme(.dark)
     }
 
     @ViewBuilder

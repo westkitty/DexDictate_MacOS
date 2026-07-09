@@ -19,7 +19,7 @@ struct VocabularyCommandsPage: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: SurfaceTokens.settingsSectionSpacing) {
                 Text(SettingsPage.vocabularyCommands.title)
                     .font(.title2.bold())
 
@@ -35,7 +35,7 @@ struct VocabularyCommandsPage: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            .padding(24)
+            .padding(SurfaceTokens.settingsPagePadding)
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
     }

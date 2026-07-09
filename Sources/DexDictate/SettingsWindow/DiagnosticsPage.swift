@@ -22,7 +22,7 @@ struct DiagnosticsPage: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: SurfaceTokens.settingsSectionSpacing) {
                 Text(SettingsPage.diagnosticsRecovery.title)
                     .font(.title2.bold())
 
@@ -82,7 +82,7 @@ struct DiagnosticsPage: View {
 
                 systemRepairGroup
             }
-            .padding(24)
+            .padding(SurfaceTokens.settingsPagePadding)
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
     }
@@ -98,10 +98,7 @@ struct DiagnosticsPage: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Text("Use this when DexDictate cannot open the selected microphone, Bluetooth audio gets stuck, or macOS reports Core Audio error -10868. This restarts the macOS audio service; audio devices will briefly disappear and reconnect.")
-                .font(.caption2)
-                .foregroundStyle(.orange.opacity(0.86))
-                .fixedSize(horizontal: false, vertical: true)
+            WarningCallout(text: "Use this when DexDictate cannot open the selected microphone, Bluetooth audio gets stuck, or macOS reports Core Audio error -10868. This restarts the macOS audio service; audio devices will briefly disappear and reconnect.")
 
             Button {
                 resetCoreAudio()

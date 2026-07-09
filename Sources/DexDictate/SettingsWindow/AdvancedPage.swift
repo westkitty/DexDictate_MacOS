@@ -10,7 +10,7 @@ struct AdvancedPage: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: SurfaceTokens.settingsSectionSpacing) {
                 Text(SettingsPage.advanced.title)
                     .font(.title2.bold())
 
@@ -52,7 +52,7 @@ struct AdvancedPage: View {
                     caption: "Shows Dexter commentary feed in the Settings & History panel. Local quote packs only — no network."
                 )
             }
-            .padding(24)
+            .padding(SurfaceTokens.settingsPagePadding)
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
     }

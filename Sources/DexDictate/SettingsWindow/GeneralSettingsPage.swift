@@ -13,7 +13,7 @@ struct GeneralSettingsPage: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: SurfaceTokens.settingsSectionSpacing) {
                 Text(SettingsPage.general.title)
                     .font(.title2.bold())
 
@@ -60,7 +60,7 @@ struct GeneralSettingsPage: View {
                     .buttonStyle(.bordered)
                 }
             }
-            .padding(24)
+            .padding(SurfaceTokens.settingsPagePadding)
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .onAppear {

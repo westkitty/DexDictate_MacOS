@@ -15,7 +15,7 @@ struct HistorySettingsPage: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: SurfaceTokens.settingsSectionSpacing) {
                 Text(SettingsPage.history.title)
                     .font(.title2.bold())
 
@@ -47,7 +47,7 @@ struct HistorySettingsPage: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
-            .padding(24)
+            .padding(SurfaceTokens.settingsPagePadding)
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
     }

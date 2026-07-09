@@ -18,7 +18,7 @@ struct OutputSettingsPage: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: SurfaceTokens.settingsSectionSpacing) {
                 Text(SettingsPage.outputInsertion.title)
                     .font(.title2.bold())
 
@@ -67,7 +67,7 @@ struct OutputSettingsPage: View {
                     .buttonStyle(.bordered)
                 }
             }
-            .padding(24)
+            .padding(SurfaceTokens.settingsPagePadding)
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .onAppear {

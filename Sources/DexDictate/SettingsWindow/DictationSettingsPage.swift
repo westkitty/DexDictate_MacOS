@@ -11,7 +11,7 @@ struct DictationSettingsPage: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: SurfaceTokens.settingsSectionSpacing) {
                 Text(SettingsPage.dictation.title)
                     .font(.title2.bold())
 
@@ -52,7 +52,7 @@ struct DictationSettingsPage: View {
                     isOn: $settings.pauseBrowserMediaDuringDictation
                 )
             }
-            .padding(24)
+            .padding(SurfaceTokens.settingsPagePadding)
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
     }
