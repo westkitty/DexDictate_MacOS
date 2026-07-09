@@ -1,0 +1,1208 @@
+warning: 'fluidaudio': found 1 file(s) which are unhandled; explicitly declare them as resources or exclude from the target
+    /Users/andrew/DexDictate_MacOS.nosync/.build/checkouts/FluidAudio/Sources/FluidAudio/ASR/Parakeet/Unified/benchmark.md
+[0/1] Planning build
+Building for debugging...
+[0/7] Write swift-version--58304C5D6DBC2206.txt
+Build complete! (0.80s)
+Test Suite 'All tests' started at 2026-07-09 15:50:47.514.
+Test Suite 'DexDictate_MacOSPackageTests.xctest' started at 2026-07-09 15:50:47.517.
+Test Suite 'AccessibilityInsertionTests' started at 2026-07-09 15:50:47.517.
+Test Case '-[DexDictateTests.AccessibilityInsertionTests testCursorOffsetASCII]' started.
+Test Case '-[DexDictateTests.AccessibilityInsertionTests testCursorOffsetASCII]' passed (0.004 seconds).
+Test Case '-[DexDictateTests.AccessibilityInsertionTests testCursorOffsetCJK]' started.
+Test Case '-[DexDictateTests.AccessibilityInsertionTests testCursorOffsetCJK]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AccessibilityInsertionTests testCursorOffsetEmojiUsesUnicodeScalarsNotUTF16]' started.
+Test Case '-[DexDictateTests.AccessibilityInsertionTests testCursorOffsetEmojiUsesUnicodeScalarsNotUTF16]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AccessibilityInsertionTests testCursorOffsetMixedEmojiAndCJK]' started.
+Test Case '-[DexDictateTests.AccessibilityInsertionTests testCursorOffsetMixedEmojiAndCJK]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AccessibilityInsertionTests testCursorOffsetNonZeroInitialRange]' started.
+Test Case '-[DexDictateTests.AccessibilityInsertionTests testCursorOffsetNonZeroInitialRange]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AccessibilityInsertionTests testDoesNotSetSelectedTextAttributeWhenNotSettable]' started.
+2026-07-09 15:50:47.523 xctest[16999:583505] [DexDictate] insertViaAccessibility() — strategies 1 skipped: kAXValueAttribute not settable
+2026-07-09 15:50:47.525 xctest[16999:583505] [DexDictate] insertViaAccessibility() — strategy 2 (selectedText) skipped: attribute not settable
+2026-07-09 15:50:47.525 xctest[16999:583505] [DexDictate] insertViaAccessibility() — both strategies failed; falling back to clipboard paste
+Test Case '-[DexDictateTests.AccessibilityInsertionTests testDoesNotSetSelectedTextAttributeWhenNotSettable]' passed (0.026 seconds).
+Test Case '-[DexDictateTests.AccessibilityInsertionTests testDoesNotSetValueAttributeWhenNotSettable]' started.
+2026-07-09 15:50:47.549 xctest[16999:583505] [DexDictate] insertViaAccessibility() — strategies 1 skipped: kAXValueAttribute not settable
+2026-07-09 15:50:47.549 xctest[16999:583505] [DexDictate] insertViaAccessibility() — strategy 2 (selectedText) skipped: attribute not settable
+2026-07-09 15:50:47.549 xctest[16999:583505] [DexDictate] insertViaAccessibility() — both strategies failed; falling back to clipboard paste
+Test Case '-[DexDictateTests.AccessibilityInsertionTests testDoesNotSetValueAttributeWhenNotSettable]' passed (0.008 seconds).
+Test Case '-[DexDictateTests.AccessibilityInsertionTests testFallsBackToSelectedTextWhenValueAttributeNotSettableButSelectedTextIs]' started.
+2026-07-09 15:50:47.557 xctest[16999:583505] [DexDictate] insertViaAccessibility() — strategies 1 skipped: kAXValueAttribute not settable
+Test Case '-[DexDictateTests.AccessibilityInsertionTests testFallsBackToSelectedTextWhenValueAttributeNotSettableButSelectedTextIs]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AccessibilityInsertionTests testReturnsFalseAndFallsThroughToClipboardWhenNoFocusedElement]' started.
+2026-07-09 15:50:47.557 xctest[16999:583505] [DexDictate] insertViaAccessibility() — no focused AX element
+Test Case '-[DexDictateTests.AccessibilityInsertionTests testReturnsFalseAndFallsThroughToClipboardWhenNoFocusedElement]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AccessibilityInsertionTests testSetValueCalledWhenValueAttributeIsSettable]' started.
+Test Case '-[DexDictateTests.AccessibilityInsertionTests testSetValueCalledWhenValueAttributeIsSettable]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AccessibilityInsertionTests testWhenBothStrategiesFailOnlyTwoSetAttemptsOccurAndNothingIsAppended]' started.
+2026-07-09 15:50:47.558 xctest[16999:583505] [DexDictate] insertViaAccessibility() — strategy 1 (value+range) failed: AXError -25200
+2026-07-09 15:50:47.558 xctest[16999:583505] [DexDictate] insertViaAccessibility() — strategy 2 (selectedText) failed: AXError -25200
+2026-07-09 15:50:47.558 xctest[16999:583505] [DexDictate] insertViaAccessibility() — both strategies failed; falling back to clipboard paste
+Test Case '-[DexDictateTests.AccessibilityInsertionTests testWhenBothStrategiesFailOnlyTwoSetAttemptsOccurAndNothingIsAppended]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.AccessibilityInsertionTests testWhenValueNotSettableOnlySelectedTextStrategyIsAttempted]' started.
+2026-07-09 15:50:47.559 xctest[16999:583505] [DexDictate] insertViaAccessibility() — strategies 1 skipped: kAXValueAttribute not settable
+2026-07-09 15:50:47.559 xctest[16999:583505] [DexDictate] insertViaAccessibility() — strategy 2 (selectedText) failed: AXError -25200
+2026-07-09 15:50:47.559 xctest[16999:583505] [DexDictate] insertViaAccessibility() — both strategies failed; falling back to clipboard paste
+Test Case '-[DexDictateTests.AccessibilityInsertionTests testWhenValueNotSettableOnlySelectedTextStrategyIsAttempted]' passed (0.000 seconds).
+Test Suite 'AccessibilityInsertionTests' passed at 2026-07-09 15:50:47.559.
+	 Executed 12 tests, with 0 failures (0 unexpected) in 0.041 (0.042) seconds
+Test Suite 'AdaptiveBenchmarkControllerTests' started at 2026-07-09 15:50:47.559.
+Test Case '-[DexDictateTests.AdaptiveBenchmarkControllerTests testCancelForDictationCancelsScheduledBenchmark]' started.
+2026-07-09 15:50:47.935 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+Test Case '-[DexDictateTests.AdaptiveBenchmarkControllerTests testCancelForDictationCancelsScheduledBenchmark]' passed (0.728 seconds).
+Test Case '-[DexDictateTests.AdaptiveBenchmarkControllerTests testLatestStrictCapturedCorpusPrefersValidSession]' started.
+Test Case '-[DexDictateTests.AdaptiveBenchmarkControllerTests testLatestStrictCapturedCorpusPrefersValidSession]' passed (0.019 seconds).
+Test Case '-[DexDictateTests.AdaptiveBenchmarkControllerTests testRunBenchmarksNowPausesWhileEngineIsBusy]' started.
+2026-07-09 15:50:48.308 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+Test Case '-[DexDictateTests.AdaptiveBenchmarkControllerTests testRunBenchmarksNowPausesWhileEngineIsBusy]' passed (0.027 seconds).
+Test Case '-[DexDictateTests.AdaptiveBenchmarkControllerTests testScheduleIfNeededMarksUnavailableWhenHelperMissing]' started.
+2026-07-09 15:50:48.339 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+Test Case '-[DexDictateTests.AdaptiveBenchmarkControllerTests testScheduleIfNeededMarksUnavailableWhenHelperMissing]' passed (0.020 seconds).
+Test Case '-[DexDictateTests.AdaptiveBenchmarkControllerTests testScheduleIfNeededUsesInjectedPostDictationDelay]' started.
+2026-07-09 15:50:48.359 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+Test Case '-[DexDictateTests.AdaptiveBenchmarkControllerTests testScheduleIfNeededUsesInjectedPostDictationDelay]' passed (0.020 seconds).
+Test Case '-[DexDictateTests.AdaptiveBenchmarkControllerTests testStrictCapturedCorpusValidationRejectsBundledSampleShape]' started.
+Test Case '-[DexDictateTests.AdaptiveBenchmarkControllerTests testStrictCapturedCorpusValidationRejectsBundledSampleShape]' passed (0.002 seconds).
+Test Suite 'AdaptiveBenchmarkControllerTests' passed at 2026-07-09 15:50:48.377.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.816 (0.817) seconds
+Test Suite 'AppInsertionOverridesManagerTests' started at 2026-07-09 15:50:48.377.
+Test Case '-[DexDictateTests.AppInsertionOverridesManagerTests testAddReplacesExistingEntryForSameBundle]' started.
+Test Case '-[DexDictateTests.AppInsertionOverridesManagerTests testAddReplacesExistingEntryForSameBundle]' passed (0.003 seconds).
+Test Case '-[DexDictateTests.AppInsertionOverridesManagerTests testMatchingBundleUsesPerAppOverrideInsteadOfGlobalMode]' started.
+Test Case '-[DexDictateTests.AppInsertionOverridesManagerTests testMatchingBundleUsesPerAppOverrideInsteadOfGlobalMode]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.AppInsertionOverridesManagerTests testOverrideDoesNotLeakToUnrelatedApps]' started.
+Test Case '-[DexDictateTests.AppInsertionOverridesManagerTests testOverrideDoesNotLeakToUnrelatedApps]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.AppInsertionOverridesManagerTests testUseGlobalOverrideResolvesToNilEffectiveMode]' started.
+Test Case '-[DexDictateTests.AppInsertionOverridesManagerTests testUseGlobalOverrideResolvesToNilEffectiveMode]' passed (0.001 seconds).
+Test Suite 'AppInsertionOverridesManagerTests' passed at 2026-07-09 15:50:48.385.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.007 (0.008) seconds
+Test Suite 'AppSettingsRestoreDefaultsTests' started at 2026-07-09 15:50:48.385.
+Test Case '-[DexDictateTests.AppSettingsRestoreDefaultsTests testRestoreDefaultsMatchesDeclaredFactoryState]' started.
+Test Case '-[DexDictateTests.AppSettingsRestoreDefaultsTests testRestoreDefaultsMatchesDeclaredFactoryState]' passed (0.018 seconds).
+Test Suite 'AppSettingsRestoreDefaultsTests' passed at 2026-07-09 15:50:48.403.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.018 (0.018) seconds
+Test Suite 'AppSmokeTests' started at 2026-07-09 15:50:48.403.
+Test Case '-[DexDictateTests.AppSmokeTests testCommandProcessorHandlesEmptyInputSafely]' started.
+Test Case '-[DexDictateTests.AppSmokeTests testCommandProcessorHandlesEmptyInputSafely]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AppSmokeTests testCommandProcessorHandlesWhitespaceOnlyInputSafely]' started.
+Test Case '-[DexDictateTests.AppSmokeTests testCommandProcessorHandlesWhitespaceOnlyInputSafely]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AppSmokeTests testCommandProcessorInitializesWithoutCrashing]' started.
+Test Case '-[DexDictateTests.AppSmokeTests testCommandProcessorInitializesWithoutCrashing]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AppSmokeTests testEngineDefaultStateIsStoppedNotError]' started.
+2026-07-09 15:50:48.405 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+Test Case '-[DexDictateTests.AppSmokeTests testEngineDefaultStateIsStoppedNotError]' passed (0.003 seconds).
+Test Case '-[DexDictateTests.AppSmokeTests testEngineStatusIconIsNonEmptyOnInit]' started.
+2026-07-09 15:50:48.408 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+Test Case '-[DexDictateTests.AppSmokeTests testEngineStatusIconIsNonEmptyOnInit]' passed (0.003 seconds).
+Test Case '-[DexDictateTests.AppSmokeTests testEngineStatusTextIsNonEmptyOnInit]' started.
+2026-07-09 15:50:48.411 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+Test Case '-[DexDictateTests.AppSmokeTests testEngineStatusTextIsNonEmptyOnInit]' passed (0.005 seconds).
+Test Case '-[DexDictateTests.AppSmokeTests testPermissionManagerInitializesWithoutCrashing]' started.
+Test Case '-[DexDictateTests.AppSmokeTests testPermissionManagerInitializesWithoutCrashing]' passed (0.263 seconds).
+Test Case '-[DexDictateTests.AppSmokeTests testPermissionManagerURLHelpersReturnNonNil]' started.
+Test Case '-[DexDictateTests.AppSmokeTests testPermissionManagerURLHelpersReturnNonNil]' passed (0.064 seconds).
+Test Case '-[DexDictateTests.AppSmokeTests testPreTriggerBufferDefaultIsFalse]' started.
+Test Case '-[DexDictateTests.AppSmokeTests testPreTriggerBufferDefaultIsFalse]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AppSmokeTests testSilenceTrimDefaultIsFalse]' started.
+Test Case '-[DexDictateTests.AppSmokeTests testSilenceTrimDefaultIsFalse]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AppSmokeTests testToastStateInitializesWithCurrentNil]' started.
+Test Case '-[DexDictateTests.AppSmokeTests testToastStateInitializesWithCurrentNil]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AppSmokeTests testTranscriptionEngineInitializesWithoutCrashing]' started.
+2026-07-09 15:50:48.744 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+Test Case '-[DexDictateTests.AppSmokeTests testTranscriptionEngineInitializesWithoutCrashing]' passed (0.003 seconds).
+Test Suite 'AppSmokeTests' passed at 2026-07-09 15:50:48.746.
+	 Executed 12 tests, with 0 failures (0 unexpected) in 0.341 (0.343) seconds
+Test Suite 'ArchitectureHardeningTests' started at 2026-07-09 15:50:48.746.
+Test Case '-[DexDictateTests.ArchitectureHardeningTests testAudioRecorderBufferClearedAfterCollect]' started.
+2026-07-09 15:50:48.747 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+Test Case '-[DexDictateTests.ArchitectureHardeningTests testAudioRecorderBufferClearedAfterCollect]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.ArchitectureHardeningTests testAudioRecorderBufferInjectAndCollect]' started.
+2026-07-09 15:50:48.748 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+Test Case '-[DexDictateTests.ArchitectureHardeningTests testAudioRecorderBufferInjectAndCollect]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.ArchitectureHardeningTests testClipboardManagerSnapshotCapAllowsSmallPayloads]' started.
+Test Case '-[DexDictateTests.ArchitectureHardeningTests testClipboardManagerSnapshotCapAllowsSmallPayloads]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.ArchitectureHardeningTests testClipboardManagerSnapshotCapReturnsEmptyItemsWhenOversized]' started.
+2026-07-09 15:50:48.750 xctest[16999:583505] [DexDictate] ClipboardManager — pasteboard snapshot exceeded 10 MB cap (11534336 bytes); skipping restore to avoid memory pressure.
+Test Case '-[DexDictateTests.ArchitectureHardeningTests testClipboardManagerSnapshotCapReturnsEmptyItemsWhenOversized]' passed (0.002 seconds).
+Test Case '-[DexDictateTests.ArchitectureHardeningTests testDiagnosticsStoreAppendIsAccretive]' started.
+Test Case '-[DexDictateTests.ArchitectureHardeningTests testDiagnosticsStoreAppendIsAccretive]' passed (0.003 seconds).
+Test Case '-[DexDictateTests.ArchitectureHardeningTests testDiagnosticsStoreKeepsNewestRecordsAfterPrune]' started.
+Test Case '-[DexDictateTests.ArchitectureHardeningTests testDiagnosticsStoreKeepsNewestRecordsAfterPrune]' passed (0.013 seconds).
+Test Case '-[DexDictateTests.ArchitectureHardeningTests testDiagnosticsStorePrunesWhenOverLimit]' started.
+Test Case '-[DexDictateTests.ArchitectureHardeningTests testDiagnosticsStorePrunesWhenOverLimit]' passed (0.029 seconds).
+Test Case '-[DexDictateTests.ArchitectureHardeningTests testLocalJSONStoreDeleteRemovesFile]' started.
+Test Case '-[DexDictateTests.ArchitectureHardeningTests testLocalJSONStoreDeleteRemovesFile]' passed (0.219 seconds).
+Test Case '-[DexDictateTests.ArchitectureHardeningTests testLocalJSONStoreMigratesLegacyPayload]' started.
+2026-07-09 15:50:49.016 xctest[16999:583517] [DexDictate] [LocalJSONStore] Migrated legacy payload in 88E6CB12-99CD-45C3-9464-207CAF2336EC.json.
+Test Case '-[DexDictateTests.ArchitectureHardeningTests testLocalJSONStoreMigratesLegacyPayload]' passed (0.002 seconds).
+Test Case '-[DexDictateTests.ArchitectureHardeningTests testLocalJSONStoreQuarantinesCorruptFile]' started.
+2026-07-09 15:50:49.018 xctest[16999:583510] [DexDictate] [LocalJSONStore] Cannot decode 72ECA990-3A59-451F-8C71-780971361563.json (no legacy migrator) — quarantining.
+2026-07-09 15:50:49.022 xctest[16999:583510] [DexDictate] [LocalJSONStore] Quarantined 72ECA990-3A59-451F-8C71-780971361563.json → 72ECA990-3A59-451F-8C71-780971361563.json.corrupt-2026-07-09T19:50:49Z
+Test Case '-[DexDictateTests.ArchitectureHardeningTests testLocalJSONStoreQuarantinesCorruptFile]' passed (0.055 seconds).
+Test Case '-[DexDictateTests.ArchitectureHardeningTests testLocalJSONStoreReturnsDefaultWhenFileAbsent]' started.
+Test Case '-[DexDictateTests.ArchitectureHardeningTests testLocalJSONStoreReturnsDefaultWhenFileAbsent]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.ArchitectureHardeningTests testLocalJSONStoreRoundTrip]' started.
+Test Case '-[DexDictateTests.ArchitectureHardeningTests testLocalJSONStoreRoundTrip]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.ArchitectureHardeningTests testLocalJSONStoreWritesVersionedEnvelope]' started.
+Test Case '-[DexDictateTests.ArchitectureHardeningTests testLocalJSONStoreWritesVersionedEnvelope]' passed (0.002 seconds).
+Test Suite 'ArchitectureHardeningTests' passed at 2026-07-09 15:50:49.076.
+	 Executed 13 tests, with 0 failures (0 unexpected) in 0.328 (0.330) seconds
+Test Suite 'AudioDeviceManagerTests' started at 2026-07-09 15:50:49.076.
+Test Case '-[DexDictateTests.AudioDeviceManagerTests testResolveInputDeviceRejectsOutputOnlyDevice]' started.
+Test Case '-[DexDictateTests.AudioDeviceManagerTests testResolveInputDeviceRejectsOutputOnlyDevice]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AudioDeviceManagerTests testResolveInputDeviceReturnsAvailableMatchForInputCapableDevice]' started.
+Test Case '-[DexDictateTests.AudioDeviceManagerTests testResolveInputDeviceReturnsAvailableMatchForInputCapableDevice]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AudioDeviceManagerTests testResolveInputDeviceReturnsMissingWhenUIDIsAbsent]' started.
+Test Case '-[DexDictateTests.AudioDeviceManagerTests testResolveInputDeviceReturnsMissingWhenUIDIsAbsent]' passed (0.000 seconds).
+Test Suite 'AudioDeviceManagerTests' passed at 2026-07-09 15:50:49.077.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'AudioFileImporterTests' started at 2026-07-09 15:50:49.077.
+Test Case '-[DexDictateTests.AudioFileImporterTests testBundledSampleAudioLoadsIntoPCM]' started.
+Test Case '-[DexDictateTests.AudioFileImporterTests testBundledSampleAudioLoadsIntoPCM]' passed (0.122 seconds).
+Test Case '-[DexDictateTests.AudioFileImporterTests testDownmixToMonoAveragesStereoChannels]' started.
+Test Case '-[DexDictateTests.AudioFileImporterTests testDownmixToMonoAveragesStereoChannels]' passed (0.000 seconds).
+Test Suite 'AudioFileImporterTests' passed at 2026-07-09 15:50:49.200.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.123 (0.123) seconds
+Test Suite 'AudioInputSelectionPolicyTests' started at 2026-07-09 15:50:49.200.
+Test Case '-[DexDictateTests.AudioInputSelectionPolicyTests testAvailablePreferredDeviceIsPreserved]' started.
+Test Case '-[DexDictateTests.AudioInputSelectionPolicyTests testAvailablePreferredDeviceIsPreserved]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AudioInputSelectionPolicyTests testMissingPreferredDeviceFallsBackToSystemDefaultAfterGraceExpires]' started.
+Test Case '-[DexDictateTests.AudioInputSelectionPolicyTests testMissingPreferredDeviceFallsBackToSystemDefaultAfterGraceExpires]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AudioInputSelectionPolicyTests testMissingPreferredDeviceIsRetainedDuringGracePeriod]' started.
+Test Case '-[DexDictateTests.AudioInputSelectionPolicyTests testMissingPreferredDeviceIsRetainedDuringGracePeriod]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AudioInputSelectionPolicyTests testSystemDefaultSelectionRemainsUntouched]' started.
+Test Case '-[DexDictateTests.AudioInputSelectionPolicyTests testSystemDefaultSelectionRemainsUntouched]' passed (0.000 seconds).
+Test Suite 'AudioInputSelectionPolicyTests' passed at 2026-07-09 15:50:49.202.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'AudioLevelNormalizerTests' started at 2026-07-09 15:50:49.202.
+Test Case '-[DexDictateTests.AudioLevelNormalizerTests testAboveFullScaleClampsToOne]' started.
+Test Case '-[DexDictateTests.AudioLevelNormalizerTests testAboveFullScaleClampsToOne]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AudioLevelNormalizerTests testAmplitudeAtFloorReturnsApproxZero]' started.
+Test Case '-[DexDictateTests.AudioLevelNormalizerTests testAmplitudeAtFloorReturnsApproxZero]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AudioLevelNormalizerTests testAmplitudeJustAboveFloorReturnsSmallPositive]' started.
+Test Case '-[DexDictateTests.AudioLevelNormalizerTests testAmplitudeJustAboveFloorReturnsSmallPositive]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AudioLevelNormalizerTests testFullScaleAmplitudeReturnsOne]' started.
+Test Case '-[DexDictateTests.AudioLevelNormalizerTests testFullScaleAmplitudeReturnsOne]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AudioLevelNormalizerTests testHighSpeechAmplitudeIsInRange]' started.
+Test Case '-[DexDictateTests.AudioLevelNormalizerTests testHighSpeechAmplitudeIsInRange]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AudioLevelNormalizerTests testInfinityInputReturnsSafeValue]' started.
+Test Case '-[DexDictateTests.AudioLevelNormalizerTests testInfinityInputReturnsSafeValue]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AudioLevelNormalizerTests testLowSpeechAmplitudeIsInRange]' started.
+Test Case '-[DexDictateTests.AudioLevelNormalizerTests testLowSpeechAmplitudeIsInRange]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AudioLevelNormalizerTests testMidSpeechAmplitudeIsInRange]' started.
+Test Case '-[DexDictateTests.AudioLevelNormalizerTests testMidSpeechAmplitudeIsInRange]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AudioLevelNormalizerTests testNaNInputReturnsSafeValue]' started.
+Test Case '-[DexDictateTests.AudioLevelNormalizerTests testNaNInputReturnsSafeValue]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AudioLevelNormalizerTests testNegativeAmplitudeReturnsZero]' started.
+Test Case '-[DexDictateTests.AudioLevelNormalizerTests testNegativeAmplitudeReturnsZero]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AudioLevelNormalizerTests testNoNaNOrInfinityAcrossInputRange]' started.
+Test Case '-[DexDictateTests.AudioLevelNormalizerTests testNoNaNOrInfinityAcrossInputRange]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AudioLevelNormalizerTests testOutputIsMonotonicallyIncreasing]' started.
+Test Case '-[DexDictateTests.AudioLevelNormalizerTests testOutputIsMonotonicallyIncreasing]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AudioLevelNormalizerTests testTinyAmplitudeReturnsNearZero]' started.
+Test Case '-[DexDictateTests.AudioLevelNormalizerTests testTinyAmplitudeReturnsNearZero]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AudioLevelNormalizerTests testVeryLargeAmplitudeClampsToOne]' started.
+Test Case '-[DexDictateTests.AudioLevelNormalizerTests testVeryLargeAmplitudeClampsToOne]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AudioLevelNormalizerTests testZeroAmplitudeReturnsZero]' started.
+Test Case '-[DexDictateTests.AudioLevelNormalizerTests testZeroAmplitudeReturnsZero]' passed (0.000 seconds).
+Test Suite 'AudioLevelNormalizerTests' passed at 2026-07-09 15:50:49.209.
+	 Executed 15 tests, with 0 failures (0 unexpected) in 0.004 (0.007) seconds
+Test Suite 'AudioRecorderRecoveryFailureTests' started at 2026-07-09 15:50:49.209.
+Test Case '-[DexDictateTests.AudioRecorderRecoveryFailureTests testAudioErrorClassifierIdentifiesCoreAudioDeviceStall]' started.
+Test Case '-[DexDictateTests.AudioRecorderRecoveryFailureTests testAudioErrorClassifierIdentifiesCoreAudioDeviceStall]' passed (0.003 seconds).
+Test Case '-[DexDictateTests.AudioRecorderRecoveryFailureTests testLocalizedDescriptionDoesNotIncludeManualShellCommandFor10868]' started.
+Test Case '-[DexDictateTests.AudioRecorderRecoveryFailureTests testLocalizedDescriptionDoesNotIncludeManualShellCommandFor10868]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AudioRecorderRecoveryFailureTests testLocalizedDescriptionFallsBackToFriendlyInitialStartMessage]' started.
+Test Case '-[DexDictateTests.AudioRecorderRecoveryFailureTests testLocalizedDescriptionFallsBackToFriendlyInitialStartMessage]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AudioRecorderRecoveryFailureTests testLocalizedDescriptionPrefersRecoveryNotice]' started.
+Test Case '-[DexDictateTests.AudioRecorderRecoveryFailureTests testLocalizedDescriptionPrefersRecoveryNotice]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AudioRecorderRecoveryFailureTests testRecoveryNoticeFor10868PointsAtAdvancedResetWithoutShellCommand]' started.
+Test Case '-[DexDictateTests.AudioRecorderRecoveryFailureTests testRecoveryNoticeFor10868PointsAtAdvancedResetWithoutShellCommand]' passed (0.002 seconds).
+Test Case '-[DexDictateTests.AudioRecorderRecoveryFailureTests testRecoveryNoticeOmitsUnderlyingErrorDump]' started.
+Test Case '-[DexDictateTests.AudioRecorderRecoveryFailureTests testRecoveryNoticeOmitsUnderlyingErrorDump]' passed (0.001 seconds).
+Test Suite 'AudioRecorderRecoveryFailureTests' passed at 2026-07-09 15:50:49.217.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.007 (0.008) seconds
+Test Suite 'AudioRecorderRecoveryPlannerTests' started at 2026-07-09 15:50:49.217.
+Test Case '-[DexDictateTests.AudioRecorderRecoveryPlannerTests testPreferredInputMissingFallsBackToSystemDefaultAndClearsStoredSelection]' started.
+Test Case '-[DexDictateTests.AudioRecorderRecoveryPlannerTests testPreferredInputMissingFallsBackToSystemDefaultAndClearsStoredSelection]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AudioRecorderRecoveryPlannerTests testPreferredInputStillPresentAfterRouteChangeStaysOnPreferredMic]' started.
+Test Case '-[DexDictateTests.AudioRecorderRecoveryPlannerTests testPreferredInputStillPresentAfterRouteChangeStaysOnPreferredMic]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AudioRecorderRecoveryPlannerTests testPreferredInputTemporarilyUnavailableThenRecoverableRetriesPreferredFirst]' started.
+Test Case '-[DexDictateTests.AudioRecorderRecoveryPlannerTests testPreferredInputTemporarilyUnavailableThenRecoverableRetriesPreferredFirst]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AudioRecorderRecoveryPlannerTests testPreferredInputThatStillExistsButCannotOpenFallsBackWithoutClearingPreference]' started.
+Test Case '-[DexDictateTests.AudioRecorderRecoveryPlannerTests testPreferredInputThatStillExistsButCannotOpenFallsBackWithoutClearingPreference]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.AudioRecorderRecoveryPlannerTests testRepeatedRouteRecoveriesDoNotAddDuplicatePreferredAttempts]' started.
+Test Case '-[DexDictateTests.AudioRecorderRecoveryPlannerTests testRepeatedRouteRecoveriesDoNotAddDuplicatePreferredAttempts]' passed (0.000 seconds).
+Test Suite 'AudioRecorderRecoveryPlannerTests' passed at 2026-07-09 15:50:49.219.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'AudioRecorderTapStateTests' started at 2026-07-09 15:50:49.219.
+Test Case '-[DexDictateTests.AudioRecorderTapStateTests testStartAttemptGuardRejectsOverlap]' started.
+2026-07-09 15:50:49.219 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+Test Case '-[DexDictateTests.AudioRecorderTapStateTests testStartAttemptGuardRejectsOverlap]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.AudioRecorderTapStateTests testTeardownClearsBelievedTapState]' started.
+2026-07-09 15:50:49.220 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+Test Case '-[DexDictateTests.AudioRecorderTapStateTests testTeardownClearsBelievedTapState]' passed (0.305 seconds).
+Test Case '-[DexDictateTests.AudioRecorderTapStateTests testTeardownIsIdempotentWhenNoTapInstalled]' started.
+2026-07-09 15:50:49.526 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+Test Case '-[DexDictateTests.AudioRecorderTapStateTests testTeardownIsIdempotentWhenNoTapInstalled]' passed (0.002 seconds).
+Test Suite 'AudioRecorderTapStateTests' passed at 2026-07-09 15:50:49.528.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.308 (0.309) seconds
+Test Suite 'AudioResamplerTrailingTrimTests' started at 2026-07-09 15:50:49.528.
+Test Case '-[DexDictateTests.AudioResamplerTrailingTrimTests testTrailingTrimDoesNotIncreaseSampleCountAndPreservesNonEmptySpeech]' started.
+Test Case '-[DexDictateTests.AudioResamplerTrailingTrimTests testTrailingTrimDoesNotIncreaseSampleCountAndPreservesNonEmptySpeech]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.AudioResamplerTrailingTrimTests testTrailingTrimHandlesShortAndEmptyInputSafely]' started.
+Test Case '-[DexDictateTests.AudioResamplerTrailingTrimTests testTrailingTrimHandlesShortAndEmptyInputSafely]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.AudioResamplerTrailingTrimTests testTrailingTrimRemovesLongTrailingSilenceWithoutTouchingLeadingSpeech]' started.
+Test Case '-[DexDictateTests.AudioResamplerTrailingTrimTests testTrailingTrimRemovesLongTrailingSilenceWithoutTouchingLeadingSpeech]' passed (0.001 seconds).
+Test Suite 'AudioResamplerTrailingTrimTests' passed at 2026-07-09 15:50:49.531.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.003 (0.003) seconds
+Test Suite 'AudioTapInstallerTests' started at 2026-07-09 15:50:49.531.
+Test Case '-[DexDictateTests.AudioTapInstallerTests testDoubleInstallThrowsInsteadOfCrashing]' started.
+Test Case '-[DexDictateTests.AudioTapInstallerTests testDoubleInstallThrowsInsteadOfCrashing]' passed (0.034 seconds).
+Test Case '-[DexDictateTests.AudioTapInstallerTests testFirstInstallSucceeds]' started.
+Test Case '-[DexDictateTests.AudioTapInstallerTests testFirstInstallSucceeds]' passed (0.008 seconds).
+Test Case '-[DexDictateTests.AudioTapInstallerTests testRemoveTapAfterInstallSucceeds]' started.
+Test Case '-[DexDictateTests.AudioTapInstallerTests testRemoveTapAfterInstallSucceeds]' passed (0.008 seconds).
+Test Case '-[DexDictateTests.AudioTapInstallerTests testRemoveTapWhenNoneInstalledDoesNotCrash]' started.
+Test Case '-[DexDictateTests.AudioTapInstallerTests testRemoveTapWhenNoneInstalledDoesNotCrash]' passed (0.007 seconds).
+Test Suite 'AudioTapInstallerTests' passed at 2026-07-09 15:50:49.588.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.056 (0.057) seconds
+Test Suite 'BenchmarkCorpusTests' started at 2026-07-09 15:50:49.588.
+Test Case '-[DexDictateTests.BenchmarkCorpusTests testStrictCorpusHasExpectedShape]' started.
+Test Case '-[DexDictateTests.BenchmarkCorpusTests testStrictCorpusHasExpectedShape]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.BenchmarkCorpusTests testTranscriptMapMatchesCorpusCount]' started.
+Test Case '-[DexDictateTests.BenchmarkCorpusTests testTranscriptMapMatchesCorpusCount]' passed (0.000 seconds).
+Test Suite 'BenchmarkCorpusTests' passed at 2026-07-09 15:50:49.590.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.002 (0.002) seconds
+Test Suite 'BenchmarkPromotionPolicyTests' started at 2026-07-09 15:50:49.590.
+Test Case '-[DexDictateTests.BenchmarkPromotionPolicyTests testPromotionRejectsExcessiveLatencyRegression]' started.
+Test Case '-[DexDictateTests.BenchmarkPromotionPolicyTests testPromotionRejectsExcessiveLatencyRegression]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.BenchmarkPromotionPolicyTests testPromotionRequiresMeaningfulWERGainWithinLatencyBudget]' started.
+Test Case '-[DexDictateTests.BenchmarkPromotionPolicyTests testPromotionRequiresMeaningfulWERGainWithinLatencyBudget]' passed (0.000 seconds).
+Test Suite 'BenchmarkPromotionPolicyTests' passed at 2026-07-09 15:50:49.590.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds
+Test Suite 'BrowserMediaPauseServiceTests' started at 2026-07-09 15:50:49.591.
+Test Case '-[DexDictateTests.BrowserMediaPauseServiceTests testBrowserRunning_scriptReturnsZero_sessionReturnedButNoPausedMedia]' started.
+Test Case '-[DexDictateTests.BrowserMediaPauseServiceTests testBrowserRunning_scriptReturnsZero_sessionReturnedButNoPausedMedia]' passed (0.002 seconds).
+Test Case '-[DexDictateTests.BrowserMediaPauseServiceTests testChromePauses3Elements_sessionCaptured]' started.
+2026-07-09 15:50:49.592 xctest[16999:583509] [DexDictate] BrowserMediaPauseService: paused 3 element(s) in Google Chrome
+2026-07-09 15:50:49.592 xctest[16999:583509] [DexDictate] BrowserMediaPauseService: paused 3 media element(s) across browsers
+Test Case '-[DexDictateTests.BrowserMediaPauseServiceTests testChromePauses3Elements_sessionCaptured]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.BrowserMediaPauseServiceTests testFeatureDisabled_returnsNil_noScriptCalls]' started.
+Test Case '-[DexDictateTests.BrowserMediaPauseServiceTests testFeatureDisabled_returnsNil_noScriptCalls]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.BrowserMediaPauseServiceTests testMultipleBrowsersRunning_allCaptured]' started.
+2026-07-09 15:50:49.594 xctest[16999:583510] [DexDictate] BrowserMediaPauseService: paused 2 element(s) in Google Chrome
+2026-07-09 15:50:49.594 xctest[16999:583510] [DexDictate] BrowserMediaPauseService: paused 1 element(s) in Brave Browser
+2026-07-09 15:50:49.594 xctest[16999:583510] [DexDictate] BrowserMediaPauseService: paused 3 media element(s) across browsers
+Test Case '-[DexDictateTests.BrowserMediaPauseServiceTests testMultipleBrowsersRunning_allCaptured]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.BrowserMediaPauseServiceTests testNoBrowsersRunning_returnsNil]' started.
+Test Case '-[DexDictateTests.BrowserMediaPauseServiceTests testNoBrowsersRunning_returnsNil]' passed (0.103 seconds).
+Test Case '-[DexDictateTests.BrowserMediaPauseServiceTests testResume_noPausedMedia_scriptNotCalled]' started.
+Test Case '-[DexDictateTests.BrowserMediaPauseServiceTests testResume_noPausedMedia_scriptNotCalled]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.BrowserMediaPauseServiceTests testResume_onlyCallsScriptForEntriesWithPausedCount]' started.
+2026-07-09 15:50:49.700 xctest[16999:583509] [DexDictate] BrowserMediaPauseService: resumed 1 element(s) in Google Chrome
+Test Case '-[DexDictateTests.BrowserMediaPauseServiceTests testResume_onlyCallsScriptForEntriesWithPausedCount]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.BrowserMediaPauseServiceTests testSafariNotInSupportedBrowsers]' started.
+Test Case '-[DexDictateTests.BrowserMediaPauseServiceTests testSafariNotInSupportedBrowsers]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.BrowserMediaPauseServiceTests testScriptFailureForOneBrowser_otherBrowserStillProcessed]' started.
+2026-07-09 15:50:49.701 xctest[16999:583510] [DexDictate] BrowserMediaPauseService: paused 1 element(s) in Brave Browser
+2026-07-09 15:50:49.702 xctest[16999:583510] [DexDictate] BrowserMediaPauseService: paused 1 media element(s) across browsers
+Test Case '-[DexDictateTests.BrowserMediaPauseServiceTests testScriptFailureForOneBrowser_otherBrowserStillProcessed]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.BrowserMediaPauseServiceTests testZoomRunning_skipsPause_returnsNil]' started.
+2026-07-09 15:50:49.703 xctest[16999:583509] [DexDictate] BrowserMediaPauseService: skipping pause — protected app is running
+Test Case '-[DexDictateTests.BrowserMediaPauseServiceTests testZoomRunning_skipsPause_returnsNil]' passed (0.001 seconds).
+Test Suite 'BrowserMediaPauseServiceTests' passed at 2026-07-09 15:50:49.704.
+	 Executed 10 tests, with 0 failures (0 unexpected) in 0.111 (0.113) seconds
+Test Suite 'BuildMetadataConsistencyTests' started at 2026-07-09 15:50:49.704.
+Test Case '-[DexDictateTests.BuildMetadataConsistencyTests testBuildScriptAndSourceInfoPlistShareCanonicalBundleIdentifier]' started.
+Test Case '-[DexDictateTests.BuildMetadataConsistencyTests testBuildScriptAndSourceInfoPlistShareCanonicalBundleIdentifier]' passed (0.003 seconds).
+Test Case '-[DexDictateTests.BuildMetadataConsistencyTests testSourceAndTemplatePlistsStayAlignedOnMetadataAndPermissionKeys]' started.
+Test Case '-[DexDictateTests.BuildMetadataConsistencyTests testSourceAndTemplatePlistsStayAlignedOnMetadataAndPermissionKeys]' passed (0.001 seconds).
+Test Suite 'BuildMetadataConsistencyTests' passed at 2026-07-09 15:50:49.708.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.004 (0.004) seconds
+Test Suite 'ClipboardManagerTests' started at 2026-07-09 15:50:49.708.
+Test Case '-[DexDictateTests.ClipboardManagerTests testClonePasteboardItemPreservesIndependentRepresentations]' started.
+Test Case '-[DexDictateTests.ClipboardManagerTests testClonePasteboardItemPreservesIndependentRepresentations]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.ClipboardManagerTests testClonePasteboardItemsDropsEmptyClonesButKeepsValidItems]' started.
+Test Case '-[DexDictateTests.ClipboardManagerTests testClonePasteboardItemsDropsEmptyClonesButKeepsValidItems]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.ClipboardManagerTests testClonePasteboardItemsKeepsTrackOfUnrestorableOriginalClipboardContents]' started.
+Test Case '-[DexDictateTests.ClipboardManagerTests testClonePasteboardItemsKeepsTrackOfUnrestorableOriginalClipboardContents]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.ClipboardManagerTests testClonePasteboardItemsWithNilInputRepresentsEmptyClipboardSafely]' started.
+Test Case '-[DexDictateTests.ClipboardManagerTests testClonePasteboardItemsWithNilInputRepresentsEmptyClipboardSafely]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.ClipboardManagerTests testDefaultPasteDeliveryProfileWaitsForStandardApps]' started.
+Test Case '-[DexDictateTests.ClipboardManagerTests testDefaultPasteDeliveryProfileWaitsForStandardApps]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.ClipboardManagerTests testNonMatchingZoomLikeBundleUsesDefaultProfile]' started.
+Test Case '-[DexDictateTests.ClipboardManagerTests testNonMatchingZoomLikeBundleUsesDefaultProfile]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.ClipboardManagerTests testPasteValidationChecksFrontmostApp]' started.
+2026-07-09 15:50:50.065 xctest[16999:583505] [DexDictate] ClipboardManager — paste aborted: target application 'com.example.app' (PID 1234) is not frontmost at deadline. Current frontmost is 'com.brave.Browser' (PID 1367).
+Test Case '-[DexDictateTests.ClipboardManagerTests testPasteValidationChecksFrontmostApp]' passed (0.634 seconds).
+Test Case '-[DexDictateTests.ClipboardManagerTests testRestoreOwnershipCheckAllowsRestoreOnlyWhenDexDictateStillOwnsPayload]' started.
+Test Case '-[DexDictateTests.ClipboardManagerTests testRestoreOwnershipCheckAllowsRestoreOnlyWhenDexDictateStillOwnsPayload]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.ClipboardManagerTests testRestoreOwnershipCheckPreventsStaleRestoreAcrossRepeatedPasteOperations]' started.
+Test Case '-[DexDictateTests.ClipboardManagerTests testRestoreOwnershipCheckPreventsStaleRestoreAcrossRepeatedPasteOperations]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.ClipboardManagerTests testRestoreOwnershipCheckRejectsRestoreWhenClipboardChangeCountMoved]' started.
+Test Case '-[DexDictateTests.ClipboardManagerTests testRestoreOwnershipCheckRejectsRestoreWhenClipboardChangeCountMoved]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.ClipboardManagerTests testRestoreOwnershipCheckRejectsRestoreWhenPayloadNoLongerMatches]' started.
+Test Case '-[DexDictateTests.ClipboardManagerTests testRestoreOwnershipCheckRejectsRestoreWhenPayloadNoLongerMatches]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.ClipboardManagerTests testRestoreOwnershipCheckRejectsRestoreWhenStringPayloadMissing]' started.
+Test Case '-[DexDictateTests.ClipboardManagerTests testRestoreOwnershipCheckRejectsRestoreWhenStringPayloadMissing]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.ClipboardManagerTests testSavedPasteboardContentsMaterializesFreshItemsForEachRestoreAttempt]' started.
+Test Case '-[DexDictateTests.ClipboardManagerTests testSavedPasteboardContentsMaterializesFreshItemsForEachRestoreAttempt]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.ClipboardManagerTests testZoomPasteDeliveryProfileAllowsExtraActivationTime]' started.
+Test Case '-[DexDictateTests.ClipboardManagerTests testZoomPasteDeliveryProfileAllowsExtraActivationTime]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.ClipboardManagerTests testZoomPrefixResolutionAppliesToAllUsZoomBundles]' started.
+Test Case '-[DexDictateTests.ClipboardManagerTests testZoomPrefixResolutionAppliesToAllUsZoomBundles]' passed (0.000 seconds).
+Test Suite 'ClipboardManagerTests' passed at 2026-07-09 15:50:50.353.
+	 Executed 15 tests, with 0 failures (0 unexpected) in 0.639 (0.645) seconds
+Test Suite 'ColorHexTests' started at 2026-07-09 15:50:50.353.
+Test Case '-[DexDictateTests.ColorHexTests testAcceptsHexWithoutHashAndLowercase]' started.
+Test Case '-[DexDictateTests.ColorHexTests testAcceptsHexWithoutHashAndLowercase]' passed (0.011 seconds).
+Test Case '-[DexDictateTests.ColorHexTests testHexRoundTripIsStable]' started.
+Test Case '-[DexDictateTests.ColorHexTests testHexRoundTripIsStable]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.ColorHexTests testRejectsMalformedHex]' started.
+Test Case '-[DexDictateTests.ColorHexTests testRejectsMalformedHex]' passed (0.000 seconds).
+Test Suite 'ColorHexTests' passed at 2026-07-09 15:50:50.366.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.012 (0.013) seconds
+Test Suite 'CommandProcessorTests' started at 2026-07-09 15:50:50.366.
+Test Case '-[DexDictateTests.CommandProcessorTests testAllCapsUppercasesOnlyTheContentBeforeTheCommand]' started.
+Test Case '-[DexDictateTests.CommandProcessorTests testAllCapsUppercasesOnlyTheContentBeforeTheCommand]' passed (0.004 seconds).
+Test Case '-[DexDictateTests.CommandProcessorTests testCustomHotWordCommandResolvesBeforeBuiltIns]' started.
+Test Case '-[DexDictateTests.CommandProcessorTests testCustomHotWordCommandResolvesBeforeBuiltIns]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.CommandProcessorTests testNewLineCommandUsesWordBoundaries]' started.
+Test Case '-[DexDictateTests.CommandProcessorTests testNewLineCommandUsesWordBoundaries]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.CommandProcessorTests testNewLineDoesNotTriggerOnConcatenatedWord]' started.
+Test Case '-[DexDictateTests.CommandProcessorTests testNewLineDoesNotTriggerOnConcatenatedWord]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.CommandProcessorTests testScratchThatDoesNotTriggerInNormalSentenceTail]' started.
+Test Case '-[DexDictateTests.CommandProcessorTests testScratchThatDoesNotTriggerInNormalSentenceTail]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.CommandProcessorTests testScratchThatOnlyDeletesAsStandaloneSuffix]' started.
+Test Case '-[DexDictateTests.CommandProcessorTests testScratchThatOnlyDeletesAsStandaloneSuffix]' passed (0.000 seconds).
+Test Suite 'CommandProcessorTests' passed at 2026-07-09 15:50:50.372.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.005 (0.006) seconds
+Test Suite 'CoreAudioDeviceListenerTests' started at 2026-07-09 15:50:50.372.
+Test Case '-[DexDictateTests.CoreAudioDeviceListenerTests testDeinitDoesNotCrash]' started.
+2026-07-09 15:50:50.372 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+2026-07-09 15:50:50.373 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+Test Case '-[DexDictateTests.CoreAudioDeviceListenerTests testDeinitDoesNotCrash]' passed (0.002 seconds).
+Test Case '-[DexDictateTests.CoreAudioDeviceListenerTests testEachServiceInstanceOwnsIndependentListenerRegistration]' started.
+2026-07-09 15:50:50.374 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+2026-07-09 15:50:50.374 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+Test Case '-[DexDictateTests.CoreAudioDeviceListenerTests testEachServiceInstanceOwnsIndependentListenerRegistration]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.CoreAudioDeviceListenerTests testListenerIsRegisteredAfterInit]' started.
+2026-07-09 15:50:50.375 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+Test Case '-[DexDictateTests.CoreAudioDeviceListenerTests testListenerIsRegisteredAfterInit]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.CoreAudioDeviceListenerTests testRegistrationFlagIsSetBeforeAnyStartRecordingCall]' started.
+2026-07-09 15:50:50.376 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+Test Case '-[DexDictateTests.CoreAudioDeviceListenerTests testRegistrationFlagIsSetBeforeAnyStartRecordingCall]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.CoreAudioDeviceListenerTests testRegistrationFlagRemainsStableAfterMultipleServiceCreations]' started.
+2026-07-09 15:50:50.376 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+2026-07-09 15:50:50.376 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+2026-07-09 15:50:50.377 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+2026-07-09 15:50:50.377 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+2026-07-09 15:50:50.377 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+2026-07-09 15:50:50.377 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+Test Case '-[DexDictateTests.CoreAudioDeviceListenerTests testRegistrationFlagRemainsStableAfterMultipleServiceCreations]' passed (0.002 seconds).
+Test Case '-[DexDictateTests.CoreAudioDeviceListenerTests testSetupDefaultDeviceListenerIsIdempotent]' started.
+2026-07-09 15:50:50.378 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+2026-07-09 15:50:50.378 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — already registered, skipping
+Test Case '-[DexDictateTests.CoreAudioDeviceListenerTests testSetupDefaultDeviceListenerIsIdempotent]' passed (0.001 seconds).
+Test Suite 'CoreAudioDeviceListenerTests' passed at 2026-07-09 15:50:50.379.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.006 (0.007) seconds
+Test Suite 'CrashReporterTests' started at 2026-07-09 15:50:50.379.
+Test Case '-[DexDictateTests.CrashReporterTests testFormatsNameReasonAndStack]' started.
+Test Case '-[DexDictateTests.CrashReporterTests testFormatsNameReasonAndStack]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.CrashReporterTests testHandlesEmptyReasonString]' started.
+Test Case '-[DexDictateTests.CrashReporterTests testHandlesEmptyReasonString]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.CrashReporterTests testHandlesMissingReason]' started.
+Test Case '-[DexDictateTests.CrashReporterTests testHandlesMissingReason]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.CrashReporterTests testNoStackOmitsTrailingNewline]' started.
+Test Case '-[DexDictateTests.CrashReporterTests testNoStackOmitsTrailingNewline]' passed (0.000 seconds).
+Test Suite 'CrashReporterTests' passed at 2026-07-09 15:50:50.380.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'DexDictateTests' started at 2026-07-09 15:50:50.380.
+Test Case '-[DexDictateTests.DexDictateTests testProfanityFilter]' started.
+Test Case '-[DexDictateTests.DexDictateTests testProfanityFilter]' passed (0.002 seconds).
+Test Case '-[DexDictateTests.DexDictateTests testProfanityFilterCaseInsensitive]' started.
+Test Case '-[DexDictateTests.DexDictateTests testProfanityFilterCaseInsensitive]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.DexDictateTests testProfanityFilterSupportsAdditionsAndRemovals]' started.
+Test Case '-[DexDictateTests.DexDictateTests testProfanityFilterSupportsAdditionsAndRemovals]' passed (0.000 seconds).
+Test Suite 'DexDictateTests' passed at 2026-07-09 15:50:50.383.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.003 (0.003) seconds
+Test Suite 'DexExperimentalUIStateTests' started at 2026-07-09 15:50:50.383.
+Test Case '-[DexDictateTests.DexExperimentalUIStateTests testEquatabilityRoundtrip]' started.
+Test Case '-[DexDictateTests.DexExperimentalUIStateTests testEquatabilityRoundtrip]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.DexExperimentalUIStateTests testPlaceholderHasExpectedDefaults]' started.
+Test Case '-[DexDictateTests.DexExperimentalUIStateTests testPlaceholderHasExpectedDefaults]' passed (0.000 seconds).
+Test Suite 'DexExperimentalUIStateTests' passed at 2026-07-09 15:50:50.383.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+Test Suite 'DiagnosticsStoreTests' started at 2026-07-09 15:50:50.383.
+Test Case '-[DexDictateTests.DiagnosticsStoreTests testDiagnosticsStoreRetainsOnlyNewestRecords]' started.
+Test Case '-[DexDictateTests.DiagnosticsStoreTests testDiagnosticsStoreRetainsOnlyNewestRecords]' passed (0.002 seconds).
+Test Suite 'DiagnosticsStoreTests' passed at 2026-07-09 15:50:50.386.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.002 (0.002) seconds
+Test Suite 'DictationContextPromptTests' started at 2026-07-09 15:50:50.386.
+Test Case '-[DexDictateTests.DictationContextPromptTests testBothNilReturnsNil]' started.
+Test Case '-[DexDictateTests.DictationContextPromptTests testBothNilReturnsNil]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.DictationContextPromptTests testBoundsToMaxCharsKeepingTail]' started.
+Test Case '-[DexDictateTests.DictationContextPromptTests testBoundsToMaxCharsKeepingTail]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.DictationContextPromptTests testCombinesDomainThenContext]' started.
+Test Case '-[DexDictateTests.DictationContextPromptTests testCombinesDomainThenContext]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.DictationContextPromptTests testDomainBiasOnly]' started.
+Test Case '-[DexDictateTests.DictationContextPromptTests testDomainBiasOnly]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.DictationContextPromptTests testEmptyAndWhitespaceTreatedAsNil]' started.
+Test Case '-[DexDictateTests.DictationContextPromptTests testEmptyAndWhitespaceTreatedAsNil]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.DictationContextPromptTests testFocusedContextOnly]' started.
+Test Case '-[DexDictateTests.DictationContextPromptTests testFocusedContextOnly]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.DictationContextPromptTests testTrimsWhitespaceOnEachPart]' started.
+Test Case '-[DexDictateTests.DictationContextPromptTests testTrimsWhitespaceOnEachPart]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.DictationContextPromptTests testZeroMaxCharsReturnsNil]' started.
+Test Case '-[DexDictateTests.DictationContextPromptTests testZeroMaxCharsReturnsNil]' passed (0.000 seconds).
+Test Suite 'DictationContextPromptTests' passed at 2026-07-09 15:50:50.388.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'DictationIntelligenceTests' started at 2026-07-09 15:50:50.388.
+Test Case '-[DexDictateTests.DictationIntelligenceTests testAdaptiveTailDelayIncreasesForLongLooseUtterances]' started.
+Test Case '-[DexDictateTests.DictationIntelligenceTests testAdaptiveTailDelayIncreasesForLongLooseUtterances]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.DictationIntelligenceTests testAdaptiveTailDelayShrinksForShortCleanUtterances]' started.
+Test Case '-[DexDictateTests.DictationIntelligenceTests testAdaptiveTailDelayShrinksForShortCleanUtterances]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.DictationIntelligenceTests testAutomaticDomainBiasMapsChatApps]' started.
+Test Case '-[DexDictateTests.DictationIntelligenceTests testAutomaticDomainBiasMapsChatApps]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.DictationIntelligenceTests testAutomaticDomainBiasMapsCodingApps]' started.
+Test Case '-[DexDictateTests.DictationIntelligenceTests testAutomaticDomainBiasMapsCodingApps]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.DictationIntelligenceTests testCodingVocabularyBiasAddsExpectedReplacements]' started.
+Test Case '-[DexDictateTests.DictationIntelligenceTests testCodingVocabularyBiasAddsExpectedReplacements]' passed (0.004 seconds).
+Test Case '-[DexDictateTests.DictationIntelligenceTests testSuspiciousTranscriptionHeuristicFlagsSingleWordLongUtterance]' started.
+Test Case '-[DexDictateTests.DictationIntelligenceTests testSuspiciousTranscriptionHeuristicFlagsSingleWordLongUtterance]' passed (0.000 seconds).
+Test Suite 'DictationIntelligenceTests' passed at 2026-07-09 15:50:50.394.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.006 (0.006) seconds
+Test Suite 'EngineDisplayStateTests' started at 2026-07-09 15:50:50.394.
+Test Case '-[DexDictateTests.EngineDisplayStateTests testEquatabilityOfMatchingCases]' started.
+Test Case '-[DexDictateTests.EngineDisplayStateTests testEquatabilityOfMatchingCases]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.EngineDisplayStateTests testErrorLabelFallsBackWhenMessageEmpty]' started.
+Test Case '-[DexDictateTests.EngineDisplayStateTests testErrorLabelFallsBackWhenMessageEmpty]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.EngineDisplayStateTests testErrorLabelUsesProvidedMessage]' started.
+Test Case '-[DexDictateTests.EngineDisplayStateTests testErrorLabelUsesProvidedMessage]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.EngineDisplayStateTests testIsActiveOnlyDuringListeningAndTranscribing]' started.
+Test Case '-[DexDictateTests.EngineDisplayStateTests testIsActiveOnlyDuringListeningAndTranscribing]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.EngineDisplayStateTests testLabelIsNonEmptyForAllCases]' started.
+Test Case '-[DexDictateTests.EngineDisplayStateTests testLabelIsNonEmptyForAllCases]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.EngineDisplayStateTests testSystemImageIsNonEmptyForAllCases]' started.
+Test Case '-[DexDictateTests.EngineDisplayStateTests testSystemImageIsNonEmptyForAllCases]' passed (0.000 seconds).
+Test Suite 'EngineDisplayStateTests' passed at 2026-07-09 15:50:50.395.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'EngineLifecycleStateMachineTests' started at 2026-07-09 15:50:50.395.
+Test Case '-[DexDictateTests.EngineLifecycleStateMachineTests testAudioCaptureFailureReturnsToReady]' started.
+Test Case '-[DexDictateTests.EngineLifecycleStateMachineTests testAudioCaptureFailureReturnsToReady]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.EngineLifecycleStateMachineTests testHappyPathTransitionsReachReadyAgain]' started.
+Test Case '-[DexDictateTests.EngineLifecycleStateMachineTests testHappyPathTransitionsReachReadyAgain]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.EngineLifecycleStateMachineTests testImportedFileTranscriptionCanStartFromReady]' started.
+Test Case '-[DexDictateTests.EngineLifecycleStateMachineTests testImportedFileTranscriptionCanStartFromReady]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.EngineLifecycleStateMachineTests testInputMonitorRecoveryFromErrorReturnsToReady]' started.
+Test Case '-[DexDictateTests.EngineLifecycleStateMachineTests testInputMonitorRecoveryFromErrorReturnsToReady]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.EngineLifecycleStateMachineTests testInvalidTransitionsAreRejected]' started.
+Test Case '-[DexDictateTests.EngineLifecycleStateMachineTests testInvalidTransitionsAreRejected]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.EngineLifecycleStateMachineTests testListeningCanRestartAfterAudioCaptureFailure]' started.
+Test Case '-[DexDictateTests.EngineLifecycleStateMachineTests testListeningCanRestartAfterAudioCaptureFailure]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.EngineLifecycleStateMachineTests testSystemStoppedIsAlwaysAllowed]' started.
+Test Case '-[DexDictateTests.EngineLifecycleStateMachineTests testSystemStoppedIsAlwaysAllowed]' passed (0.000 seconds).
+Test Suite 'EngineLifecycleStateMachineTests' passed at 2026-07-09 15:50:50.397.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'ExperimentFlagsDefaultsTests' started at 2026-07-09 15:50:50.397.
+Test Case '-[DexDictateTests.ExperimentFlagsDefaultsTests testTrimDefaultsKeepLeadingTrimOffAndTrailingTrimOn]' started.
+Test Case '-[DexDictateTests.ExperimentFlagsDefaultsTests testTrimDefaultsKeepLeadingTrimOffAndTrailingTrimOn]' passed (0.000 seconds).
+Test Suite 'ExperimentFlagsDefaultsTests' passed at 2026-07-09 15:50:50.397.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+Test Suite 'FlavorQuotePacksDexterFeedTests' started at 2026-07-09 15:50:50.397.
+Test Case '-[DexDictateTests.FlavorQuotePacksDexterFeedTests testAllProfilesAreCoveredByCaseIterable]' started.
+Test Case '-[DexDictateTests.FlavorQuotePacksDexterFeedTests testAllProfilesAreCoveredByCaseIterable]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.FlavorQuotePacksDexterFeedTests testCrossProfileAggregationProducesLines]' started.
+Test Case '-[DexDictateTests.FlavorQuotePacksDexterFeedTests testCrossProfileAggregationProducesLines]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.FlavorQuotePacksDexterFeedTests testEveryLineHasNonEmptyText]' started.
+Test Case '-[DexDictateTests.FlavorQuotePacksDexterFeedTests testEveryLineHasNonEmptyText]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.FlavorQuotePacksDexterFeedTests testEveryProfilePackIsNonEmpty]' started.
+Test Case '-[DexDictateTests.FlavorQuotePacksDexterFeedTests testEveryProfilePackIsNonEmpty]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.FlavorQuotePacksDexterFeedTests testSamplingFiveUniqueLinesSucceeds]' started.
+Test Case '-[DexDictateTests.FlavorQuotePacksDexterFeedTests testSamplingFiveUniqueLinesSucceeds]' passed (0.001 seconds).
+Test Suite 'FlavorQuotePacksDexterFeedTests' passed at 2026-07-09 15:50:50.399.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.002 (0.002) seconds
+Test Suite 'FocusedTextReaderTests' started at 2026-07-09 15:50:50.399.
+Test Case '-[DexDictateTests.FocusedTextReaderTests testRespectsCustomMaxCharsBoundIfAnyValueReturned]' started.
+Test Case '-[DexDictateTests.FocusedTextReaderTests testRespectsCustomMaxCharsBoundIfAnyValueReturned]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.FocusedTextReaderTests testReturnsNilOrStringWithoutCrashingInHeadlessEnvironment]' started.
+Test Case '-[DexDictateTests.FocusedTextReaderTests testReturnsNilOrStringWithoutCrashingInHeadlessEnvironment]' passed (0.000 seconds).
+Test Suite 'FocusedTextReaderTests' passed at 2026-07-09 15:50:50.400.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'HistoryItemCleanedVariantTests' started at 2026-07-09 15:50:50.400.
+Test Case '-[DexDictateTests.HistoryItemCleanedVariantTests testCleanedTextCanBeSetViaMemberwiseInit]' started.
+Test Case '-[DexDictateTests.HistoryItemCleanedVariantTests testCleanedTextCanBeSetViaMemberwiseInit]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.HistoryItemCleanedVariantTests testCleanedTextDefaultsToNil]' started.
+Test Case '-[DexDictateTests.HistoryItemCleanedVariantTests testCleanedTextDefaultsToNil]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.HistoryItemCleanedVariantTests testDecodingOlderPayloadWithoutCleanedTextFieldSucceeds]' started.
+Test Case '-[DexDictateTests.HistoryItemCleanedVariantTests testDecodingOlderPayloadWithoutCleanedTextFieldSucceeds]' passed (0.000 seconds).
+Test Suite 'HistoryItemCleanedVariantTests' passed at 2026-07-09 15:50:50.401.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'InstanceGuardTests' started at 2026-07-09 15:50:50.401.
+Test Case '-[DexDictateTests.InstanceGuardTests testChoosesLowestPIDDeterministicallyAmongMultiple]' started.
+Test Case '-[DexDictateTests.InstanceGuardTests testChoosesLowestPIDDeterministicallyAmongMultiple]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.InstanceGuardTests testDetectsExistingOtherInstance]' started.
+Test Case '-[DexDictateTests.InstanceGuardTests testDetectsExistingOtherInstance]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.InstanceGuardTests testEmptyListContinuesLaunching]' started.
+Test Case '-[DexDictateTests.InstanceGuardTests testEmptyListContinuesLaunching]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.InstanceGuardTests testIgnoresOnlyTheCurrentPIDNotDuplicatesOfOtherValues]' started.
+Test Case '-[DexDictateTests.InstanceGuardTests testIgnoresOnlyTheCurrentPIDNotDuplicatesOfOtherValues]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.InstanceGuardTests testSoleInstanceContinuesLaunching]' started.
+Test Case '-[DexDictateTests.InstanceGuardTests testSoleInstanceContinuesLaunching]' passed (0.000 seconds).
+Test Suite 'InstanceGuardTests' passed at 2026-07-09 15:50:50.403.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'LaunchAtLoginControllerTests' started at 2026-07-09 15:50:50.403.
+Test Case '-[DexDictateTests.LaunchAtLoginControllerTests testRegisterFailurePreservesErrorMessage]' started.
+2026-07-09 15:50:50.402 xctest[16999:583505] [DexDictate] Launch-at-login update failed: mock launch-at-login failure
+Test Case '-[DexDictateTests.LaunchAtLoginControllerTests testRegisterFailurePreservesErrorMessage]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.LaunchAtLoginControllerTests testRegisterSuccessUpdatesStatusAndClearsErrors]' started.
+Test Case '-[DexDictateTests.LaunchAtLoginControllerTests testRegisterSuccessUpdatesStatusAndClearsErrors]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.LaunchAtLoginControllerTests testRequiresApprovalStatusRemainsActionable]' started.
+Test Case '-[DexDictateTests.LaunchAtLoginControllerTests testRequiresApprovalStatusRemainsActionable]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.LaunchAtLoginControllerTests testUnavailableStatusStillAllowsRegistrationAttempt]' started.
+Test Case '-[DexDictateTests.LaunchAtLoginControllerTests testUnavailableStatusStillAllowsRegistrationAttempt]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.LaunchAtLoginControllerTests testUnregisterIfPossibleSkipsDisabledService]' started.
+Test Case '-[DexDictateTests.LaunchAtLoginControllerTests testUnregisterIfPossibleSkipsDisabledService]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.LaunchAtLoginControllerTests testUnregisterIfPossibleUnregistersEnabledService]' started.
+Test Case '-[DexDictateTests.LaunchAtLoginControllerTests testUnregisterIfPossibleUnregistersEnabledService]' passed (0.000 seconds).
+Test Suite 'LaunchAtLoginControllerTests' passed at 2026-07-09 15:50:50.404.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'LivePreviewInvariantTests' started at 2026-07-09 15:50:50.404.
+Test Case '-[DexDictateTests.LivePreviewInvariantTests testCommittedTranscriptIsByteIdenticalWithPreviewControllerAttachedOrNot]' started.
+2026-07-09 15:50:50.408 xctest[16999:583505] [DexDictate] DEBUG build detected — transcription may be slow without optimized SwiftWhisper binaries
+2026-07-09 15:50:50.409 xctest[16999:583505] [DexDictate] WhisperParams[live]: best_of=1 speed_up=false no_context=true max_tokens=128 single_segment=true
+2026-07-09 15:50:50.409 xctest[16999:583505] [DexDictate] Core ML encoder not found; using CPU/Accelerate path
+2026-07-09 15:50:50.409 xctest[16999:583505] [DexDictate] Loading Whisper model from /Users/andrew/DexDictate_MacOS.nosync/.build/arm64-apple-macosx/debug/DexDictate_MacOS_DexDictateKit.bundle/tiny.en.bin (74 MB)...
+whisper_init_from_file_no_state: loading model from '/Users/andrew/DexDictate_MacOS.nosync/.build/arm64-apple-macosx/debug/DexDictate_MacOS_DexDictateKit.bundle/tiny.en.bin'
+whisper_model_load: loading model
+whisper_model_load: n_vocab       = 51864
+whisper_model_load: n_audio_ctx   = 1500
+whisper_model_load: n_audio_state = 384
+whisper_model_load: n_audio_head  = 6
+whisper_model_load: n_audio_layer = 4
+whisper_model_load: n_text_ctx    = 448
+whisper_model_load: n_text_state  = 384
+whisper_model_load: n_text_head   = 6
+whisper_model_load: n_text_layer  = 4
+whisper_model_load: n_mels        = 80
+whisper_model_load: ftype         = 1
+whisper_model_load: qntvr         = 0
+whisper_model_load: type          = 1
+whisper_model_load: mem required  =  201.00 MB (+    3.00 MB per decoder)
+whisper_model_load: adding 1607 extra tokens
+whisper_model_load: model ctx     =   73.62 MB
+whisper_model_load: model size    =   73.54 MB
+whisper_init_state: kv self size  =    2.62 MB
+whisper_init_state: kv cross size =    8.79 MB
+whisper_init_state: loading Core ML model from '/Users/andrew/DexDictate_MacOS.nosync/.build/arm64-apple-macosx/debug/DexDictate_MacOS_DexDictateKit.bundle/tiny.en-encoder.mlmodelc'
+whisper_init_state: first run on a device may take a while ...
+whisper_init_state: failed to load Core ML model from '/Users/andrew/DexDictate_MacOS.nosync/.build/arm64-apple-macosx/debug/DexDictate_MacOS_DexDictateKit.bundle/tiny.en-encoder.mlmodelc'
+2026-07-09 15:50:50.535 xctest[16999:583505] [DexDictate] Whisper model loaded successfully
+2026-07-09 15:50:50.535 xctest[16999:583505] [DexDictate] Whisper warm-up starting (silent inference)
+2026-07-09 15:50:50.536 xctest[16999:583505] [DexDictate] WhisperParams[live]: best_of=1 speed_up=false no_context=true max_tokens=128 single_segment=true
+2026-07-09 15:50:50.599 xctest[16999:583505] [DexDictate] Whisper output: [REDACTED — 0 chars]
+2026-07-09 15:50:50.599 xctest[16999:583505] [DexDictate] Whisper warm-up complete
+2026-07-09 15:50:50.599 xctest[16999:583505] [DexDictate] Whisper transcribe completed in 63ms
+2026-07-09 15:50:50.611 xctest[16999:583505] [DexDictate] WhisperParams[live]: best_of=1 speed_up=false no_context=true max_tokens=128 single_segment=true
+2026-07-09 15:50:51.180 xctest[16999:583505] [DexDictate] Whisper output: [REDACTED — 139 chars]
+2026-07-09 15:50:51.181 xctest[16999:583505] [DexDictate] Whisper transcribe completed in 569ms
+2026-07-09 15:50:51.181 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+2026-07-09 15:50:51.182 xctest[16999:583505] [DexDictate] DEBUG build detected — transcription may be slow without optimized SwiftWhisper binaries
+2026-07-09 15:50:51.183 xctest[16999:583505] [DexDictate] WhisperParams[live]: best_of=1 speed_up=false no_context=true max_tokens=128 single_segment=true
+2026-07-09 15:50:51.183 xctest[16999:583505] [DexDictate] Core ML encoder not found; using CPU/Accelerate path
+2026-07-09 15:50:51.183 xctest[16999:583505] [DexDictate] Loading Whisper model from /Users/andrew/DexDictate_MacOS.nosync/.build/arm64-apple-macosx/debug/DexDictate_MacOS_DexDictateKit.bundle/tiny.en.bin (74 MB)...
+whisper_init_from_file_no_state: loading model from '/Users/andrew/DexDictate_MacOS.nosync/.build/arm64-apple-macosx/debug/DexDictate_MacOS_DexDictateKit.bundle/tiny.en.bin'
+whisper_model_load: loading model
+whisper_model_load: n_vocab       = 51864
+whisper_model_load: n_audio_ctx   = 1500
+whisper_model_load: n_audio_state = 384
+whisper_model_load: n_audio_head  = 6
+whisper_model_load: n_audio_layer = 4
+whisper_model_load: n_text_ctx    = 448
+whisper_model_load: n_text_state  = 384
+whisper_model_load: n_text_head   = 6
+whisper_model_load: n_text_layer  = 4
+whisper_model_load: n_mels        = 80
+whisper_model_load: ftype         = 1
+whisper_model_load: qntvr         = 0
+whisper_model_load: type          = 1
+whisper_model_load: mem required  =  201.00 MB (+    3.00 MB per decoder)
+whisper_model_load: adding 1607 extra tokens
+whisper_model_load: model ctx     =   73.62 MB
+whisper_model_load: model size    =   73.54 MB
+whisper_init_state: kv self size  =    2.62 MB
+whisper_init_state: kv cross size =    8.79 MB
+whisper_init_state: loading Core ML model from '/Users/andrew/DexDictate_MacOS.nosync/.build/arm64-apple-macosx/debug/DexDictate_MacOS_DexDictateKit.bundle/tiny.en-encoder.mlmodelc'
+whisper_init_state: first run on a device may take a while ...
+whisper_init_state: failed to load Core ML model from '/Users/andrew/DexDictate_MacOS.nosync/.build/arm64-apple-macosx/debug/DexDictate_MacOS_DexDictateKit.bundle/tiny.en-encoder.mlmodelc'
+2026-07-09 15:50:51.332 xctest[16999:583505] [DexDictate] Whisper model loaded successfully
+2026-07-09 15:50:51.332 xctest[16999:583505] [DexDictate] Whisper warm-up starting (silent inference)
+2026-07-09 15:50:51.332 xctest[16999:583505] [DexDictate] WhisperParams[live]: best_of=1 speed_up=false no_context=true max_tokens=128 single_segment=true
+2026-07-09 15:50:51.432 xctest[16999:583505] [DexDictate] Whisper output: [REDACTED — 0 chars]
+2026-07-09 15:50:51.433 xctest[16999:583505] [DexDictate] Whisper warm-up complete
+2026-07-09 15:50:51.433 xctest[16999:583505] [DexDictate] Whisper transcribe completed in 100ms
+2026-07-09 15:50:51.441 xctest[16999:583505] [DexDictate] WhisperParams[live]: best_of=1 speed_up=false no_context=true max_tokens=128 single_segment=true
+2026-07-09 15:50:52.391 xctest[16999:583505] [DexDictate] Whisper output: [REDACTED — 139 chars]
+2026-07-09 15:50:52.391 xctest[16999:583505] [DexDictate] Whisper transcribe completed in 950ms
+Test Case '-[DexDictateTests.LivePreviewInvariantTests testCommittedTranscriptIsByteIdenticalWithPreviewControllerAttachedOrNot]' passed (1.990 seconds).
+Test Case '-[DexDictateTests.LivePreviewInvariantTests testPreviewStaysInertWhenSettingIsOff]' started.
+2026-07-09 15:50:52.394 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+Test Case '-[DexDictateTests.LivePreviewInvariantTests testPreviewStaysInertWhenSettingIsOff]' passed (0.002 seconds).
+Test Suite 'LivePreviewInvariantTests' passed at 2026-07-09 15:50:52.396.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 1.991 (1.992) seconds
+Test Suite 'MainActorActionTests' started at 2026-07-09 15:50:52.396.
+Test Case '-[DexDictateTests.MainActorActionTests testRunAsyncExecutesOnMainActor]' started.
+Test Case '-[DexDictateTests.MainActorActionTests testRunAsyncExecutesOnMainActor]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.MainActorActionTests testRunSyncExecutesAsynchronouslyOnMainActor]' started.
+Test Case '-[DexDictateTests.MainActorActionTests testRunSyncExecutesAsynchronouslyOnMainActor]' passed (0.000 seconds).
+Test Suite 'MainActorActionTests' passed at 2026-07-09 15:50:52.397.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'MainActorDispatchTests' started at 2026-07-09 15:50:52.398.
+Test Case '-[DexDictateTests.MainActorDispatchTests testAsyncRunsOnMainThreadAsynchronously]' started.
+Test Case '-[DexDictateTests.MainActorDispatchTests testAsyncRunsOnMainThreadAsynchronously]' passed (0.001 seconds).
+Test Suite 'MainActorDispatchTests' passed at 2026-07-09 15:50:52.399.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'MockAudioProviderTests' started at 2026-07-09 15:50:52.399.
+Test Case '-[DexDictateTests.MockAudioProviderTests testCollectRecordingClearsAccumulation]' started.
+2026-07-09 15:50:52.399 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+Test Case '-[DexDictateTests.MockAudioProviderTests testCollectRecordingClearsAccumulation]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.MockAudioProviderTests testEmptySampleInputIsHandledSafely]' started.
+2026-07-09 15:50:52.400 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+Test Case '-[DexDictateTests.MockAudioProviderTests testEmptySampleInputIsHandledSafely]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.MockAudioProviderTests testInjectMockSamplesWithoutAVAudioEngine]' started.
+2026-07-09 15:50:52.400 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+Test Case '-[DexDictateTests.MockAudioProviderTests testInjectMockSamplesWithoutAVAudioEngine]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.MockAudioProviderTests testIntegrationWithAudioResampler]' started.
+2026-07-09 15:50:52.401 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+Test Case '-[DexDictateTests.MockAudioProviderTests testIntegrationWithAudioResampler]' passed (0.018 seconds).
+Test Case '-[DexDictateTests.MockAudioProviderTests testLargeMockBufferAccumulatesAndDownsamples]' started.
+2026-07-09 15:50:52.420 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+Test Case '-[DexDictateTests.MockAudioProviderTests testLargeMockBufferAccumulatesAndDownsamples]' passed (0.070 seconds).
+Test Case '-[DexDictateTests.MockAudioProviderTests testRepeatedInjectionsAccumulateInOrder]' started.
+2026-07-09 15:50:52.490 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+Test Case '-[DexDictateTests.MockAudioProviderTests testRepeatedInjectionsAccumulateInOrder]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.MockAudioProviderTests testZeroAndExtremeAmplitudeMockSamples]' started.
+2026-07-09 15:50:52.491 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+Test Case '-[DexDictateTests.MockAudioProviderTests testZeroAndExtremeAmplitudeMockSamples]' passed (0.001 seconds).
+Test Suite 'MockAudioProviderTests' passed at 2026-07-09 15:50:52.492.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.092 (0.093) seconds
+Test Suite 'OnboardingValidationTests' started at 2026-07-09 15:50:52.492.
+Test Case '-[DexDictateTests.OnboardingValidationTests testMicrophoneValidationMessagesRemainDistinct]' started.
+Test Case '-[DexDictateTests.OnboardingValidationTests testMicrophoneValidationMessagesRemainDistinct]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.OnboardingValidationTests testTriggerValidationMessagesRemainDistinct]' started.
+Test Case '-[DexDictateTests.OnboardingValidationTests testTriggerValidationMessagesRemainDistinct]' passed (0.000 seconds).
+Test Suite 'OnboardingValidationTests' passed at 2026-07-09 15:50:52.492.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds
+Test Suite 'OutputCoordinatorTests' started at 2026-07-09 15:50:52.492.
+Test Case '-[DexDictateTests.OutputCoordinatorTests testAccessibilityInsertionFailureFallsBackToClipboardPasteWhenAutoPasteEnabled]' started.
+2026-07-09 15:50:52.492 xctest[16999:583505] [DexDictate] insertViaAccessibility() — strategy 1 (value+range) failed: AXError -25200
+2026-07-09 15:50:52.492 xctest[16999:583505] [DexDictate] insertViaAccessibility() — strategy 2 (selectedText) failed: AXError -25200
+2026-07-09 15:50:52.492 xctest[16999:583505] [DexDictate] insertViaAccessibility() — both strategies failed; falling back to clipboard paste
+Test Case '-[DexDictateTests.OutputCoordinatorTests testAccessibilityInsertionFailureFallsBackToClipboardPasteWhenAutoPasteEnabled]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.OutputCoordinatorTests testAccessibilityInsertionSuccessUsesAccessibilityPathWithoutClipboardPaste]' started.
+Test Case '-[DexDictateTests.OutputCoordinatorTests testAccessibilityInsertionSuccessUsesAccessibilityPathWithoutClipboardPaste]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.OutputCoordinatorTests testAccessibilityModeFallsBackToClipboardPasteWhenTargetIsNotFrontmost]' started.
+2026-07-09 15:50:52.493 xctest[16999:583505] [DexDictate] OutputCoordinator — skipping direct Accessibility insertion because target application is not frontmost; falling back to clipboard paste.
+Test Case '-[DexDictateTests.OutputCoordinatorTests testAccessibilityModeFallsBackToClipboardPasteWhenTargetIsNotFrontmost]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.OutputCoordinatorTests testAccessibilityModeStillRespectsSensitiveContextProtection]' started.
+Test Case '-[DexDictateTests.OutputCoordinatorTests testAccessibilityModeStillRespectsSensitiveContextProtection]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.OutputCoordinatorTests testAccessibilityModeWithAutoPasteDisabledRemainsSavedOnly]' started.
+Test Case '-[DexDictateTests.OutputCoordinatorTests testAccessibilityModeWithAutoPasteDisabledRemainsSavedOnly]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.OutputCoordinatorTests testAlreadyFrontmostTargetDoesNotActivateAgain]' started.
+Test Case '-[DexDictateTests.OutputCoordinatorTests testAlreadyFrontmostTargetDoesNotActivateAgain]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.OutputCoordinatorTests testBackgroundTargetActivatesOnceBeforePaste]' started.
+Test Case '-[DexDictateTests.OutputCoordinatorTests testBackgroundTargetActivatesOnceBeforePaste]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.OutputCoordinatorTests testClipboardOnlyModeCopiesWithoutPasting]' started.
+Test Case '-[DexDictateTests.OutputCoordinatorTests testClipboardOnlyModeCopiesWithoutPasting]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.OutputCoordinatorTests testInsertionModesStayBehaviorallyDistinct]' started.
+Test Case '-[DexDictateTests.OutputCoordinatorTests testInsertionModesStayBehaviorallyDistinct]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.OutputCoordinatorTests testReplaceFieldModeRespectsSensitiveContextProtection]' started.
+Test Case '-[DexDictateTests.OutputCoordinatorTests testReplaceFieldModeRespectsSensitiveContextProtection]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.OutputCoordinatorTests testReplaceFieldModeRoutesToSelectAllAndPaste]' started.
+Test Case '-[DexDictateTests.OutputCoordinatorTests testReplaceFieldModeRoutesToSelectAllAndPaste]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.OutputCoordinatorTests testSavedOnlyWhenAutoPasteDisabled]' started.
+Test Case '-[DexDictateTests.OutputCoordinatorTests testSavedOnlyWhenAutoPasteDisabled]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.OutputCoordinatorTests testSecureHeuristicFlagsLikelyPasswordFields]' started.
+Test Case '-[DexDictateTests.OutputCoordinatorTests testSecureHeuristicFlagsLikelyPasswordFields]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.OutputCoordinatorTests testSensitiveContextDoesNotForceCopyOnlyWhenProtectionDisabled]' started.
+Test Case '-[DexDictateTests.OutputCoordinatorTests testSensitiveContextDoesNotForceCopyOnlyWhenProtectionDisabled]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.OutputCoordinatorTests testSensitiveContextFallsBackToCopyOnly]' started.
+Test Case '-[DexDictateTests.OutputCoordinatorTests testSensitiveContextFallsBackToCopyOnly]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.OutputCoordinatorTests testStandardContextStillPastes]' started.
+Test Case '-[DexDictateTests.OutputCoordinatorTests testStandardContextStillPastes]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.OutputCoordinatorTests testTargetApplicationIsPassedToPasteWriter]' started.
+Test Case '-[DexDictateTests.OutputCoordinatorTests testTargetApplicationIsPassedToPasteWriter]' passed (0.000 seconds).
+Test Suite 'OutputCoordinatorTests' passed at 2026-07-09 15:50:52.497.
+	 Executed 17 tests, with 0 failures (0 unexpected) in 0.003 (0.005) seconds
+Test Suite 'OutputPipelineHardeningTests' started at 2026-07-09 15:50:52.497.
+Test Case '-[DexDictateTests.OutputPipelineHardeningTests testAllInsertionModesDecodeFromRawValues]' started.
+Test Case '-[DexDictateTests.OutputPipelineHardeningTests testAllInsertionModesDecodeFromRawValues]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.OutputPipelineHardeningTests testDifferentBundleIDFails]' started.
+Test Case '-[DexDictateTests.OutputPipelineHardeningTests testDifferentBundleIDFails]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.OutputPipelineHardeningTests testDifferentIdentifierFails]' started.
+Test Case '-[DexDictateTests.OutputPipelineHardeningTests testDifferentIdentifierFails]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.OutputPipelineHardeningTests testDifferentPIDFailsEvenWhenBundleIDsAreAbsent]' started.
+Test Case '-[DexDictateTests.OutputPipelineHardeningTests testDifferentPIDFailsEvenWhenBundleIDsAreAbsent]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.OutputPipelineHardeningTests testDifferentRoleFails]' started.
+Test Case '-[DexDictateTests.OutputPipelineHardeningTests testDifferentRoleFails]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.OutputPipelineHardeningTests testEditableProviderIsConsultedBeforeSelectAllPaste]' started.
+2026-07-09 15:50:52.620 xctest[16999:583505] [DexDictate] ClipboardManager — select-all-paste aborted: focused element in 'com.example.app' is not editable. Text remains on clipboard.
+Test Case '-[DexDictateTests.OutputPipelineHardeningTests testEditableProviderIsConsultedBeforeSelectAllPaste]' passed (0.123 seconds).
+Test Case '-[DexDictateTests.OutputPipelineHardeningTests testExistingModesStillDecodeAfterAddingReplaceFieldCase]' started.
+Test Case '-[DexDictateTests.OutputPipelineHardeningTests testExistingModesStillDecodeAfterAddingReplaceFieldCase]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.OutputPipelineHardeningTests testMatchingSemanticFieldPasses]' started.
+Test Case '-[DexDictateTests.OutputPipelineHardeningTests testMatchingSemanticFieldPasses]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.OutputPipelineHardeningTests testNilCurrentSnapshotConservativelyAllowsPaste]' started.
+Test Case '-[DexDictateTests.OutputPipelineHardeningTests testNilCurrentSnapshotConservativelyAllowsPaste]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.OutputPipelineHardeningTests testNoMatchingSemanticFieldFails]' started.
+Test Case '-[DexDictateTests.OutputPipelineHardeningTests testNoMatchingSemanticFieldFails]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.OutputPipelineHardeningTests testNonEditableFocusAbortsPaste]' started.
+2026-07-09 15:50:52.749 xctest[16999:583505] [DexDictate] ClipboardManager — paste aborted: focused element in 'com.example.app' is not editable. Text remains on clipboard.
+Test Case '-[DexDictateTests.OutputPipelineHardeningTests testNonEditableFocusAbortsPaste]' passed (0.127 seconds).
+Test Case '-[DexDictateTests.OutputPipelineHardeningTests testNoSemanticInfoOnEitherSideAllowsPaste]' started.
+Test Case '-[DexDictateTests.OutputPipelineHardeningTests testNoSemanticInfoOnEitherSideAllowsPaste]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.OutputPipelineHardeningTests testPIDCheckTakesPriorityOverBundleCheck]' started.
+Test Case '-[DexDictateTests.OutputPipelineHardeningTests testPIDCheckTakesPriorityOverBundleCheck]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.OutputPipelineHardeningTests testReplaceFieldModeRoundTripsAsJSON]' started.
+Test Case '-[DexDictateTests.OutputPipelineHardeningTests testReplaceFieldModeRoundTripsAsJSON]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.OutputPipelineHardeningTests testSameElementPassesWhenBothHaveSameIdentifier]' started.
+Test Case '-[DexDictateTests.OutputPipelineHardeningTests testSameElementPassesWhenBothHaveSameIdentifier]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.OutputPipelineHardeningTests testSamePIDPassesWhenBundleIDsAreAbsent]' started.
+Test Case '-[DexDictateTests.OutputPipelineHardeningTests testSamePIDPassesWhenBundleIDsAreAbsent]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.OutputPipelineHardeningTests testTargetBundleIDUsedWhenTriggerBundleIDNil]' started.
+Test Case '-[DexDictateTests.OutputPipelineHardeningTests testTargetBundleIDUsedWhenTriggerBundleIDNil]' passed (0.000 seconds).
+Test Suite 'OutputPipelineHardeningTests' passed at 2026-07-09 15:50:52.754.
+	 Executed 17 tests, with 0 failures (0 unexpected) in 0.254 (0.257) seconds
+Test Suite 'PermissionCapabilityTests' started at 2026-07-09 15:50:52.754.
+Test Case '-[DexDictateTests.PermissionCapabilityTests testAccessibilityReadFailsWhenGrantedButCheckFails]' started.
+Test Case '-[DexDictateTests.PermissionCapabilityTests testAccessibilityReadFailsWhenGrantedButCheckFails]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.PermissionCapabilityTests testAccessibilityReadPassesWhenGrantedAndCheckSucceeds]' started.
+Test Case '-[DexDictateTests.PermissionCapabilityTests testAccessibilityReadPassesWhenGrantedAndCheckSucceeds]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.PermissionCapabilityTests testAccessibilityReadSkippedWhenNotGranted]' started.
+Test Case '-[DexDictateTests.PermissionCapabilityTests testAccessibilityReadSkippedWhenNotGranted]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.PermissionCapabilityTests testAllPassedFalseWhenAnyFails]' started.
+Test Case '-[DexDictateTests.PermissionCapabilityTests testAllPassedFalseWhenAnyFails]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.PermissionCapabilityTests testAllPassedTrueWhenBothSkipped]' started.
+Test Case '-[DexDictateTests.PermissionCapabilityTests testAllPassedTrueWhenBothSkipped]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.PermissionCapabilityTests testAllPassedTrueWhenBothSucceed]' started.
+Test Case '-[DexDictateTests.PermissionCapabilityTests testAllPassedTrueWhenBothSucceed]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.PermissionCapabilityTests testEventTapFailsWhenGrantedButCheckFails]' started.
+Test Case '-[DexDictateTests.PermissionCapabilityTests testEventTapFailsWhenGrantedButCheckFails]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.PermissionCapabilityTests testEventTapPassesWhenGrantedAndCheckSucceeds]' started.
+Test Case '-[DexDictateTests.PermissionCapabilityTests testEventTapPassesWhenGrantedAndCheckSucceeds]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.PermissionCapabilityTests testEventTapSkippedWhenNotGranted]' started.
+Test Case '-[DexDictateTests.PermissionCapabilityTests testEventTapSkippedWhenNotGranted]' passed (0.000 seconds).
+Test Suite 'PermissionCapabilityTests' passed at 2026-07-09 15:50:52.758.
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.003 (0.004) seconds
+Test Suite 'PermissionDisplayStateTests' started at 2026-07-09 15:50:52.758.
+Test Case '-[DexDictateTests.PermissionDisplayStateTests testAllGrantedFalseWhenAnyMissing]' started.
+Test Case '-[DexDictateTests.PermissionDisplayStateTests testAllGrantedFalseWhenAnyMissing]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.PermissionDisplayStateTests testAllGrantedWhenAllTrue]' started.
+Test Case '-[DexDictateTests.PermissionDisplayStateTests testAllGrantedWhenAllTrue]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.PermissionDisplayStateTests testMissingLabelsEmptyWhenAllGranted]' started.
+Test Case '-[DexDictateTests.PermissionDisplayStateTests testMissingLabelsEmptyWhenAllGranted]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.PermissionDisplayStateTests testMissingLabelsListsOnlyMissingPermissions]' started.
+Test Case '-[DexDictateTests.PermissionDisplayStateTests testMissingLabelsListsOnlyMissingPermissions]' passed (0.000 seconds).
+Test Suite 'PermissionDisplayStateTests' passed at 2026-07-09 15:50:52.760.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'PermissionManagerCapabilityTests' started at 2026-07-09 15:50:52.760.
+Test Case '-[DexDictateTests.PermissionManagerCapabilityTests testCapabilityReportPopulatedImmediatelyAfterInit]' started.
+Test Case '-[DexDictateTests.PermissionManagerCapabilityTests testCapabilityReportPopulatedImmediatelyAfterInit]' passed (0.065 seconds).
+Test Case '-[DexDictateTests.PermissionManagerCapabilityTests testCapabilityReportUpdatedOnRefresh]' started.
+Test Case '-[DexDictateTests.PermissionManagerCapabilityTests testCapabilityReportUpdatedOnRefresh]' passed (0.097 seconds).
+Test Case '-[DexDictateTests.PermissionManagerCapabilityTests testFailingCheckerNeverProducesPassedStatus]' started.
+Test Case '-[DexDictateTests.PermissionManagerCapabilityTests testFailingCheckerNeverProducesPassedStatus]' passed (0.097 seconds).
+Test Case '-[DexDictateTests.PermissionManagerCapabilityTests testPassingCheckerNeverProducesFailedStatus]' started.
+Test Case '-[DexDictateTests.PermissionManagerCapabilityTests testPassingCheckerNeverProducesFailedStatus]' passed (0.095 seconds).
+Test Suite 'PermissionManagerCapabilityTests' passed at 2026-07-09 15:50:53.114.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.353 (0.354) seconds
+Test Suite 'PermissionManagerTests' started at 2026-07-09 15:50:53.114.
+Test Case '-[DexDictateTests.PermissionManagerTests testOnboardingOnlyStopCancelsPolling]' started.
+Test Case '-[DexDictateTests.PermissionManagerTests testOnboardingOnlyStopCancelsPolling]' passed (0.100 seconds).
+Test Case '-[DexDictateTests.PermissionManagerTests testOnboardingStopDoesNotDisableRuntimePolling]' started.
+2026-07-09 15:50:53.264 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+Test Case '-[DexDictateTests.PermissionManagerTests testOnboardingStopDoesNotDisableRuntimePolling]' passed (0.151 seconds).
+Test Suite 'PermissionManagerTests' passed at 2026-07-09 15:50:53.366.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.251 (0.252) seconds
+Test Suite 'PermissionSettingsLinkerTests' started at 2026-07-09 15:50:53.366.
+Test Case '-[DexDictateTests.PermissionSettingsLinkerTests testAccessibilityURL]' started.
+Test Case '-[DexDictateTests.PermissionSettingsLinkerTests testAccessibilityURL]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.PermissionSettingsLinkerTests testAllURLsAreDifferent]' started.
+Test Case '-[DexDictateTests.PermissionSettingsLinkerTests testAllURLsAreDifferent]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.PermissionSettingsLinkerTests testFallbackURL]' started.
+Test Case '-[DexDictateTests.PermissionSettingsLinkerTests testFallbackURL]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.PermissionSettingsLinkerTests testInputMonitoringURL]' started.
+Test Case '-[DexDictateTests.PermissionSettingsLinkerTests testInputMonitoringURL]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.PermissionSettingsLinkerTests testMicrophoneURL]' started.
+Test Case '-[DexDictateTests.PermissionSettingsLinkerTests testMicrophoneURL]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.PermissionSettingsLinkerTests testPermissionManagerAccessibilityURLMatchesLinker]' started.
+Test Case '-[DexDictateTests.PermissionSettingsLinkerTests testPermissionManagerAccessibilityURLMatchesLinker]' passed (0.048 seconds).
+Test Case '-[DexDictateTests.PermissionSettingsLinkerTests testPermissionManagerInputMonitoringURLMatchesLinker]' started.
+Test Case '-[DexDictateTests.PermissionSettingsLinkerTests testPermissionManagerInputMonitoringURLMatchesLinker]' passed (0.047 seconds).
+Test Case '-[DexDictateTests.PermissionSettingsLinkerTests testPermissionManagerMicrophoneURLMatchesLinker]' started.
+Test Case '-[DexDictateTests.PermissionSettingsLinkerTests testPermissionManagerMicrophoneURLMatchesLinker]' passed (0.046 seconds).
+Test Suite 'PermissionSettingsLinkerTests' passed at 2026-07-09 15:50:53.508.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.141 (0.142) seconds
+Test Suite 'PreTriggerAudioBufferTests' started at 2026-07-09 15:50:53.508.
+Test Case '-[DexDictateTests.PreTriggerAudioBufferTests testAppendAndSnapshotReturnsCorrectOrder]' started.
+Test Case '-[DexDictateTests.PreTriggerAudioBufferTests testAppendAndSnapshotReturnsCorrectOrder]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.PreTriggerAudioBufferTests testCapacityIsAtLeastOne]' started.
+Test Case '-[DexDictateTests.PreTriggerAudioBufferTests testCapacityIsAtLeastOne]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.PreTriggerAudioBufferTests testCapacityMatchesDuration]' started.
+Test Case '-[DexDictateTests.PreTriggerAudioBufferTests testCapacityMatchesDuration]' passed (0.011 seconds).
+Test Case '-[DexDictateTests.PreTriggerAudioBufferTests testClearResetsBuffer]' started.
+Test Case '-[DexDictateTests.PreTriggerAudioBufferTests testClearResetsBuffer]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.PreTriggerAudioBufferTests testClearThenAppend]' started.
+Test Case '-[DexDictateTests.PreTriggerAudioBufferTests testClearThenAppend]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.PreTriggerAudioBufferTests testConcurrentWritesDoNotCrash]' started.
+Test Case '-[DexDictateTests.PreTriggerAudioBufferTests testConcurrentWritesDoNotCrash]' passed (0.002 seconds).
+Test Case '-[DexDictateTests.PreTriggerAudioBufferTests testEmptyBufferSnapshotIsEmpty]' started.
+Test Case '-[DexDictateTests.PreTriggerAudioBufferTests testEmptyBufferSnapshotIsEmpty]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.PreTriggerAudioBufferTests testExactCapacityFillThenOneMore]' started.
+Test Case '-[DexDictateTests.PreTriggerAudioBufferTests testExactCapacityFillThenOneMore]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.PreTriggerAudioBufferTests testOverfillBySingleChunkKeepsNewest]' started.
+Test Case '-[DexDictateTests.PreTriggerAudioBufferTests testOverfillBySingleChunkKeepsNewest]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.PreTriggerAudioBufferTests testPartialFillThenWrap]' started.
+Test Case '-[DexDictateTests.PreTriggerAudioBufferTests testPartialFillThenWrap]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.PreTriggerAudioBufferTests testPrependedSnapshotIsChronologicallyFirst]' started.
+Test Case '-[DexDictateTests.PreTriggerAudioBufferTests testPrependedSnapshotIsChronologicallyFirst]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.PreTriggerAudioBufferTests testResetSameSampleRateStillClears]' started.
+Test Case '-[DexDictateTests.PreTriggerAudioBufferTests testResetSameSampleRateStillClears]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.PreTriggerAudioBufferTests testResetThenAppendWithNewRate]' started.
+Test Case '-[DexDictateTests.PreTriggerAudioBufferTests testResetThenAppendWithNewRate]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.PreTriggerAudioBufferTests testResetWithNewSampleRate]' started.
+Test Case '-[DexDictateTests.PreTriggerAudioBufferTests testResetWithNewSampleRate]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.PreTriggerAudioBufferTests testSingleSampleAppend]' started.
+Test Case '-[DexDictateTests.PreTriggerAudioBufferTests testSingleSampleAppend]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.PreTriggerAudioBufferTests testSnapshotAfterWrapIsStillChronological]' started.
+Test Case '-[DexDictateTests.PreTriggerAudioBufferTests testSnapshotAfterWrapIsStillChronological]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.PreTriggerAudioBufferTests testWraparoundDropsOldest]' started.
+Test Case '-[DexDictateTests.PreTriggerAudioBufferTests testWraparoundDropsOldest]' passed (0.000 seconds).
+Test Suite 'PreTriggerAudioBufferTests' passed at 2026-07-09 15:50:53.525.
+	 Executed 17 tests, with 0 failures (0 unexpected) in 0.015 (0.017) seconds
+Test Suite 'ProfileContentTests' started at 2026-07-09 15:50:53.525.
+Test Case '-[DexDictateTests.ProfileContentTests testFlavorTickerManagerAvoidsImmediateRepeats]' started.
+Test Case '-[DexDictateTests.ProfileContentTests testFlavorTickerManagerAvoidsImmediateRepeats]' passed (0.004 seconds).
+Test Case '-[DexDictateTests.ProfileContentTests testFlavorTickerManagerAvoidsRecentFiveWhenPossible]' started.
+Test Case '-[DexDictateTests.ProfileContentTests testFlavorTickerManagerAvoidsRecentFiveWhenPossible]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.ProfileContentTests testProfileManagerDefaultsToStandardAndLoadsStandardBundledVocabulary]' started.
+Test Case '-[DexDictateTests.ProfileContentTests testProfileManagerDefaultsToStandardAndLoadsStandardBundledVocabulary]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.ProfileContentTests testSelectingProfileChangesBundledVocabularyAndWatermarkPool]' started.
+Test Case '-[DexDictateTests.ProfileContentTests testSelectingProfileChangesBundledVocabularyAndWatermarkPool]' passed (0.005 seconds).
+Test Case '-[DexDictateTests.ProfileContentTests testSynchronizeFromSettingsAppliesExternalProfileChanges]' started.
+Test Case '-[DexDictateTests.ProfileContentTests testSynchronizeFromSettingsAppliesExternalProfileChanges]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.ProfileContentTests testWatermarkManifestMatchesExactPoolsAndExcludesSheets]' started.
+Test Case '-[DexDictateTests.ProfileContentTests testWatermarkManifestMatchesExactPoolsAndExcludesSheets]' passed (0.000 seconds).
+Test Suite 'ProfileContentTests' passed at 2026-07-09 15:50:53.536.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.011 (0.011) seconds
+Test Suite 'ResourceBundleTests' started at 2026-07-09 15:50:53.536.
+Test Case '-[DexDictateTests.ResourceBundleTests testResourceBundleContainsExpectedFiles]' started.
+Test Case '-[DexDictateTests.ResourceBundleTests testResourceBundleContainsExpectedFiles]' passed (0.001 seconds).
+Test Suite 'ResourceBundleTests' passed at 2026-07-09 15:50:53.537.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'SafeModePresetTests' started at 2026-07-09 15:50:53.538.
+Test Case '-[DexDictateTests.SafeModePresetTests testSafeModePresetAppliesLowerRiskDefaults]' started.
+Test Case '-[DexDictateTests.SafeModePresetTests testSafeModePresetAppliesLowerRiskDefaults]' passed (0.000 seconds).
+Test Suite 'SafeModePresetTests' passed at 2026-07-09 15:50:53.538.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+Test Suite 'SecureInputContextTests' started at 2026-07-09 15:50:53.538.
+Test Case '-[DexDictateTests.SecureInputContextTests testChatMessageComposerFieldIsNotSecure]' started.
+Test Case '-[DexDictateTests.SecureInputContextTests testChatMessageComposerFieldIsNotSecure]' passed (0.004 seconds).
+Test Case '-[DexDictateTests.SecureInputContextTests testCodeEditorFieldIsNotSecure]' started.
+Test Case '-[DexDictateTests.SecureInputContextTests testCodeEditorFieldIsNotSecure]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.SecureInputContextTests testOneTimeCodeInPlaceholderIsSecure]' started.
+Test Case '-[DexDictateTests.SecureInputContextTests testOneTimeCodeInPlaceholderIsSecure]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.SecureInputContextTests testOTPInTitleIsSecure]' started.
+Test Case '-[DexDictateTests.SecureInputContextTests testOTPInTitleIsSecure]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.SecureInputContextTests testPasscodeInTitleIsSecure]' started.
+Test Case '-[DexDictateTests.SecureInputContextTests testPasscodeInTitleIsSecure]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.SecureInputContextTests testPasswordInPlaceholderIsSecure]' started.
+Test Case '-[DexDictateTests.SecureInputContextTests testPasswordInPlaceholderIsSecure]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.SecureInputContextTests testPinAsStandaloneWordInPlaceholderIsSecure]' started.
+Test Case '-[DexDictateTests.SecureInputContextTests testPinAsStandaloneWordInPlaceholderIsSecure]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.SecureInputContextTests testPinInLabelAsStandaloneWordIsSecure]' started.
+Test Case '-[DexDictateTests.SecureInputContextTests testPinInLabelAsStandaloneWordIsSecure]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.SecureInputContextTests testPinSubstringInIdentifierDoesNotFlagOpinionText]' started.
+Test Case '-[DexDictateTests.SecureInputContextTests testPinSubstringInIdentifierDoesNotFlagOpinionText]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.SecureInputContextTests testPinSubstringInIdentifierDoesNotFlagSpinControl]' started.
+Test Case '-[DexDictateTests.SecureInputContextTests testPinSubstringInIdentifierDoesNotFlagSpinControl]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.SecureInputContextTests testSecretAsStandaloneWordInLabelIsSecure]' started.
+Test Case '-[DexDictateTests.SecureInputContextTests testSecretAsStandaloneWordInLabelIsSecure]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.SecureInputContextTests testSecretSubstringInIdentifierDoesNotFlagClientSecret]' started.
+Test Case '-[DexDictateTests.SecureInputContextTests testSecretSubstringInIdentifierDoesNotFlagClientSecret]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.SecureInputContextTests testSecretSubstringInIdentifierDoesNotFlagSecretKey]' started.
+Test Case '-[DexDictateTests.SecureInputContextTests testSecretSubstringInIdentifierDoesNotFlagSecretKey]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.SecureInputContextTests testSecureTextFieldSubroleIsAlwaysSecure]' started.
+Test Case '-[DexDictateTests.SecureInputContextTests testSecureTextFieldSubroleIsAlwaysSecure]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.SecureInputContextTests testStandardFieldIsNotSecure]' started.
+Test Case '-[DexDictateTests.SecureInputContextTests testStandardFieldIsNotSecure]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.SecureInputContextTests testStrongTokenInIdentifierStillFlagsSensitiveContext]' started.
+Test Case '-[DexDictateTests.SecureInputContextTests testStrongTokenInIdentifierStillFlagsSensitiveContext]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.SecureInputContextTests testTokenAsStandaloneWordInPlaceholderIsSecure]' started.
+Test Case '-[DexDictateTests.SecureInputContextTests testTokenAsStandaloneWordInPlaceholderIsSecure]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.SecureInputContextTests testTokenSubstringInIdentifierDoesNotFlagTokenField]' started.
+Test Case '-[DexDictateTests.SecureInputContextTests testTokenSubstringInIdentifierDoesNotFlagTokenField]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.SecureInputContextTests testTokenWordInPlaceholderFlagsLikelyApiKeyContext]' started.
+Test Case '-[DexDictateTests.SecureInputContextTests testTokenWordInPlaceholderFlagsLikelyApiKeyContext]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.SecureInputContextTests testTwoFactorAuthTokenInLabelIsSecure]' started.
+Test Case '-[DexDictateTests.SecureInputContextTests testTwoFactorAuthTokenInLabelIsSecure]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.SecureInputContextTests testVerificationCodeInLabelIsSecure]' started.
+Test Case '-[DexDictateTests.SecureInputContextTests testVerificationCodeInLabelIsSecure]' passed (0.000 seconds).
+Test Suite 'SecureInputContextTests' passed at 2026-07-09 15:50:53.550.
+	 Executed 21 tests, with 0 failures (0 unexpected) in 0.010 (0.012) seconds
+Test Suite 'SettingsMigrationTests' started at 2026-07-09 15:50:53.550.
+Test Case '-[DexDictateTests.SettingsMigrationTests testMigrationCopiesLegacyHUDSettingAndSetsSchemaVersion]' started.
+Test Case '-[DexDictateTests.SettingsMigrationTests testMigrationCopiesLegacyHUDSettingAndSetsSchemaVersion]' passed (0.004 seconds).
+Test Case '-[DexDictateTests.SettingsMigrationTests testMigrationNormalizesInvalidStoredValues]' started.
+Test Case '-[DexDictateTests.SettingsMigrationTests testMigrationNormalizesInvalidStoredValues]' passed (0.003 seconds).
+Test Suite 'SettingsMigrationTests' passed at 2026-07-09 15:50:53.557.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.007 (0.007) seconds
+Test Suite 'SmartCleanupClientRequestBuildingTests' started at 2026-07-09 15:50:53.557.
+Test Case '-[DexDictateTests.SmartCleanupClientRequestBuildingTests testChatCompletionsRequestBodyContainsModelAndPromptAndNonStreaming]' started.
+Test Case '-[DexDictateTests.SmartCleanupClientRequestBuildingTests testChatCompletionsRequestBodyContainsModelAndPromptAndNonStreaming]' passed (0.002 seconds).
+Test Case '-[DexDictateTests.SmartCleanupClientRequestBuildingTests testChatCompletionsRequestBuildsPOSTWithCorrectPath]' started.
+Test Case '-[DexDictateTests.SmartCleanupClientRequestBuildingTests testChatCompletionsRequestBuildsPOSTWithCorrectPath]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.SmartCleanupClientRequestBuildingTests testChatCompletionsRequestFailsOnInvalidBaseURL]' started.
+Test Case '-[DexDictateTests.SmartCleanupClientRequestBuildingTests testChatCompletionsRequestFailsOnInvalidBaseURL]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.SmartCleanupClientRequestBuildingTests testModelsRequestAddsBearerHeaderWhenAPIKeyPresent]' started.
+Test Case '-[DexDictateTests.SmartCleanupClientRequestBuildingTests testModelsRequestAddsBearerHeaderWhenAPIKeyPresent]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.SmartCleanupClientRequestBuildingTests testModelsRequestBuildsGETWithModelsPath]' started.
+Test Case '-[DexDictateTests.SmartCleanupClientRequestBuildingTests testModelsRequestBuildsGETWithModelsPath]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.SmartCleanupClientRequestBuildingTests testModelsRequestFailsOnInvalidBaseURL]' started.
+Test Case '-[DexDictateTests.SmartCleanupClientRequestBuildingTests testModelsRequestFailsOnInvalidBaseURL]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.SmartCleanupClientRequestBuildingTests testNoHardCodedDeveloperHostnamesOrPorts]' started.
+Test Case '-[DexDictateTests.SmartCleanupClientRequestBuildingTests testNoHardCodedDeveloperHostnamesOrPorts]' passed (0.000 seconds).
+Test Suite 'SmartCleanupClientRequestBuildingTests' passed at 2026-07-09 15:50:53.563.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.005 (0.006) seconds
+Test Suite 'SmartCleanupCoordinatorTests' started at 2026-07-09 15:50:53.563.
+Test Case '-[DexDictateTests.SmartCleanupCoordinatorTests testAddingHistoryItemWhileDisabledDoesNotChangeReachability]' started.
+Test Case '-[DexDictateTests.SmartCleanupCoordinatorTests testAddingHistoryItemWhileDisabledDoesNotChangeReachability]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.SmartCleanupCoordinatorTests testReachabilityIsDisabledWhenSettingIsOff]' started.
+Test Case '-[DexDictateTests.SmartCleanupCoordinatorTests testReachabilityIsDisabledWhenSettingIsOff]' passed (0.000 seconds).
+Test Suite 'SmartCleanupCoordinatorTests' passed at 2026-07-09 15:50:53.564.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'SmartCleanupURLValidationTests' started at 2026-07-09 15:50:53.564.
+Test Case '-[DexDictateTests.SmartCleanupURLValidationTests test127DotPrefixIsTreatedAsLoopback]' started.
+Test Case '-[DexDictateTests.SmartCleanupURLValidationTests test127DotPrefixIsTreatedAsLoopback]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.SmartCleanupURLValidationTests testEmptyStringIsInvalid]' started.
+Test Case '-[DexDictateTests.SmartCleanupURLValidationTests testEmptyStringIsInvalid]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.SmartCleanupURLValidationTests testLocalhostHTTPIsNotFlaggedCleartext]' started.
+Test Case '-[DexDictateTests.SmartCleanupURLValidationTests testLocalhostHTTPIsNotFlaggedCleartext]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.SmartCleanupURLValidationTests testLoopbackHTTPIsNotFlaggedCleartext]' started.
+Test Case '-[DexDictateTests.SmartCleanupURLValidationTests testLoopbackHTTPIsNotFlaggedCleartext]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.SmartCleanupURLValidationTests testMissingHostIsInvalid]' started.
+Test Case '-[DexDictateTests.SmartCleanupURLValidationTests testMissingHostIsInvalid]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.SmartCleanupURLValidationTests testMissingSchemeIsInvalid]' started.
+Test Case '-[DexDictateTests.SmartCleanupURLValidationTests testMissingSchemeIsInvalid]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.SmartCleanupURLValidationTests testNonLoopbackHTTPIsFlaggedCleartext]' started.
+Test Case '-[DexDictateTests.SmartCleanupURLValidationTests testNonLoopbackHTTPIsFlaggedCleartext]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.SmartCleanupURLValidationTests testNonLoopbackHTTPSIsNotFlaggedCleartext]' started.
+Test Case '-[DexDictateTests.SmartCleanupURLValidationTests testNonLoopbackHTTPSIsNotFlaggedCleartext]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.SmartCleanupURLValidationTests testUnsupportedSchemeIsInvalid]' started.
+Test Case '-[DexDictateTests.SmartCleanupURLValidationTests testUnsupportedSchemeIsInvalid]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.SmartCleanupURLValidationTests testValidHTTPLoopbackURL]' started.
+Test Case '-[DexDictateTests.SmartCleanupURLValidationTests testValidHTTPLoopbackURL]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.SmartCleanupURLValidationTests testValidHTTPSURL]' started.
+Test Case '-[DexDictateTests.SmartCleanupURLValidationTests testValidHTTPSURL]' passed (0.000 seconds).
+Test Suite 'SmartCleanupURLValidationTests' passed at 2026-07-09 15:50:53.566.
+	 Executed 11 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'ToastStateTests' started at 2026-07-09 15:50:53.566.
+Test Case '-[DexDictateTests.ToastStateTests testAutoDismissAfterTimeout]' started.
+Test Case '-[DexDictateTests.ToastStateTests testAutoDismissAfterTimeout]' passed (0.153 seconds).
+Test Case '-[DexDictateTests.ToastStateTests testClearOnEmptyStateIsNoop]' started.
+Test Case '-[DexDictateTests.ToastStateTests testClearOnEmptyStateIsNoop]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.ToastStateTests testClearSetsCurrentToNil]' started.
+Test Case '-[DexDictateTests.ToastStateTests testClearSetsCurrentToNil]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.ToastStateTests testClipboardFallbackLabel]' started.
+Test Case '-[DexDictateTests.ToastStateTests testClipboardFallbackLabel]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.ToastStateTests testCommandExecutedLabel]' started.
+Test Case '-[DexDictateTests.ToastStateTests testCommandExecutedLabel]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.ToastStateTests testCustomCommandExecutedLabel]' started.
+Test Case '-[DexDictateTests.ToastStateTests testCustomCommandExecutedLabel]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.ToastStateTests testEventEquatability]' started.
+Test Case '-[DexDictateTests.ToastStateTests testEventEquatability]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.ToastStateTests testInitialCurrentIsNil]' started.
+Test Case '-[DexDictateTests.ToastStateTests testInitialCurrentIsNil]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.ToastStateTests testNewShowCancelsOldDismissTimer]' started.
+Test Case '-[DexDictateTests.ToastStateTests testNewShowCancelsOldDismissTimer]' passed (0.143 seconds).
+Test Case '-[DexDictateTests.ToastStateTests testOutputInsertedLabel]' started.
+Test Case '-[DexDictateTests.ToastStateTests testOutputInsertedLabel]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.ToastStateTests testOutputSavedOnlyLabel]' started.
+Test Case '-[DexDictateTests.ToastStateTests testOutputSavedOnlyLabel]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.ToastStateTests testShowCanDisplayAllEventCases]' started.
+Test Case '-[DexDictateTests.ToastStateTests testShowCanDisplayAllEventCases]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.ToastStateTests testShowReplacesCurrentWithoutDelay]' started.
+Test Case '-[DexDictateTests.ToastStateTests testShowReplacesCurrentWithoutDelay]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.ToastStateTests testShowSetsCurrentImmediately]' started.
+Test Case '-[DexDictateTests.ToastStateTests testShowSetsCurrentImmediately]' passed (0.000 seconds).
+Test Suite 'ToastStateTests' passed at 2026-07-09 15:50:53.868.
+	 Executed 14 tests, with 0 failures (0 unexpected) in 0.299 (0.302) seconds
+Test Suite 'TranscriptionEngineBrowserMediaPauseTests' started at 2026-07-09 15:50:53.868.
+Test Case '-[DexDictateTests.TranscriptionEngineBrowserMediaPauseTests testBrowserMediaPauseService_conformsToProtocol]' started.
+Test Case '-[DexDictateTests.TranscriptionEngineBrowserMediaPauseTests testBrowserMediaPauseService_conformsToProtocol]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.TranscriptionEngineBrowserMediaPauseTests testEngineAcceptsInjectedController]' started.
+2026-07-09 15:50:53.869 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+Test Case '-[DexDictateTests.TranscriptionEngineBrowserMediaPauseTests testEngineAcceptsInjectedController]' passed (0.003 seconds).
+Test Case '-[DexDictateTests.TranscriptionEngineBrowserMediaPauseTests testFeatureDisabled_pauseNotCalled]' started.
+2026-07-09 15:50:53.872 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+Test Case '-[DexDictateTests.TranscriptionEngineBrowserMediaPauseTests testFeatureDisabled_pauseNotCalled]' passed (0.002 seconds).
+Test Case '-[DexDictateTests.TranscriptionEngineBrowserMediaPauseTests testPauseReturnsNil_resumeNotCalledOnStop]' started.
+2026-07-09 15:50:53.875 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+2026-07-09 15:50:53.876 xctest[16999:583505] [DexDictate] Lifecycle transition stopped --systemStopped--> stopped (stopSystem)
+Test Case '-[DexDictateTests.TranscriptionEngineBrowserMediaPauseTests testPauseReturnsNil_resumeNotCalledOnStop]' passed (0.004 seconds).
+Test Case '-[DexDictateTests.TranscriptionEngineBrowserMediaPauseTests testPauseSessionWithNoPausedMedia_resumeStillCalled]' started.
+Test Case '-[DexDictateTests.TranscriptionEngineBrowserMediaPauseTests testPauseSessionWithNoPausedMedia_resumeStillCalled]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.TranscriptionEngineBrowserMediaPauseTests testResumeCalledExactlyOnce_sessionCleared]' started.
+2026-07-09 15:50:53.879 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+2026-07-09 15:50:53.879 xctest[16999:583505] [DexDictate] Lifecycle transition stopped --systemStopped--> stopped (stopSystem)
+2026-07-09 15:50:53.880 xctest[16999:583505] [DexDictate] Lifecycle transition stopped --systemStopped--> stopped (stopSystem)
+Test Case '-[DexDictateTests.TranscriptionEngineBrowserMediaPauseTests testResumeCalledExactlyOnce_sessionCleared]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.TranscriptionEngineBrowserMediaPauseTests testResumedSession_matchesPausedSession]' started.
+Test Case '-[DexDictateTests.TranscriptionEngineBrowserMediaPauseTests testResumedSession_matchesPausedSession]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.TranscriptionEngineBrowserMediaPauseTests testStopSystem_resumesActiveSession]' started.
+2026-07-09 15:50:53.882 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+2026-07-09 15:50:53.882 xctest[16999:583505] [DexDictate] Lifecycle transition stopped --systemStopped--> stopped (stopSystem)
+Test Case '-[DexDictateTests.TranscriptionEngineBrowserMediaPauseTests testStopSystem_resumesActiveSession]' passed (0.001 seconds).
+Test Suite 'TranscriptionEngineBrowserMediaPauseTests' passed at 2026-07-09 15:50:53.883.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.014 (0.015) seconds
+Test Suite 'TranscriptionFeedbackAdapterContractTests' started at 2026-07-09 15:50:53.883.
+Test Case '-[DexDictateTests.TranscriptionFeedbackAdapterContractTests testCopiedOnlySensitiveContextIsClipboardFallback]' started.
+Test Case '-[DexDictateTests.TranscriptionFeedbackAdapterContractTests testCopiedOnlySensitiveContextIsClipboardFallback]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.TranscriptionFeedbackAdapterContractTests testIdleTitleIsEmpty]' started.
+Test Case '-[DexDictateTests.TranscriptionFeedbackAdapterContractTests testIdleTitleIsEmpty]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.TranscriptionFeedbackAdapterContractTests testNoSpeechDetectedToneIsWarning]' started.
+Test Case '-[DexDictateTests.TranscriptionFeedbackAdapterContractTests testNoSpeechDetectedToneIsWarning]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.TranscriptionFeedbackAdapterContractTests testPastedToActiveAppToneIsSuccess]' started.
+Test Case '-[DexDictateTests.TranscriptionFeedbackAdapterContractTests testPastedToActiveAppToneIsSuccess]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.TranscriptionFeedbackAdapterContractTests testSymbolNameIsNonEmptyForAllCases]' started.
+Test Case '-[DexDictateTests.TranscriptionFeedbackAdapterContractTests testSymbolNameIsNonEmptyForAllCases]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.TranscriptionFeedbackAdapterContractTests testTitleIsStringForAllCases]' started.
+Test Case '-[DexDictateTests.TranscriptionFeedbackAdapterContractTests testTitleIsStringForAllCases]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.TranscriptionFeedbackAdapterContractTests testToneIsDefinedForAllCases]' started.
+Test Case '-[DexDictateTests.TranscriptionFeedbackAdapterContractTests testToneIsDefinedForAllCases]' passed (0.000 seconds).
+Test Suite 'TranscriptionFeedbackAdapterContractTests' passed at 2026-07-09 15:50:53.885.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'TranscriptionFeedbackTests' started at 2026-07-09 15:50:53.885.
+Test Case '-[DexDictateTests.TranscriptionFeedbackTests testFeedbackMessagesAreDistinct]' started.
+Test Case '-[DexDictateTests.TranscriptionFeedbackTests testFeedbackMessagesAreDistinct]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.TranscriptionFeedbackTests testFeedbackToneMatchesOutcome]' started.
+Test Case '-[DexDictateTests.TranscriptionFeedbackTests testFeedbackToneMatchesOutcome]' passed (0.000 seconds).
+Test Suite 'TranscriptionFeedbackTests' passed at 2026-07-09 15:50:53.886.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds
+Test Suite 'TranscriptionHistorySetCleanedTextTests' started at 2026-07-09 15:50:53.886.
+Test Case '-[DexDictateTests.TranscriptionHistorySetCleanedTextTests testSetCleanedTextAttachesVariantToMatchingItem]' started.
+Test Case '-[DexDictateTests.TranscriptionHistorySetCleanedTextTests testSetCleanedTextAttachesVariantToMatchingItem]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.TranscriptionHistorySetCleanedTextTests testSetCleanedTextIsNoOpForUnknownID]' started.
+Test Case '-[DexDictateTests.TranscriptionHistorySetCleanedTextTests testSetCleanedTextIsNoOpForUnknownID]' passed (0.000 seconds).
+Test Suite 'TranscriptionHistorySetCleanedTextTests' passed at 2026-07-09 15:50:53.887.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds
+Test Suite 'TranscriptionHistoryTests' started at 2026-07-09 15:50:53.887.
+Test Case '-[DexDictateTests.TranscriptionHistoryTests testHistoryCapturesAccuracyRetryMetadata]' started.
+Test Case '-[DexDictateTests.TranscriptionHistoryTests testHistoryCapturesAccuracyRetryMetadata]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.TranscriptionHistoryTests testHistoryItemsCaptureCreationDate]' started.
+Test Case '-[DexDictateTests.TranscriptionHistoryTests testHistoryItemsCaptureCreationDate]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.TranscriptionHistoryTests testRemovedHistoryCanBeRestored]' started.
+Test Case '-[DexDictateTests.TranscriptionHistoryTests testRemovedHistoryCanBeRestored]' passed (0.000 seconds).
+Test Suite 'TranscriptionHistoryTests' passed at 2026-07-09 15:50:53.888.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'TranscriptionQualityMetricsTests' started at 2026-07-09 15:50:53.888.
+Test Case '-[DexDictateTests.TranscriptionQualityMetricsTests testClippingProxyMetricsDetectEmptyMissingWordsAndTruncationSignals]' started.
+Test Case '-[DexDictateTests.TranscriptionQualityMetricsTests testClippingProxyMetricsDetectEmptyMissingWordsAndTruncationSignals]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.TranscriptionQualityMetricsTests testCommandRecognitionMetricsCaptureBuiltInAndCustomDexErrors]' started.
+Test Case '-[DexDictateTests.TranscriptionQualityMetricsTests testCommandRecognitionMetricsCaptureBuiltInAndCustomDexErrors]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.TranscriptionQualityMetricsTests testLatencyMetricsReportSupportsOptionalDimensionsWithoutChangingLegacyLatency]' started.
+Test Case '-[DexDictateTests.TranscriptionQualityMetricsTests testLatencyMetricsReportSupportsOptionalDimensionsWithoutChangingLegacyLatency]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.TranscriptionQualityMetricsTests testPunctuationMetricsTrackTerminalQuestionCommaAndDualWerModes]' started.
+Test Case '-[DexDictateTests.TranscriptionQualityMetricsTests testPunctuationMetricsTrackTerminalQuestionCommaAndDualWerModes]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.TranscriptionQualityMetricsTests testRetrySelectionEvaluationAndAggregateMetricsCoverKeyCases]' started.
+Test Case '-[DexDictateTests.TranscriptionQualityMetricsTests testRetrySelectionEvaluationAndAggregateMetricsCoverKeyCases]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.TranscriptionQualityMetricsTests testVocabularyAccuracyMetricsTrackCategoriesAndOverallRate]' started.
+Test Case '-[DexDictateTests.TranscriptionQualityMetricsTests testVocabularyAccuracyMetricsTrackCategoriesAndOverallRate]' passed (0.003 seconds).
+Test Suite 'TranscriptionQualityMetricsTests' passed at 2026-07-09 15:50:53.895.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.006 (0.007) seconds
+Test Suite 'TriggerShortcutConflictCheckerTests' started at 2026-07-09 15:50:53.895.
+Test Case '-[DexDictateTests.TriggerShortcutConflictCheckerTests testBareKeyFiresWhileTyping]' started.
+Test Case '-[DexDictateTests.TriggerShortcutConflictCheckerTests testBareKeyFiresWhileTyping]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.TriggerShortcutConflictCheckerTests testForceQuitComboIsSystemReserved]' started.
+Test Case '-[DexDictateTests.TriggerShortcutConflictCheckerTests testForceQuitComboIsSystemReserved]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.TriggerShortcutConflictCheckerTests testMouseTriggerNeverConflicts]' started.
+Test Case '-[DexDictateTests.TriggerShortcutConflictCheckerTests testMouseTriggerNeverConflicts]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.TriggerShortcutConflictCheckerTests testNonStandardBitsIgnoredWhenMatchingSystemShortcut]' started.
+Test Case '-[DexDictateTests.TriggerShortcutConflictCheckerTests testNonStandardBitsIgnoredWhenMatchingSystemShortcut]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.TriggerShortcutConflictCheckerTests testPlainCmdLetterNotInTableIsSafe]' started.
+Test Case '-[DexDictateTests.TriggerShortcutConflictCheckerTests testPlainCmdLetterNotInTableIsSafe]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.TriggerShortcutConflictCheckerTests testSafeShortcutHasNoConflict]' started.
+Test Case '-[DexDictateTests.TriggerShortcutConflictCheckerTests testSafeShortcutHasNoConflict]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.TriggerShortcutConflictCheckerTests testScreenshotComboIsSystemReserved]' started.
+Test Case '-[DexDictateTests.TriggerShortcutConflictCheckerTests testScreenshotComboIsSystemReserved]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.TriggerShortcutConflictCheckerTests testSpotlightIsSystemReserved]' started.
+Test Case '-[DexDictateTests.TriggerShortcutConflictCheckerTests testSpotlightIsSystemReserved]' passed (0.000 seconds).
+Test Suite 'TriggerShortcutConflictCheckerTests' passed at 2026-07-09 15:50:53.898.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'VerificationTests' started at 2026-07-09 15:50:53.898.
+Test Case '-[DexDictateTests.VerificationTests testGoldenPath]' started.
+2026-07-09 15:50:53.899 xctest[16999:583505] [DexDictate] setupDefaultDeviceListener() — registered kAudioHardwarePropertyDefaultInputDevice listener
+Test Case '-[DexDictateTests.VerificationTests testGoldenPath]' passed (0.011 seconds).
+Test Suite 'VerificationTests' passed at 2026-07-09 15:50:53.909.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.011 (0.011) seconds
+Test Suite 'VersionConsistencyTests' started at 2026-07-09 15:50:53.909.
+Test Case '-[DexDictateTests.VersionConsistencyTests testMenuBarAppIsAccessory]' started.
+Test Case '-[DexDictateTests.VersionConsistencyTests testMenuBarAppIsAccessory]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.VersionConsistencyTests testTemplateStaysTemplated]' started.
+Test Case '-[DexDictateTests.VersionConsistencyTests testTemplateStaysTemplated]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.VersionConsistencyTests testVersionFileMatchesInfoPlist]' started.
+Test Case '-[DexDictateTests.VersionConsistencyTests testVersionFileMatchesInfoPlist]' passed (0.001 seconds).
+Test Suite 'VersionConsistencyTests' passed at 2026-07-09 15:50:53.910.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'VocabularyCorrectionDraftTests' started at 2026-07-09 15:50:53.910.
+Test Case '-[DexDictateTests.VocabularyCorrectionDraftTests testDraftRequiresBothFields]' started.
+Test Case '-[DexDictateTests.VocabularyCorrectionDraftTests testDraftRequiresBothFields]' passed (0.000 seconds).
+Test Suite 'VocabularyCorrectionDraftTests' passed at 2026-07-09 15:50:53.911.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+Test Suite 'VocabularyLayeringTests' started at 2026-07-09 15:50:53.911.
+Test Case '-[DexDictateTests.VocabularyLayeringTests testApplyEffectiveUsesBundledAndCustomLayersWithCustomOverride]' started.
+Test Case '-[DexDictateTests.VocabularyLayeringTests testApplyEffectiveUsesBundledAndCustomLayersWithCustomOverride]' passed (0.002 seconds).
+Test Case '-[DexDictateTests.VocabularyLayeringTests testBundledVocabularyDoesNotPersistIntoCustomVocabularyStorage]' started.
+Test Case '-[DexDictateTests.VocabularyLayeringTests testBundledVocabularyDoesNotPersistIntoCustomVocabularyStorage]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.VocabularyLayeringTests testReplacementWithRegexTemplateMetacharactersIsOutputLiterally]' started.
+Test Case '-[DexDictateTests.VocabularyLayeringTests testReplacementWithRegexTemplateMetacharactersIsOutputLiterally]' passed (0.001 seconds).
+Test Suite 'VocabularyLayeringTests' passed at 2026-07-09 15:50:53.915.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.004 (0.004) seconds
+Test Suite 'WhisperModelCatalogTests' started at 2026-07-09 15:50:53.915.
+Test Case '-[DexDictateTests.WhisperModelCatalogTests testImportRejectsUnexpectedFileNames]' started.
+Test Case '-[DexDictateTests.WhisperModelCatalogTests testImportRejectsUnexpectedFileNames]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.WhisperModelCatalogTests testImportReplacesExistingModelMetadata]' started.
+Test Case '-[DexDictateTests.WhisperModelCatalogTests testImportReplacesExistingModelMetadata]' passed (0.005 seconds).
+Test Case '-[DexDictateTests.WhisperModelCatalogTests testRecognizerRejectsUnrelatedFiles]' started.
+Test Case '-[DexDictateTests.WhisperModelCatalogTests testRecognizerRejectsUnrelatedFiles]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.WhisperModelCatalogTests testRecognizesGGMLFilenamesWithDisplayNames]' started.
+Test Case '-[DexDictateTests.WhisperModelCatalogTests testRecognizesGGMLFilenamesWithDisplayNames]' passed (0.000 seconds).
+Test Case '-[DexDictateTests.WhisperModelCatalogTests testRemoveImportedModelHandlesMissingEntriesGracefully]' started.
+Test Case '-[DexDictateTests.WhisperModelCatalogTests testRemoveImportedModelHandlesMissingEntriesGracefully]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.WhisperModelCatalogTests testResolveSelectionFallsBackToBestAvailableWhenSavedMissing]' started.
+Test Case '-[DexDictateTests.WhisperModelCatalogTests testResolveSelectionFallsBackToBestAvailableWhenSavedMissing]' passed (0.002 seconds).
+Test Case '-[DexDictateTests.WhisperModelCatalogTests testResolveSelectionKeepsValidSavedSelection]' started.
+Test Case '-[DexDictateTests.WhisperModelCatalogTests testResolveSelectionKeepsValidSavedSelection]' passed (0.002 seconds).
+Test Case '-[DexDictateTests.WhisperModelCatalogTests testScansModelsDirectoryForInstalledGGMLModels]' started.
+Test Case '-[DexDictateTests.WhisperModelCatalogTests testScansModelsDirectoryForInstalledGGMLModels]' passed (0.002 seconds).
+Test Suite 'WhisperModelCatalogTests' passed at 2026-07-09 15:50:53.929.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.013 (0.014) seconds
+Test Suite 'WhisperServiceTests' started at 2026-07-09 15:50:53.929.
+Test Case '-[DexDictateTests.WhisperServiceTests testImportedFileParamsAllowFullFileDecoding]' started.
+2026-07-09 15:50:53.929 xctest[16999:583505] [DexDictate] WhisperParams[file]: best_of=1 speed_up=false no_context=false max_tokens=0 single_segment=false
+Test Case '-[DexDictateTests.WhisperServiceTests testImportedFileParamsAllowFullFileDecoding]' passed (0.001 seconds).
+Test Case '-[DexDictateTests.WhisperServiceTests testLiveDictationParamsStayLatencyOptimized]' started.
+2026-07-09 15:50:53.929 xctest[16999:583505] [DexDictate] WhisperParams[live]: best_of=1 speed_up=true no_context=true max_tokens=128 single_segment=true
+Test Case '-[DexDictateTests.WhisperServiceTests testLiveDictationParamsStayLatencyOptimized]' passed (0.000 seconds).
+Test Suite 'WhisperServiceTests' passed at 2026-07-09 15:50:53.930.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'DexDictate_MacOSPackageTests.xctest' passed at 2026-07-09 15:50:53.930.
+	 Executed 409 tests, with 0 failures (0 unexpected) in 6.351 (6.413) seconds
+Test Suite 'All tests' passed at 2026-07-09 15:50:53.930.
+	 Executed 409 tests, with 0 failures (0 unexpected) in 6.351 (6.416) seconds
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+✔ Test run with 0 tests in 0 suites passed after 0.001 seconds.

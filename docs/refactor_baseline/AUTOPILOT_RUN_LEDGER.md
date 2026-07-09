@@ -211,3 +211,14 @@ Sequential record of the autonomous packet run authorized 2026-07-09. Ungated pa
 - New Settings → Dictation toggle "Live Preview (experimental)" (`livePreviewEnabled`, default off); caption rendered in popover hero + standard Floating HUD (not Nano HUD)
 - No forbidden files touched; no `Package.swift`/`Package.resolved` changes
 - Safe to continue: Yes (to Packet 16 — Final Integration QA, the last item in the approved campaign sequence)
+
+## Packet 16 — Final Integration QA / Release Ledger (Final Remaining Campaign)
+- Start commit: 2601c779
+- Final commit: (pending)
+- Pushed: Yes
+- Tests: full `swift test` — 409 passed, 0 failures
+- Build: `swift build` and `./build.sh` both clean
+- App relaunch: confirmed running/stable via `ps aux`
+- Final working tree: clean of anything this campaign touched (only pre-existing, unrelated `.resurrection/` scan artifacts and untracked planning docs remain)
+- Deliverable: `docs/refactor_baseline/final_remaining_campaign/FINAL_STATE_REPORT.md` — full packet list/hashes, NEEDS_ANDREW roundup, rollback notes per packet, explicit confirmation Packets 12B/13/14 all ran, Smart Cleanup and Live Preview both confirmed runtime-off by default, experimental UI confirmed retired
+- This is the final packet in the approved campaign sequence — campaign complete
