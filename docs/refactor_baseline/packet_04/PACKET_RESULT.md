@@ -1,0 +1,18 @@
+## Packet Result
+- Packet: 04 — Dictation + Audio Migration
+- Branch: speech-engine-exploration-benchmarks
+- Commit hash: (see AUTOPILOT_RUN_LEDGER.md)
+- Pushed: Yes
+- Files changed: `Sources/DexDictate/SettingsWindow/DictationSettingsPage.swift` (built out: Trigger Mode segmented control, `ShortcutRecorder`, Silence Timeout slider + new caption, End Preset picker, Adaptive Tail Delay toggle); `Sources/DexDictate/SettingsWindow/AudioSettingsPage.swift` (built out: Input Device picker, Trim Leading/Trailing Silence toggle); `Sources/DexDictate/QuickSettingsView.swift` (migrated rows hidden behind two new flags — `showLegacyInputRows`, `showLegacyTailTimingRows`; `SettingToggleWithInfo` widened fileprivate → internal); `Sources/DexDictate/SettingsWindow/SettingsWindowController.swift` + `SettingsRootView.swift` + `Sources/DexDictate/DexDictateApp.swift` (threaded the app's existing `AudioDeviceScanner` instance into the Settings window rather than constructing a second one)
+- Files inspected but not changed: `Sources/DexDictate/ShortcutRecorder.swift` (confirmed self-contained, zero edits — re-hosted as-is), `Sources/DexDictateKit/Capture/AudioDeviceScanner.swift` (confirmed no `.shared` singleton; its lifecycle is self-owned via `init()`/`deinit`, not view-lifecycle-driven — read-only, informed the scanner-threading decision), `Sources/DexDictateKit/Settings/AppSettings.swift` (confirmed storage keys: `triggerMode`, `silenceTimeout`, `inputDeviceUID`, `enableSilenceTrim_v1`, `utteranceEndPreset_v1`, `adaptiveTailDelayEnabled_v1`, `userShortcutData` — all unchanged), `Sources/DexDictate/DexDictateApp.swift` (confirmed `TriggerSegment` already internal, reusable as-is)
+- Forbidden files touched: No
+- Tests run: full `swift test`; targeted `swift test --filter AudioRecorderRecovery`
+- Test result: 382 passed, 0 failures (full suite, matches Packet 01 baseline); 5/5 passed (AudioRecorderRecovery, untouched-green as required)
+- Targeted tests: `AudioRecorderRecoveryPlannerTests` — 5/5 passed
+- Manual validations: not performed (trigger matrix, shortcut re-recording, mic switch/unplug, silence timeout/tail preset persistence) — see `NEEDS_ANDREW.md`
+- Screenshots captured: none — blocked, see `NEEDS_ANDREW.md`
+- Feature-loss checklist rows completed: Local Whisper Dictation, Audio Route Recovery & Fallback — verified at the code/test level only (same bindings, same storage keys, same recovery test suite green); not manually round-tripped
+- Dexter preservation checks: not exercised (no Dexter-adjacent files touched)
+- Known issues: **Mandatory lifecycle inventory** — see `NEEDS_ANDREW.md` for the full writeup. Summary: no behavior found hidden in the Input or Accuracy & Speed card's own view lifecycle. The one structural change was threading the app's single `AudioDeviceScanner` instance into the Settings window (via `SettingsWindowController.show(scanner:)`) instead of constructing a redundant second instance, since `AudioDeviceScanner` has no `.shared` singleton and owns a CoreAudio device-change listener for its lifetime. **Scope interpretation**: the packet's goal text lists "adaptive tail preset picker" for the Dictation page; the codebase's actual `utteranceEndPreset` picker (Stable/Fast/Conservative, matching Packet 10's tail-timing preset names) and its paired `adaptiveTailDelayEnabled` toggle were migrated together as one feature unit, since migrating the picker alone would have separated it from its own enable/disable toggle. "Model Selection Mode" (Fast/Balanced/Accurate decode preset) was left in the Accuracy & Speed card for Packet 07, per that packet's own goal text ("model/end preset picker").
+- Rollback required: No
+- Next recommended packet: 05 — Output + Per-App Rules

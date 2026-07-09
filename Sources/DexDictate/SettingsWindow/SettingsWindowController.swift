@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import DexDictateKit
 
 /// Manages the lifecycle of the DexDictate Settings window.
 ///
@@ -13,14 +14,20 @@ class SettingsWindowController: ObservableObject {
     @Published var selection: SettingsPage = .general
 
     /// Opens the Settings window, or brings it forward and restores its last-viewed
-    /// page if already open.
-    func show() {
+    /// page if already open. `scanner` is the app's single `AudioDeviceScanner` instance
+    /// (the same one the popover uses) — passed in rather than re-instantiated here so the
+    /// Audio & Microphone page reads live state instead of standing up a second CoreAudio
+    /// device-change listener.
+    func show(scanner: AudioDeviceScanner) {
         if window == nil {
             let hosting = NSHostingController(
-                rootView: SettingsRootView(selection: Binding(
-                    get: { [weak self] in self?.selection ?? .general },
-                    set: { [weak self] in self?.selection = $0 }
-                ))
+                rootView: SettingsRootView(
+                    selection: Binding(
+                        get: { [weak self] in self?.selection ?? .general },
+                        set: { [weak self] in self?.selection = $0 }
+                    ),
+                    scanner: scanner
+                )
             )
             let newWindow = NSWindow(contentViewController: hosting)
             newWindow.title = NSLocalizedString("DexDictate Settings", comment: "Settings window title")

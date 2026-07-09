@@ -32,6 +32,14 @@ struct QuickSettingsView: View {
     /// Settings → General (Packet 03). Rows stay in the codebase, hidden, until
     /// Packet 12B retires the legacy Quick Settings stack entirely.
     private let showLegacyGeneralRows = false
+    /// Input Device picker, Silence Timeout slider, and the shortcut recorder now live in
+    /// Settings → Dictation / Audio & Microphone (Packet 04). Route Health and the
+    /// Vocabulary/Voice Commands buttons stay here until Packets 08/06.
+    private let showLegacyInputRows = false
+    /// End Preset picker, Adaptive Tail Delay toggle, and Trim Leading/Trailing Silence now
+    /// live in Settings → Dictation / Audio & Microphone (Packet 04). Everything else in
+    /// Accuracy & Speed stays until Packet 07/08.
+    private let showLegacyTailTimingRows = false
     @State private var advancedPanelExpanded = false
     @State private var isResettingCoreAudio = false
     @State private var coreAudioResetStatus: String?
@@ -87,30 +95,32 @@ struct QuickSettingsView: View {
                         isExpanded: $inputPanelExpanded
                     ) {
                         VStack(alignment: .leading, spacing: 10) {
-                            controlRow(label: "Input Device") {
-                                Picker("", selection: $settings.inputDeviceUID) {
-                                    Text("System Default").tag("")
-                                    ForEach(scanner.availableDevices) { device in
-                                        Text(device.name).tag(device.uid)
+                            if showLegacyInputRows {
+                                controlRow(label: "Input Device") {
+                                    Picker("", selection: $settings.inputDeviceUID) {
+                                        Text("System Default").tag("")
+                                        ForEach(scanner.availableDevices) { device in
+                                            Text(device.name).tag(device.uid)
+                                        }
                                     }
+                                    .labelsHidden()
+                                    .pickerStyle(.menu)
+                                    .frame(width: 180)
                                 }
-                                .labelsHidden()
-                                .pickerStyle(.menu)
-                                .frame(width: 180)
-                            }
 
-                            VStack(alignment: .leading, spacing: 4) {
-                                HStack {
-                                    Text("Silence Timeout")
-                                        .font(.caption)
-                                        .foregroundStyle(.white.opacity(0.8))
-                                    Spacer()
-                                    Text(settings.silenceTimeout == 0 ? "Disabled" : "\(Int(settings.silenceTimeout))s")
-                                        .font(.caption.monospacedDigit())
-                                        .foregroundStyle(.white.opacity(0.55))
+                                VStack(alignment: .leading, spacing: 4) {
+                                    HStack {
+                                        Text("Silence Timeout")
+                                            .font(.caption)
+                                            .foregroundStyle(.white.opacity(0.8))
+                                        Spacer()
+                                        Text(settings.silenceTimeout == 0 ? "Disabled" : "\(Int(settings.silenceTimeout))s")
+                                            .font(.caption.monospacedDigit())
+                                            .foregroundStyle(.white.opacity(0.55))
+                                    }
+                                    Slider(value: $settings.silenceTimeout, in: 0...15, step: 1)
+                                        .tint(.cyan)
                                 }
-                                Slider(value: $settings.silenceTimeout, in: 0...15, step: 1)
-                                    .tint(.cyan)
                             }
 
                                     SettingToggleWithInfo(
@@ -165,7 +175,9 @@ struct QuickSettingsView: View {
                                 .controlSize(.small)
                             }
 
-                            ShortcutRecorder(shortcut: $settings.userShortcut)
+                            if showLegacyInputRows {
+                                ShortcutRecorder(shortcut: $settings.userShortcut)
+                            }
                         }
                     }
 
@@ -266,28 +278,30 @@ struct QuickSettingsView: View {
                                 .frame(width: 180)
                             }
 
-                            controlRow(label: "End Preset") {
-                                Picker("", selection: $settings.utteranceEndPreset) {
-                                    ForEach(AppSettings.UtteranceEndPreset.allCases) { preset in
-                                        Text(preset.rawValue).tag(preset)
+                            if showLegacyTailTimingRows {
+                                controlRow(label: "End Preset") {
+                                    Picker("", selection: $settings.utteranceEndPreset) {
+                                        ForEach(AppSettings.UtteranceEndPreset.allCases) { preset in
+                                            Text(preset.rawValue).tag(preset)
+                                        }
                                     }
+                                    .labelsHidden()
+                                    .pickerStyle(.menu)
+                                    .frame(width: 180)
                                 }
-                                .labelsHidden()
-                                .pickerStyle(.menu)
-                                .frame(width: 180)
+
+                                SettingToggleWithInfo(
+                                    title: "Adaptive Tail Delay",
+                                    info: "After you stop speaking, DexDictate waits a moment before cutting off the recording. Adaptive Tail Delay learns how long you typically pause between words and adjusts this wait automatically — so it doesn't clip the end of what you said or make you wait too long before transcription starts.",
+                                    isOn: $settings.adaptiveTailDelayEnabled
+                                )
+
+                                SettingToggleWithInfo(
+                                    title: "Trim Leading/Trailing Silence",
+                                    info: "Removes silent audio from the beginning and end of each recording before sending it to Whisper. Reduces the chance of hallucinated words in the silent gaps and can marginally improve speed on short utterances.",
+                                    isOn: $settings.enableSilenceTrim
+                                )
                             }
-
-                            SettingToggleWithInfo(
-                                title: "Adaptive Tail Delay",
-                                info: "After you stop speaking, DexDictate waits a moment before cutting off the recording. Adaptive Tail Delay learns how long you typically pause between words and adjusts this wait automatically — so it doesn't clip the end of what you said or make you wait too long before transcription starts.",
-                                isOn: $settings.adaptiveTailDelayEnabled
-                            )
-
-                            SettingToggleWithInfo(
-                                title: "Trim Leading/Trailing Silence",
-                                info: "Removes silent audio from the beginning and end of each recording before sending it to Whisper. Reduces the chance of hallucinated words in the silent gaps and can marginally improve speed on short utterances.",
-                                isOn: $settings.enableSilenceTrim
-                            )
 
                             SettingToggleWithInfo(
                                 title: "Trailing Trim Experiment",
@@ -1581,7 +1595,7 @@ struct MenuBarDisplayPreview: View {
     }
 }
 
-private struct SettingToggleWithInfo: View {
+struct SettingToggleWithInfo: View {
     let title: String
     let info: String
     @Binding var isOn: Bool

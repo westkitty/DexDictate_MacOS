@@ -1,9 +1,11 @@
 import SwiftUI
+import DexDictateKit
 
 /// Sidebar + detail shell for the Settings window. Pages are placeholders until
 /// Packets 03–11 migrate real controls into them one domain at a time.
 struct SettingsRootView: View {
     @Binding var selection: SettingsPage
+    @ObservedObject var scanner: AudioDeviceScanner
 
     var body: some View {
         NavigationSplitView {
@@ -19,7 +21,7 @@ struct SettingsRootView: View {
         switch selection {
         case .general: GeneralSettingsPage()
         case .dictation: DictationSettingsPage()
-        case .audioMicrophone: AudioSettingsPage()
+        case .audioMicrophone: AudioSettingsPage(scanner: scanner)
         case .outputInsertion: OutputSettingsPage()
         case .vocabularyCommands: VocabularyCommandsPage()
         case .modelsAccuracy: ModelsAccuracyPage()

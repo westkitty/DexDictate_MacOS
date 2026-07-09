@@ -32,3 +32,13 @@ Sequential record of the autonomous packet run authorized 2026-07-09. Ungated pa
 - Manual validations: not performed (control round-trips, Replay Onboarding, visual card check) — see `packet_03/NEEDS_ANDREW.md`
 - NEEDS_ANDREW: same LSUIElement/accessibility automation gap; lifecycle finding documented and safely handled (see `packet_03/PACKET_RESULT.md` Known issues) — `QuickSettingsView`'s onAppear refresh for Launch at Login / menu bar icons replicated in `GeneralSettingsPage.onAppear`
 - Safe to continue: Yes
+
+## Packet 04 — Dictation + Audio Migration
+- Start commit: a4347c36
+- Final commit: (see commit immediately following this entry)
+- Pushed: Yes
+- Tests: 382 passed, 0 failures (matches baseline); targeted `AudioRecorderRecovery` 5/5 passed, untouched-green
+- Screenshots: none — blocked, see `packet_04/NEEDS_ANDREW.md`
+- Manual validations: not performed (trigger matrix, shortcut re-recording, mic switch/unplug, silence timeout/tail preset persistence) — see `packet_04/NEEDS_ANDREW.md`
+- NEEDS_ANDREW: same LSUIElement/accessibility automation gap; mandatory lifecycle inventory completed and documented (no hidden behavior found; threaded existing `AudioDeviceScanner` instance instead of duplicating it) — see `packet_04/PACKET_RESULT.md` Known issues
+- Safe to continue: Yes
