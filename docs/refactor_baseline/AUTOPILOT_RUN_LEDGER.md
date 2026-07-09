@@ -75,7 +75,7 @@ Sequential record of the autonomous packet run authorized 2026-07-09. Ungated pa
 
 ## Packet 08 — Diagnostics + Recovery + Advanced
 - Start commit: 6152be96
-- Final commit: (see commit immediately following this entry)
+- Final commit: f3474ee5
 - Pushed: Yes
 - Tests: 382 passed, 0 failures (matches baseline); targeted AudioRecorderRecovery 11/11 passed, untouched-green
 - Screenshots: none — blocked, same automation gap as every prior packet
