@@ -8,6 +8,7 @@ import DexDictateKit
 struct PopoverHeroView: View {
     @ObservedObject var engine: TranscriptionEngine
     @ObservedObject var settings: AppSettings
+    @ObservedObject var livePreviewController: LivePreviewController
     let watermarkImage: NSImage?
 
     private var isIdle: Bool {
@@ -82,6 +83,9 @@ struct PopoverHeroView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(engine.state == .stopped ? "Start dictation system" : "Stop dictation system")
+
+                LivePreviewCaptionView(controller: livePreviewController)
+                    .padding(.horizontal, 4)
             }
             .padding(.vertical, 8)
         }

@@ -17,6 +17,7 @@ struct PopoverRootView: View {
     @ObservedObject var permissionManager: PermissionManager
     @ObservedObject var settings: AppSettings
     @ObservedObject var profileManager: ProfileManager
+    @ObservedObject var livePreviewController: LivePreviewController
     @State private var cachedWatermarkImage: NSImage? = nil
     @State private var isQuitConfirmPresented = false
     /// Packet 12A adoption: re-hosts `DexCommandPaletteView` (unchanged, from
@@ -72,7 +73,7 @@ struct PopoverRootView: View {
                             if !permissionManager.allPermissionsGranted {
                                 errorBanner
                             } else {
-                                PopoverHeroView(engine: engine, settings: settings, watermarkImage: cachedWatermarkImage)
+                                PopoverHeroView(engine: engine, settings: settings, livePreviewController: livePreviewController, watermarkImage: cachedWatermarkImage)
                                 compactControlsRow
                                 if engine.state == .listening {
                                     DexTranscriptCard(transcript: liveTranscriptState)

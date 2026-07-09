@@ -29,6 +29,7 @@ struct FloatingHUDView: View {
     @ObservedObject var engine: TranscriptionEngine
     @ObservedObject var profileManager: ProfileManager
     @ObservedObject var toastState: ToastState
+    @ObservedObject var livePreviewController: LivePreviewController
 
     @State private var cachedWatermarkImage: NSImage? = nil
 
@@ -50,65 +51,7 @@ struct FloatingHUDView: View {
                 .rotationEffect(.degrees(-14))
                 .allowsHitTesting(false)
 
-            // Status content (foreground)
-            VStack(spacing: 0) {
-                HStack(spacing: 8) {
-                    Image(systemName: engine.statusIcon)
-                        .font(.title2)
-                        .symbolEffect(.pulse, isActive: engine.state == .listening)
-                        .foregroundStyle(statusColor)
-
-                    if engine.state == .listening || engine.state == .transcribing {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(engine.statusText)
-                                .font(.caption)
-                                .bold()
-                                .lineLimit(1)
-
-                            // Mic Level
-                            GeometryReader { geo in
-                                ZStack(alignment: .leading) {
-                                    Rectangle()
-                                        .fill(Color.white.opacity(0.2))
-                                    Rectangle()
-                                        .fill(statusColor)
-                                        .frame(width: geo.size.width * CGFloat(engine.inputLevel))
-                                        .animation(.linear(duration: 0.1), value: engine.inputLevel)
-                                }
-                            }
-                            .frame(height: 4)
-                            .clipShape(RoundedRectangle(cornerRadius: 2))
-                        }
-                        .frame(width: 100)
-                    }
-                }
-
-                // Toast notification strip — auto-dismisses after ~2.5 s
-                if let toast = toastState.current {
-                    HUDToastBannerView(event: toast)
-                        .transition(.opacity.combined(with: .move(edge: .bottom)))
-                        .padding(.top, 6)
-                }
-            }
-            .padding(12)
-            .background {
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(.ultraThinMaterial)
-                    .opacity(chromeOpacity)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(Color.black.opacity(readabilityScrimOpacity))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(statusColor.opacity(statusTintOpacity))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(Color.white.opacity(borderOpacity), lineWidth: 1)
-                    )
-            }
-            .animation(.easeInOut(duration: 0.22), value: toastState.current != nil)
+            statusContent
         }
         .onAppear {
             cachedWatermarkImage = loadWatermarkImage()
@@ -116,6 +59,76 @@ struct FloatingHUDView: View {
         .onChange(of: profileManager.currentWatermarkAsset?.url) { _, _ in
             cachedWatermarkImage = loadWatermarkImage()
         }
+    }
+
+    /// Extracted from `body` (Packet 14) — adding the live preview caption row pushed the
+    /// combined `ZStack`/`VStack`/`background` expression over SwiftUI's type-checker time
+    /// budget ("unable to type-check this expression in reasonable time"). Splitting it
+    /// into its own `@ViewBuilder` property is a pure compiler-budget fix — no layout or
+    /// behavior change from the prior inline version.
+    @ViewBuilder
+    private var statusContent: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 8) {
+                Image(systemName: engine.statusIcon)
+                    .font(.title2)
+                    .symbolEffect(.pulse, isActive: engine.state == .listening)
+                    .foregroundStyle(statusColor)
+
+                if engine.state == .listening || engine.state == .transcribing {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(engine.statusText)
+                            .font(.caption)
+                            .bold()
+                            .lineLimit(1)
+
+                        // Mic Level
+                        GeometryReader { geo in
+                            ZStack(alignment: .leading) {
+                                Rectangle()
+                                    .fill(Color.white.opacity(0.2))
+                                Rectangle()
+                                    .fill(statusColor)
+                                    .frame(width: geo.size.width * CGFloat(engine.inputLevel))
+                                    .animation(.linear(duration: 0.1), value: engine.inputLevel)
+                            }
+                        }
+                        .frame(height: 4)
+                        .clipShape(RoundedRectangle(cornerRadius: 2))
+                    }
+                    .frame(width: 100)
+                }
+            }
+
+            LivePreviewCaptionView(controller: livePreviewController)
+                .padding(.top, 6)
+
+            // Toast notification strip — auto-dismisses after ~2.5 s
+            if let toast = toastState.current {
+                HUDToastBannerView(event: toast)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                    .padding(.top, 6)
+            }
+        }
+        .padding(12)
+        .background {
+            RoundedRectangle(cornerRadius: 16)
+                .fill(.ultraThinMaterial)
+                .opacity(chromeOpacity)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.black.opacity(readabilityScrimOpacity))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(statusColor.opacity(statusTintOpacity))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.white.opacity(borderOpacity), lineWidth: 1)
+                )
+        }
+        .animation(.easeInOut(duration: 0.22), value: toastState.current != nil)
     }
 
     private func loadWatermarkImage() -> NSImage? {
@@ -212,6 +225,7 @@ class FloatingHUDController: ObservableObject {
     private var hubPanel: NSPanel?
     private var engine: TranscriptionEngine?
     private var profileManager: ProfileManager?
+    private var livePreviewController: LivePreviewController?
     private var onDetachHistory: (() -> Void)?
     private var onOpenHelp: (() -> Void)?
 
@@ -226,11 +240,13 @@ class FloatingHUDController: ObservableObject {
     func setup(
         engine: TranscriptionEngine,
         profileManager: ProfileManager,
+        livePreviewController: LivePreviewController,
         onDetachHistory: (() -> Void)? = nil,
         onOpenHelp: (() -> Void)? = nil
     ) {
         self.engine = engine
         self.profileManager = profileManager
+        self.livePreviewController = livePreviewController
         self.onDetachHistory = onDetachHistory
         self.onOpenHelp = onOpenHelp
 
@@ -247,7 +263,7 @@ class FloatingHUDController: ObservableObject {
     }
 
     func show() {
-        guard let engine = engine, let profileManager = profileManager else { return }
+        guard let engine = engine, let profileManager = profileManager, let livePreviewController else { return }
         if window == nil {
             let rootView: AnyView
             if AppSettings.shared.useExperimentalNanoHUD {
@@ -262,7 +278,8 @@ class FloatingHUDController: ObservableObject {
                 let stdView = FloatingHUDView(
                     engine: engine,
                     profileManager: profileManager,
-                    toastState: toastState
+                    toastState: toastState,
+                    livePreviewController: livePreviewController
                 )
                 rootView = AnyView(stdView)
             }

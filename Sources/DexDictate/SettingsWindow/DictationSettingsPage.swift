@@ -51,6 +51,14 @@ struct DictationSettingsPage: View {
                     info: "Pauses video and audio in Chrome, Brave, or Edge tabs when recording starts, then resumes them when you stop. macOS will ask for Automation permission the first time it runs. Skips automatically when Zoom is active. Safari and Firefox are not supported.",
                     isOn: $settings.pauseBrowserMediaDuringDictation
                 )
+
+                Divider()
+
+                SettingToggleWithInfo(
+                    title: "Live Preview (experimental)",
+                    info: "Shows a dimmed, italic \"PREVIEW\" caption in the popover and Floating HUD while you're speaking, sourced from whichever engine is already handling live captions. Display-only — batch Whisper remains the only source of the text that actually gets inserted, and this never changes it. Off by default.",
+                    isOn: $settings.livePreviewEnabled
+                )
             }
             .padding(SurfaceTokens.settingsPagePadding)
             .frame(maxWidth: .infinity, alignment: .topLeading)

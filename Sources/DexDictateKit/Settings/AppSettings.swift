@@ -172,6 +172,12 @@ public class AppSettings: ObservableObject {
     /// changes nothing for existing users until they opt in.
     @AppStorage("showInlineResultQuote") public var showInlineResultQuote: Bool = false
 
+    /// Packet 14: display-only live preview captions while listening, sourced from
+    /// whichever streaming provider the engine already resolved (Nemotron/Apple Speech).
+    /// Batch Whisper remains the only committed-output path — this flag never touches it.
+    /// New key, default off (experimental).
+    @AppStorage("livePreviewEnabled") public var livePreviewEnabled: Bool = false
+
     /// Whether to show a second stats ticker (word count, duration, WPM) below the flavor ticker.
     @AppStorage("showDictationStats_v1") public var showDictationStats: Bool = false
 

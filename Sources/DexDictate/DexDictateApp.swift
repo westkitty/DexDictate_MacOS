@@ -28,6 +28,8 @@ struct DexDictateApp: App {
     @StateObject private var helpController = HelpWindowController()
     // Settings Controller
     @StateObject private var settingsWindowController = SettingsWindowController()
+    // Packet 14: display-only live preview, default off.
+    @StateObject private var livePreviewController = LivePreviewController()
 
     init() {
         Safety.setupDirectories()
@@ -47,6 +49,7 @@ struct DexDictateApp: App {
                         permissionManager: permissionManager,
                         settings: settings,
                         profileManager: profileManager,
+                        livePreviewController: livePreviewController,
                         onDetachHistory: {
                             MainActorAction.run { historyController.show() }
                         },
@@ -122,6 +125,7 @@ struct DexDictateApp: App {
                 hudController.setup(
                     engine: engine,
                     profileManager: profileManager,
+                    livePreviewController: livePreviewController,
                     onDetachHistory: { MainActorAction.run { historyController.show() } },
                     onOpenHelp: { MainActorAction.run { helpController.show() } }
                 )
@@ -130,6 +134,8 @@ struct DexDictateApp: App {
                 // Packet 13: observes TranscriptionHistory (not TranscriptionEngine) for
                 // newly-committed transcripts. Idempotent — safe on every popover open.
                 SmartCleanupCoordinator.shared.start(history: engine.history)
+                // Packet 14: display-only live preview. Idempotent — safe on every popover open.
+                livePreviewController.start(engine: engine)
 
                 // Engine already running (started at launch). Nothing more to do.
                 guard engine.state == .stopped else { return }

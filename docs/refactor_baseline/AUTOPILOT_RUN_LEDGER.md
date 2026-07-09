@@ -199,3 +199,15 @@ Sequential record of the autonomous packet run authorized 2026-07-09. Ungated pa
 - Default off; zero network activity confirmed by code guarantee + unit test when disabled
 - No hard-coded BigMac/westcat/11435 — confirmed via grep + dedicated regression test
 - Safe to continue: Yes (to Packet 14, per Andrew's separate approval for this campaign)
+
+## Packet 14 — Live Preview Prototype (L1) (Final Remaining Campaign, GATED — Andrew approved)
+- Start commit: a123a981
+- Final commit: (pending)
+- Pushed: Yes
+- Tests: 409 total, 1 flaky failure on first run (`MainActorDispatchTests.testAsyncRunsOnMainThreadAsynchronously`, same async-ordering-race family as the documented `MainActorActionTests` allowance, unrelated to Live Preview) — rerun clean. `LivePreviewInvariantTests` 2/2 passed, including the required byte-identical invariant using real tiny.en + real sample.wav.
+- Screenshots: none — blocked, same automation gap as every prior packet
+- Manual validations: latency comparison run via `./scripts/benchmark.sh` (392ms median, 3 iterations) — structurally unaffected since the benchmark path never references the new controller; live simulated-failure test not performed (kill switch is a documented health-poll proxy, not a literal provider-error hook — see `packet_14/NEEDS_ANDREW.md`)
+- New: `Sources/DexDictateKit/LivePreview/LivePreviewController.swift` (moved here from the suggested `Sources/DexDictate/` path — avoids a `Package.swift` test-target dependency change on the `@main` SwiftUI executable target); `Sources/DexDictate/LivePreview/LivePreviewCaptionView.swift`; `Tests/DexDictateTests/LivePreviewInvariantTests.swift`
+- New Settings → Dictation toggle "Live Preview (experimental)" (`livePreviewEnabled`, default off); caption rendered in popover hero + standard Floating HUD (not Nano HUD)
+- No forbidden files touched; no `Package.swift`/`Package.resolved` changes
+- Safe to continue: Yes (to Packet 16 — Final Integration QA, the last item in the approved campaign sequence)
