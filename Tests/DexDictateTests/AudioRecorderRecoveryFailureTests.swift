@@ -58,7 +58,7 @@ final class AudioRecorderRecoveryFailureTests: XCTestCase {
 
         XCTAssertEqual(
             report?.recoveryNotice,
-            "Preferred microphone could not be opened. DexDictate switched to System Default input."
+            "Preferred microphone could not be opened. DexDictate switched to System Default Input."
         )
     }
 
@@ -80,7 +80,7 @@ final class AudioRecorderRecoveryFailureTests: XCTestCase {
         XCTAssertTrue(AudioErrorClassifier.isCoreAudioDeviceStall(error7))
     }
 
-    func testLocalizedDescriptionIncludesCoreAudioResetFor10868() {
+    func testLocalizedDescriptionDoesNotIncludeManualShellCommandFor10868() {
         let failure = AudioRecorderRecoveryFailure(
             reason: .initialStart,
             requestedPreferredUID: "mic-a",
@@ -91,11 +91,11 @@ final class AudioRecorderRecoveryFailureTests: XCTestCase {
             underlyingError: NSError(domain: "com.apple.coreaudio", code: -10868, userInfo: nil)
         )
 
-        XCTAssertTrue(failure.localizedDescription.contains("Core Audio error -10868 detected"))
-        XCTAssertTrue(failure.localizedDescription.contains("sudo killall -9 coreaudiod"))
+        XCTAssertEqual(failure.localizedDescription, "DexDictate could not open the selected microphone. Try again.")
+        XCTAssertFalse(failure.localizedDescription.contains("sudo killall -9 coreaudiod"))
     }
 
-    func testRecoveryNoticeIncludesCoreAudioResetFor10868() {
+    func testRecoveryNoticeFor10868PointsAtAdvancedResetWithoutShellCommand() {
         let planner = AudioRecorderRecoveryPlanner(
             retryDelays: [0],
             sleep: { _ in },
@@ -116,6 +116,7 @@ final class AudioRecorderRecoveryFailureTests: XCTestCase {
         let report = try? planner.execute(preferredUID: "mic-a", reason: .initialStart)
 
         XCTAssertTrue(report?.recoveryNotice?.contains("Core Audio error -10868 detected") ?? false)
-        XCTAssertTrue(report?.recoveryNotice?.contains("sudo killall -9 coreaudiod") ?? false)
+        XCTAssertTrue(report?.recoveryNotice?.contains("Advanced") ?? false)
+        XCTAssertFalse(report?.recoveryNotice?.contains("sudo killall -9 coreaudiod") ?? true)
     }
 }

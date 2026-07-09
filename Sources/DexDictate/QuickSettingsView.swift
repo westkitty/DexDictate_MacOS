@@ -28,6 +28,10 @@ struct QuickSettingsView: View {
     @State private var contextBiasExpanded = false
     @State private var benchmarkPanelExpanded = false
     @State private var experimentalPanelExpanded = false
+    @State private var advancedPanelExpanded = false
+    @State private var isResettingCoreAudio = false
+    @State private var coreAudioResetStatus: String?
+    private let coreAudioResetService = CoreAudioResetService()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -613,6 +617,52 @@ struct QuickSettingsView: View {
                             }
                         }
                     }
+
+                    QuickSettingsDisclosureCard(
+                        title: "Advanced",
+                        subtitle: "Recovery actions for stuck macOS audio routes.",
+                        systemImage: "wrench.and.screwdriver.fill",
+                        isExpanded: $advancedPanelExpanded
+                    ) {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("If microphone input keeps failing, macOS Core Audio may be stuck. Resetting Core Audio restarts the system audio service and usually fixes missing or frozen microphones.")
+                                .font(.caption2)
+                                .foregroundStyle(.white.opacity(0.58))
+                                .fixedSize(horizontal: false, vertical: true)
+
+                            Text("Use this when DexDictate cannot open the selected microphone, Bluetooth audio gets stuck, or macOS reports Core Audio error -10868. This restarts the macOS audio service; audio devices will briefly disappear and reconnect.")
+                                .font(.caption2)
+                                .foregroundStyle(.orange.opacity(0.86))
+                                .fixedSize(horizontal: false, vertical: true)
+
+                            Button {
+                                resetCoreAudio()
+                            } label: {
+                                HStack(spacing: 6) {
+                                    if isResettingCoreAudio {
+                                        ProgressView()
+                                            .scaleEffect(0.55)
+                                            .controlSize(.small)
+                                    } else {
+                                        Image(systemName: "waveform.badge.exclamationmark")
+                                    }
+                                    Text(isResettingCoreAudio ? "Resetting..." : "Reset Core Audio")
+                                }
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .controlSize(.small)
+                            .tint(.orange)
+                            .disabled(isResettingCoreAudio)
+                            .accessibilityLabel("Reset Core Audio")
+
+                            if let coreAudioResetStatus {
+                                Text(coreAudioResetStatus)
+                                    .font(.caption2)
+                                    .foregroundStyle(coreAudioResetStatus.lowercased().contains("failed") ? .red.opacity(0.9) : .white.opacity(0.55))
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                    }
                 }
                 .padding(SurfaceTokens.cardPadding)
                 .background(Color.black.opacity(0.3))
@@ -697,6 +747,63 @@ struct QuickSettingsView: View {
             return "Failed"
         case .none:
             return "No recovery yet"
+        }
+    }
+
+    private func resetCoreAudio() {
+        guard !isResettingCoreAudio else { return }
+        let alert = NSAlert()
+        alert.messageText = "Reset Core Audio?"
+        alert.informativeText = "This will restart macOS Core Audio. Your audio devices may briefly disconnect and reconnect. Continue?"
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Continue")
+        alert.addButton(withTitle: "Cancel")
+
+        guard alert.runModal() == .alertFirstButtonReturn else {
+            return
+        }
+
+        isResettingCoreAudio = true
+        coreAudioResetStatus = "macOS will ask for administrator permission to restart Core Audio."
+        Safety.log("QuickSettingsView — Reset Core Audio button invoked", category: .audio)
+
+        Task { @MainActor in
+            do {
+                try await coreAudioResetService.resetCoreAudio()
+                try await Task.sleep(nanoseconds: 1_200_000_000)
+                scanner.refreshDevices()
+                validatePreferredInputAfterCoreAudioReset()
+
+                switch await engine.rebuildAudioAfterCoreAudioReset() {
+                case .success(let message):
+                    coreAudioResetStatus = message
+                    Safety.log("QuickSettingsView — Core Audio reset postflight succeeded: \(message)", category: .audio)
+                case .failure(let error):
+                    coreAudioResetStatus = "Core Audio reset completed, but audio input restart failed: \(error.localizedDescription)"
+                    Safety.log("QuickSettingsView — Core Audio reset postflight restart failed: \(error)", category: .audio)
+                }
+            } catch {
+                coreAudioResetStatus = "Core Audio reset failed: \(error.localizedDescription)"
+                Safety.log("QuickSettingsView — Core Audio reset failed: \(error)", category: .audio)
+            }
+
+            isResettingCoreAudio = false
+        }
+    }
+
+    private func validatePreferredInputAfterCoreAudioReset() {
+        let preferredUID = settings.inputDeviceUID
+        guard !preferredUID.isEmpty else {
+            Safety.log("QuickSettingsView — Core Audio reset postflight device validation: System Default selected", category: .audio)
+            return
+        }
+
+        let devices = AudioDeviceManager.inputDevices()
+        if devices.contains(where: { $0.uid == preferredUID }) {
+            Safety.log("QuickSettingsView — Core Audio reset postflight device validation succeeded for preferredUID='\(preferredUID)'", category: .audio)
+        } else {
+            settings.inputDeviceUID = ""
+            Safety.log("QuickSettingsView — Core Audio reset postflight cleared stale preferredUID='\(preferredUID)'", category: .audio)
         }
     }
 

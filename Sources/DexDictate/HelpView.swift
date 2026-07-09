@@ -461,6 +461,7 @@ private struct WelcomeContent: View {
             VStack(alignment: .leading, spacing: 12) {
                 helpBody("DexDictate lives in your menu bar and converts speech to text using a local Whisper AI model. No internet connection is required — your audio never leaves your Mac.")
                 helpBody("Press your configured trigger to start speaking. DexDictate transcribes what you say and types it into whatever app is in focus.")
+                helpCallout("If DexDictate cannot open your selected microphone or reports Core Audio error -10868, open Quick Settings > Advanced and use Reset Core Audio. This restarts macOS audio and can fix missing or frozen microphones.")
                 helpHeading("Key ideas")
                 VStack(alignment: .leading, spacing: 6) {
                     Label("Runs entirely on your Mac — Apple Silicon optimized", systemImage: "cpu")
@@ -931,23 +932,9 @@ private struct DiagnosticsContent: View {
             // MARK: CoreAudio -10868
 
             helpHeading("Core Audio Error (-10868)")
-            helpBody("If DexDictate repeatedly reports a Core Audio error, macOS Core Audio may be stuck. This can happen after system sleep, audio device changes, or when Zoom or another audio app disrupts the audio session.")
-            helpWarning("Save your work first. The following command briefly interrupts all system audio.")
-            helpBody("Open Terminal and run:")
-            Text("sudo killall coreaudiod")
-                .font(.caption.monospaced())
-                .foregroundStyle(.cyan.opacity(0.9))
-                .padding(8)
-                .background(Color.white.opacity(0.05))
-                .clipShape(RoundedRectangle(cornerRadius: 6))
-            helpBody("If that does not work:")
-            Text("sudo killall -9 coreaudiod")
-                .font(.caption.monospaced())
-                .foregroundStyle(.cyan.opacity(0.9))
-                .padding(8)
-                .background(Color.white.opacity(0.05))
-                .clipShape(RoundedRectangle(cornerRadius: 6))
-            helpBody("DexDictate does not run these commands automatically.")
+            helpBody("If DexDictate cannot open your selected microphone or reports Core Audio error -10868, open Quick Settings > Advanced and use Reset Core Audio. This restarts macOS audio and can fix missing or frozen microphones.")
+            helpWarning("Resetting Core Audio briefly interrupts all system audio.")
+            helpBody("Use Quick Settings → Advanced → Reset Core Audio. DexDictate will ask for confirmation, macOS will ask for administrator permission, and then DexDictate will reload input devices.")
 
             // MARK: Diagnostics log
 

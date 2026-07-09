@@ -294,6 +294,68 @@ public final class TranscriptionEngine: ObservableObject {
         automaticRetryOriginalText = nil
         whisperService.setInitialPrompt(nil)
     }
+
+    public func rebuildAudioAfterCoreAudioReset() async -> Result<String, Error> {
+        Safety.log("TranscriptionEngine — Core Audio reset postflight started, state=\(state)", category: .audio)
+        let preferredUID = AppSettings.shared.inputDeviceUID
+
+        if !preferredUID.isEmpty {
+            let knownDevices = AudioDeviceManager.inputDevices()
+            if !knownDevices.contains(where: { $0.uid == preferredUID }) {
+                Safety.log(
+                    "TranscriptionEngine — preferred input uid='\(preferredUID)' no longer exists after Core Audio reset; clearing stored selection",
+                    category: .audio
+                )
+                AppSettings.shared.inputDeviceUID = ""
+            }
+        }
+
+        guard state == .listening else {
+            statusText = "Core Audio reset complete. Audio devices reloaded."
+            Safety.log("TranscriptionEngine — Core Audio reset postflight complete; no active dictation engine to restart", category: .audio)
+            return .success("Core Audio reset complete. Audio devices reloaded.")
+        }
+
+        silenceTimeoutTask?.cancel()
+        silenceTimeoutTask = nil
+        silenceCountdown = nil
+        inputLevel = 0
+        liveTranscript = ""
+        statusText = "Restarting audio input..."
+
+        return await withCheckedContinuation { continuation in
+            audioService.rebuildAfterCoreAudioReset(preferredInputUID: AppSettings.shared.inputDeviceUID) { [weak self] result in
+                guard let self else {
+                    continuation.resume(returning: .success("Core Audio reset complete."))
+                    return
+                }
+
+                switch result {
+                case .success(let report):
+                    if let report {
+                        self.recordRouteRecoverySuccess(report)
+                        if report.shouldClearStoredPreferredUID {
+                            AppSettings.shared.inputDeviceUID = ""
+                        }
+                    }
+                    self.statusText = "Core Audio reset complete. Audio input restarted."
+                    self.startSilenceCountdownIfNeeded()
+                    Safety.log("TranscriptionEngine — Core Audio reset postflight engine restart succeeded", category: .audio)
+                    continuation.resume(returning: .success("Core Audio reset complete. Audio input restarted."))
+                case .failure(let error):
+                    self.resultFeedback = .idle
+                    self.pendingOutputTargetApplication = nil
+                    self.currentRecordingStartedAt = nil
+                    self.resumeActiveBrowserMediaSession()
+                    _ = self.applyLifecycle(.audioCaptureFailed, context: "coreAudioResetRestartFailure")
+                    self.statusText = "Core Audio reset completed, but DexDictate could not restart audio input."
+                    self.inputLevel = 0
+                    Safety.log("TranscriptionEngine — Core Audio reset postflight engine restart failed: \(error)", category: .audio)
+                    continuation.resume(returning: .failure(error))
+                }
+            }
+        }
+    }
     
     /// True once the Whisper model has been successfully loaded into memory.
     /// Used by `.onAppear` to skip redundant 74 MB model reloads when the engine

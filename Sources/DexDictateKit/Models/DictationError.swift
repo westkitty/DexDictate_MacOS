@@ -21,10 +21,7 @@ public enum DictationError: LocalizedError, Equatable {
                 Audio engine setup failed: \(message)
 
                 This is usually a macOS Core Audio problem, not a DexDictate settings problem.
-                Fix: open Terminal and run:
-                sudo killall -9 coreaudiod
-
-                Then try DexDictate again.
+                Use Quick Settings > Advanced > Reset Core Audio, then try DexDictate again.
                 """
             }
             return "Audio engine setup failed: \(message)"

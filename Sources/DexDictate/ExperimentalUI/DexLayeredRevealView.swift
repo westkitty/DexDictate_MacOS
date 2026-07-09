@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import DexDictateKit
 
 /// Sparse layered reveal panel — settings, history, and Dexter feed.
@@ -19,7 +20,10 @@ struct DexLayeredRevealView: View {
     var onRequestOnboardingDebug: (() -> Void)?
 
     @State private var activeLayer: RevealLayer = .none
+    @State private var isResettingCoreAudio = false
+    @State private var coreAudioResetStatus: String?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    private let coreAudioResetService = CoreAudioResetService()
 
     enum RevealLayer: Equatable {
         case none, history, settings, dexter
@@ -281,6 +285,15 @@ struct DexLayeredRevealView: View {
                     isOn: safeModeBinding
                 )
 
+                // -- Advanced --
+                Text("Advanced")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.62))
+                    .padding(.top, 4)
+                    .accessibilityAddTraits(.isHeader)
+
+                advancedAudioRecoveryPanel
+
                 // -- HUD --
                 sectionHeader("HUD")
 
@@ -320,6 +333,110 @@ struct DexLayeredRevealView: View {
                 else       { settings.disableSafeMode() }
             }
         )
+    }
+
+    private var advancedAudioRecoveryPanel: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Advanced Audio Recovery")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.orange.opacity(0.9))
+
+            Text("If microphone input keeps failing, macOS Core Audio may be stuck. Resetting Core Audio restarts the system audio service and usually fixes missing or frozen microphones.")
+                .font(.caption2)
+                .foregroundStyle(.white.opacity(0.55))
+                .fixedSize(horizontal: false, vertical: true)
+
+            Button {
+                resetCoreAudio()
+            } label: {
+                HStack(spacing: 6) {
+                    if isResettingCoreAudio {
+                        ProgressView()
+                            .scaleEffect(0.55)
+                            .controlSize(.small)
+                    } else {
+                        Image(systemName: "waveform.badge.exclamationmark")
+                            .accessibilityHidden(true)
+                    }
+                    Text(isResettingCoreAudio ? "Resetting..." : "Reset Core Audio")
+                        .font(.caption.weight(.medium))
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+            }
+            .buttonStyle(.plain)
+            .background(Color.orange.opacity(0.22))
+            .foregroundStyle(.white.opacity(0.9))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .disabled(isResettingCoreAudio)
+            .accessibilityLabel("Reset Core Audio")
+
+            if let coreAudioResetStatus {
+                Text(coreAudioResetStatus)
+                    .font(.caption2)
+                    .foregroundStyle(coreAudioResetStatus.lowercased().contains("failed") ? .red.opacity(0.9) : .white.opacity(0.45))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(10)
+        .background(Color.white.opacity(0.04))
+        .clipShape(RoundedRectangle(cornerRadius: 9))
+    }
+
+    private func resetCoreAudio() {
+        guard !isResettingCoreAudio else { return }
+        let alert = NSAlert()
+        alert.messageText = "Reset Core Audio?"
+        alert.informativeText = "This will restart macOS Core Audio. Your audio devices may briefly disconnect and reconnect. Continue?"
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Continue")
+        alert.addButton(withTitle: "Cancel")
+
+        guard alert.runModal() == .alertFirstButtonReturn else {
+            return
+        }
+
+        isResettingCoreAudio = true
+        coreAudioResetStatus = "macOS will ask for administrator permission to restart Core Audio."
+        Safety.log("DexLayeredRevealView — Reset Core Audio button invoked", category: .audio)
+
+        Task { @MainActor in
+            do {
+                try await coreAudioResetService.resetCoreAudio()
+                try await Task.sleep(nanoseconds: 1_200_000_000)
+                validatePreferredInputAfterCoreAudioReset()
+
+                switch await engine.rebuildAudioAfterCoreAudioReset() {
+                case .success(let message):
+                    coreAudioResetStatus = message
+                    Safety.log("DexLayeredRevealView — Core Audio reset postflight succeeded: \(message)", category: .audio)
+                case .failure(let error):
+                    coreAudioResetStatus = "Core Audio reset completed, but audio input restart failed: \(error.localizedDescription)"
+                    Safety.log("DexLayeredRevealView — Core Audio reset postflight restart failed: \(error)", category: .audio)
+                }
+            } catch {
+                coreAudioResetStatus = "Core Audio reset failed: \(error.localizedDescription)"
+                Safety.log("DexLayeredRevealView — Core Audio reset failed: \(error)", category: .audio)
+            }
+
+            isResettingCoreAudio = false
+        }
+    }
+
+    private func validatePreferredInputAfterCoreAudioReset() {
+        let preferredUID = settings.inputDeviceUID
+        guard !preferredUID.isEmpty else {
+            Safety.log("DexLayeredRevealView — Core Audio reset postflight device validation: System Default selected", category: .audio)
+            return
+        }
+
+        let devices = AudioDeviceManager.inputDevices()
+        if devices.contains(where: { $0.uid == preferredUID }) {
+            Safety.log("DexLayeredRevealView — Core Audio reset postflight device validation succeeded for preferredUID='\(preferredUID)'", category: .audio)
+        } else {
+            settings.inputDeviceUID = ""
+            Safety.log("DexLayeredRevealView — Core Audio reset postflight cleared stale preferredUID='\(preferredUID)'", category: .audio)
+        }
     }
 
     // MARK: - Dexter layer

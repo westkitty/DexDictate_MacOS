@@ -5,6 +5,14 @@
 .build/arm64-apple-macosx/debug/VerificationRunner.dSYM/Contents/Info.plist
 .build/arm64-apple-macosx/release/DexDictate_MacOS.dSYM/Contents/Info.plist
 .build/arm64-apple-macosx/release/VerificationRunner.dSYM/Contents/Info.plist
+.build/artifacts/moonshine-swift/Moonshine/Moonshine.xcframework/Info.plist
+.build/checkouts/FluidAudio/AGENTS.md
+.build/checkouts/FluidAudio/Documentation/README.md
+.build/checkouts/FluidAudio/README.md
+.build/checkouts/FluidAudio/Scripts/nemo_ami_benchmark/README.md
+.build/checkouts/FluidAudio/Scripts/voice_cloning/README.md
+.build/checkouts/FluidAudio/Sources/FastClusterWrapper/README.md
+.build/checkouts/FluidAudio/Sources/FluidAudioCLI/README.md
 .build/checkouts/SwiftWhisper/README.md
 .build/checkouts/SwiftWhisper/whisper.cpp/bindings/go/README.md
 .build/checkouts/SwiftWhisper/whisper.cpp/bindings/ios/README.md

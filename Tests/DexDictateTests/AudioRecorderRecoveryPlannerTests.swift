@@ -74,6 +74,7 @@ final class AudioRecorderRecoveryPlannerTests: XCTestCase {
     }
 
     func testPreferredInputThatStillExistsButCannotOpenFallsBackWithoutClearingPreference() throws {
+        var stalledUIDs: [String] = []
         let planner = makePlanner(
             resolutionSequence: [
                 .available(AudioInputDeviceMatch(uid: "mic-a", deviceID: 42, hasInputChannels: true)),
@@ -87,14 +88,16 @@ final class AudioRecorderRecoveryPlannerTests: XCTestCase {
                 case .systemDefault:
                     return AudioRecorderStartedInput(uid: "", deviceID: nil)
                 }
-            }
+            },
+            markPreferredDeviceStalled: { stalledUIDs.append($0) }
         )
 
         let report = try planner.execute(preferredUID: "mic-a", reason: .routeRecovery)
 
         XCTAssertTrue(report.usedSystemDefault)
         XCTAssertFalse(report.shouldClearStoredPreferredUID)
-        XCTAssertEqual(report.retryCount, 2)
+        XCTAssertEqual(report.retryCount, 0)
+        XCTAssertEqual(stalledUIDs, ["mic-a"])
         XCTAssertNotNil(report.recoveryNotice)
     }
 
@@ -130,7 +133,8 @@ final class AudioRecorderRecoveryPlannerTests: XCTestCase {
 
     private func makePlanner(
         resolutionSequence: [AudioInputDeviceResolution],
-        startHandler: @escaping (AudioRecorderSelectedInput, AudioRecorderStartReason, Int) throws -> AudioRecorderStartedInput
+        startHandler: @escaping (AudioRecorderSelectedInput, AudioRecorderStartReason, Int) throws -> AudioRecorderStartedInput,
+        markPreferredDeviceStalled: @escaping (String) -> Void = { _ in }
     ) -> AudioRecorderRecoveryPlanner {
         var resolutions = resolutionSequence
         return AudioRecorderRecoveryPlanner(
@@ -143,7 +147,8 @@ final class AudioRecorderRecoveryPlannerTests: XCTestCase {
                 }
                 return resolutions[0]
             },
-            startAttempt: startHandler
+            startAttempt: startHandler,
+            markPreferredDeviceStalled: markPreferredDeviceStalled
         )
     }
 

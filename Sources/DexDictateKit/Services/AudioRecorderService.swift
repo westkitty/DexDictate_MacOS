@@ -90,8 +90,12 @@ public final class AudioRecorderService: ObservableObject {
     /// `audioQueue` already serializes top-level calls; this flag additionally rejects
     /// genuine reentrancy (a recovery synchronously triggered mid-start).
     nonisolated(unsafe) private var isStartInProgress = false
+    nonisolated(unsafe) private var captureWasActiveBeforeSleep = false
+    nonisolated(unsafe) private var preferredInputUIDBeforeSleep = ""
+    nonisolated(unsafe) private var preferredInputCooldownUntil: [String: Date] = [:]
 
     private let preferredInputRetryDelays: [TimeInterval] = [0, 0.2, 0.5, 1.0]
+    private let preferredInputFailureCooldown: TimeInterval = 60
 
     public init() {
         setupSleepWakeNotifications()
@@ -114,6 +118,12 @@ public final class AudioRecorderService: ObservableObject {
         ) { [weak self] _ in
             self?.audioQueue.async { [weak self] in
                 guard let self else { return }
+                self.captureWasActiveBeforeSleep = self.isCaptureSessionActive
+                self.preferredInputUIDBeforeSleep = self.activePreferredInputUID
+                Safety.log(
+                    "AudioRecorderService — macOS will sleep; tearing down engine, wasActive=\(self.captureWasActiveBeforeSleep), preferredUID='\(self.preferredInputUIDBeforeSleep)'",
+                    category: .audio
+                )
                 self.teardownEngineUnsafe()
                 self.isCaptureSessionActive = false
                 self.activePreferredInputUID = ""
@@ -127,7 +137,23 @@ public final class AudioRecorderService: ObservableObject {
             forName: NSWorkspace.didWakeNotification,
             object: nil,
             queue: nil
-        ) { _ in /* engine will be restarted on next recording attempt */ }
+        ) { [weak self] _ in
+            self?.audioQueue.async { [weak self] in
+                guard let self else { return }
+                let shouldRebuild = self.captureWasActiveBeforeSleep
+                let preferredUID = self.preferredInputUIDBeforeSleep
+                self.captureWasActiveBeforeSleep = false
+                self.preferredInputUIDBeforeSleep = ""
+
+                guard shouldRebuild else {
+                    Safety.log("AudioRecorderService — macOS woke; no active capture session to rebuild", category: .audio)
+                    return
+                }
+
+                Safety.log("AudioRecorderService — macOS woke; rebuilding capture engine for preferredUID='\(preferredUID)'", category: .audio)
+                self.rebuildAfterExternalAudioReset(preferredUID: preferredUID, reason: .routeRecovery)
+            }
+        }
     }
 
     /// Observes AVAudioEngineConfigurationChange, which fires when the hardware route
@@ -267,6 +293,28 @@ public final class AudioRecorderService: ObservableObject {
         }
         defer { endStartAttempt() }
 
+        let effectiveInputDeviceUID: String
+        let cooldownRecoveryNotice: String?
+        if let cooldownNotice = preferredCooldownNotice(for: inputDeviceUID) {
+            effectiveInputDeviceUID = ""
+            cooldownRecoveryNotice = cooldownNotice
+            Safety.log(
+                "startRecordingInternal() — preferredUID='\(inputDeviceUID)' is cooling down; using System Default Input",
+                category: .audio
+            )
+        } else {
+            effectiveInputDeviceUID = inputDeviceUID
+            cooldownRecoveryNotice = nil
+        }
+
+        if !inputDeviceUID.isEmpty {
+            let preferredName = AudioDeviceManager.inputDevices().first(where: { $0.uid == inputDeviceUID })?.name ?? "(unresolved)"
+            Safety.log(
+                "startRecordingInternal() — preferred microphone open attempt: uid='\(inputDeviceUID)', name='\(preferredName)'",
+                category: .audio
+            )
+        }
+
         let planner = AudioRecorderRecoveryPlanner(
             retryDelays: preferredInputRetryDelays,
             sleep: { Thread.sleep(forTimeInterval: $0) },
@@ -282,12 +330,20 @@ public final class AudioRecorderService: ObservableObject {
                     attemptIndex: attemptIndex,
                     preserveBufferedAudio: preserveBufferedAudio
                 )
+            },
+            markPreferredDeviceStalled: { [weak self] uid in
+                self?.markPreferredDeviceOnCooldown(uid)
             }
         )
 
-        let report = try planner.execute(preferredUID: inputDeviceUID, reason: reason)
+        let plannedReport = try planner.execute(preferredUID: effectiveInputDeviceUID, reason: reason)
+        let report = adjustedReportForCooldown(
+            plannedReport,
+            requestedPreferredUID: inputDeviceUID,
+            recoveryNotice: cooldownRecoveryNotice
+        )
         isCaptureSessionActive = true
-        activePreferredInputUID = inputDeviceUID
+        activePreferredInputUID = report.usedSystemDefault ? "" : inputDeviceUID
         activeInputUID = report.activeInputUID
 
         Safety.log(
@@ -331,6 +387,56 @@ public final class AudioRecorderService: ObservableObject {
             self.activeInputUID = ""
             MainActorDispatch.async { [weak self] in
                 self?.inputLevel = 0
+            }
+        }
+    }
+
+    public func rebuildAfterCoreAudioReset(
+        preferredInputUID: String,
+        completion: @escaping @MainActor (Result<AudioRecorderStartReport?, Error>) -> Void
+    ) {
+        audioQueue.async { [weak self] in
+            guard let self else { return }
+            Safety.log(
+                "AudioRecorderService — Core Audio reset postflight requested, isCaptureSessionActive=\(self.isCaptureSessionActive), preferredUID='\(preferredInputUID)'",
+                category: .audio
+            )
+            self.teardownEngineUnsafe()
+            MainActorDispatch.async { [weak self] in
+                self?.inputLevel = 0
+            }
+
+            guard self.isCaptureSessionActive else {
+                self.activePreferredInputUID = ""
+                self.activeInputUID = ""
+                Safety.log("AudioRecorderService — Core Audio reset postflight: no active capture engine to restart", category: .audio)
+                MainActorDispatch.async {
+                    completion(.success(nil))
+                }
+                return
+            }
+
+            do {
+                let report = try self.startRecordingInternal(
+                    inputDeviceUID: preferredInputUID,
+                    reason: .routeRecovery,
+                    preserveBufferedAudio: false
+                )
+                Safety.log(
+                    "AudioRecorderService — Core Audio reset postflight restart succeeded; finalDecision=\(report.finalDecisionDescription)",
+                    category: .audio
+                )
+                MainActorDispatch.async {
+                    completion(.success(report))
+                }
+            } catch {
+                Safety.log("AudioRecorderService — Core Audio reset postflight restart failed: \(error)", category: .audio)
+                self.isCaptureSessionActive = false
+                self.activePreferredInputUID = ""
+                self.activeInputUID = ""
+                MainActorDispatch.async {
+                    completion(.failure(error))
+                }
             }
         }
     }
@@ -674,6 +780,74 @@ public final class AudioRecorderService: ObservableObject {
             shouldClearStoredPreferredUID: false,
             underlyingError: error
         )
+    }
+
+    private func markPreferredDeviceOnCooldown(_ uid: String) {
+        guard !uid.isEmpty else { return }
+        preferredInputCooldownUntil[uid] = Date().addingTimeInterval(preferredInputFailureCooldown)
+        Safety.log(
+            "AudioRecorderService — preferred input uid='\(uid)' placed on \(Int(preferredInputFailureCooldown))s cooldown after Core Audio error -10868",
+            category: .audio
+        )
+    }
+
+    private func preferredCooldownNotice(for uid: String) -> String? {
+        guard !uid.isEmpty else { return nil }
+        guard let until = preferredInputCooldownUntil[uid] else { return nil }
+        if until <= Date() {
+            preferredInputCooldownUntil.removeValue(forKey: uid)
+            Safety.log("AudioRecorderService — preferred input uid='\(uid)' cooldown expired", category: .audio)
+            return nil
+        }
+        return "Preferred microphone could not be opened. DexDictate switched to System Default Input."
+    }
+
+    private func adjustedReportForCooldown(
+        _ report: AudioRecorderStartReport,
+        requestedPreferredUID: String,
+        recoveryNotice: String?
+    ) -> AudioRecorderStartReport {
+        guard let recoveryNotice, !requestedPreferredUID.isEmpty else { return report }
+        return AudioRecorderStartReport(
+            reason: report.reason,
+            requestedPreferredUID: requestedPreferredUID,
+            activeInputUID: report.activeInputUID,
+            activeInputDeviceID: report.activeInputDeviceID,
+            preferredInputDeviceID: report.preferredInputDeviceID,
+            usedSystemDefault: true,
+            retryCount: report.retryCount,
+            recoveryNotice: recoveryNotice,
+            shouldClearStoredPreferredUID: false
+        )
+    }
+
+    private func rebuildAfterExternalAudioReset(preferredUID: String, reason: AudioRecorderStartReason) {
+        do {
+            let report = try startRecordingInternal(
+                inputDeviceUID: preferredUID,
+                reason: reason,
+                preserveBufferedAudio: true
+            )
+            Safety.log(
+                "AudioRecorderService — external audio rebuild succeeded; finalDecision=\(report.finalDecisionDescription)",
+                category: .audio
+            )
+            MainActorDispatch.async { [weak self] in
+                self?.onRouteRecoveryResult?(.success(report))
+            }
+        } catch {
+            let failure = makeRecoveryFailure(error, reason: reason, preferredUID: preferredUID)
+            Safety.log("AudioRecorderService — external audio rebuild failed: \(failure.localizedDescription)", category: .audio)
+            isCaptureSessionActive = false
+            activePreferredInputUID = ""
+            activeInputUID = ""
+            MainActorDispatch.async { [weak self] in
+                guard let self else { return }
+                self.inputLevel = 0
+                self.onRouteRecoveryResult?(.failure(failure))
+                self.onEngineInterrupted?()
+            }
+        }
     }
 
     private func describeSelection(_ selection: AudioRecorderSelectedInput) -> String {

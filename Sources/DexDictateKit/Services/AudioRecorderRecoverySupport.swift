@@ -49,14 +49,11 @@ public struct AudioRecorderRecoveryFailure: Error, LocalizedError {
             return recoveryNotice
         }
 
-        let isStall = AudioErrorClassifier.isCoreAudioDeviceStall(underlyingError)
-        let recoveryCommandText = isStall ? "\n\nCore Audio error -10868 detected. A manual Core Audio reset may be required. Run in Terminal:\nsudo killall -9 coreaudiod" : ""
-
         switch reason {
         case .initialStart:
-            return "DexDictate could not open the selected microphone. Try again.\(recoveryCommandText)"
+            return "DexDictate could not open the selected microphone. Try again."
         case .routeRecovery:
-            return "DexDictate could not recover audio after the route changed. Ready to record again.\(recoveryCommandText)"
+            return "DexDictate could not recover audio after the route changed. Ready to record again."
         }
     }
 }
@@ -111,6 +108,23 @@ struct AudioRecorderRecoveryPlanner {
     let log: (String) -> Void
     let resolvePreferredInput: (String) -> AudioInputDeviceResolution
     let startAttempt: (AudioRecorderSelectedInput, AudioRecorderStartReason, Int) throws -> AudioRecorderStartedInput
+    let markPreferredDeviceStalled: (String) -> Void
+
+    init(
+        retryDelays: [TimeInterval],
+        sleep: @escaping (TimeInterval) -> Void,
+        log: @escaping (String) -> Void,
+        resolvePreferredInput: @escaping (String) -> AudioInputDeviceResolution,
+        startAttempt: @escaping (AudioRecorderSelectedInput, AudioRecorderStartReason, Int) throws -> AudioRecorderStartedInput,
+        markPreferredDeviceStalled: @escaping (String) -> Void = { _ in }
+    ) {
+        self.retryDelays = retryDelays
+        self.sleep = sleep
+        self.log = log
+        self.resolvePreferredInput = resolvePreferredInput
+        self.startAttempt = startAttempt
+        self.markPreferredDeviceStalled = markPreferredDeviceStalled
+    }
 
     func execute(preferredUID: String, reason: AudioRecorderStartReason) throws -> AudioRecorderStartReport {
         let effectiveRetryDelays = retryDelays.isEmpty ? [0] : retryDelays
@@ -153,6 +167,11 @@ struct AudioRecorderRecoveryPlanner {
                     } catch {
                         lastPreferredStartError = error
                         log("audio recovery — preferred start failed for uid=\(preferredUID), deviceID=\(match.deviceID), attempt=\(index + 1): \(error)")
+                        if AudioErrorClassifier.isCoreAudioDeviceStall(error) {
+                            log("audio recovery — Core Audio error -10868 detected for preferred uid=\(preferredUID); falling back to System Default and starting cooldown")
+                            markPreferredDeviceStalled(preferredUID)
+                            break preferredLoop
+                        }
                     }
                 case .missing(let uid):
                     log("audio recovery — preferred uid=\(uid) is missing on attempt \(index + 1)")
@@ -214,18 +233,18 @@ struct AudioRecorderRecoveryPlanner {
             : "Preferred microphone could not be opened."
 
         let isStall = lastPreferredStartError.map { AudioErrorClassifier.isCoreAudioDeviceStall($0) } ?? false
-        let recoveryCommandText = isStall ? "\n\nCore Audio error -10868 detected. A manual Core Audio reset may be required. Run in Terminal:\nsudo killall -9 coreaudiod" : ""
+        let stallHint = isStall ? " Core Audio error -10868 detected. Use Advanced > Reset Core Audio if microphone input keeps failing." : ""
 
         switch lastResolution {
         case .systemDefault:
             return nil
         case .missing:
-            return "Selected microphone is unavailable. DexDictate switched to System Default input.\(recoveryCommandText)"
+            return "Selected microphone is unavailable. DexDictate switched to System Default input.\(stallHint)"
         case .unavailableAsInput:
-            return "Selected device is not usable as an input. DexDictate switched to System Default input.\(recoveryCommandText)"
+            return "Selected device is not usable as an input. DexDictate switched to System Default input.\(stallHint)"
         case .available:
             _ = lastPreferredStartError
-            return "\(prefix) DexDictate switched to System Default input.\(recoveryCommandText)"
+            return "\(prefix) DexDictate switched to System Default Input.\(stallHint)"
         }
     }
 

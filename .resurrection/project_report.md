@@ -11,9 +11,9 @@
 
 ## Git State
 - Summary: Repo root: /Users/andrew/DexDictate_MacOS.nosync | Branch: speech-engine-exploration-benchmarks | Status: dirty | Remote: git@github.com:westkitty/DexDictate_MacOS.git
-- Latest commit: bac1bcfb5a54f8607b997e81c66b872ce657abd3 Add speech engine exploration benchmark lanes
-- Tracked modified count: 3
-- Untracked count: 1
+- Latest commit: da31ba4f813a8dd26b78285da082685b50752cb7 fix: bring Experimental UI to parity with Classic for transcription features
+- Tracked modified count: 4
+- Untracked count: 0
 - Staged count: 1
 
 ## Commands Detected
@@ -29,6 +29,14 @@
 - .build/arm64-apple-macosx/debug/VerificationRunner.dSYM/Contents/Info.plist
 - .build/arm64-apple-macosx/release/DexDictate_MacOS.dSYM/Contents/Info.plist
 - .build/arm64-apple-macosx/release/VerificationRunner.dSYM/Contents/Info.plist
+- .build/artifacts/moonshine-swift/Moonshine/Moonshine.xcframework/Info.plist
+- .build/checkouts/FluidAudio/AGENTS.md
+- .build/checkouts/FluidAudio/Documentation/README.md
+- .build/checkouts/FluidAudio/README.md
+- .build/checkouts/FluidAudio/Scripts/nemo_ami_benchmark/README.md
+- .build/checkouts/FluidAudio/Scripts/voice_cloning/README.md
+- .build/checkouts/FluidAudio/Sources/FastClusterWrapper/README.md
+- .build/checkouts/FluidAudio/Sources/FluidAudioCLI/README.md
 - .build/checkouts/SwiftWhisper/README.md
 - .build/checkouts/SwiftWhisper/whisper.cpp/bindings/go/README.md
 - .build/checkouts/SwiftWhisper/whisper.cpp/bindings/ios/README.md
@@ -1683,5 +1691,5 @@
 5. Validate the project with the hinted build command: ./build.sh
 
 ## Scan Metadata
-- Timestamp: 2026-06-27T18:13:25+00:00
-- Scanner version: 1.0.0
+- Timestamp: 2026-07-05T04:31:53+00:00
+- Scanner version: 1.1.0
