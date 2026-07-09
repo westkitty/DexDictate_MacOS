@@ -102,3 +102,13 @@ Sequential record of the autonomous packet run authorized 2026-07-09. Ungated pa
 - Screenshots: none — blocked, same automation gap as every prior packet
 - Manual validations: not performed — see `packet_09/NEEDS_ANDREW.md`
 - Safe to continue: Yes — proceeding to Packet 10 (independent), then Packet 11 (unblocks Stage B), then returning to complete Packet 09 Stage B before 12A/15.
+
+## Packet 10 — Terminology Sweep
+- Start commit: c3422d96
+- Final commit: (see commit immediately following this entry)
+- Pushed: Yes
+- Tests: 382 passed, 0 failures (matches baseline); targeted SettingsMigration 2/2 passed
+- Screenshots: none — blocked, same automation gap as every prior packet
+- Manual validations: not performed (visual read-through) — see `packet_10/NEEDS_ANDREW.md`
+- NEEDS_ANDREW: forbidden-file string in `TranscriptionEngine.swift:1262` not editable; NEW finding — four more orphaned benchmark controls (Run Benchmarks Now, Restore Stable Defaults, Open Captured Corpus, BenchmarkResultsSection) hidden by Packet 07 with no new home, distinct from the original 7; 34 other stale Help "Quick Settings →" paths left for a separate documentation pass — see `packet_10/NEEDS_ANDREW.md`
+- Safe to continue: Yes

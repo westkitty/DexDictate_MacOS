@@ -124,7 +124,7 @@ struct HistoryView: View {
                                         .fixedSize(horizontal: false, vertical: true)
 
                                     if item.isAccuracyRetry {
-                                        Text("Accuracy retry")
+                                        Text("Quality retry")
                                             .font(.caption2.weight(.semibold))
                                             .foregroundStyle(.cyan)
                                     }

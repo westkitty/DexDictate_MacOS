@@ -61,10 +61,10 @@ struct PopoverResultView: View {
                     }
 
                     if engine.canRetryLastUtterance {
-                        Button("Retry Last in Accuracy Mode") { retryLastUtterance() }
+                        Button("Retry with Higher Quality") { retryLastUtterance() }
                             .buttonStyle(.bordered)
                             .controlSize(.small)
-                            .accessibilityLabel("Retry the last utterance in accuracy mode")
+                            .accessibilityLabel("Retry the last utterance with higher quality")
                     }
 
                     if settings.enableCorrectionSheet {

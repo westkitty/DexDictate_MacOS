@@ -78,7 +78,7 @@ struct ModelsAccuracyPage: View {
                 Divider()
 
                 SettingToggleWithInfo(
-                    title: "Accuracy Retry",
+                    title: "Quality Retry",
                     info: "When transcription produces a suspiciously short or low-confidence result, DexDictate silently re-runs Whisper on the same audio at a higher quality level. Costs extra processing time but catches utterances where the first pass stumbled.",
                     isOn: $settings.enableAccuracyRetry
                 )
@@ -86,15 +86,15 @@ struct ModelsAccuracyPage: View {
                 if settings.enableAccuracyRetry {
                     SettingToggleWithInfo(
                         title: "Retry Suspicious Results Automatically",
-                        info: "When Accuracy Retry is on, this fires the retry without asking you first. Turn it off if you'd rather decide manually — you'll see a 'Retry Last in Accuracy Mode' button after each suspicious result instead.",
+                        info: "When Quality Retry is on, this fires the retry without asking you first. Turn it off if you'd rather decide manually — you'll see a 'Retry with Higher Quality' button after each suspicious result instead.",
                         isOn: $settings.autoRetrySuspiciousResults
                     )
                     .padding(.leading, 16)
                 }
 
                 SettingToggleWithInfo(
-                    title: "Use Context From Focused Field",
-                    info: "Reads the text you're currently editing (via the Accessibility API) and uses it to prime Whisper, improving accuracy for proper nouns and continuing sentences. Combined with DexDictate's vocabulary biasing. Off by default; requires Accessibility permission.",
+                    title: "Context Priming",
+                    info: "Reads the text around your cursor so names and jargon come out right.",
                     isOn: $settings.enableContextInjection
                 )
 
@@ -125,7 +125,7 @@ struct ModelsAccuracyPage: View {
         }
     }
 
-    /// Distinct from "Use Context From Focused Field" (Context Injection) above: this
+    /// Distinct from "Context Priming" (formerly "Context Injection") above: this
     /// applies a light domain-specific vocabulary hint based on which app is frontmost,
     /// rather than reading live cursor content. Migrated verbatim from the popover's
     /// "Context Biasing" disclosure group (Packet 08B — was orphaned by Packet 07).

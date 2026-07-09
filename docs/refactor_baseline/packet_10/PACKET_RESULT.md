@@ -1,0 +1,18 @@
+## Packet Result
+- Packet: 10 — Terminology Sweep
+- Branch: speech-engine-exploration-benchmarks
+- Commit hash: (see AUTOPILOT_RUN_LEDGER.md)
+- Pushed: Yes
+- Files changed: `Sources/DexDictate/QuickSettingsView.swift` (hidden legacy copies: Accuracy Retry→Quality Retry, Correction Sheet→Review Before Insert, Use Context From Focused Field→Context Priming, subtitle "smart retry"/"hidden context biasing"→"quality retry"/"context priming"); `Sources/DexDictate/SettingsWindow/ModelsAccuracyPage.swift` (same three renames, active copy); `Sources/DexDictate/SettingsWindow/OutputSettingsPage.swift` (Correction Sheet→Review Before Insert); `Sources/DexDictate/ControlsView.swift` + `Sources/DexDictate/PopoverResultView.swift` ("Retry Last in Accuracy Mode"→"Retry with Higher Quality" + accessibility labels, in both the classic and new popover); `Sources/DexDictate/HistoryView.swift` + `Sources/DexDictate/HistoryWindow.swift` ("Accuracy retry" history-tag display→"Quality retry" — display string only, `isAccuracyRetry` boolean field untouched); `Sources/DexDictate/HelpView.swift` (all Help text renames + "Found at:" paths updated to real current Settings locations, "Optimization" group name fully removed)
+- Files inspected but not changed: `Sources/DexDictateKit/TranscriptionEngine.swift` (found one user-facing string in a forbidden file — see below), `Sources/DexDictate/BenchmarkCaptureWindow.swift` (checked for equivalents of four newly-discovered orphaned benchmark controls — none found)
+- Forbidden files touched: No
+- Tests run: full `swift test`; targeted `swift test --filter SettingsMigration`
+- Test result: 382 passed, 0 failures (full suite, matches Packet 01 baseline); 2/2 passed (targeted, green as required)
+- Targeted tests: `SettingsMigrationTests` — 2/2 passed
+- Manual validations: not performed (visual read-through of renamed strings across every Settings page/popover/Help section) — see `NEEDS_ANDREW.md`
+- Screenshots captured: none — blocked, same automation gap as every prior packet
+- Feature-loss checklist rows completed: n/a (string-only packet; no behavior changed)
+- Dexter preservation checks: not exercised (no Dexter-adjacent files touched)
+- Known issues: (1) **Grep hit list** — full results in `NEEDS_ANDREW.md`. (2) **Forbidden-file string** — `TranscriptionEngine.swift:1262` has a real user-facing "Retrying in accuracy mode..." string I could not touch; still says the old term. (3) **New finding**: four more benchmark controls (Run Benchmarks Now, Restore Stable Defaults, Open Captured Corpus, `BenchmarkResultsSection`) were hidden by Packet 07 along with the rest of the Benchmarks & Corpus group but never given a new home — distinct from, and in addition to, the original 7 orphans Andrew already resolved via Packet 08B. Flagged, not fixed (placement decision, not a string rename). (4) **Scope boundary**: 34 other stale "Quick Settings →" Help references beyond the ones tied to these 5 renamed terms were left alone — full Help-location audit is a separate task. Post-sweep grep confirms zero remaining user-facing hits of the retired terms (only code comments remain, which the packet explicitly permits).
+- Rollback required: No
+- Next recommended packet: 11 — Dexter & Personality

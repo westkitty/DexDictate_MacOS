@@ -584,19 +584,19 @@ private struct TranscriptionContent: View {
                 helpHeading("Bundled model: tiny.en")
                 helpBody("A compact English-only model that balances speed and accuracy on Apple Silicon. Loaded automatically on first launch.")
                 helpHeading("Active model & selection")
-                helpBody("Quick Settings → Benchmark → Optimization → Active Model.\n\nThe Model Selection picker below it controls whether DexDictate manages the model automatically (Auto Idle Benchmark) or lets you pick manually.")
+                helpBody("Settings → Models & Accuracy → Active Model.\n\nThe Model Selection picker below it controls whether DexDictate manages the model automatically (Auto Idle Benchmark) or lets you pick manually.")
                 helpHeading("End Preset")
-                helpBody("Controls how aggressively DexDictate trims silence at the end of a recording. Found at: Quick Settings → Benchmark → Optimization → End Preset.")
+                helpBody("Controls how aggressively DexDictate trims silence at the end of a recording. Found at: Settings → Dictation → End Preset.")
                 VStack(alignment: .leading, spacing: 4) {
                     HelpRow(key: "Stable", value: "Conservative; least likely to clip sentence endings")
                     HelpRow(key: "Fast", value: "More aggressive; may clip very last words")
                     HelpRow(key: "Conservative", value: "Generous; waits longer before closing")
                 }
-                helpHeading("Accuracy Retry (opt-in)")
-                helpBody("Found at: Quick Settings → Benchmark → Optimization → Accuracy Retry toggle.\n\nWhen on, DexDictate re-transcribes at higher accuracy if confidence is low. Items retried this way are tagged \"Accuracy retry\" in history.")
+                helpHeading("Quality Retry (opt-in)")
+                helpBody("Found at: Settings → Models & Accuracy → Quality Retry toggle.\n\nWhen on, DexDictate re-transcribes at higher accuracy if confidence is low. Items retried this way are tagged \"Quality retry\" in history.")
                 helpWarning("Accuracy depends on microphone quality and background noise. Very short phrases (under ~1 second) may not transcribe reliably. Non-English speech will produce unpredictable results with the default tiny.en model.")
                 HelpScreenshot("help-transcription-model",
-                               caption: "The Benchmark Optimization section showing model and preset controls.")
+                               caption: "The Models & Accuracy page showing model and preset controls.")
             }
         }
     }
@@ -641,7 +641,7 @@ private struct HistoryContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             helpHeading("Inline history panel")
-            helpBody("Every transcription is logged in the panel at the top of the main popover. Each item shows timestamp, full text, copy button, and an \"Accuracy retry\" badge when applicable.\n\nClick the chevron to toggle between 100pt (collapsed) and 300pt (expanded).")
+            helpBody("Every transcription is logged in the panel at the top of the main popover. Each item shows timestamp, full text, copy button, and a \"Quality retry\" badge when applicable.\n\nClick the chevron to toggle between 100pt (collapsed) and 300pt (expanded).")
             HelpScreenshot("help-history-inline-expanded",
                            caption: "The history panel expanded, showing transcription items and the detach button.")
             helpHeading("Detached history window")
@@ -672,8 +672,8 @@ private struct VocabularyContent: View {
             helpBody("Custom vocabulary teaches DexDictate to automatically replace transcribed words or phrases with your preferred versions. Useful for proper nouns, technical terms, and consistently mis-transcribed words.")
             helpCallout("Example: If Whisper transcribes \"Dex Dictate\" instead of \"DexDictate\", add an entry: Dex Dictate → DexDictate")
             helpHeading("Adding a replacement")
-            helpBody("Option A — From the detached history window: click the correction icon (📖) on any history item → enter the correct version in the sheet. This button only appears when Quick Settings → Benchmark → Optimization → Correction Sheet is enabled.")
-            helpBody("Option B — From Quick Settings: Quick Settings → Input → Custom Vocabulary → Manage...")
+            helpBody("Option A — From the detached history window: click the correction icon (📖) on any history item → enter the correct version in the sheet. This button only appears when Settings → Output & Insertion → Review Before Insert is enabled.")
+            helpBody("Option B — From Settings → Vocabulary & Commands.")
             HelpScreenshot("help-vocabulary-correction-sheet",
                            caption: "The vocabulary correction sheet with both fields filled.")
             helpHeading("How replacements work")
@@ -840,15 +840,15 @@ private struct BenchmarkingContent: View {
                 helpHeading("Bundled corpus")
                 helpBody("DexDictate ships with reference audio samples. You can also capture your own corpus — this reflects your voice and environment more accurately.")
                 helpHeading("Benchmark Capture")
-                helpBody("Quick Settings → Benchmark → Open Benchmark Capture.\n\nRead on-screen prompts aloud. DexDictate saves your recordings as a WAV corpus for future benchmarks.")
+                helpBody("Settings → Models & Accuracy → Open Benchmark Lab….\n\nRead on-screen prompts aloud. DexDictate saves your recordings as a WAV corpus for future benchmarks.")
                 HelpScreenshot("help-benchmark-capture",
                                caption: "The Benchmark Capture window showing a reference prompt and recording controls.")
                 helpHeading("Model selection")
-                helpBody("Quick Settings → Benchmark → Optimization → Active Model picks the current model.\n\nModel Selection below it controls auto vs manual: set it to your preferred model or leave it on Auto Idle Benchmark to let DexDictate benchmark and pick during idle time.")
+                helpBody("Settings → Models & Accuracy → Active Model picks the current model.\n\nModel Selection below it controls auto vs manual: set it to your preferred model or leave it on Auto Idle Benchmark to let DexDictate benchmark and pick during idle time.")
                 HelpScreenshot("help-model-settings",
-                               caption: "The Benchmark Optimization section showing model and selection controls.")
+                               caption: "The Models & Accuracy page showing model and selection controls.")
                 helpHeading("Restore Stable Defaults")
-                helpBody("Quick Settings → Benchmark → Restore Stable Defaults resets transcription-specific settings to known-good values.")
+                helpBody("Resets transcription-specific settings to known-good values. Not currently reachable from Settings or the popover — see Packet 10's report.")
             }
         }
     }
@@ -907,9 +907,9 @@ private struct DiagnosticsContent: View {
             // MARK: Existing troubleshooting
 
             helpHeading("Trigger not firing")
-            helpBody("1. Check Permissions — Accessibility and Input Monitoring must both be granted.\n2. Fully quit DexDictate and relaunch.\n3. Confirm your shortcut is set in Quick Settings → Input → Trigger Mode and the shortcut recorder field.")
+            helpBody("1. Check Permissions — Accessibility and Input Monitoring must both be granted.\n2. Fully quit DexDictate and relaunch.\n3. Confirm your shortcut is set in Settings → Dictation → Trigger Mode and the shortcut recorder field.")
             helpHeading("Transcription is empty or wrong")
-            helpBody("1. Confirm Microphone permission is granted.\n2. Check Input Device in Quick Settings → Input → Input Device.\n3. Enable Safe Mode (clipboard-only) to rule out output issues.\n4. Try the bundled tiny.en model in Quick Settings → Benchmark → Optimization → Active Model.")
+            helpBody("1. Confirm Microphone permission is granted.\n2. Check Input Device in Settings → Audio & Microphone → Input Device.\n3. Enable Safe Mode (clipboard-only) to rule out output issues.\n4. Try the bundled tiny.en model in Settings → Models & Accuracy → Active Model.")
             helpHeading("Text pasting in wrong place / not pasting")
             helpBody("1. Ensure the target app is in focus when you release the trigger.\n2. Check per-app rules in Quick Settings → Output → Per-App Insertion Rules → Manage...\n3. Try enabling Accessibility API insertion.")
 

@@ -302,7 +302,7 @@ struct QuickSettingsView: View {
 
                     QuickSettingsDisclosureCard(
                         title: "Accuracy & Speed",
-                        subtitle: "Model choice, tail timing, smart retry, and hidden context biasing.",
+                        subtitle: "Model choice, tail timing, quality retry, and context priming.",
                         systemImage: "speedometer",
                         isExpanded: $accuracyPanelExpanded
                     ) {
@@ -373,7 +373,7 @@ struct QuickSettingsView: View {
 
                             if showLegacyModelAccuracyRows {
                                 SettingToggleWithInfo(
-                                    title: "Accuracy Retry",
+                                    title: "Quality Retry",
                                     info: "When transcription produces a suspiciously short or low-confidence result, DexDictate silently re-runs Whisper on the same audio at a higher quality level. Costs extra processing time but catches utterances where the first pass stumbled.",
                                     isOn: $settings.enableAccuracyRetry
                                 )
@@ -381,7 +381,7 @@ struct QuickSettingsView: View {
                                 if settings.enableAccuracyRetry {
                                     SettingToggleWithInfo(
                                         title: "Retry Suspicious Results Automatically",
-                                        info: "When Accuracy Retry is on, this fires the retry without asking you first. Turn it off if you'd rather decide manually — you'll see a 'Retry Last in Accuracy Mode' button after each suspicious result instead.",
+                                        info: "When Quality Retry is on, this fires the retry without asking you first. Turn it off if you'd rather decide manually — you'll see a 'Retry with Higher Quality' button after each suspicious result instead.",
                                         isOn: $settings.autoRetrySuspiciousResults
                                     )
                                     .padding(.leading, 16)
@@ -390,7 +390,7 @@ struct QuickSettingsView: View {
 
                             if showLegacyCorrectionSheetRow {
                                 SettingToggleWithInfo(
-                                    title: "Correction Sheet",
+                                    title: "Review Before Insert",
                                     info: "After each dictation, shows a compact review sheet where you can confirm, edit, or reject the transcript before it gets inserted. Adds one extra step but lets you catch mistakes before they reach the target app.",
                                     isOn: $settings.enableCorrectionSheet
                                 )
@@ -398,8 +398,8 @@ struct QuickSettingsView: View {
 
                             if showLegacyModelAccuracyRows {
                                 SettingToggleWithInfo(
-                                    title: "Use Context From Focused Field",
-                                    info: "Reads the text you're currently editing (via the Accessibility API) and uses it to prime Whisper, improving accuracy for proper nouns and continuing sentences. Combined with DexDictate's vocabulary biasing. Off by default; requires Accessibility permission.",
+                                    title: "Context Priming",
+                                    info: "Reads the text around your cursor so names and jargon come out right.",
                                     isOn: $settings.enableContextInjection
                                 )
                             }

@@ -5,8 +5,9 @@ import DexDictateKit
 /// Settings → Output & Insertion. Migrated verbatim (same bindings, same storage keys)
 /// from the popover's "Output" card (Auto-Paste, Copy Only in Sensitive Fields, Use
 /// Accessibility API for Insertion, Filter Profanity, Per-App Rules) and the "Accuracy &
-/// Speed" card (Correction Sheet — grouped here as an output-safety control even though
-/// it's declared alongside accuracy controls in the popover). Safe Mode and Show Floating
+/// Speed" card (Correction Sheet, renamed "Review Before Insert" in Packet 10 — grouped
+/// here as an output-safety control even though it's declared alongside accuracy controls
+/// in the popover). Safe Mode and Show Floating
 /// HUD stay in the popover until Packet 08. No insertion/clipboard/secure-input logic
 /// changed — only where these toggles are displayed.
 struct OutputSettingsPage: View {
@@ -33,7 +34,7 @@ struct OutputSettingsPage: View {
                 Toggle("Copy Only in Sensitive Fields", isOn: $settings.copyOnlyInSensitiveFields)
 
                 SettingToggleWithInfo(
-                    title: "Correction Sheet",
+                    title: "Review Before Insert",
                     info: "After each dictation, shows a compact review sheet where you can confirm, edit, or reject the transcript before it gets inserted. Adds one extra step but lets you catch mistakes before they reach the target app.",
                     isOn: $settings.enableCorrectionSheet
                 )
