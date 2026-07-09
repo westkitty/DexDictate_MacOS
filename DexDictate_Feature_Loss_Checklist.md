@@ -53,6 +53,24 @@
 - [ ] **Model Benchmarking & Promotion**
   - *Validation:* Open "Benchmark Capture" window, record Golden Prompts, run baseline benchmarks, check that results save to `benchmark_baseline.json`.
   - *Code/Test:* [ModelBenchmarking.swift](file:///Users/andrew/DexDictate_MacOS.nosync/Sources/DexDictateKit/Benchmarking/ModelBenchmarking.swift), `BenchmarkPromotionPolicyTests.swift`
+- [ ] **Onboarding Wizard**
+  - *Validation:* Complete onboarding flow from Welcome page through Permissions, Trigger settings, to completion, verifying loops play smoothly.
+  - *Code/Test:* [OnboardingView.swift](file:///Users/andrew/DexDictate_MacOS.nosync/Sources/DexDictate/OnboardingView.swift), `OnboardingValidationTests.swift`
+- [ ] **Dexter Imagery**
+  - *Validation:* Verify that the Dexter watermark backdrops and regional profile images load and display behind active windows.
+  - *Code/Test:* [WatermarkAssetProvider.swift](file:///Users/andrew/DexDictate_MacOS.nosync/Sources/DexDictateKit/Profiles/WatermarkAssetProvider.swift)
+- [ ] **RSS-Style News Ticker Feed**
+  - *Validation:* Check that the flavor ticker always scrolls text smoothly across the top of the popover without clipping or stopping.
+  - *Code/Test:* [FlavorTickerView.swift](file:///Users/andrew/DexDictate_MacOS.nosync/Sources/DexDictate/FlavorTickerView.swift)
+- [ ] **Randomized Dexter Backgrounds**
+  - *Validation:* Refresh dynamic content or restart app and verify the watermark image rotations select new randomized backdrops without immediate repeats.
+  - *Code/Test:* [WatermarkAssetProvider.swift](file:///Users/andrew/DexDictate_MacOS.nosync/Sources/DexDictateKit/Profiles/WatermarkAssetProvider.swift), [ProfileManager.swift](file:///Users/andrew/DexDictate_MacOS.nosync/Sources/DexDictateKit/Profiles/ProfileManager.swift)
+- [ ] **Launch Animation**
+  - *Validation:* Start the application and confirm the launch animation panel plays the randomized intro video, pauses on the final branding card, and shrinks to the status bar on exit.
+  - *Code/Test:* [LaunchIntroController.swift](file:///Users/andrew/DexDictate_MacOS.nosync/Sources/DexDictate/LaunchIntroController.swift)
+- [ ] **Dexter Identity Layer**
+  - *Validation:* Check that regional Australian and Canadian profiles correctly load specialized quote packs and custom watermarks.
+  - *Code/Test:* [ProfileManager.swift](file:///Users/andrew/DexDictate_MacOS.nosync/Sources/DexDictateKit/Profiles/ProfileManager.swift)
 
 ## Must-Not-Break Systems
 
@@ -61,6 +79,15 @@
 3. **Trigger Event Tap:** Quartz `CGEvent` listener that monitors hotkey bounds globally.
 4. **macOS Accessibility Trust:** The polling loop checking permissions must never block the main thread.
 5. **Settings Schema Migrator:** UserDefaults migration logic must stay backwards compatible.
+
+## Fragile / Do-Not-Touch List (Unless Explicitly Approved)
+
+1. **Onboarding Wizard Flow:** [OnboardingView.swift](file:///Users/andrew/DexDictate_MacOS.nosync/Sources/DexDictate/OnboardingView.swift) - complex looping and playback state logic.
+2. **Dexter Asset Loading:** [WatermarkAssetProvider.swift](file:///Users/andrew/DexDictate_MacOS.nosync/Sources/DexDictateKit/Profiles/WatermarkAssetProvider.swift) - dependencies on resources bundle path formatting.
+3. **RSS / Feed Logic:** [FlavorTickerView.swift](file:///Users/andrew/DexDictate_MacOS.nosync/Sources/DexDictate/FlavorTickerView.swift) - text marquee bounds, timings, and alignment.
+4. **Randomized Background Selection:** [ProfileManager.swift](file:///Users/andrew/DexDictate_MacOS.nosync/Sources/DexDictateKit/Profiles/ProfileManager.swift) - state publishing and synchronization.
+5. **Launch Animation Playback:** [LaunchIntroController.swift](file:///Users/andrew/DexDictate_MacOS.nosync/Sources/DexDictate/LaunchIntroController.swift) - window level ordering, rate scaling, and AVPlayer observers.
+6. **Bundled Dexter Media/Assets:** MP4 animations and PNG background assets bundled in safety resources must not be deleted or modified.
 
 ## Refactor Gate
 

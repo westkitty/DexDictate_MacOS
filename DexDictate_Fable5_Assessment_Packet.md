@@ -150,8 +150,92 @@ The app is functionally rich but suffers from a **discoverability crisis** and *
   ssh -N -L 11435:127.0.0.1:11434 user@bigmac-ip
   ```
 - **Product Setup:** The app should allow the user to configure the Local Tunnel Port (defaulting to 11435), Model Name, API Key placeholder (`ollama`), and optional remote host notes.
+## 11. Dexter Identity Preservation Requirements
 
-## 11. Constraints for Fable
+Dexter is a core part of DexDictate's product identity, and Dexter-related features are non-negotiable requirements, not optional cosmetics. Fable's UI/UX recovery plan must protect, integrate, and preserve these elements rather than sanitizing the app into a generic utility.
+
+### Confirmed Dexter-Related Features & Assets:
+1. **Interactive Onboarding Wizard:**
+   - *Code Paths:* [OnboardingView.swift](file:///Users/andrew/DexDictate_MacOS.nosync/Sources/DexDictate/OnboardingView.swift)
+   - *State Flow & Screens:* Multi-page wizard (WelcomePage, PermissionsPage, ShortcutPage, CompletionPage) using custom looping/reverse-looping player animations (`OnboardingPlayerRepresentable`).
+   - *Bundled Video Assets:* 
+     - `OnboardingWelcomeAnimation.mp4`
+     - `OnboardingPermissionsAnimation.mp4`
+     - `OnboardingShortcutAnimation.mp4`
+     - `OnboardingCompletionAnimation.mp4`
+   - *User-Facing Purpose:* Introduces the product, requests systems permissions (Accessibility, Input Monitoring, Microphone), lets users record a trigger hotkey, and validates audio input.
+   - *Preservation Requirement:* Must be preserved as a core first-run experience; do not treat it as disposable setup scaffolding.
+
+2. **Existing Imagery & Visual Identity:**
+   - *Code Paths:* [WatermarkAssetProvider.swift](file:///Users/andrew/DexDictate_MacOS.nosync/Sources/DexDictateKit/Profiles/WatermarkAssetProvider.swift)
+   - *Asset Inventory:* Bundled PNG image files under resource bundle:
+     - `DexDictate_active_processing_label__processing.png`, `DexDictate_active_recording_label__recording.png`
+     - `DexDictate_app_settings.png`
+     - `DexDictate_benchmark__failed__variant_a.png` / `variant_b.png`
+     - `DexDictate_benchmark__running__variant_a.png` / `variant_b.png`
+     - `DexDictate_copied_to_clipboard.png`
+     - `DexDictate_error__misunderstood__variant_a.png`
+     - `DexDictate_filter_profanity.png`
+     - `DexDictate_floating_hud_window__variant_a.png` / `variant_b.png`
+     - `DexDictate_listening__waiting__variant_a.png` / `variant_b.png` / `variant_c.png`
+     - `DexDictate_loading_ai_model.png`
+     - `DexDictate_mic_only_icon__variant_a.png` / `variant_b.png`
+     - `DexDictate_mode__aussie_profile.png`
+     - `DexDictate_mode__canadian_profile__variant_a.png` / `variant_b.png`
+     - `DexDictate_offline_privacy__variant_a.png` / `variant_b.png`
+     - `DexDictate_onboarding__completion.png`
+     - `DexDictate_onboarding__shortcut_selection__variant_a.png` / `variant_b.png`
+     - `DexDictate_onboarding__welcome__variant_a.png` / `variant_b.png`
+     - `DexDictate_processing__typing__variant_a.png` / `variant_b.png` / `variant_c.png`
+     - `DexDictate_random_cycle__headphones_portrait.png`
+     - `DexDictate_random_cycle__red_button_prompt.png`
+     - `DexDictate_random_cycle__side_eye_pose__variant_a.png` / `variant_b.png` / `variant_c.png`
+     - `DexDictate_random_cycle__smiley_mask_splatter__variant_a.png` / `variant_b.png` / `variant_c.png`
+     - `DexDictate_random_cycle__standing_pose__variant_a.png` / `variant_b.png` / `variant_c.png`
+     - `DexDictate_result_feedback_badge__variant_a.png` / `variant_b.png`
+     - `DexDictate_start_dictation__variant_a.png`
+     - `DexDictate_success__saved__variant_a.png` / `variant_b.png`
+     - `DexDictate_transcribe_file__variant_a.png` / `variant_b.png`
+     - `DexDictate_transcription_history__collapsed.png`
+     - `DexDictate_transcription_history__expanded__variant_a.png` / `variant_b.png`
+     - `DexDictate_trigger_mode__hold_to_talk__variant_a.png` / `variant_b.png`
+     - `DexDictate_undo_removal__variant_a.png` / `variant_b.png`
+     - Canadian regional icons: `dexdictate-icon-canada-01.png` to `-05.png`
+     - Australian regional icons: `dexdictate-icon-aussie-01.png` to `-02.png`
+   - *UI Location:* Rendered in the popover background, HUD, settings pages, and onboarding screens.
+   - *Preservation Requirement:* Future UI designs must preserve these assets, paths, and their visual presence.
+
+3. **RSS-Style News Marquee Ticker:**
+   - *Code Paths:* [FlavorTickerView.swift](file:///Users/andrew/DexDictate_MacOS.nosync/Sources/DexDictate/FlavorTickerView.swift) and [FlavorQuotePacks.swift](file:///Users/andrew/DexDictate_MacOS.nosync/Sources/DexDictateKit/Quotes/FlavorQuotePacks.swift)
+   - *Current Behavior:* Always-scrolling marquee at the top of the popover displaying short flavor lines. Sourced locally from regional quote packs based on active profile (`standard`, `canadian`, `aussie`), with no external network requests.
+   - *Preservation Requirement:* Do not remove or hide the RSS-style marquee ticker during refactor planning.
+
+4. **Recurring Randomized Dexter Background Images:**
+   - *Code Paths:* [WatermarkAssetProvider.swift](file:///Users/andrew/DexDictate_MacOS.nosync/Sources/DexDictateKit/Profiles/WatermarkAssetProvider.swift) and [ProfileManager.swift](file:///Users/andrew/DexDictate_MacOS.nosync/Sources/DexDictateKit/Profiles/ProfileManager.swift)
+   - *Current Behavior:* Selects randomized watermarks (avoiding immediate repetition) and updates them via `refreshDynamicContent()` on events/clicks. Rendered at low opacity as backdrops.
+   - *Preservation Requirement:* Must be preserved as a core brand feature, not treated as cosmetic clutter.
+
+5. **Launch Animation:**
+   - *Code Paths:* [LaunchIntroController.swift](file:///Users/andrew/DexDictate_MacOS.nosync/Sources/DexDictate/LaunchIntroController.swift)
+   - *Current Behavior:* Selects randomly from `LaunchAnimation_01.mp4` through `LaunchAnimation_08.mp4`, plays muted at 1.5x speed in a floating overlay panel, holds for 1.5s on the final brand card, and animates/shrinks away. Includes overlay text fallback.
+   - *Preservation Requirement:* Future UI designs may improve its presentation (e.g. alignment or window levels) but must not remove the launch animation.
+
+### Refactor Risks:
+- Accidentally sanitizing the app's playful personality during a settings panel redesign.
+- Breaking the custom video loops and player states inside `OnboardingView` or `LaunchIntroController` (which use specific AppKit overlays and speed scaling).
+- Failing to load assets from the resources bundle due to package folder relocations.
+
+### What Fable May Improve:
+- Reorganize settings cards, simplify hotkey mappings, layout alignment, typography, and tab organization.
+- Improve the visual integration of the RSS-style marquee ticker to match professional macOS design standards.
+
+### What Fable Must Not Remove:
+- The launch intro panel animations.
+- The interactive four-page onboarding wizard.
+- The randomized Dexter watermark backdrops and regional localization profiles.
+- The top-scrolling RSS-style ticker.
+
+## 12. Constraints for Fable
 
 - **No full rewrite:** Do not recommend moving away from the Swift Package Manager or SwiftUI menu-bar architecture.
 - **No deletion of features:** Hidden features (Accuracy Retry, Vocabulary, Benchmarks) must be protected, surfaced, and preserved.
@@ -159,25 +243,25 @@ The app is functionally rich but suffers from a **discoverability crisis** and *
 - **No cloud-only requirements:** Maintain local-first Whisper as the baseline fallback.
 - **Do not combine refactoring passes:** UI layout changes must be decoupled from risky audio-capture and Core Audio recovery modifications.
 
-## 12. Non-Goals
+## 13. Non-Goals
 
 - No active Swift code implementation or directory modification in this pass.
 - No Windows/Linux support.
 - No commercial metering or licensing systems.
 - No active-window screen recording/awareness implementation until existing UI/UX is stabilized.
 
-## 13. Unknowns / Missing Inputs
+## 14. Unknowns / Missing Inputs
 
 - **UI Screenshots:** Visual previews of the popovers are unavailable to the remote model. Visual QA requires human validation or visual scripts.
 - **MainActorActionTests Failure:** The test `testRunAsyncExecutesOnMainActor` fails due to an environmental async timing discrepancy on lines 37-40 of `MainActorActionTests.swift`.
 - **Tailscale/SSH Setup:** The local app cannot automate SSH tunnel creation; it must assume the user configures the tunnel externally.
 
-## 14. Contradictions or Tensions
+## 15. Contradictions or Tensions
 
 - **Local-first vs. Remote Inference:** The app's core promise is fully local-only dictation, but adding remote Ollama requires explaining to the user that audio is transmitted to a trusted home server (BigMac) over SSH/Tailscale, not public clouds.
 - **Feature Richness vs. Screen Real Estate:** The popover is tiny (standard menu-bar width), yet it nests dozens of advanced controls. Surfacing them without creating visual clutter is a major challenge.
 
-## 15. Fable Stopping Point
+## 16. Fable Stopping Point
 
 Fable 5 must stop after producing:
 1. A **UI/UX recovery plan** with mockups/wireframes description.
@@ -185,7 +269,7 @@ Fable 5 must stop after producing:
 3. A **behavior-preserving refactor strategy** detailing file movements.
 4. **Phased implementation packets** for Google Antigravity execution.
 
-## 16. Review Method
+## 17. Review Method
 
 1. Human review and sign-off on the Fable 5 plan by Andrew.
 2. Sequential execution of implementation packets by Google Antigravity.
@@ -193,7 +277,7 @@ Fable 5 must stop after producing:
 
 ---
 
-## 17. Paste-Ready Fable Context Block
+## 18. Paste-Ready Fable Context Block
 
 ```markdown
 ### TASK DESCRIPTION
