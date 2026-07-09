@@ -25,7 +25,7 @@ Sequential record of the autonomous packet run authorized 2026-07-09. Ungated pa
 
 ## Packet 03 — General + Appearance Migration
 - Start commit: a5995767
-- Final commit: (see commit immediately following this entry)
+- Final commit: 59e4a422
 - Pushed: Yes
 - Tests: 382 passed, 0 failures (matches baseline)
 - Screenshots: none — blocked, see `packet_03/NEEDS_ANDREW.md`
