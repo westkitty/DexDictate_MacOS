@@ -26,6 +26,8 @@ struct DexDictateApp: App {
     @StateObject private var historyController = HistoryWindowController()
     // Help Controller
     @StateObject private var helpController = HelpWindowController()
+    // Settings Controller
+    @StateObject private var settingsWindowController = SettingsWindowController()
 
     init() {
         Safety.setupDirectories()
@@ -70,6 +72,9 @@ struct DexDictateApp: App {
                         },
                         onOpenHelp: {
                             MainActorAction.run { helpController.show() }
+                        },
+                        onOpenSettings: {
+                            MainActorAction.run { settingsWindowController.show() }
                         },
                         onRequestOnboardingDebug: {
                             MainActorAction.run { appDelegate.presentOnboardingForDebug() }
@@ -437,6 +442,7 @@ struct AntiGravityMainView: View {
 
     var onDetachHistory: (() -> Void)?
     var onOpenHelp: (() -> Void)?
+    var onOpenSettings: (() -> Void)?
     var onRequestOnboardingDebug: (() -> Void)?
 
     var body: some View {
@@ -494,6 +500,13 @@ struct AntiGravityMainView: View {
                         }
                         UIModeToggleButton(settings: settings)
                         Spacer()
+                        ChromeIconButton(
+                            systemName: "gearshape",
+                            accessibilityText: "Open Settings"
+                        ) {
+                            onOpenSettings?()
+                        }
+                        .help(NSLocalizedString("Settings…", comment: ""))
                         ChromeIconButton(
                             systemName: "questionmark.circle",
                             accessibilityText: "Open Help"

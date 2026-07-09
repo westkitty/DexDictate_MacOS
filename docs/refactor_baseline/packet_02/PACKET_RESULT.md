@@ -1,0 +1,18 @@
+## Packet Result
+- Packet: 02 — Settings Window Shell
+- Branch: speech-engine-exploration-benchmarks
+- Commit hash: (recorded after commit — see AUTOPILOT_RUN_LEDGER.md)
+- Pushed: Yes
+- Files changed: `Sources/DexDictate/DexDictateApp.swift` (minimal edit: gear button + controller wiring, 13 lines); new `Sources/DexDictate/SettingsWindow/` — `SettingsPage.swift`, `SettingsSidebar.swift`, `SettingsRootView.swift`, `SettingsWindowController.swift`, `SettingsPagePlaceholder.swift`, and 11 stub pages (`GeneralSettingsPage.swift`, `DictationSettingsPage.swift`, `AudioSettingsPage.swift`, `OutputSettingsPage.swift`, `VocabularyCommandsPage.swift`, `ModelsAccuracyPage.swift`, `SmartCleanupPage.swift`, `HistorySettingsPage.swift`, `DexterPersonalityPage.swift`, `DiagnosticsPage.swift`, `AdvancedPage.swift`)
+- Files inspected but not changed: `HistoryWindow.swift`, `HelpWindowController.swift` (windowing pattern precedent), `SurfaceTokens.swift`, `PopoverSizing.swift`, `QuickSettingsView.swift` (confirmed untouched), `ControlsView.swift`, `FooterView.swift`, `ChromeButton.swift`, `Package.swift`, `Info.plist` (confirmed `LSUIElement=true`)
+- Forbidden files touched: No
+- Tests run: full `swift test`
+- Test result: 382 passed, 0 failures — matches Packet 01 baseline exactly, zero new failures
+- Targeted tests: n/a (no logic changed, pure additive UI)
+- Manual validations: window open/close, sidebar navigation, and dictation-with-window-open were NOT performed — see `NEEDS_ANDREW.md` (no working UI-automation path to this LSUIElement app in this environment)
+- Screenshots captured: none — blocked; see `NEEDS_ANDREW.md`
+- Feature-loss checklist rows completed: n/a (additive only, nothing relocated yet)
+- Dexter preservation checks: not exercised (no Dexter-adjacent files touched)
+- Known issues: ⌘, shortcut was skipped — the app is `LSUIElement` with no application menu, so there's no clean attachment point for a global Settings shortcut without restructuring scene/menu setup beyond a minimal edit; noted rather than attempted, per the packet's own allowance. Screenshot/manual-validation gap documented in `NEEDS_ANDREW.md` (same root cause as Packet 01).
+- Rollback required: No
+- Next recommended packet: 03 — General + Appearance Migration
