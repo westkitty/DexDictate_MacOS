@@ -202,7 +202,7 @@ Sequential record of the autonomous packet run authorized 2026-07-09. Ungated pa
 
 ## Packet 14 — Live Preview Prototype (L1) (Final Remaining Campaign, GATED — Andrew approved)
 - Start commit: a123a981
-- Final commit: (pending)
+- Final commit: 7bf561da
 - Pushed: Yes
 - Tests: 409 total, 1 flaky failure on first run (`MainActorDispatchTests.testAsyncRunsOnMainThreadAsynchronously`, same async-ordering-race family as the documented `MainActorActionTests` allowance, unrelated to Live Preview) — rerun clean. `LivePreviewInvariantTests` 2/2 passed, including the required byte-identical invariant using real tiny.en + real sample.wav.
 - Screenshots: none — blocked, same automation gap as every prior packet
