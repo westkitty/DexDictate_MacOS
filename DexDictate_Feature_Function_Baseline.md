@@ -311,8 +311,9 @@ Live transcription is the only major requested capability that remains unresolve
 - **Release Verification:** `./scripts/validate_release.sh .build/DexDictate.app`
 - **Benchmark Run:** `./scripts/benchmark.sh --audio sample_corpus/sample.wav`
 
-## 15. Refactor Readiness Verdict
+## 15. Refactor Readiness Verdict & Next Step
 
 - **UI/UX Planning:** **Ready.** Fable 5 can draft popover/settings redesigns and live transcription roadmaps.
 - **Refactoring:** **Gated.** Do not refactor audio capture or event tap until the UI taxonomy is approved.
-- **Ollama Stack:** **Ready.** Remote provider setting fields can be planned.
+- **Ollama Stack:** **Gated.** Remote provider setting fields are blocked until settings reorganizations are completed.
+- **Recommended Next Step:** Give the completed Fable packet and Fable prompt to Fable 5 for assessment. Do not implement new features or modify functional code until the Fable plan is reviewed and approved.

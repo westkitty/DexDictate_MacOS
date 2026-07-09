@@ -2,12 +2,16 @@
 
 ## 1. Purpose
 
-DexDictate must support a local-first remote inference setup where the client Mac running the app does not run the heavy model locally. Instead, it forwards transcription, smart post-processing, and summary requests to a remote inference Mac or home server running Ollama. 
+DexDictate must support a local-first remote inference setup where the client Mac running the app does not run the heavy model locally. Instead, it forwards transcription, smart post-processing, formatting, rewrite, command interpretation, and summary requests to a remote inference Mac or home server running Ollama over SSH or Tailscale networking.
 
-- **No Agent Framework:** The implementation will use direct, standard OpenAI-compatible `/v1` HTTP requests without invoking agent frameworks.
-- **Client machine (MacBook):** Does not run the model. It captures speech and dispatches API requests.
-- **Remote inference machine (BigMac):** Runs Ollama locally, hosts the weights, and executes inference on its GPU.
-- **OpenAI-Compatible endpoint:** Requests are sent using standard `/v1/chat/completions` JSON payloads.
+### Core Architecture & Boundaries:
+- **Smart Transcription Cleanup Scope:** Remote Ollama is primarily utilized for post-processing tasks (cleanup, formatting, rewrite, custom command interpretation, and smart transcription post-processing).
+- **No Low-Latency Live ASR Assumptions:** Remote Ollama must **not** be assumed to provide low-latency live ASR unless a specific future remote streaming provider proves it. Low-latency live caption feeds must be treated as a separate architectural problem from Smart/LLM post-processing.
+- **No Conflation of Providers:** Do not conflate ASR/transcription providers (e.g. local Whisper) with LLM cleanup/Smart providers (e.g. remote Ollama).
+- **Local Whisper Baseline:** Local Whisper remains the reliable baseline transcription engine and primary fallback.
+- **No Agent Frameworks:** The implementation must use direct, standard OpenAI-compatible `/v1` HTTP requests (e.g. `/v1/chat/completions`) without invoking heavy agent orchestration frameworks.
+- **MacBook (Client):** Captures speech and dispatches API requests. Does not run the model.
+- **BigMac (Remote Inference Host):** Runs Ollama locally, hosts the weights, and executes inference on its GPU.
 
 ## 2. Andrew's Current Stack
 
@@ -103,11 +107,6 @@ A detailed review of the `DexDictate` codebase was performed to check for existi
 3. **Hard-coding developer hostnames:** If names like `BigMac`, `westcat`, or port `11435` are hard-coded in UI instructions as defaults rather than examples, it will confuse generic users.
 4. **Insecure cleartext network exposure:** If users expose their remote Ollama server publicly on the internet on `11434` without a secure tunnel, their raw text feeds will be sent unencrypted. SSH tunnels or Tailscale must be explicitly recommended.
 
-## 7. Recommended Next Implementation Packet
+## 7. Recommended Next Task
 
-After the human review of this baseline assessment, the recommended next task is to create the **Ollama Provider Integration & UI Settings Packet**. 
-This packet will define:
-- Extending `AppSettings` to persist `ollamaBaseURL`, `ollamaModelName`, `ollamaAPIKey`, and `useOllamaForSmartTranscription`.
-- Adding an `OllamaTranscriptionService` implementation conforming to a new `SmartTranscriptionProvider` protocol.
-- Adding a settings section in `QuickSettingsView` with "Test Connection" and "Test Inference" diagnostics.
-- Documenting the SSH tunnel pattern directly in the Settings UI help tip.
+Give the completed Fable packet and Fable prompt to Fable 5 for assessment. Do not implement new features or refactor any code until the Fable plan is reviewed and approved.

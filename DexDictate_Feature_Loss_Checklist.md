@@ -72,7 +72,7 @@
   - *Validation:* Check that regional Australian and Canadian profiles correctly load specialized quote packs and custom watermarks.
   - *Code/Test:* [ProfileManager.swift](file:///Users/andrew/DexDictate_MacOS.nosync/Sources/DexDictateKit/Profiles/ProfileManager.swift)
 - [ ] **Live Transcription (Requirement)**
-  - *Validation:* Verify that fallback batch Whisper transcription remains fully functional as the default primary output, and is not degraded by live transcription features.
+  - *Validation:* Confirm that batch Whisper transcription remains fully functional as the primary committed output baseline. Verify that live transcription (unresolved, previously attempted via Parakeet) is treated as an isolated preview experiment and does not degrade the core dictation pipeline.
   - *Code/Test:* [TranscriptionEngine.swift](file:///Users/andrew/DexDictate_MacOS.nosync/Sources/DexDictateKit/TranscriptionEngine.swift)
 
 ## Must-Not-Break Systems
