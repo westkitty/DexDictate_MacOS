@@ -19,7 +19,6 @@ struct PopoverRootView: View {
     @ObservedObject var profileManager: ProfileManager
     @ObservedObject var livePreviewController: LivePreviewController
     @State private var cachedWatermarkImage: NSImage? = nil
-    @State private var isQuitConfirmPresented = false
     /// Packet 12A adoption: re-hosts `DexCommandPaletteView` (unchanged, from
     /// `ExperimentalUI/`) as a full-content screen-swap — same technique the experimental
     /// popover itself uses to avoid sheet-triggered Dock bounce. `onOpenFeatureHub`/
@@ -130,7 +129,7 @@ struct PopoverRootView: View {
 
             HStack(spacing: 6) {
                 ChromeIconButton(systemName: "power", accessibilityText: "Quit DexDictate", tint: headerForegroundColor) {
-                    isQuitConfirmPresented = true
+                    confirmAndQuit()
                 }
                 Spacer()
                 ChromeIconButton(systemName: "gearshape", accessibilityText: "Open Settings", tint: headerForegroundColor) {
@@ -145,16 +144,22 @@ struct PopoverRootView: View {
         }
         .padding(.top, 8)
         .padding(.bottom, 6)
-        .confirmationDialog(
-            "Quit DexDictate?",
-            isPresented: $isQuitConfirmPresented,
-            titleVisibility: .visible
-        ) {
-            Button("Quit", role: .destructive) {
-                NSApplication.shared.terminate(nil)
-            }
-            Button("Cancel", role: .cancel) {}
-        }
+    }
+
+    /// Uses a native `NSAlert` rather than SwiftUI's `.confirmationDialog` — the latter is
+    /// unreliable inside a `MenuBarExtra(.window)` popover (the popover can lose key status
+    /// and dismiss the instant the dialog tries to present, so the confirmation silently
+    /// never appears and Quit does nothing). Same fix already proven in this codebase for
+    /// `DiagnosticsPage`'s "Reset Core Audio?" confirmation.
+    private func confirmAndQuit() {
+        let alert = NSAlert()
+        alert.messageText = "Quit DexDictate?"
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Quit")
+        alert.addButton(withTitle: "Cancel")
+        NSApp.activate()
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        NSApplication.shared.terminate(nil)
     }
 
     // MARK: - Error banner (replaces the hero on permission/mic failure)
@@ -223,7 +228,7 @@ struct PopoverRootView: View {
                     Button("Pause Dictation") { pauseDictation() }
                     Button("Command Palette") { isCommandPaletteShown = true }
                     Divider()
-                    Button("Quit App") { isQuitConfirmPresented = true }
+                    Button("Quit App") { confirmAndQuit() }
                 } label: {
                     Text("⋯")
                         .font(.caption.weight(.bold))
