@@ -174,7 +174,7 @@ Sequential record of the autonomous packet run authorized 2026-07-09. Ungated pa
 
 ## Packet 12B — Experimental UI Retirement (Final Remaining Campaign, GATED — Andrew approved)
 - Start commit: ed6a0f55
-- Final commit: (pending)
+- Final commit: 52d2dd98
 - Pushed: Yes
 - Tests: 382 passed, 0 failures (matches baseline)
 - Screenshots: none — blocked, same automation gap as every prior packet
