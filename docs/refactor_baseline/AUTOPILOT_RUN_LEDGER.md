@@ -115,7 +115,7 @@ Sequential record of the autonomous packet run authorized 2026-07-09. Ungated pa
 
 ## Packet 11 — Dexter & Personality
 - Start commit: a48584bc
-- Final commit: (see commit immediately following this entry)
+- Final commit: 85489b2f
 - Pushed: Yes
 - Tests: 382 passed, 0 failures (matches baseline); targeted ProfileContent 6/6 passed
 - Screenshots: none — blocked, same automation gap as every prior packet
