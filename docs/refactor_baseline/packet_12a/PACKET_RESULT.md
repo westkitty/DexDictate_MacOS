@@ -1,0 +1,18 @@
+## Packet Result
+- Packet: 12A — Experimental Adoption Inventory + Safe Adoption
+- Branch: speech-engine-exploration-benchmarks
+- Commit hash: (see AUTOPILOT_RUN_LEDGER.md)
+- Pushed: Yes
+- Files changed: `docs/experimental_adoption_inventory.md` (new — mandatory deliverable, full capability table); `Sources/DexDictate/PopoverRootView.swift` (adopted Command Palette as a screen-swap, reachable via ⌘K + footer overflow); `Sources/DexDictate/PopoverResultView.swift` (added optional `profileManager`, wired inline Dexter quote conditionally); `Sources/DexDictate/SettingsWindow/DexterPersonalityPage.swift` (replaced Packet 11's placeholder with a real toggle); `Sources/DexDictateKit/Settings/AppSettings.swift` (added `showInlineResultQuote`, a new key, default `false`)
+- Files inspected but not changed: all nine files in `Sources/DexDictate/ExperimentalUI/` (read in full to build the inventory — zero edits, per "delete/modify nothing" rule), `Sources/DexDictate/FloatingHUD.swift` (confirmed Nano HUD's existing production integration)
+- Forbidden files touched: No
+- Tests run: full `swift test`
+- Test result: 382 passed, 0 failures (matches Packet 01 baseline)
+- Targeted tests: none specified by this packet
+- Manual validations: not performed (⌘K palette open/execute, Nano HUD render, experimental UI on→off→on round-trip, full dictation loop in both UIs) — see `NEEDS_ANDREW.md`
+- Screenshots captured: none — blocked, same automation gap as every prior packet
+- Feature-loss checklist rows completed: n/a (adoption packet, not a migration packet)
+- Dexter preservation checks: `ProfileManager.swift`, `WatermarkAssetProvider.swift`, `FlavorTickerView.swift` — zero-line diffs (confirmed); inline quote reads existing `profileManager.currentFlavorLine` published state, doesn't touch quote-pack logic
+- Known issues: **Inventory complete and honest** — see `docs/experimental_adoption_inventory.md`. Three MISSING rows (pinned "daily six" compact controls; live transcript/mic meter while listening — a new finding from this inventory, not previously flagged; Dexter Feed browser). These block Packet 12B, which requires Andrew's separate explicit approval regardless and was not run. **New storage key**: `showInlineResultQuote` (default `false`, does not repurpose any existing key). **Skipped adoption**: Dexter Feed — not one of the three suggested safe adoptions, no clean existing page to attach it to.
+- Rollback required: No
+- Next recommended packet: NONE — Packet 12B requires Andrew's explicit written approval of the inventory

@@ -58,9 +58,8 @@ struct DexterPersonalityPage: View {
 
                 Text("Inline Result Quotes")
                     .font(.headline)
-                Toggle("Show quote inline with results", isOn: .constant(false))
-                    .disabled(true)
-                Text("Coming with experimental adoption (Packet 12A).")
+                Toggle("Show quote inline with results", isOn: $settings.showInlineResultQuote)
+                Text("Adopted from the experimental UI (Packet 12A). Shows a Dexter quote line beneath the popover's last-result card. Off by default — existing behavior is unchanged until you opt in.")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
 

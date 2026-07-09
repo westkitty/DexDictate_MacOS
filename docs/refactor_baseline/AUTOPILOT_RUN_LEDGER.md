@@ -103,6 +103,19 @@ Sequential record of the autonomous packet run authorized 2026-07-09. Ungated pa
 - Manual validations: not performed — see `packet_09/NEEDS_ANDREW.md`
 - Safe to continue: Yes — proceeding to Packet 12A.
 
+## Packet 12A — Experimental Adoption Inventory + Safe Adoption
+- Start commit: d489c19d
+- Final commit: (see commit immediately following this entry)
+- Pushed: Yes
+- Tests: 382 passed, 0 failures (matches baseline)
+- Screenshots: none — blocked, same automation gap as every prior packet
+- Manual validations: not performed — see `packet_12a/NEEDS_ANDREW.md`
+- Mandatory deliverable: `docs/experimental_adoption_inventory.md` — full capability table, 3 MISSING rows (pinned daily-six compact controls; live transcript/mic meter while listening — new finding; Dexter Feed browser)
+- Adopted: Command Palette (⌘K, screen-swap in PopoverRootView), inline Dexter result quote (new key `showInlineResultQuote`). Nano HUD confirmed already adopted pre-existing (FloatingHUD.swift).
+- `ExperimentalUI/` folder: zero files touched (confirmed)
+- Per this packet's own instruction: STOPPING here. Packet 12B is gated and requires Andrew's separate explicit written approval of the inventory — not proceeding to it.
+- Safe to continue: Yes (to Packet 15 — the only remaining ungated packet in the approved sequence)
+
 ## Packet 10 — Terminology Sweep
 - Start commit: c3422d96
 - Final commit: c4cb7356

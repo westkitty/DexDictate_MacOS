@@ -165,6 +165,13 @@ public class AppSettings: ObservableObject {
     /// Whether the flavor ticker may animate when content overflows and motion is allowed.
     @AppStorage("animateFlavorTicker_v1") public var animateFlavorTicker: Bool = true
 
+    /// Packet 12A: whether the popover's last-result card also shows an inline Dexter
+    /// quote line beneath the transcript. New key — no prior standard-UI equivalent
+    /// existed; the experimental UI's `DexterCommentaryLine` had no on/off toggle of its
+    /// own (it inherited visibility from `showFlavorTicker`). Defaults off so adoption
+    /// changes nothing for existing users until they opt in.
+    @AppStorage("showInlineResultQuote") public var showInlineResultQuote: Bool = false
+
     /// Whether to show a second stats ticker (word count, duration, WPM) below the flavor ticker.
     @AppStorage("showDictationStats_v1") public var showDictationStats: Bool = false
 

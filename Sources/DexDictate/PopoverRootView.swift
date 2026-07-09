@@ -19,6 +19,12 @@ struct PopoverRootView: View {
     @ObservedObject var profileManager: ProfileManager
     @State private var cachedWatermarkImage: NSImage? = nil
     @State private var isQuitConfirmPresented = false
+    /// Packet 12A adoption: re-hosts `DexCommandPaletteView` (unchanged, from
+    /// `ExperimentalUI/`) as a full-content screen-swap — same technique the experimental
+    /// popover itself uses to avoid sheet-triggered Dock bounce. `onOpenFeatureHub`/
+    /// `onOpenGUISwitcher` are nil here (no equivalent screens in this popover), which the
+    /// palette already renders as disabled affordances rather than requiring changes.
+    @State private var isCommandPaletteShown = false
 
     var onDetachHistory: (() -> Void)?
     var onOpenHelp: (() -> Void)?
@@ -38,41 +44,59 @@ struct PopoverRootView: View {
                     .ignoresSafeArea()
             }
 
-            VStack(spacing: 0) {
-                header
+            if isCommandPaletteShown {
+                DexCommandPaletteView(
+                    engine: engine,
+                    settings: settings,
+                    onBack: { isCommandPaletteShown = false },
+                    onOpenFeatureHub: nil,
+                    onOpenGUISwitcher: nil,
+                    onDetachHistory: onDetachHistory,
+                    onOpenHelp: onOpenHelp
+                )
+            } else {
+                VStack(spacing: 0) {
+                    header
 
-                if settings.showFlavorTicker {
-                    FlavorTickerView(
-                        text: profileManager.currentFlavorLine?.text ?? "",
-                        animateWhenNeeded: settings.animateFlavorTicker
-                    )
-                }
-
-                Divider().opacity(0.2).padding(.horizontal, 12)
-
-                ScrollView {
-                    VStack(spacing: 12) {
-                        if !permissionManager.allPermissionsGranted {
-                            errorBanner
-                        } else {
-                            PopoverHeroView(engine: engine, settings: settings, watermarkImage: cachedWatermarkImage)
-                        }
-
-                        PopoverResultView(engine: engine, settings: settings)
-
-                        Divider().opacity(0.2).padding(.horizontal, 12)
-
-                        PopoverHistoryTeaser(history: engine.history, onOpenHistory: onDetachHistory)
-
-                        statusLine
+                    if settings.showFlavorTicker {
+                        FlavorTickerView(
+                            text: profileManager.currentFlavorLine?.text ?? "",
+                            animateWhenNeeded: settings.animateFlavorTicker
+                        )
                     }
-                    .padding(.vertical, 10)
+
+                    Divider().opacity(0.2).padding(.horizontal, 12)
+
+                    ScrollView {
+                        VStack(spacing: 12) {
+                            if !permissionManager.allPermissionsGranted {
+                                errorBanner
+                            } else {
+                                PopoverHeroView(engine: engine, settings: settings, watermarkImage: cachedWatermarkImage)
+                            }
+
+                            PopoverResultView(engine: engine, settings: settings, profileManager: profileManager)
+
+                            Divider().opacity(0.2).padding(.horizontal, 12)
+
+                            PopoverHistoryTeaser(history: engine.history, onOpenHistory: onDetachHistory)
+
+                            statusLine
+                        }
+                        .padding(.vertical, 10)
+                    }
+
+                    Divider().opacity(0.2).padding(.horizontal, 12)
+
+                    footer
                 }
-
-                Divider().opacity(0.2).padding(.horizontal, 12)
-
-                footer
             }
+
+            // Invisible ⌘K shortcut for the command palette (Packet 12A adoption).
+            Button("") { isCommandPaletteShown = true }
+                .keyboardShortcut("k", modifiers: [.command])
+                .opacity(0)
+                .allowsHitTesting(false)
         }
         .frame(width: 320, height: popoverHeight)
         .onAppear {
@@ -191,6 +215,7 @@ struct PopoverRootView: View {
                     Button("Transcribe File…") { importAudioFile() }
                     Toggle("Safe Mode", isOn: safeModeBinding)
                     Button("Pause Dictation") { pauseDictation() }
+                    Button("Command Palette") { isCommandPaletteShown = true }
                     Divider()
                     Button("Quit App") { isQuitConfirmPresented = true }
                 } label: {

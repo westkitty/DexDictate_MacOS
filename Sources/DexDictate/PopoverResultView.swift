@@ -9,6 +9,9 @@ import DexDictateKit
 struct PopoverResultView: View {
     @ObservedObject var engine: TranscriptionEngine
     @ObservedObject var settings: AppSettings
+    /// Only needed for the inline Dexter quote (Packet 12A adoption); optional so existing
+    /// call sites that don't pass it still compile — the quote just doesn't render.
+    var profileManager: ProfileManager?
     @State private var isCorrectionSheetPresented = false
     @State private var correctionDraft = VocabularyCorrectionDraft()
 
@@ -73,6 +76,11 @@ struct PopoverResultView: View {
                             .controlSize(.small)
                             .accessibilityLabel("Create a custom vocabulary correction")
                     }
+                }
+
+                if settings.showInlineResultQuote, let profileManager,
+                   let quoteText = profileManager.currentFlavorLine?.text, !quoteText.isEmpty {
+                    DexterCommentaryLine(text: quoteText)
                 }
             }
             .padding(SurfaceTokens.cardPadding)
