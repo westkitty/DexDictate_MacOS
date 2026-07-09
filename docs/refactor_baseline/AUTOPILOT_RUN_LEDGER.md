@@ -151,7 +151,7 @@ Sequential record of the autonomous packet run authorized 2026-07-09. Ungated pa
 
 ## Packet 10B — Benchmark + Help Debt Bridge (Final Remaining Campaign)
 - Start commit: 211ccd6f
-- Final commit: (pending)
+- Final commit: 1e43274
 - Pushed: Yes
 - Tests: 382 tests, 1 failure on first run (`MainActorActionTests.testRunAsyncExecutesOnMainActor`, known-flaky, failing alone); rerun via `--filter MainActorActionTests` 2/2 passed clean — per known-flaky allowance, documented and continuing
 - Screenshots: none — blocked, same automation gap as every prior packet
