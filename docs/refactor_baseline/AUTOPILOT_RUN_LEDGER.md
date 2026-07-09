@@ -65,7 +65,7 @@ Sequential record of the autonomous packet run authorized 2026-07-09. Ungated pa
 
 ## Packet 07 — Models + Accuracy + Benchmark Relocation
 - Start commit: 5afd8dd2
-- Final commit: (see commit immediately following this entry)
+- Final commit: 7c0dc21b
 - Pushed: Yes
 - Tests: 382 passed, 0 failures (matches baseline); targeted BenchmarkPromotion/AdaptiveBenchmark 8/8 passed
 - Screenshots: none — blocked, see `packet_07/NEEDS_ANDREW.md`
