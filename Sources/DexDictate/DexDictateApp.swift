@@ -859,7 +859,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.terminate(nil)
         return true
     }
-    
+
     private var onboardingWindow: NSWindow?
 
     private func configureApplicationIcon() {

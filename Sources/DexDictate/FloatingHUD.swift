@@ -293,6 +293,18 @@ class FloatingHUDController: ObservableObject {
             if window?.frame.origin == .zero {
                 window?.center()
             }
+            // BUG-004 fix: the HUD sits at `.floating` level, above every normal app
+            // window (Settings, History, Help, etc.). It also centers itself on first
+            // use (see above), landing on the exact same screen point Settings/History
+            // center themselves on, and its position persists afterward via
+            // `setFrameAutosaveName`. The standard FloatingHUDView has no click-driven
+            // content at all (only the Nano HUD variant's `onOpenHub` responds to taps),
+            // so it was silently intercepting clicks meant for whatever normal window
+            // happened to be underneath it, with nothing to show for it. Ignoring mouse
+            // events lets clicks pass through to the window below — safe for the
+            // standard HUD (nothing is lost) and skipped for the Nano HUD (which still
+            // needs to open its hub panel on tap).
+            window?.ignoresMouseEvents = !AppSettings.shared.useExperimentalNanoHUD
         }
         window?.orderFront(nil)
     }

@@ -1,0 +1,15 @@
+## Packet Result
+- Packet: BUG-004 — Settings Window Controls Do Not Respond
+- Branch: speech-engine-exploration-benchmarks
+- Commit hash: (see final response)
+- Pushed: Yes
+- Files changed: `Sources/DexDictate/FloatingHUD.swift` (real fix — `ignoresMouseEvents` set conditionally on the standard vs. Nano HUD variant, right after window creation in `FloatingHUDController.show()`); `Sources/DexDictate/DexDictateApp.swift` (one incidental whitespace-only line, leftover from removing temporary investigation diagnostics)
+- Files inspected but not changed: `SettingsWindowController.swift`, `SettingsRootView.swift`, `SettingsSidebar.swift`, `GeneralSettingsPage.swift`, `SurfaceTokens.swift`, `ChromeButton.swift`, `QuickSettingsView.swift` (its `SettingToggleWithInfo` reused across Settings pages), `HistoryWindowController`/`HelpWindowController` (compared as known-good detached-window patterns), `LaunchIntroController.swift` (investigated as a candidate root cause via its overlapping window — ruled out because it already sets `ignoresMouseEvents = true`)
+- Forbidden files touched: No
+- Tests run: full `swift test`; targeted `swift test --filter MainActorActionTests`
+- Test result: 410 tests, 1 failure on first run (documented pre-existing flaky test, unrelated to this fix) — rerun clean (2/2). Net 410/410 effectively passing.
+- Manual validation: **NEEDS_ANDREW** — could not click through the running app. Beyond the standard LSUIElement/accessibility blocker, this investigation surfaced a live, shared, multi-monitor desktop with Andrew's own unrelated applications open; synthetic mouse-click injection was attempted briefly, then stopped immediately once this was discovered, and all synthetic-click tooling was deleted. Exact manual steps are in `VALIDATION.md`.
+- Storage keys changed: None (`git diff | grep "@AppStorage\|UserDefaults"` — no output)
+- Remaining risks: The Floating HUD's overlap-without-click-passthrough is a confirmed, code-level defect and the fix is unambiguously safe (the standard HUD has zero click-driven content to lose), but this investigation could not 100% confirm live that it is the *sole* explanation for "none of the buttons work" — if Andrew's manual validation still finds unresponsive controls, the next thing to investigate is the Settings `NSWindow`'s activation/key-window handling for LSUIElement/accessory apps (`NSApp.activate()` vs. the deprecated `activate(ignoringOtherApps:)`), which was considered but not changed in this pass since there was no concrete evidence pointing at it specifically (only the HUD-overlap theory had direct, reproducible code+window-inspection evidence).
+- Rollback required: No
+- Next recommended packet: none — awaiting Andrew's manual validation result
