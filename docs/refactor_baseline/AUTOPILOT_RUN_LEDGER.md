@@ -148,3 +148,14 @@ Sequential record of the autonomous packet run authorized 2026-07-09. Ungated pa
 - No new `@AppStorage` keys. No forbidden files touched.
 - Per approved autopilot sequence: this is the **final ungated packet**. Stopping here — Packets 12B, 13, 14 remain gated and require Andrew's separate explicit written approval.
 - Safe to continue: N/A — autopilot run complete pending Andrew's direction on gated packets
+
+## Packet 10B — Benchmark + Help Debt Bridge (Final Remaining Campaign)
+- Start commit: 211ccd6f
+- Final commit: (pending)
+- Pushed: Yes
+- Tests: 382 tests, 1 failure on first run (`MainActorActionTests.testRunAsyncExecutesOnMainActor`, known-flaky, failing alone); rerun via `--filter MainActorActionTests` 2/2 passed clean — per known-flaky allowance, documented and continuing
+- Screenshots: none — blocked, same automation gap as every prior packet
+- Manual validations: not performed — see `packet_10b/PACKET_RESULT.md`
+- Resolved: Run Benchmarks Now + Restore Stable Defaults + BenchmarkResultsSection re-homed to Settings → Models & Accuracy → new "Benchmark Tools" section; Open Captured Corpus confirmed already reachable via Benchmark Lab's "Open Corpus Folder" button (no new UI needed); 2 stale Help entries updated to point at the new location
+- Not in scope: broader 34-reference Help-text audit (same boundary Packet 10 drew); forbidden-file string in `TranscriptionEngine.swift:1262` remains untouched
+- Safe to continue: Yes (to Packet 12A-B)

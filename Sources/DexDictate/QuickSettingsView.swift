@@ -1479,7 +1479,7 @@ struct MenuBarSettingsSection: View {
     }
 }
 
-private struct BenchmarkResultsSection: View {
+struct BenchmarkResultsSection: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var modelCatalog: WhisperModelCatalog
     @ObservedObject var benchmarkResultsStore: BenchmarkResultsStore

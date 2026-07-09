@@ -9,6 +9,7 @@ struct SettingsRootView: View {
     @ObservedObject var benchmarkCaptureController: BenchmarkCaptureWindowController
     @ObservedObject var historyController: HistoryWindowController
     @ObservedObject var profileManager: ProfileManager
+    @ObservedObject var adaptiveBenchmarkController: AdaptiveBenchmarkController
 
     var body: some View {
         NavigationSplitView {
@@ -35,7 +36,7 @@ struct SettingsRootView: View {
         case .audioMicrophone: AudioSettingsPage(scanner: scanner)
         case .outputInsertion: OutputSettingsPage()
         case .vocabularyCommands: VocabularyCommandsPage()
-        case .modelsAccuracy: ModelsAccuracyPage(benchmarkCaptureController: benchmarkCaptureController)
+        case .modelsAccuracy: ModelsAccuracyPage(benchmarkCaptureController: benchmarkCaptureController, adaptiveBenchmarkController: adaptiveBenchmarkController)
         case .smartCleanup: SmartCleanupPage()
         case .history: HistorySettingsPage(historyController: historyController)
         case .dexterPersonality: DexterPersonalityPage(profileManager: profileManager)

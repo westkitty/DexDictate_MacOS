@@ -25,7 +25,8 @@ class SettingsWindowController: ObservableObject {
         scanner: AudioDeviceScanner,
         benchmarkCaptureController: BenchmarkCaptureWindowController,
         historyController: HistoryWindowController,
-        profileManager: ProfileManager
+        profileManager: ProfileManager,
+        adaptiveBenchmarkController: AdaptiveBenchmarkController
     ) {
         if window == nil {
             let hosting = NSHostingController(
@@ -37,7 +38,8 @@ class SettingsWindowController: ObservableObject {
                     scanner: scanner,
                     benchmarkCaptureController: benchmarkCaptureController,
                     historyController: historyController,
-                    profileManager: profileManager
+                    profileManager: profileManager,
+                    adaptiveBenchmarkController: adaptiveBenchmarkController
                 )
             )
             let newWindow = NSWindow(contentViewController: hosting)

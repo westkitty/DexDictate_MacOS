@@ -816,7 +816,7 @@ private struct SafeModeContent: View {
             HelpScreenshot("help-safe-mode-toggle",
                            caption: "The Safe Mode toggle in the Output section of Quick Settings.")
             helpHeading("Stable Dictation Defaults")
-            helpBody("Resets transcription-specific settings (model, end preset, trim) to known-good values without affecting output or appearance preferences.\n\nLocation: Quick Settings → Benchmark → Restore Stable Defaults button.")
+            helpBody("Resets transcription-specific settings (model, end preset, trim) to known-good values without affecting output or appearance preferences.\n\nLocation: Settings → Models & Accuracy → Benchmark Tools → Restore Stable Defaults button.")
             helpHeading("Restore Defaults")
             helpBody("Footer → Restore Defaults resets all settings to factory defaults. Custom vocabulary and voice commands are not affected.")
         }
@@ -847,8 +847,8 @@ private struct BenchmarkingContent: View {
                 helpBody("Settings → Models & Accuracy → Active Model picks the current model.\n\nModel Selection below it controls auto vs manual: set it to your preferred model or leave it on Auto Idle Benchmark to let DexDictate benchmark and pick during idle time.")
                 HelpScreenshot("help-model-settings",
                                caption: "The Models & Accuracy page showing model and selection controls.")
-                helpHeading("Restore Stable Defaults")
-                helpBody("Resets transcription-specific settings to known-good values. Not currently reachable from Settings or the popover — see Packet 10's report.")
+                helpHeading("Benchmark Tools")
+                helpBody("Settings → Models & Accuracy → Benchmark Tools.\n\n\"Run Benchmarks Now\" triggers an in-app benchmark pass across your installed models (disabled while dictation is active or a run is already in progress). \"Restore Stable Defaults\" resets transcription-specific settings to known-good values. Below both, cached and in-progress benchmark results are listed for the active model and its recent alternatives.")
             }
         }
     }

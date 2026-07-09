@@ -1,0 +1,18 @@
+## Packet Result
+- Packet: 10B — Benchmark + Help Debt Bridge
+- Branch: speech-engine-exploration-benchmarks
+- Commit hash: (see AUTOPILOT_RUN_LEDGER.md)
+- Pushed: Yes
+- Files changed: `Sources/DexDictate/QuickSettingsView.swift` (widened `BenchmarkResultsSection` from `private` to internal, zero logic change); `Sources/DexDictate/SettingsWindow/ModelsAccuracyPage.swift` (new "Benchmark Tools" section: Run Benchmarks Now, Restore Stable Defaults, status text, re-hosted `BenchmarkResultsSection`); `Sources/DexDictate/SettingsWindow/SettingsRootView.swift` (threaded `adaptiveBenchmarkController`); `Sources/DexDictate/SettingsWindow/SettingsWindowController.swift` (added `adaptiveBenchmarkController` param to `show(...)`); `Sources/DexDictate/DexDictateApp.swift` (both `show(...)` call sites now pass the app's existing `adaptiveBenchmarkController` instance); `Sources/DexDictate/HelpView.swift` (two Help entries updated to point at the new Benchmark Tools location, replacing stale/self-referential text)
+- Files inspected but not changed: `Sources/DexDictateKit/Benchmarking/ModelBenchmarking.swift`, `Sources/DexDictateKit/Settings/AppSettings.swift` (read `runBenchmarksNow()` / `restoreStableDictationDefaults()` to confirm re-hosting is call-identical), `Sources/DexDictate/BenchmarkCaptureWindow.swift` (confirmed "Open Corpus Folder" is the existing equivalent of "Open Captured Corpus" — no new UI needed there), `Sources/DexDictateKit/TranscriptionEngine.swift` (re-confirmed forbidden-file string, unchanged)
+- Forbidden files touched: No
+- Tests run: full `swift test`; targeted rerun `swift test --filter MainActorActionTests`
+- Test result: 382 tests, 1 failure on first run — `MainActorActionTests.testRunAsyncExecutesOnMainActor`, the documented known-flaky test, failing alone. Rerun via `--filter MainActorActionTests`: 2/2 passed clean. Per the known-flaky allowance, documented and continuing.
+- Targeted tests: `MainActorActionTests` — 2/2 passed on rerun
+- Manual validations: not performed (Benchmark Tools section click-through, Help text read-through) — see `NEEDS_ANDREW.md` (none created this packet beyond what's in `BENCHMARK_HELP_DEBT_PLAN.md`; same LSUIElement/accessibility blocker as every prior packet)
+- Screenshots captured: none — blocked, same automation gap as every prior packet
+- Feature-loss checklist rows completed: n/a (control-relocation packet, not a full-page migration)
+- Dexter preservation checks: n/a — no Dexter-adjacent files touched
+- Known issues: Full plan and per-control disposition in `BENCHMARK_HELP_DEBT_PLAN.md`. "Open Captured Corpus" required no new UI — already reachable via the Benchmark Lab window's "Open Corpus Folder" button (same underlying call, different label; Packet 10's grep missed this because it searched for the exact old label string). Forbidden-file string in `TranscriptionEngine.swift:1262` remains untouched. Broader 34-reference Help-text audit remains out of scope, as it was in Packet 10. No new `@AppStorage` keys.
+- Rollback required: No
+- Next recommended packet: 12A-B — Missing Experimental Adoption Bridge (per campaign sequence)

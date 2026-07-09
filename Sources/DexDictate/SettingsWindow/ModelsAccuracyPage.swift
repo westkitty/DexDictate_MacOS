@@ -16,7 +16,9 @@ import DexDictateKit
 struct ModelsAccuracyPage: View {
     @ObservedObject private var settings = AppSettings.shared
     @ObservedObject private var modelCatalog = WhisperModelCatalog.shared
+    @ObservedObject private var benchmarkResultsStore = BenchmarkResultsStore.shared
     @ObservedObject var benchmarkCaptureController: BenchmarkCaptureWindowController
+    @ObservedObject var adaptiveBenchmarkController: AdaptiveBenchmarkController
     private let engine = TranscriptionEngine.shared
 
     var body: some View {
@@ -119,9 +121,59 @@ struct ModelsAccuracyPage: View {
                 }
                 .buttonStyle(.bordered)
                 .frame(maxWidth: .infinity, alignment: .leading)
+
+                benchmarkToolsSection
             }
             .padding(SurfaceTokens.settingsPagePadding)
             .frame(maxWidth: .infinity, alignment: .topLeading)
+        }
+    }
+
+    /// Packet 10B: re-homes the three benchmark controls Packet 07 hid along with the rest
+    /// of the popover's "Benchmarks & Corpus" group but never gave a new home
+    /// (`docs/refactor_baseline/packet_10/NEEDS_ANDREW.md`). "Open Captured Corpus" is not
+    /// re-hosted here — it's already reachable via the Benchmark Lab window's own
+    /// "Open Corpus Folder" button (same `openCorpusFolder()` call, same
+    /// `sessionDirectory == nil` disabled guard). Logic is identical to the hidden popover
+    /// copy: same `adaptiveBenchmarkController.runBenchmarksNow()` / `settings
+    /// .restoreStableDictationDefaults()` calls, same disabled condition, same
+    /// `BenchmarkResultsSection` (widened from `private` to internal in
+    /// `QuickSettingsView.swift`, zero logic changes).
+    private var benchmarkToolsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Divider()
+
+            Text("Benchmark Tools")
+                .font(.headline)
+
+            HStack {
+                Button("Run Benchmarks Now") {
+                    MainActorAction.run {
+                        adaptiveBenchmarkController.runBenchmarksNow()
+                    }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .disabled(adaptiveBenchmarkController.status.isBusy || !(engine.state == .ready || engine.state == .stopped))
+
+                Button("Restore Stable Defaults") {
+                    settings.restoreStableDictationDefaults()
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+            }
+
+            Text(adaptiveBenchmarkController.status.description)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            BenchmarkResultsSection(
+                settings: settings,
+                modelCatalog: modelCatalog,
+                benchmarkResultsStore: benchmarkResultsStore,
+                adaptiveBenchmarkController: adaptiveBenchmarkController
+            )
         }
     }
 

@@ -75,7 +75,8 @@ struct DexDictateApp: App {
                                     scanner: scanner,
                                     benchmarkCaptureController: benchmarkCaptureController,
                                     historyController: historyController,
-                                    profileManager: profileManager
+                                    profileManager: profileManager,
+                                    adaptiveBenchmarkController: adaptiveBenchmarkController
                                 )
                             }
                         },
@@ -107,7 +108,8 @@ struct DexDictateApp: App {
                                     scanner: scanner,
                                     benchmarkCaptureController: benchmarkCaptureController,
                                     historyController: historyController,
-                                    profileManager: profileManager
+                                    profileManager: profileManager,
+                                    adaptiveBenchmarkController: adaptiveBenchmarkController
                                 )
                             }
                         },
