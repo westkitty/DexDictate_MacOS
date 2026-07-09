@@ -35,7 +35,7 @@ Sequential record of the autonomous packet run authorized 2026-07-09. Ungated pa
 
 ## Packet 04 — Dictation + Audio Migration
 - Start commit: a4347c36
-- Final commit: (see commit immediately following this entry)
+- Final commit: df7dc59b
 - Pushed: Yes
 - Tests: 382 passed, 0 failures (matches baseline); targeted `AudioRecorderRecovery` 5/5 passed, untouched-green
 - Screenshots: none — blocked, see `packet_04/NEEDS_ANDREW.md`
