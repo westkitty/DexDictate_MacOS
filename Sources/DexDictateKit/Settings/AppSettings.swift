@@ -145,11 +145,13 @@ public class AppSettings: ObservableObject {
     @AppStorage("useExperimentalDexterFeed") public var useExperimentalDexterFeed: Bool = false
 
     /// Packet 09 (Popover Slim-Down): when `true`, shows the new slim `PopoverRootView`
-    /// instead of the classic `AntiGravityMainView`. Stage A ships this default `false`
-    /// (old popover stays default); Stage B flips the default to `true` in a separate,
-    /// independently revertible commit. Distinct from `useExperimentalStateFirstUI`, which
-    /// selects the older state-first experimental UI.
-    @AppStorage("useSlimPopover") public var useSlimPopover: Bool = false
+    /// instead of the classic `AntiGravityMainView`. Stage A shipped this default `false`
+    /// (old popover stayed default); Stage B (this line) flips the default to `true`, in a
+    /// separate, independently revertible commit — withheld until Packet 11 gave Profile/
+    /// Theme/Ticker a Settings-window home, since the new popover has no UI for them.
+    /// Distinct from `useExperimentalStateFirstUI`, which selects the older state-first
+    /// experimental UI.
+    @AppStorage("useSlimPopover") public var useSlimPopover: Bool = true
 
     /// Controls how the primary menu bar item renders while idle.
     @AppStorage("menuBarDisplayMode_v1") public var menuBarDisplayMode: MenuBarDisplayMode = .micAndText

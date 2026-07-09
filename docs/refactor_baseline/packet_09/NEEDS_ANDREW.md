@@ -1,4 +1,13 @@
-# Packet 09 — Stage B Withheld + Screenshot/Manual Validation Gaps
+# Packet 09 — Stage B (completed after Packet 11) + Screenshot/Manual Validation Gaps
+
+**Update**: Stage B is now complete. `useSlimPopover`'s default flipped to `true` once
+Packet 11 gave Profile, Theme, and Ticker controls a Settings-window home. Fresh inventory
+before flipping confirmed every `showLegacy*` hide-flag in `QuickSettingsView.swift` is
+`false`. `swift test` passed clean on rerun (first run hit the documented known-flaky
+`MainActorActionTests.testRunAsyncExecutesOnMainActor` alone; rerun was 382/382 clean, per
+the allowance). The reasoning below is preserved as the historical record of why it was
+initially withheld.
+
 
 ## Stage B (default flip) was NOT executed — here's why
 

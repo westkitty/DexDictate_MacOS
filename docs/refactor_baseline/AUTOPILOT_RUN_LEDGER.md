@@ -94,14 +94,14 @@ Sequential record of the autonomous packet run authorized 2026-07-09. Ungated pa
 - Quick Settings entry hidden: No — deliberately withheld until Packet 11 lands (would strand profile/theme/ticker controls otherwise). See `packet_08b/QUICK_SETTINGS_FINAL_INVENTORY.md`.
 - Safe to continue: Yes (to Packet 09 — will watch for its "profile switch" Dexter check surfacing this same gap)
 
-## Packet 09 — Popover Slim-Down (Stage A complete; Stage B withheld)
+## Packet 09 — Popover Slim-Down (Stage A complete; Stage B completed after Packet 11)
 - Start commit: aace4f35
 - Stage A commit: 8978dfe7 (pushed)
-- Stage B: NOT executed — see `packet_09/NEEDS_ANDREW.md`. New popover contract has no UI for Profile/Theme/Ticker (still Packet 11's job); no fallback path back to classic popover once `useSlimPopover` default flips. Flipping now would strand real, currently-used controls.
-- Tests: 382 passed, 0 failures (matches baseline); targeted OutputPipelineHardening 17/17 passed
+- Stage B commit: (see commit immediately following this entry) — completed after Packet 11 gave Profile/Theme/Ticker a Settings-window home. Fresh inventory confirmed clean before flipping.
+- Tests: Stage A 382 passed; Stage B first run hit known-flaky MainActorActionTests alone, rerun clean 382/382
 - Screenshots: none — blocked, same automation gap as every prior packet
 - Manual validations: not performed — see `packet_09/NEEDS_ANDREW.md`
-- Safe to continue: Yes — proceeding to Packet 10 (independent), then Packet 11 (unblocks Stage B), then returning to complete Packet 09 Stage B before 12A/15.
+- Safe to continue: Yes — proceeding to Packet 12A.
 
 ## Packet 10 — Terminology Sweep
 - Start commit: c3422d96
