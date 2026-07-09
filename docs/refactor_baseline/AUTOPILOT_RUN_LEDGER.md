@@ -105,7 +105,7 @@ Sequential record of the autonomous packet run authorized 2026-07-09. Ungated pa
 
 ## Packet 10 — Terminology Sweep
 - Start commit: c3422d96
-- Final commit: (see commit immediately following this entry)
+- Final commit: c4cb7356
 - Pushed: Yes
 - Tests: 382 passed, 0 failures (matches baseline); targeted SettingsMigration 2/2 passed
 - Screenshots: none — blocked, same automation gap as every prior packet
