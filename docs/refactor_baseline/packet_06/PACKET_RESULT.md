@@ -1,0 +1,18 @@
+## Packet Result
+- Packet: 06 — Vocabulary + Commands
+- Branch: speech-engine-exploration-benchmarks
+- Commit hash: (see AUTOPILOT_RUN_LEDGER.md)
+- Pushed: Yes
+- Files changed: `Sources/DexDictate/SettingsWindow/VocabularyCommandsPage.swift` (built out: embeds `VocabularySettingsView` and `CustomCommandsView` verbatim, plus the pipeline-order caption); `Sources/DexDictate/QuickSettingsView.swift` (the two Input-card buttons hidden behind `showLegacyVocabularyCommandsButtons`; their window-opening functions left in place, unused)
+- Files inspected but not changed: `Sources/DexDictate/VocabularySettingsView.swift`, `Sources/DexDictate/CustomCommandsSheet.swift`, `Sources/DexDictate/VocabularyCorrectionSheet.swift` (all read in full — zero edits), `Sources/DexDictateKit/VocabularyManager.swift` (read-only, confirmed `VocabularyItem` has no provenance field), `Sources/DexDictateKit/TranscriptionEngine.swift` (read-only, confirmed pipeline call order: commands then vocabulary)
+- Forbidden files touched: No (`VocabularyManager.swift`, `CommandProcessor.swift` — zero edits)
+- Tests run: full `swift test`; targeted `swift test --filter "Vocabulary|CommandProcessor"`
+- Test result: 382 passed, 0 failures (full suite); 17/17 passed (targeted)
+- Targeted tests: `VocabularyLayeringTests` and related — 17/17 passed
+- Manual validations: not performed (foo→bar round-trip, scratch-that command, learn-correction round-trip) — see `NEEDS_ANDREW.md`
+- Screenshots captured: none — blocked, see `NEEDS_ANDREW.md`
+- Feature-loss checklist rows completed: Custom Vocabulary and learned corrections, Voice Commands — verified at the code/test level only (same manager instances, same targeted test suites green, zero logic edits); not manually round-tripped
+- Dexter preservation checks: not exercised (no Dexter-adjacent files touched)
+- Known issues: **Learned-provenance finding** — `VocabularyItem` has no source/provenance field, so the "Learned" badge was skipped rather than adding a stored field (schema change, explicitly out of scope per the packet). **Pipeline-order verification** — confirmed against `TranscriptionEngine.swift`: commands run first, then vocabulary corrections; the proposed caption text was accurate and used verbatim. Both editor content views (`VocabularySettingsView`, `CustomCommandsView`) turned out to already be pure content views with no window-wrapper entanglement, so no split was needed.
+- Rollback required: No
+- Next recommended packet: 07 — Models + Accuracy + Benchmark Relocation

@@ -52,3 +52,13 @@ Sequential record of the autonomous packet run authorized 2026-07-09. Ungated pa
 - Manual validations: not performed (per-app rule round-trip, password-field fallback, clipboard-restore test, toggle round-trips) — see `packet_05/NEEDS_ANDREW.md`
 - NEEDS_ANDREW: same LSUIElement/accessibility automation gap; button-vs-embed decision documented (button — `PerAppInsertionSheet.swift` untouched); Correction Sheet migrated cross-card from Accuracy & Speed per goal text — see `packet_05/PACKET_RESULT.md` Known issues
 - Safe to continue: Yes
+
+## Packet 06 — Vocabulary + Commands
+- Start commit: c74f07d3
+- Final commit: (see commit immediately following this entry)
+- Pushed: Yes
+- Tests: 382 passed, 0 failures (matches baseline); targeted Vocabulary/CommandProcessor 17/17 passed
+- Screenshots: none — blocked, see `packet_06/NEEDS_ANDREW.md`
+- Manual validations: not performed (foo→bar round-trip, scratch-that command, learn-correction round-trip) — see `packet_06/NEEDS_ANDREW.md`
+- NEEDS_ANDREW: same LSUIElement/accessibility automation gap; no "Learned" badge (no provenance field — schema change out of scope); pipeline-order caption verified against `TranscriptionEngine.swift` — see `packet_06/PACKET_RESULT.md` Known issues
+- Safe to continue: Yes

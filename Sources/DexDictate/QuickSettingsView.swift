@@ -48,6 +48,10 @@ struct QuickSettingsView: View {
     /// grouped with the other output-safety controls even though it's declared in the
     /// Accuracy & Speed card.
     private let showLegacyCorrectionSheetRow = false
+    /// Custom Vocabulary / Voice Commands buttons now live embedded in Settings →
+    /// Vocabulary & Commands (Packet 06). Their window-opening functions stay in place
+    /// (unused by these hidden buttons) in case another path still calls them.
+    private let showLegacyVocabularyCommandsButtons = false
     @State private var advancedPanelExpanded = false
     @State private var isResettingCoreAudio = false
     @State private var coreAudioResetStatus: String?
@@ -169,18 +173,20 @@ struct QuickSettingsView: View {
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.white.opacity(0.82))
 
-                            HStack {
-                                Button("Custom Vocabulary") {
-                                    openVocabularyWindow()
-                                }
-                                .buttonStyle(.bordered)
-                                .controlSize(.small)
+                            if showLegacyVocabularyCommandsButtons {
+                                HStack {
+                                    Button("Custom Vocabulary") {
+                                        openVocabularyWindow()
+                                    }
+                                    .buttonStyle(.bordered)
+                                    .controlSize(.small)
 
-                                Button("Voice Commands") {
-                                    openCustomCommandsWindow()
+                                    Button("Voice Commands") {
+                                        openCustomCommandsWindow()
+                                    }
+                                    .buttonStyle(.bordered)
+                                    .controlSize(.small)
                                 }
-                                .buttonStyle(.bordered)
-                                .controlSize(.small)
                             }
 
                             if showLegacyInputRows {
