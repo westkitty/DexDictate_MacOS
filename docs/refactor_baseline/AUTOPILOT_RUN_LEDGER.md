@@ -139,7 +139,7 @@ Sequential record of the autonomous packet run authorized 2026-07-09. Ungated pa
 
 ## Packet 15 — Visual Polish
 - Start commit: fd61f4d2
-- Final commit: (pending)
+- Final commit: 991ddca
 - Pushed: Yes
 - Tests: 382 passed, 0 failures (matches baseline)
 - Screenshots: none — blocked, same automation gap as every prior packet
