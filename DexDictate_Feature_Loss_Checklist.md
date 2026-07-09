@@ -71,6 +71,9 @@
 - [ ] **Dexter Identity Layer**
   - *Validation:* Check that regional Australian and Canadian profiles correctly load specialized quote packs and custom watermarks.
   - *Code/Test:* [ProfileManager.swift](file:///Users/andrew/DexDictate_MacOS.nosync/Sources/DexDictateKit/Profiles/ProfileManager.swift)
+- [ ] **Live Transcription (Requirement)**
+  - *Validation:* Verify that fallback batch Whisper transcription remains fully functional as the default primary output, and is not degraded by live transcription features.
+  - *Code/Test:* [TranscriptionEngine.swift](file:///Users/andrew/DexDictate_MacOS.nosync/Sources/DexDictateKit/TranscriptionEngine.swift)
 
 ## Must-Not-Break Systems
 
@@ -79,6 +82,7 @@
 3. **Trigger Event Tap:** Quartz `CGEvent` listener that monitors hotkey bounds globally.
 4. **macOS Accessibility Trust:** The polling loop checking permissions must never block the main thread.
 5. **Settings Schema Migrator:** UserDefaults migration logic must stay backwards compatible.
+6. **Batch Whisper Baseline:** Local batch Whisper transcription must remain the primary default committed output layer.
 
 ## Fragile / Do-Not-Touch List (Unless Explicitly Approved)
 

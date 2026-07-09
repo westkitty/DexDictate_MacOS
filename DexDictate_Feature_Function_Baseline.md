@@ -288,16 +288,31 @@ The current codebase contains **no network LLM/Ollama settings**. The provider a
 - **Remote Ollama setup UI.**
 - **On-screen multi-window context awareness.**
 - **Connection test buttons for remote providers.**
+- **Live Transcription (unresolved):** Text appearing while the user is still speaking (Parakeet streaming was attempted but is unsuccessful).
 
-## 13. Validation Commands
+## 13. Live Transcription Requirement
+
+Live transcription is the only major requested capability that remains unresolved.
+
+- **Current State:** The production path uses batch transcription (recording stops, then local Whisper/compatibility provider transcribes).
+- **Parakeet Attempt:** Parakeet streaming was integrated but failed to meet expectations due to stability and threading issues. It is a partial path that requires complete architectural reassessment.
+- **Preservation Contract:** The existing batch Whisper transcription pipeline must not be compromised or weakened. It serves as the primary high-confidence fallback.
+- **Roadmap Architecture recommendation:** Fable should evaluate a staged path:
+  1. *Phase 1:* reliable live preview captions inside DexDictate HUD/popover only (provisional text shown while speaking).
+  2. *Phase 2:* final Whisper/accuracy transcript remains the committed output.
+  3. *Phase 3:* optional live typing mode (inserting text dynamically) only after preview stability is proven.
+  4. *Phase 4:* remote Ollama/Smart layer may clean final output, not drive low-latency live partials.
+- **Key Risks:** Partial transcript instability, duplicate text emissions, cursor drift, focus changes during speech, correction/rewrite complexity, latency from local/remote models, and user confusion.
+
+## 14. Validation Commands
 
 - **Unit tests:** `swift test`
 - **Quality Verification:** `./scripts/run_quality_paths.sh`
 - **Release Verification:** `./scripts/validate_release.sh .build/DexDictate.app`
 - **Benchmark Run:** `./scripts/benchmark.sh --audio sample_corpus/sample.wav`
 
-## 14. Refactor Readiness Verdict
+## 15. Refactor Readiness Verdict
 
-- **UI/UX Planning:** **Ready.** Fable 5 can draft popover/settings redesigns.
+- **UI/UX Planning:** **Ready.** Fable 5 can draft popover/settings redesigns and live transcription roadmaps.
 - **Refactoring:** **Gated.** Do not refactor audio capture or event tap until the UI taxonomy is approved.
 - **Ollama Stack:** **Ready.** Remote provider setting fields can be planned.

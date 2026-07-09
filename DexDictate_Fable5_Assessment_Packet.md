@@ -235,41 +235,76 @@ Dexter is a core part of DexDictate's product identity, and Dexter-related featu
 - The randomized Dexter watermark backdrops and regional localization profiles.
 - The top-scrolling RSS-style ticker.
 
-## 12. Constraints for Fable
+## 12. Live Transcription Requirement
+
+Live transcription is a key product feature request that remains unresolved.
+
+### Current Product State:
+- DexDictate's production pipeline relies primarily on **batch/final transcription** (the audio is recorded, stopped, resampled, transcribed using Whisper, and finally typed or copied).
+- **Parakeet ASR streaming** was attempted to show text as the user speaks. However, the performance and reliability did not meet expectations (causing partial stability issues and CPU contention).
+- **Do not treat live transcription as solved.** Parakeet was a partial/unsuccessful path that needs reassessment.
+
+### Requested Modes to Evaluate:
+- **Batch Final Transcription:** Record audio silently (or with simple meters), stop capture, transcribe with local Whisper/provider, and insert final text (current baseline).
+- **Live Preview Transcription:** Display raw, provisional caption lines inside the HUD or Menu Bar popover while speaking, but do not insert them into the target app until final commit.
+- **Live Typing Transcription:** Directly insert/type partial strings into the focused application in real-time as the user is speaking.
+- **Hybrid Mode (Recommended):** Show a live preview captions strip during dictation, and replace/commit the final high-accuracy cleaned text only after capture stops.
+
+### Staged Implementation Path Recommendation:
+1. **Phase 1: HUD Preview Only.** Establish a low-latency, stable live preview caption strip inside the DexDictate popover/HUD without modifying the cursor.
+2. **Phase 2: Whisper Final Commit.** The final Whisper-based transcription remains the only text typed at the cursor (preserves accuracy).
+3. **Phase 3: Optional Live Typing.** Introduce live typing at the cursor as an opt-in toggle only after preview stability is proven.
+4. **Phase 4: Remote Smart Post-Processing.** Use the remote Ollama layer to clean up the final batch text on stop (not for low-latency live streaming).
+
+### Implementation Risks:
+- **Partial Transcript Instability:** Live streams frequently delete, insert, or rewrite preceding tokens, leading to visual flickering.
+- **Text Duplication:** Glitches in streaming token boundaries can cause repeating segments.
+- **Cursor Drift & Selection Loss:** Typing in real-time can displace the cursor or break target state.
+- **Focus Shifts:** If the user changes focused fields mid-sentence, live typing will split the text across multiple inputs.
+- **Correction Complexity:** Deleting or rewriting typed text dynamically is highly error-prone in macOS Accessibility APIs.
+- **Latency & CPU Contention:** Streaming models (Parakeet/Nemotron) can saturate ANE/GPU threads, delaying the final batch Whisper start.
+- **User Confusion:** Users may be confused between transient live previews and the final committed text.
+
+### Preservation Rules:
+- **No replacement of batch Whisper:** Do not weaken, replace, or compromise the batch Whisper final transcription pipeline while experimenting with live transcription. Local batch Whisper must remain the reliable fallback.
+- **Proposals only:** Fable must propose a live transcription architecture and phased implementation strategy, but must not claim live transcription is already solved.
+
+## 13. Constraints for Fable
 
 - **No full rewrite:** Do not recommend moving away from the Swift Package Manager or SwiftUI menu-bar architecture.
 - **No deletion of features:** Hidden features (Accuracy Retry, Vocabulary, Benchmarks) must be protected, surfaced, and preserved.
 - **No Agent Frameworks:** Keep inference queries as standard OpenAI-compatible API calls.
 - **No cloud-only requirements:** Maintain local-first Whisper as the baseline fallback.
-- **Do not combine refactoring passes:** UI layout changes must be decoupled from risky audio-capture and Core Audio recovery modifications.
+- **Do not combine refactoring passes:** UI layout changes must be decoupled from risky audio-capture and Core Core Audio recovery modifications.
 
-## 13. Non-Goals
+## 14. Non-Goals
 
 - No active Swift code implementation or directory modification in this pass.
 - No Windows/Linux support.
 - No commercial metering or licensing systems.
 - No active-window screen recording/awareness implementation until existing UI/UX is stabilized.
 
-## 14. Unknowns / Missing Inputs
+## 15. Unknowns / Missing Inputs
 
 - **UI Screenshots:** Visual previews of the popovers are unavailable to the remote model. Visual QA requires human validation or visual scripts.
 - **MainActorActionTests Failure:** The test `testRunAsyncExecutesOnMainActor` fails due to an environmental async timing discrepancy on lines 37-40 of `MainActorActionTests.swift`.
 - **Tailscale/SSH Setup:** The local app cannot automate SSH tunnel creation; it must assume the user configures the tunnel externally.
 
-## 15. Contradictions or Tensions
+## 16. Contradictions or Tensions
 
 - **Local-first vs. Remote Inference:** The app's core promise is fully local-only dictation, but adding remote Ollama requires explaining to the user that audio is transmitted to a trusted home server (BigMac) over SSH/Tailscale, not public clouds.
 - **Feature Richness vs. Screen Real Estate:** The popover is tiny (standard menu-bar width), yet it nests dozens of advanced controls. Surfacing them without creating visual clutter is a major challenge.
 
-## 16. Fable Stopping Point
+## 17. Fable Stopping Point
 
 Fable 5 must stop after producing:
 1. A **UI/UX recovery plan** with mockups/wireframes description.
 2. A **settings reorganization proposal** aligning terminology.
 3. A **behavior-preserving refactor strategy** detailing file movements.
 4. **Phased implementation packets** for Google Antigravity execution.
+5. A **proposed live transcription architecture and phased implementation strategy** (Fable must not claim live transcription is already solved).
 
-## 17. Review Method
+## 18. Review Method
 
 1. Human review and sign-off on the Fable 5 plan by Andrew.
 2. Sequential execution of implementation packets by Google Antigravity.
@@ -277,11 +312,11 @@ Fable 5 must stop after producing:
 
 ---
 
-## 18. Paste-Ready Fable Context Block
+## 19. Paste-Ready Fable Context Block
 
 ```markdown
 ### TASK DESCRIPTION
-Assess DexDictate (macOS local Whisper dictation app) and design a UI/UX recovery + settings reorganization plan that surfaces existing hidden features (Vocabulary, Per-App rules, Context Injection, Accuracy Retry, Benchmarking) without changing core engine, audio capture, or recovery logic. Design a roadmap for future remote Ollama integration using SSH tunnels.
+Assess DexDictate (macOS local Whisper dictation app) and design a UI/UX recovery + settings reorganization plan that surfaces existing hidden features (Vocabulary, Per-App rules, Context Injection, Accuracy Retry, Benchmarking) without changing core engine, audio capture, or recovery logic. Design a roadmap for future remote Ollama integration using SSH tunnels. Propose a live transcription architecture and phased implementation strategy (do not assume live transcription is solved).
 
 ### SYSTEM SPECIFICATION
 - OS: macOS 14+
@@ -299,4 +334,5 @@ Assess DexDictate (macOS local Whisper dictation app) and design a UI/UX recover
 - Reorganized Settings Taxonomy.
 - Behavior-Preserving Refactor Roadmap.
 - Phased implementation packets for Google Antigravity execution.
+- Live transcription architecture and phased implementation strategy.
 ```
