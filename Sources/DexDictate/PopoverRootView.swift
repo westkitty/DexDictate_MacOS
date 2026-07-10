@@ -91,6 +91,10 @@ struct PopoverRootView: View {
                         .padding(.vertical, 10)
                     }
 
+                    if engine.state != .stopped {
+                        stopDictationButton
+                    }
+
                     Divider().opacity(0.2).padding(.horizontal, 12)
 
                     footer
@@ -249,6 +253,39 @@ struct PopoverRootView: View {
             .padding(.bottom, 10)
         }
         .padding(.top, 6)
+    }
+
+    // MARK: - Stop Dictation (BUG-006B)
+
+    /// Moved here from `PopoverHeroView` — this used to be the "Stop Dictation" half of a single
+    /// combined Start/Stop button sitting at the top of the hero, where it visually competed with
+    /// `compactControlsRow`'s model/trigger/status chips directly below it. Pinned outside the
+    /// scrollable content (between the ScrollView and the footer divider) rather than inside it,
+    /// so it stays visible without scrolling regardless of how much result/history content is
+    /// showing. Same condition the old combined button used to show "Stop Dictation" under
+    /// (`engine.state != .stopped`) and the same `engine.stopSystem()` call — only the control's
+    /// position changed, not what it does.
+    private var stopDictationButton: some View {
+        Button(action: stopDictation) {
+            HStack {
+                Image(systemName: "stop.fill")
+                Text("Stop Dictation")
+            }
+            .font(.headline)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(Color.red.opacity(0.45))
+            .foregroundStyle(.white)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Stop dictation system")
+        .padding(.horizontal)
+        .padding(.top, 4)
+    }
+
+    private func stopDictation() {
+        MainActorAction.run { engine.stopSystem() }
     }
 
     private var safeModeBinding: Binding<Bool> {

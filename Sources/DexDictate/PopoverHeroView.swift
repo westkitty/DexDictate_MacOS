@@ -5,6 +5,14 @@ import DexDictateKit
 /// Start/Stop calls the same `engine.startSystem()`/`engine.stopSystem()` API the classic
 /// `ControlsView` buttons call — no engine changes. The Dexter watermark renders here only
 /// while idle (`.stopped`/`.ready`), never behind the result text in `PopoverResultView`.
+///
+/// BUG-006B: this view used to hold one combined Start/Stop button. The red "Stop Dictation"
+/// half competed visually with the model/status chip row directly below it in
+/// `PopoverRootView`. That half moved to `PopoverRootView.stopDictationButton`, positioned
+/// under the chip section instead — this hero now only ever shows the "Start Dictation"
+/// affordance, and only while idle (`engine.state == .stopped`), matching exactly the
+/// condition under which the old combined button used to say "Start Dictation". No change to
+/// what stopping dictation actually does — only where the control that starts it lives.
 struct PopoverHeroView: View {
     @ObservedObject var engine: TranscriptionEngine
     @ObservedObject var settings: AppSettings
@@ -69,20 +77,22 @@ struct PopoverHeroView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
-                Button(action: toggleDictation) {
-                    HStack {
-                        Image(systemName: engine.state == .stopped ? "mic.fill" : "stop.fill")
-                        Text(engine.state == .stopped ? "Start Dictation" : "Stop Dictation")
+                if engine.state == .stopped {
+                    Button(action: toggleDictation) {
+                        HStack {
+                            Image(systemName: "mic.fill")
+                            Text("Start Dictation")
+                        }
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(settings.statusAccentColor.opacity(0.45))
+                        .foregroundStyle(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
                     }
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background((engine.state == .stopped ? settings.statusAccentColor : Color.red).opacity(0.45))
-                    .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Start dictation system")
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel(engine.state == .stopped ? "Start dictation system" : "Stop dictation system")
 
                 LivePreviewCaptionView(controller: livePreviewController)
                     .padding(.horizontal, 4)

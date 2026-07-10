@@ -27,20 +27,34 @@ struct ModelsAccuracyPage: View {
                 Text(SettingsPage.modelsAccuracy.title)
                     .font(.title2.bold())
 
+                // BUG-006A: this is the one honest, primary-changing selector for "what actually
+                // gets typed" — Parakeet and installed Whisper sizes are the only real,
+                // mutually-exclusive alternatives for the committed dictation engine (see
+                // `ModelSelectionActions.activeModelRows`). It shares state with the popover's
+                // model chip and the "Installed Dictation Models" rows below via
+                // `ModelSelectionActions.applyActiveModelSelection` — selecting here immediately
+                // updates both. Nemotron/Moonshine/Apple Speech are deliberately not offered here;
+                // they're independent feature toggles, not primary-engine alternatives (Model
+                // Library section below, and its doc comment, explains why).
                 HStack {
-                    Text("Active Model")
+                    Text("Active Dictation Model")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Spacer()
-                    Picker("", selection: $settings.activeWhisperModelID) {
-                        ForEach(modelCatalog.availableModels) { model in
-                            Text(model.displayName).tag(model.id)
+                    Picker("", selection: activeModelSelectionBinding) {
+                        ForEach(activeModelRows) { row in
+                            Text(row.displayName).tag(row.id)
                         }
                     }
                     .labelsHidden()
                     .pickerStyle(.menu)
                     .frame(width: 220)
                 }
+
+                Text(ModelSelectionActions.primaryEngineStatusExplanation(settings: settings, registry: engine.transcriptionProviderRegistry))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 if let availabilityWarning = modelCatalog.availabilityWarning {
                     Text(availabilityWarning)
@@ -62,8 +76,14 @@ struct ModelsAccuracyPage: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
+                // BUG-006A: distinct from "Active Dictation Model" above — this doesn't choose a
+                // model at all. It governs whether the idle benchmark system (see
+                // `ModelBenchmarking.swift`) is allowed to silently promote/swap the active Whisper
+                // model based on its own quality measurements. Renamed from the old ambiguous
+                // "Model Selection" label, which sat directly under the real model picker and read
+                // as if it were a second, competing way to choose the model.
                 HStack {
-                    Text("Model Selection")
+                    Text("Model Auto-Promotion")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Spacer()
@@ -76,6 +96,11 @@ struct ModelsAccuracyPage: View {
                     .pickerStyle(.menu)
                     .frame(width: 220)
                 }
+
+                Text("Auto Idle Benchmark lets DexDictate silently swap your Whisper model when idle benchmarking finds a better one. Manual keeps whatever you pick above until you change it yourself.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 Divider()
 
@@ -106,7 +131,7 @@ struct ModelsAccuracyPage: View {
 
                 Divider()
 
-                Text("Transcription Engines")
+                Text("Model Library & Other Engines")
                     .font(.headline)
                 LiveTranscriptionStatusView(
                     settings: settings,
@@ -127,6 +152,25 @@ struct ModelsAccuracyPage: View {
             .padding(SurfaceTokens.settingsPagePadding)
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
+    }
+
+    /// BUG-006A: rows for the "Active Dictation Model" picker — Parakeet (if healthy) plus every
+    /// installed Whisper size. Shared with the popover's model chip via `ModelSelectionActions` so
+    /// the two surfaces can never drift apart.
+    private var activeModelRows: [ModelSelectionActions.ActiveModelRow] {
+        ModelSelectionActions.activeModelRows(
+            settings: settings, registry: engine.transcriptionProviderRegistry, modelCatalog: modelCatalog
+        )
+    }
+
+    private var activeModelSelectionBinding: Binding<String> {
+        Binding(
+            get: { activeModelRows.first(where: { $0.isSelected })?.id ?? activeModelRows.first?.id ?? "" },
+            set: { newID in
+                guard let row = activeModelRows.first(where: { $0.id == newID }) else { return }
+                ModelSelectionActions.applyActiveModelSelection(row, settings: settings)
+            }
+        )
     }
 
     /// Packet 10B: re-homes the three benchmark controls Packet 07 hid along with the rest

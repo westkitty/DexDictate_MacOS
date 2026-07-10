@@ -170,13 +170,37 @@ struct DexContextChips: View {
     @State private var showingTriggerPopover = false
     @State private var isApplyingSelection = false
 
-    /// Same union used by Classic's "Choose Model" list — see `ModelSelectionActions`.
+    /// Same union used by Settings' "Model Library" list — see `ModelSelectionActions`.
     private var whisperRows: [ModelSelectionActions.WhisperRow] {
         ModelSelectionActions.whisperRows(modelCatalog: modelCatalog)
     }
 
-    private var providerIDs: [TranscriptionProviderID] {
-        [.parakeetTDT06Bv3, .nemotron35ASRStreaming06B, .moonshineV2, .appleSpeech]
+    private var installedWhisperRows: [ModelSelectionActions.WhisperRow] {
+        whisperRows.filter(\.isInstalled)
+    }
+
+    private var downloadableWhisperRows: [ModelSelectionActions.WhisperRow] {
+        whisperRows.filter { !$0.isInstalled }
+    }
+
+    private var parakeetIsHealthy: Bool {
+        registry.healthReport[.parakeetTDT06Bv3]?.isAvailable == true
+    }
+
+    /// Independent feature-role engines — never primary-engine alternatives. Kept out of the
+    /// Installed/Download sections (which are real, mutually-exclusive primary-engine choices)
+    /// so they can't masquerade as ordinary selectable dictation models — see BUG-006A's
+    /// `docs/bug_sweeps/model_selection_bug/DIAGNOSIS.md`.
+    private var engineRoleIDs: [TranscriptionProviderID] {
+        [.nemotron35ASRStreaming06B, .moonshineV2, .appleSpeech]
+    }
+
+    private func isEngineRoleOn(_ pid: TranscriptionProviderID) -> Bool {
+        switch pid {
+        case .nemotron35ASRStreaming06B, .appleSpeech: return settings.liveTranscriptionEnabled
+        case .moonshineV2: return settings.commandModeEnabled
+        case .parakeetTDT06Bv3, .whisperKit: return false
+        }
     }
 
     private func providerObject(for id: TranscriptionProviderID) -> any TranscriptionProvider {
@@ -214,24 +238,42 @@ struct DexContextChips: View {
             }
 
             Menu {
-                Section("Whisper") {
-                    ForEach(whisperRows) { row in
-                        Button {
-                            selectWhisper(row)
-                        } label: {
-                            Text(row.isInstalled ? row.displayName : "\(row.displayName) — Download")
+                Section("Installed Dictation Models") {
+                    if parakeetIsHealthy {
+                        Button { selectProvider(.parakeetTDT06Bv3) } label: {
+                            Text(registry.parakeetProvider.displayName)
+                        }
+                    }
+                    ForEach(installedWhisperRows) { row in
+                        Button { selectWhisper(row) } label: {
+                            Text(row.displayName)
                         }
                     }
                 }
-                Section("Other Engines") {
-                    ForEach(providerIDs, id: \.self) { pid in
+                Section("Download Models") {
+                    if !parakeetIsHealthy {
+                        Button { selectProvider(.parakeetTDT06Bv3) } label: {
+                            Text("\(registry.parakeetProvider.displayName) — Download")
+                        }
+                    }
+                    ForEach(downloadableWhisperRows) { row in
+                        Button { selectWhisper(row) } label: {
+                            Text("\(row.displayName) — Download")
+                        }
+                    }
+                }
+                Section("Other Engines / Engine Roles") {
+                    ForEach(engineRoleIDs, id: \.self) { pid in
                         let isHealthy = registry.healthReport[pid]?.isAvailable == true
+                        let role = providerObject(for: pid).userFacingModeName
                         Button {
                             selectProvider(pid)
                         } label: {
-                            Text(isHealthy
-                                ? providerObject(for: pid).displayName
-                                : "\(providerObject(for: pid).displayName) — Download")
+                            if !isHealthy {
+                                Text("\(providerObject(for: pid).displayName) — \(role) — Download")
+                            } else {
+                                Text("\(providerObject(for: pid).displayName) — \(role) (\(isEngineRoleOn(pid) ? "On" : "Off"))")
+                            }
                         }
                     }
                 }

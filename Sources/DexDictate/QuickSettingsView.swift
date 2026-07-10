@@ -1765,43 +1765,40 @@ struct LiveTranscriptionStatusView: View {
         .parakeetTDT06Bv3, .nemotron35ASRStreaming06B, .moonshineV2
     ]
 
-    private var primaryEngineIsParakeet: Bool {
+    private var parakeetIsHealthy: Bool {
         registry.healthReport[.parakeetTDT06Bv3]?.isAvailable == true
     }
 
     /// The engine currently producing the committed/pasted transcript: the explicit pin if one
     /// is set, otherwise the automatic Parakeet-if-healthy-else-Whisper default. Shared with
-    /// the slim popover's `DexContextChips` model pill via `ModelSelectionActions`.
+    /// the Settings "Active Dictation Model" picker and the slim popover's `DexContextChips`
+    /// model pill via `ModelSelectionActions` (BUG-006A) — all three can never contradict
+    /// each other since they all read/write the same underlying settings.
     private var primaryEngineID: TranscriptionProviderID {
         ModelSelectionActions.primaryEngineID(settings: settings, registry: registry)
     }
 
     private var primaryEngineStatusExplanation: String {
-        let isPinned = !settings.preferredPrimaryEngineID.isEmpty
-        switch primaryEngineID {
-        case .parakeetTDT06Bv3:
-            return isPinned
-                ? "Pinned to Parakeet in the model list below."
-                : "Parakeet is downloaded and healthy, so it produces the text that gets typed automatically. Whisper is the fallback if it ever becomes unavailable."
-        default:
-            if isPinned {
-                return "Pinned to Whisper in the model list below."
-            }
-            return primaryEngineIsParakeet
-                ? "Whisper produces the text that gets typed."
-                : "Whisper produces the text that gets typed. Download Parakeet below to make it the primary engine instead."
-        }
+        ModelSelectionActions.primaryEngineStatusExplanation(settings: settings, registry: registry)
     }
 
-    /// One row in the unified model list — a specific Whisper size, or one of the other engines.
+    /// One row in the Model Library. `.whisper`/`.parakeet` are real, mutually-exclusive
+    /// primary-engine choices (same set as the Settings "Active Dictation Model" picker).
+    /// `.engineRole` covers Nemotron/Moonshine/Apple Speech — these only toggle an independent
+    /// feature (Live Transcription captions / Command Mode phrase detection) and never become
+    /// the primary engine themselves, so they're deliberately kept out of the model-selection
+    /// rows and shown with an on/off role indicator instead of a selection checkmark. See
+    /// `docs/bug_sweeps/model_selection_bug/DIAGNOSIS.md` (BUG-006A) for why.
     private enum ModelRow: Identifiable {
         case whisper(id: String, displayName: String, isInstalled: Bool)
-        case provider(TranscriptionProviderID)
+        case parakeet
+        case engineRole(TranscriptionProviderID)
 
         var id: String {
             switch self {
             case .whisper(let id, _, _): return "whisper:\(id)"
-            case .provider(let pid): return pid.rawValue
+            case .parakeet: return TranscriptionProviderID.parakeetTDT06Bv3.rawValue
+            case .engineRole(let pid): return pid.rawValue
             }
         }
     }
@@ -1810,6 +1807,7 @@ struct LiveTranscriptionStatusView: View {
         let title: String
         let subtitle: String
         let isSelected: Bool
+        let isEngineRole: Bool
         let health: TranscriptionProviderHealth?
         let isDownloading: Bool
         let canDownload: Bool
@@ -1817,15 +1815,39 @@ struct LiveTranscriptionStatusView: View {
 
     /// Whisper sizes already on disk, unioned with the full downloadable catalog — de-duplicated
     /// by id so an installed size never appears twice. Shared logic lives in
-    /// `ModelSelectionActions` so this list can't drift from the Experimental UI's version.
+    /// `ModelSelectionActions` so this list can't drift from the popover's version.
     private var whisperRows: [ModelRow] {
         ModelSelectionActions.whisperRows(modelCatalog: modelCatalog).map {
             .whisper(id: $0.id, displayName: $0.displayName, isInstalled: $0.isInstalled)
         }
     }
 
-    private var providerRows: [ModelRow] {
-        [.provider(.parakeetTDT06Bv3), .provider(.nemotron35ASRStreaming06B), .provider(.moonshineV2), .provider(.appleSpeech)]
+    /// Real, mutually-exclusive primary-engine rows that are already installed/available.
+    private var installedModelRows: [ModelRow] {
+        var rows: [ModelRow] = []
+        if parakeetIsHealthy { rows.append(.parakeet) }
+        rows.append(contentsOf: whisperRows.filter {
+            if case .whisper(_, _, let isInstalled) = $0 { return isInstalled }
+            return false
+        })
+        return rows
+    }
+
+    /// Real, mutually-exclusive primary-engine rows that still need a download before they can
+    /// become active. Never rendered with a selection checkmark (BUG-006A requirement).
+    private var downloadableModelRows: [ModelRow] {
+        var rows: [ModelRow] = []
+        if !parakeetIsHealthy { rows.append(.parakeet) }
+        rows.append(contentsOf: whisperRows.filter {
+            if case .whisper(_, _, let isInstalled) = $0 { return !isInstalled }
+            return false
+        })
+        return rows
+    }
+
+    /// Independent feature-role engines — never primary-engine alternatives.
+    private var engineRoleRows: [ModelRow] {
+        [.engineRole(.nemotron35ASRStreaming06B), .engineRole(.moonshineV2), .engineRole(.appleSpeech)]
     }
 
     private func providerObject(for id: TranscriptionProviderID) -> any TranscriptionProvider {
@@ -1848,22 +1870,33 @@ struct LiveTranscriptionStatusView: View {
                 title: name,
                 subtitle: "Compatibility",
                 isSelected: primaryEngineID == .whisperKit && settings.activeWhisperModelID == id,
+                isEngineRole: false,
                 health: health,
                 isDownloading: downloadingWhisperID == id,
                 canDownload: !isInstalled
             )
-        case .provider(let pid):
-            let selected: Bool
+        case .parakeet:
+            return RowDisplay(
+                title: registry.parakeetProvider.displayName,
+                subtitle: registry.parakeetProvider.userFacingModeName,
+                isSelected: primaryEngineID == .parakeetTDT06Bv3,
+                isEngineRole: false,
+                health: registry.healthReport[.parakeetTDT06Bv3],
+                isDownloading: downloadingIDs.contains(.parakeetTDT06Bv3),
+                canDownload: true
+            )
+        case .engineRole(let pid):
+            let isOn: Bool
             switch pid {
-            case .parakeetTDT06Bv3: selected = primaryEngineID == .parakeetTDT06Bv3
-            case .nemotron35ASRStreaming06B, .appleSpeech: selected = settings.liveTranscriptionEnabled
-            case .moonshineV2: selected = settings.commandModeEnabled
-            case .whisperKit: selected = false
+            case .nemotron35ASRStreaming06B, .appleSpeech: isOn = settings.liveTranscriptionEnabled
+            case .moonshineV2: isOn = settings.commandModeEnabled
+            case .parakeetTDT06Bv3, .whisperKit: isOn = false
             }
             return RowDisplay(
                 title: providerObject(for: pid).displayName,
                 subtitle: providerObject(for: pid).userFacingModeName,
-                isSelected: selected,
+                isSelected: isOn,
+                isEngineRole: true,
                 health: registry.healthReport[pid],
                 isDownloading: downloadingIDs.contains(pid),
                 canDownload: Self.downloadableProviderIDs.contains(pid)
@@ -1923,17 +1956,31 @@ struct LiveTranscriptionStatusView: View {
                 }
             }
 
-            DisclosureGroup("Choose Model", isExpanded: $isModelListExpanded) {
+            DisclosureGroup("Model Library", isExpanded: $isModelListExpanded) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Tap a model to use it. Not downloaded yet? Tapping it downloads it first, then selects it. Picking a model sets sensible defaults for it below — you can still change those manually afterward.")
+                    Text("Tap an installed model to make it the active dictation engine. Not downloaded yet? Tapping it downloads it first, then activates it.")
                         .font(.caption2)
                         .foregroundStyle(.white.opacity(0.5))
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.bottom, 4)
 
-                    ForEach(whisperRows) { row in rowView(row) }
+                    modelSectionHeader("Installed Dictation Models")
+                    ForEach(installedModelRows) { row in rowView(row) }
+
+                    if !downloadableModelRows.isEmpty {
+                        Divider().padding(.vertical, 2)
+                        modelSectionHeader("Download Models")
+                        ForEach(downloadableModelRows) { row in rowView(row) }
+                    }
+
                     Divider().padding(.vertical, 2)
-                    ForEach(providerRows) { row in rowView(row) }
+                    modelSectionHeader("Other Engines / Engine Roles")
+                    Text("These enable a separate feature — Live Transcription captions or Command Mode phrase detection. They never become the primary dictation engine above.")
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.5))
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.bottom, 2)
+                    ForEach(engineRoleRows) { row in rowView(row) }
                 }
                 .padding(.top, 6)
             }
@@ -1943,14 +1990,25 @@ struct LiveTranscriptionStatusView: View {
         .onAppear { refreshStatus() }
     }
 
+    private func modelSectionHeader(_ title: String) -> some View {
+        Text(title)
+            .font(.caption2.weight(.bold))
+            .foregroundStyle(.white.opacity(0.4))
+            .textCase(.uppercase)
+    }
+
     private func rowView(_ row: ModelRow) -> some View {
         let d = display(for: row)
         return Button {
             selectRow(row)
         } label: {
             HStack(alignment: .top, spacing: 6) {
-                Image(systemName: d.isSelected ? "checkmark.circle.fill" : (d.health?.isAvailable == true ? "circle" : "xmark.circle"))
-                    .foregroundStyle(d.isSelected ? .green : (d.health?.isAvailable == true ? .white.opacity(0.5) : .white.opacity(0.3)))
+                Image(systemName: d.isEngineRole
+                    ? (d.health?.isAvailable == true ? "circle" : "xmark.circle")
+                    : (d.isSelected ? "checkmark.circle.fill" : (d.health?.isAvailable == true ? "circle" : "xmark.circle")))
+                    .foregroundStyle(d.isEngineRole
+                        ? .white.opacity(0.4)
+                        : (d.isSelected ? .green : (d.health?.isAvailable == true ? .white.opacity(0.5) : .white.opacity(0.3))))
                     .font(.system(size: 11))
                 VStack(alignment: .leading, spacing: 1) {
                     Text("\(d.title) — \(d.subtitle)")
@@ -1971,6 +2029,10 @@ struct LiveTranscriptionStatusView: View {
                     Text("Download")
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(.blue)
+                } else if d.isEngineRole {
+                    Text(d.isSelected ? "On" : "Off")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(d.isSelected ? .green : .white.opacity(0.4))
                 }
             }
             .contentShape(Rectangle())
@@ -1992,7 +2054,15 @@ struct LiveTranscriptionStatusView: View {
                 downloadingWhisperID = nil
                 refreshStatus()
             }
-        case .provider(let pid):
+        case .parakeet:
+            guard !downloadingIDs.contains(.parakeetTDT06Bv3) else { return }
+            downloadingIDs.insert(.parakeetTDT06Bv3)
+            Task {
+                await ModelSelectionActions.selectProvider(.parakeetTDT06Bv3, settings: settings, registry: registry)
+                downloadingIDs.remove(.parakeetTDT06Bv3)
+                refreshStatus()
+            }
+        case .engineRole(let pid):
             guard !downloadingIDs.contains(pid) else { return }
             downloadingIDs.insert(pid)
             Task {
