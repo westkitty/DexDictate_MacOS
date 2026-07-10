@@ -29,7 +29,14 @@ struct SettingsRootView: View {
         NavigationSplitView {
             SettingsSidebar(selection: $selection)
         } detail: {
-            detailView
+            // Dexter identity watermark sits behind every Settings page (one place covers
+            // all 11). It is decorative and never intercepts interaction — see
+            // `DexterIdentityWatermark`. The profile-driven asset keeps it consistent with
+            // the popover's current Dexter image and the active regional profile.
+            ZStack {
+                DexterIdentityWatermark(assetURL: profileManager.currentWatermarkAsset?.url)
+                detailView
+            }
         }
         .frame(minWidth: 640, minHeight: 420)
         // Packet 15: most controls migrated into this window were re-hosted verbatim from

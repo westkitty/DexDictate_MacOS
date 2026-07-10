@@ -209,11 +209,17 @@ struct HelpView: View {
                 }
             }
             .background(
-                LinearGradient(
-                    colors: [Color.black.opacity(0.88), Color(red: 0.11, green: 0.12, blue: 0.16)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
+                ZStack {
+                    LinearGradient(
+                        colors: [Color.black.opacity(0.88), Color(red: 0.11, green: 0.12, blue: 0.16)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    // Dexter identity watermark behind every Guide page (one place covers all
+                    // sections). Decorative only — never intercepts interaction. HelpView has
+                    // no ProfileManager, so the stable bundled Dexter image is used.
+                    DexterIdentityWatermark()
+                }
             )
         }
         .frame(minWidth: 520, minHeight: 400)
