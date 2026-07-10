@@ -3,8 +3,22 @@ import DexDictateKit
 
 /// Sidebar + detail shell for the Settings window. Pages are placeholders until
 /// Packets 03–11 migrate real controls into them one domain at a time.
+///
+/// BUG-005 fix: `selection` is now this view's own `@State`, not a `@Binding` sourced from
+/// a bare `Binding(get:set:)` closure pair constructed in `SettingsWindowController`. That
+/// custom binding had no SwiftUI-tracked source of truth in this view's hierarchy (nothing
+/// here held `SettingsWindowController` via `@ObservedObject`), so writes to it from
+/// `SettingsSidebar`'s `List(selection:)` never triggered `SettingsRootView.body` to
+/// re-evaluate — the sidebar's native AppKit-backed row highlight updated immediately
+/// (that's intrinsic `NSTableView` behavior, independent of SwiftUI's render cycle), but
+/// `detailView`'s switch below kept rendering whatever was last actually re-rendered
+/// (`.general`, from initial load). A plain local `@State` is a real SwiftUI dependency,
+/// so both the sidebar and the detail switch below now react to the same change. This
+/// still preserves "last-viewed page persists across close/reopen," since the window (and
+/// this already-constructed view's `@State` storage) is never torn down between
+/// `SettingsWindowController.show()` calls — only hidden/shown.
 struct SettingsRootView: View {
-    @Binding var selection: SettingsPage
+    @State private var selection: SettingsPage = .general
     @ObservedObject var scanner: AudioDeviceScanner
     @ObservedObject var benchmarkCaptureController: BenchmarkCaptureWindowController
     @ObservedObject var historyController: HistoryWindowController

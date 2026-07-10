@@ -11,7 +11,6 @@ import DexDictateKit
 @MainActor
 class SettingsWindowController: ObservableObject {
     private var window: NSWindow?
-    @Published var selection: SettingsPage = .general
 
     /// Opens the Settings window, or brings it forward and restores its last-viewed
     /// page if already open. `scanner`, `benchmarkCaptureController`, `historyController`,
@@ -21,6 +20,12 @@ class SettingsWindowController: ObservableObject {
     /// onAppear; a fresh instance would silently no-op on `.show()`. `profileManager` must
     /// be the same instance so a profile switch made in Settings is immediately visible in
     /// the popover's ticker/watermark, not just in a disconnected copy.
+    ///
+    /// BUG-005 fix: `SettingsRootView` now owns its own `selection` as `@State` (see that
+    /// file's doc comment) — this controller no longer threads a page-selection binding
+    /// through at all. "Last-viewed page persists across close/reopen" still holds because
+    /// `window`/`hosting` (and the `SettingsRootView` instance's `@State` storage) are only
+    /// created once and reused via `makeKeyAndOrderFront` on every subsequent `show()`.
     func show(
         scanner: AudioDeviceScanner,
         benchmarkCaptureController: BenchmarkCaptureWindowController,
@@ -31,10 +36,6 @@ class SettingsWindowController: ObservableObject {
         if window == nil {
             let hosting = NSHostingController(
                 rootView: SettingsRootView(
-                    selection: Binding(
-                        get: { [weak self] in self?.selection ?? .general },
-                        set: { [weak self] in self?.selection = $0 }
-                    ),
                     scanner: scanner,
                     benchmarkCaptureController: benchmarkCaptureController,
                     historyController: historyController,

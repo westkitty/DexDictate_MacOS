@@ -1,0 +1,15 @@
+## Packet Result
+- Packet: BUG-005 — Settings Sidebar Selection Does Not Change Detail Page
+- Branch: speech-engine-exploration-benchmarks
+- Commit hash: (see final response)
+- Pushed: Yes
+- Files changed: `Sources/DexDictate/SettingsWindow/SettingsRootView.swift` (`selection` changed from a disconnected `@Binding` to real `@State`), `Sources/DexDictate/SettingsWindow/SettingsWindowController.swift` (removed the now-unnecessary `@Published var selection` and custom `Binding(get:set:)` construction; call site no longer passes `selection:`)
+- Files inspected but not changed: `SettingsSidebar.swift` (confirmed already correct — receives `$selection` properly), `SettingsPage.swift` (confirmed no issues), `DexDictateApp.swift` (confirmed no `selection:` argument was ever passed at either call site, so no changes needed)
+- Forbidden files touched: No
+- Tests run: full `swift test`
+- Test result: 410 tests, 0 failures — clean on first run, no flaky rerun needed
+- Manual validation: **NEEDS_ANDREW** — could not click through the running app. 9-step checklist in `VALIDATION.md`.
+- Storage keys changed: None (`git diff | grep "@AppStorage\|UserDefaults"` — no output)
+- Remaining risks: None identified beyond the standard "cannot personally verify live UI" caveat. The fix is a minimal, well-understood SwiftUI reactivity correction (disconnected custom `Binding` → real `@State`) with no behavioral surface beyond restoring correct navigation.
+- Rollback required: No
+- Next recommended packet: none — per explicit instruction, stopping after this fix and not continuing into other bugs. BUG-004 remains **not fully validated** (its underlying HUD-overlap fix is real and kept, but Andrew's live click-through validation for both BUG-004 and BUG-005 is still outstanding).
