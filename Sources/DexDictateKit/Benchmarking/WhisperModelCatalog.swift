@@ -132,6 +132,16 @@ public final class WhisperModelCatalog: ObservableObject {
         "large-v3": "Large v3"
     ]
 
+    /// Stems that also have an English-only (`.en`) entry in `downloadableCatalog`. A legacy,
+    /// non-English `ggml-<stem>.bin` file for one of these (e.g. a `ggml-base.bin` fetched by
+    /// hand via whisper.cpp's own `download-ggml-model.sh`, rather than through this app) is a
+    /// genuinely different model from its `.en` catalog counterpart — but displayed as a bare
+    /// `"Base"`, it looked confusingly like a duplicate of `"Base English"` sitting right next
+    /// to it under Download, reading as though DexDictate had "forgotten" an already-downloaded
+    /// model (BUG-007). `large`/`large-v1`/`large-v2`/`large-v3` have no `.en` counterpart at
+    /// all, so no such ambiguity exists for them and they're deliberately excluded here.
+    private static let stemsWithEnglishCatalogCounterpart: Set<String> = ["tiny", "base", "small", "medium"]
+
     /// Recognizes a whisper.cpp GGML model filename (e.g. `ggml-base.en.bin`) and returns a
     /// stable id plus a readable display label. Returns `nil` for anything that isn't a
     /// recognized GGML model file, so unrelated files in the directory are ignored.
@@ -146,7 +156,14 @@ public final class WhisperModelCatalog: ObservableObject {
         let stem = isEnglish ? String(core.dropLast(".en".count)) : core
         guard let label = knownModelStems[stem] else { return nil }
 
-        let displayName = isEnglish ? "\(label) English" : label
+        let displayName: String
+        if isEnglish {
+            displayName = "\(label) English"
+        } else if stemsWithEnglishCatalogCounterpart.contains(stem) {
+            displayName = "\(label) (Multilingual)"
+        } else {
+            displayName = label
+        }
         return (id: core, displayName: displayName)
     }
 

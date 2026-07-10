@@ -49,11 +49,17 @@ final class WhisperModelCatalogTests: XCTestCase {
     // MARK: - Installed model discovery
 
     func testRecognizesGGMLFilenamesWithDisplayNames() {
+        // BUG-007: stems with a real `.en` counterpart in `downloadableCatalog` (tiny/base/
+        // small/medium) get a "(Multilingual)" qualifier on their non-English display name so
+        // an already-installed legacy `ggml-<stem>.bin` (e.g. fetched by hand via whisper.cpp's
+        // own download-ggml-model.sh) can't be visually mistaken for a duplicate of its
+        // separately-cataloged, still-not-downloaded English counterpart. `large`/`large-v1`/
+        // `large-v2`/`large-v3` have no `.en` counterpart at all, so they're unaffected.
         let cases: [(file: String, id: String, display: String)] = [
-            ("ggml-tiny.bin", "tiny", "Tiny"),
-            ("ggml-base.bin", "base", "Base"),
-            ("ggml-small.bin", "small", "Small"),
-            ("ggml-medium.bin", "medium", "Medium"),
+            ("ggml-tiny.bin", "tiny", "Tiny (Multilingual)"),
+            ("ggml-base.bin", "base", "Base (Multilingual)"),
+            ("ggml-small.bin", "small", "Small (Multilingual)"),
+            ("ggml-medium.bin", "medium", "Medium (Multilingual)"),
             ("ggml-large.bin", "large", "Large"),
             ("ggml-large-v1.bin", "large-v1", "Large v1"),
             ("ggml-large-v2.bin", "large-v2", "Large v2"),
@@ -115,8 +121,8 @@ final class WhisperModelCatalogTests: XCTestCase {
         let ids = catalog.availableModels.map(\.id)
         XCTAssertTrue(ids.contains("base"), "ggml-base.bin should be discovered")
         XCTAssertTrue(ids.contains("small"), "ggml-small.bin should be discovered")
-        XCTAssertEqual(catalog.descriptor(for: "base")?.displayName, "Base")
-        XCTAssertEqual(catalog.descriptor(for: "small")?.displayName, "Small")
+        XCTAssertEqual(catalog.descriptor(for: "base")?.displayName, "Base (Multilingual)")
+        XCTAssertEqual(catalog.descriptor(for: "small")?.displayName, "Small (Multilingual)")
 
         // Unrelated files are ignored.
         XCTAssertFalse(catalog.availableModels.contains { $0.fileName == "notes.txt" })

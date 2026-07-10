@@ -150,4 +150,46 @@ final class ModelSelectionActionsTests: XCTestCase {
         XCTAssertTrue(imported.isInstalled)
         XCTAssertTrue(imported.displayName.contains("(Imported)"))
     }
+
+    // MARK: - BUG-007: legacy multilingual installs must not mask their English counterpart
+
+    /// Reproduces the exact real-world state that caused BUG-007: a `ggml-base.bin` placed
+    /// directly in the Models directory (e.g. fetched by hand via whisper.cpp's own
+    /// `download-ggml-model.sh`, not through this app) is a genuinely different model from the
+    /// app's own `base.en` download-catalog entry. Both must appear as separate, honestly
+    /// labeled rows — the installed multilingual model must not be conflated with, and must not
+    /// suppress, the still-not-downloaded English row.
+    func testLegacyMultilingualInstallDoesNotMaskEnglishCatalogCounterpart() throws {
+        let tempDirectory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: tempDirectory, withIntermediateDirectories: true)
+        let tinyURL = tempDirectory.appendingPathComponent("tiny.en.bin")
+        try Data("tiny".utf8).write(to: tinyURL)
+
+        let supportDirectory = tempDirectory.appendingPathComponent("Support")
+        let modelsDirectory = supportDirectory.appendingPathComponent("Models")
+        try FileManager.default.createDirectory(at: modelsDirectory, withIntermediateDirectories: true)
+        try Data("legacy base".utf8).write(to: modelsDirectory.appendingPathComponent("ggml-base.bin"))
+
+        let catalog = WhisperModelCatalog(
+            supportDirectoryURL: supportDirectory,
+            bundledModelURLs: ["tiny.en": tinyURL]
+        )
+
+        let rows = ModelSelectionActions.whisperRows(modelCatalog: catalog)
+
+        let multilingualBase = try XCTUnwrap(rows.first { $0.id == "base" })
+        XCTAssertTrue(multilingualBase.isInstalled)
+        XCTAssertTrue(
+            multilingualBase.displayName.contains("(Multilingual)"),
+            "Installed legacy non-English model must be visually distinct from its English catalog counterpart"
+        )
+
+        let englishBase = try XCTUnwrap(rows.first { $0.id == "base.en" })
+        XCTAssertFalse(englishBase.isInstalled, "base.en genuinely was never downloaded and must still show as downloadable")
+        XCTAssertTrue(englishBase.displayName.contains("MB"))
+
+        // Two distinct rows — the legacy install must never be deduped against or presented as
+        // satisfying the English catalog entry.
+        XCTAssertNotEqual(multilingualBase.id, englishBase.id)
+    }
 }
