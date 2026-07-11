@@ -38,6 +38,14 @@ public final class MoonshineTranscriptionProvider: TranscriptionProvider {
     public private(set) var isDownloading = false
     public private(set) var lastDownloadError: String?
 
+    /// Serializes native `Transcriber.transcribeWithoutStreaming` calls. `Transcriber` wraps a
+    /// plain C/ONNX Runtime handle with no internal locking of its own (`@unchecked Sendable`
+    /// upstream) — nothing prevents two overlapping `transcribeBatch` calls from both reaching
+    /// it concurrently via their own `Task.detached`. A *serial* queue (not the detached task's
+    /// own concurrency) guarantees the actual inference calls run one at a time regardless of
+    /// how many callers race to submit them.
+    private let transcriptionQueue = DispatchQueue(label: "com.dexdictate.moonshineTranscription")
+
     public init() {}
 
     private var modelDirectory: URL {
@@ -128,14 +136,27 @@ public final class MoonshineTranscriptionProvider: TranscriptionProvider {
     ///
     /// `Transcriber.transcribeWithoutStreaming` is a synchronous, blocking ONNX Runtime call.
     /// Since this provider type is `@MainActor`, calling it directly would block the UI thread
-    /// for the duration of inference — so the actual call is offloaded to a detached task.
+    /// for the duration of inference — so the actual call runs on `transcriptionQueue`, a
+    /// serial queue that also guarantees overlapping calls never reach the native handle
+    /// concurrently (see the property's doc comment).
     public func transcribeBatch(samples: [Float]) async throws -> String {
         guard let transcriber else {
             throw TranscriptionProviderError.unavailable(healthCheck().reason ?? "Moonshine is unavailable.")
         }
-        return try await Task.detached(priority: .userInitiated) {
-            let transcript = try transcriber.transcribeWithoutStreaming(audioData: samples, sampleRate: 16000)
-            return transcript.lines.map { $0.text }.joined(separator: " ")
-        }.value
+        return try await withCheckedThrowingContinuation { continuation in
+            // `Transcriber` isn't Sendable, so this capture is a compiler warning — but
+            // `transcriptionQueue` is serial, so at most one of these closures ever runs at a
+            // time regardless of how many callers race to submit; that's the actual safety
+            // property, not the type system. Verified by inspection, not silenced.
+            transcriptionQueue.async {
+                do {
+                    let transcript = try transcriber.transcribeWithoutStreaming(audioData: samples, sampleRate: 16000)
+                    let text = transcript.lines.map { $0.text }.joined(separator: " ")
+                    continuation.resume(returning: text)
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
     }
 }

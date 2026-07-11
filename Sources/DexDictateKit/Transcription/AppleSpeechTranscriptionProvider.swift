@@ -44,6 +44,14 @@ public final class AppleSpeechTranscriptionProvider: TranscriptionProvider, Stre
     private var recognitionTask: SFSpeechRecognitionTask?
     public private(set) var isSessionActive = false
 
+    /// Bumped on every start/stop. `SFSpeechRecognitionTask.cancel()` is not guaranteed
+    /// synchronous — the recognizer can still deliver one more callback shortly after
+    /// cancellation. The completion closure captures the generation at task-creation time and
+    /// discards any callback that arrives once a newer session has started, which is exactly
+    /// the "stale caption bleeds into the next utterance" failure `cancelTranscription()`'s own
+    /// doc comment describes wanting to prevent.
+    private var sessionGeneration = 0
+
     public init() {
         self.recognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US")) ?? SFSpeechRecognizer()
     }
@@ -91,10 +99,12 @@ public final class AppleSpeechTranscriptionProvider: TranscriptionProvider, Stre
         request.requiresOnDeviceRecognition = true
         recognitionRequest = request
         isSessionActive = true
+        sessionGeneration &+= 1
+        let myGeneration = sessionGeneration
 
         recognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
             MainActorDispatch.async {
-                guard let self else { return }
+                guard let self, self.sessionGeneration == myGeneration else { return }
                 if let result {
                     let text = result.bestTranscription.formattedString
                     if result.isFinal {
@@ -132,6 +142,7 @@ public final class AppleSpeechTranscriptionProvider: TranscriptionProvider, Stre
     /// captions from utterance N-1 into utterance N's preview.
     public func cancelTranscription() {
         isSessionActive = false
+        sessionGeneration &+= 1
         recognitionTask?.cancel()
         recognitionTask = nil
         recognitionRequest = nil

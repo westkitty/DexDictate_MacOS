@@ -118,7 +118,8 @@ public class PermissionManager: ObservableObject {
         updateMonitoringTimerState()
     }
 
-    /// Stops runtime-owned polling and clears the retained engine reference.
+    /// Stops runtime-owned polling and clears the engine reference (held `weak`, so this
+    /// doesn't release anything — it just stops referring to an engine that may be gone).
     public func stopRuntimeMonitoring() {
         activeMonitoringRequesters.remove(.runtime)
         engine = nil

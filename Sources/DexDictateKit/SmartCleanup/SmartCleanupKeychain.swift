@@ -23,7 +23,16 @@ enum SmartCleanupKeychain {
         var attributes = query
         attributes[kSecValueData as String] = Data(value.utf8)
         attributes[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
-        SecItemAdd(attributes as CFDictionary, nil)
+        let status = SecItemAdd(attributes as CFDictionary, nil)
+        if status != errSecSuccess {
+            // Previously discarded entirely — the caller (SmartCleanupSettings.apiKey's
+            // setter) has no other way to know the save failed, so the user would believe
+            // Smart Cleanup is configured when a subsequent `load()` silently returns nil.
+            Safety.log(
+                "SmartCleanupKeychain.save() — SecItemAdd failed with OSStatus \(status); API key was not persisted",
+                category: .settings
+            )
+        }
     }
 
     static func load() -> String? {

@@ -138,7 +138,13 @@ struct DexDictateApp: App {
                 livePreviewController.start(engine: engine)
 
                 // Engine already running (started at launch). Nothing more to do.
-                guard engine.state == .stopped else { return }
+                // `engine.state` alone can't distinguish "launch startup is still in flight"
+                // (state hasn't caught up to non-.stopped yet) from "launch startup never ran"
+                // (onboarding gated it) — didAttemptEngineStartAtLaunch does. Without also
+                // checking it, opening the popover fast enough after launch could re-run this
+                // whole fallback concurrently with launch's own startup, duplicating restored
+                // history entries.
+                guard engine.state == .stopped, !appDelegate.didAttemptEngineStartAtLaunch else { return }
 
                 // Fallback: onboarding just completed or launch startup was skipped.
                 permissionManager.requestPermissions()
@@ -667,84 +673,6 @@ struct AntiGravityMainView: View {
 
 // MARK: - Custom Views
 
-private struct QuickSettingsStatusStrip: View {
-    @ObservedObject var engine: TranscriptionEngine
-    @ObservedObject var settings: AppSettings
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Quick Settings Status")
-                .font(.caption.bold())
-                .foregroundStyle(.white.opacity(0.7))
-
-            HStack(spacing: 8) {
-                statusPill(
-                    title: "Route",
-                    value: engine.routeHealthSnapshot.activeInputLabel,
-                    detail: "Recoveries \(engine.routeHealthSnapshot.recoveryCount)"
-                )
-                statusPill(
-                    title: "Latency",
-                    value: latencyValue,
-                    detail: latencyDetail
-                )
-            }
-
-            HStack(spacing: 8) {
-                statusPill(
-                    title: "Model",
-                    value: settings.activeWhisperModelID,
-                    detail: settings.utteranceEndPreset.rawValue
-                )
-                statusPill(
-                    title: "Retry",
-                    value: settings.autoRetrySuspiciousResults ? "Smart" : "Manual",
-                    detail: settings.adaptiveTailDelayEnabled ? "Adaptive tail on" : "Adaptive tail off"
-                )
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(Color.white.opacity(0.04))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .padding(.horizontal)
-    }
-
-    private var latencyValue: String {
-        guard let snapshot = engine.performanceSnapshot else { return "No run yet" }
-        return "\(snapshot.totalMs)ms"
-    }
-
-    private var latencyDetail: String {
-        guard let snapshot = engine.performanceSnapshot else { return "Capture and transcribe timing appears here" }
-        return "Cap \(snapshot.captureStopMs) · Res \(snapshot.resampleMs) · Tx \(snapshot.transcriptionMs)"
-    }
-
-    private func statusPill(title: String, value: String, detail: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title)
-                .font(.caption2)
-                .foregroundStyle(.white.opacity(0.45))
-            Text(value)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.88))
-                .lineLimit(1)
-            Text(detail)
-                .font(.caption2)
-                .foregroundStyle(.white.opacity(0.5))
-                .lineLimit(2)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(10)
-        .background(Color.black.opacity(0.22))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-    }
-}
-
 /// A single segment of a custom segmented control.
 struct TriggerSegment: View {
     let title: String
@@ -765,25 +693,20 @@ struct TriggerSegment: View {
     }
 }
 
-/// A `ToggleStyle` that renders as a tappable checkbox.
-struct CheckboxToggleStyle: ToggleStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        Button(action: { configuration.isOn.toggle() }) {
-            HStack {
-                Image(systemName: configuration.isOn ? "checkmark.square.fill" : "square")
-                    .foregroundStyle(configuration.isOn ? .blue : .white.opacity(0.3))
-                configuration.label
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.8))
-            }
-        }
-        .buttonStyle(.plain)
-    }
-}
-
 /// Handles early app-lifecycle callbacks.
 @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
+    /// Set synchronously the moment `startEngineAtLaunch()` is called — before any of its
+    /// `await`s run. `DexDictateApp`'s popover `.onAppear` fallback checks this (not just
+    /// `engine.state == .stopped`) before repeating the same bootstrap work, because
+    /// `engine.state` doesn't actually leave `.stopped` until this method's own `Task` reaches
+    /// `engine.startSystem()` — if the popover is opened before that happens, `state` alone
+    /// can't distinguish "launch startup is legitimately still in flight" from "launch startup
+    /// was skipped (onboarding gated it)". Without this, the fallback re-ran the history-load
+    /// Task concurrently with launch's own, and `TranscriptionHistory.insert` doesn't dedupe by
+    /// id, so a fast reopen right after launch could duplicate every restored history entry.
+    private(set) var didAttemptEngineStartAtLaunch = false
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         if terminateIfDuplicateInstance() { return }
         configureApplicationIcon()
@@ -805,6 +728,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     /// UI-owned objects (hudController, historyController, etc.) are wired later
     /// in .onAppear when SwiftUI has initialised them.
     private func startEngineAtLaunch() {
+        didAttemptEngineStartAtLaunch = true
         let engine = TranscriptionEngine.shared
         let permissionManager = PermissionManager.shared
         let settings = AppSettings.shared

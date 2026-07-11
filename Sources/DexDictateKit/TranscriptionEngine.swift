@@ -152,6 +152,15 @@ public final class TranscriptionEngine: ObservableObject {
     private var recentCommittedOutputs: [String] = []
     private var automaticRetryOriginalText: String?
 
+    /// True when a trigger press arrived while the engine was still busy (`.transcribing`)
+    /// finishing the *previous* utterance. The event tap consumes the key/mouse event
+    /// regardless of whether we act on it, so without this flag that press is silently
+    /// dropped — the classic "first press after switching fields does nothing" symptom.
+    /// Consumed automatically once the engine transitions back to `.ready`
+    /// (see `applyLifecycle`). Hold-to-Talk cancels it on trigger-up if it hasn't fired yet,
+    /// since a hold that was released before recording ever started shouldn't start one now.
+    private var pendingStartRequest = false
+
     // MARK: - Metrics
     private struct MetricsSession {
         var t_trigger_up: Date?
@@ -269,6 +278,7 @@ public final class TranscriptionEngine: ObservableObject {
     }
 
     public func stopSystem() {
+        pendingStartRequest = false
         silenceTimeoutTask?.cancel()
         silenceTimeoutTask = nil
         silenceCountdown = nil
@@ -400,8 +410,16 @@ public final class TranscriptionEngine: ObservableObject {
     public func toggleListening() {
         if state == .listening {
             stopListening()
-        } else {
+        } else if state == .ready {
             startListening()
+        } else if state == .transcribing {
+            // Engine is still finishing the previous utterance. Queue this press rather
+            // than dropping it — a second tap here toggles the queued request back off.
+            pendingStartRequest.toggle()
+            Safety.log(
+                "toggleListening() — engine busy (state=\(state)); pendingStartRequest=\(pendingStartRequest)",
+                category: .lifecycle
+            )
         }
     }
 
@@ -410,15 +428,25 @@ public final class TranscriptionEngine: ObservableObject {
             stopTask?.cancel()
             stopTask = nil
             currentSessionId = UUID()
-            
+
             // reset metrics
             currentMetrics = MetricsSession()
 
-            if state != .listening {
+            if state == .ready {
                 resultFeedback = .idle
                 startListening()
+            } else if state == .transcribing {
+                // Same race as toggleListening(): the previous utterance is still being
+                // transcribed/pasted. Queue the start instead of swallowing the press —
+                // it fires automatically once the engine reaches .ready (see applyLifecycle).
+                Safety.log("handleTrigger(down: true) — engine busy (state=\(state)); queuing start", category: .lifecycle)
+                pendingStartRequest = true
             }
         } else {
+            // Hold-to-Talk: if the queued start above never got the chance to fire before
+            // the user released the trigger, cancel it — a hold that ended before recording
+            // ever began shouldn't start one now.
+            pendingStartRequest = false
             currentMetrics.t_trigger_up = Date()
             scheduleStop()
         }
@@ -736,24 +764,34 @@ public final class TranscriptionEngine: ObservableObject {
         let sessionId = self.currentSessionId
         let capturedRawCount = rawSamples.count
 
+        // Snapshot the flags this worker needs on the main actor before dispatching.
+        // ExperimentFlags' properties are plain `static var`s written from the main actor
+        // (ExperimentFlags.applyRuntimeSettings, on a settings change) with no
+        // synchronization — reading them directly from the detached task below would be a
+        // genuine data race the moment a settings change lands mid-transcription.
+        let enableSilenceTrim = ExperimentFlags.enableSilenceTrim
+        let enableTrailingTrim = ExperimentFlags.enableTrailingTrim
+        let trailingTrimMinimumSilenceMs = ExperimentFlags.trailingTrimMinimumSilenceMs
+        let trailingTrimPadMs = ExperimentFlags.trailingTrimPadMs
+
         // 2. Move silence trimming and resampling off the main actor — these are
         //    CPU-heavy operations (10–50 ms) that don't need the main thread.
         Task.detached(priority: .userInitiated) { [weak self] in
             // ── Heavy work (off main actor) ──────────────────────────────────────
             var samplesToProcess = rawSamples
-            if ExperimentFlags.enableSilenceTrim {
+            if enableSilenceTrim {
                 samplesToProcess = AudioResampler.trimSilenceFast(samplesToProcess, sampleRate: sourceSampleRate)
                 if samplesToProcess.count != capturedRawCount {
                     let pct = Int((1.0 - Double(samplesToProcess.count) / Double(capturedRawCount)) * 100)
                     Safety.log("Silence trim: \(capturedRawCount) → \(samplesToProcess.count) samples (\(pct)% removed)")
                 }
             }
-            if ExperimentFlags.enableTrailingTrim {
+            if enableTrailingTrim {
                 samplesToProcess = AudioResampler.trimTrailingSilenceCalibrated(
                     samplesToProcess,
                     sampleRate: sourceSampleRate,
-                    minimumSilenceMs: ExperimentFlags.trailingTrimMinimumSilenceMs,
-                    padMs: ExperimentFlags.trailingTrimPadMs
+                    minimumSilenceMs: trailingTrimMinimumSilenceMs,
+                    padMs: trailingTrimPadMs
                 )
             }
             let trimSamples = samplesToProcess.count
@@ -1033,8 +1071,7 @@ public final class TranscriptionEngine: ObservableObject {
     private func finalizeTranscription(
         _ text: String,
         isAccuracyRetry: Bool,
-        sourceHistoryItemID: UUID?,
-        completesLifecycle: Bool = true
+        sourceHistoryItemID: UUID?
     ) {
         // Any path through this method completes the transcription cycle.
         // Without this, early returns (e.g. command-only utterances) can leave state
@@ -1045,9 +1082,7 @@ public final class TranscriptionEngine: ObservableObject {
             pendingFocusSnapshot = nil
             automaticRetryOriginalText = nil
             whisperService.setInitialPrompt(nil)
-            if completesLifecycle {
-                _ = applyLifecycle(.transcriptionCompleted, context: "finalizeTranscription")
-            }
+            _ = applyLifecycle(.transcriptionCompleted, context: "finalizeTranscription")
             emitMetricsCSV()
             activityPhase = .ready
             lastDictationCompletionAt = Date()
@@ -1257,6 +1292,15 @@ public final class TranscriptionEngine: ObservableObject {
             return
         }
 
+        // Bracket this path with the same lifecycle transition every other transcription
+        // path uses. Without this, `state` stayed `.ready` for the whole manual retry —
+        // bypassing the pendingStartRequest queue entirely, so a trigger press during a
+        // retry started a brand-new recording concurrently, and both attempts raced for
+        // the single whisperService.ontranscriptionComplete callback slot.
+        guard applyLifecycle(.transcriptionStarted, context: "retryLastUtteranceInAccuracyMode") else {
+            return
+        }
+
         activityPhase = .retryingAccuracy
         statusText = NSLocalizedString("Retrying last utterance...", comment: "Status: retrying last utterance")
         liveTranscript = NSLocalizedString("Retrying in accuracy mode...", comment: "Retry progress")
@@ -1279,6 +1323,7 @@ public final class TranscriptionEngine: ObservableObject {
             statusText = NSLocalizedString("Retry unavailable", comment: "")
             liveTranscript = ""
             activityPhase = .ready
+            _ = applyLifecycle(.transcriptionCompleted, context: "retryLastUtteranceInAccuracyMode failed to start")
         }
     }
 
@@ -1289,14 +1334,14 @@ public final class TranscriptionEngine: ObservableObject {
             liveTranscript = ""
             resultFeedback = .noSpeechDetected
             activityPhase = .ready
+            _ = applyLifecycle(.transcriptionCompleted, context: "handleAccuracyRetryResult empty result")
             return
         }
 
         finalizeTranscription(
             trimmed,
             isAccuracyRetry: true,
-            sourceHistoryItemID: sourceHistoryItemID,
-            completesLifecycle: false
+            sourceHistoryItemID: sourceHistoryItemID
         )
     }
 
@@ -1459,6 +1504,13 @@ public final class TranscriptionEngine: ObservableObject {
 
         state = transition.to
         Safety.log("Lifecycle transition \(transition.from.rawValue) --\(event.rawValue)--> \(transition.to.rawValue) (\(context))", category: .lifecycle)
+
+        if transition.to == .ready, pendingStartRequest {
+            pendingStartRequest = false
+            Safety.log("applyLifecycle — replaying trigger press that arrived while engine was busy (\(context))", category: .lifecycle)
+            startListening()
+        }
+
         return true
     }
 }

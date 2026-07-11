@@ -110,17 +110,25 @@ public struct Safety {
         }
     }
 
-    /// Writes a diagnostic message **synchronously** on the calling thread.
+    /// Writes a diagnostic message **synchronously** — this call does not return until the
+    /// write has completed.
     ///
-    /// Used by the uncaught-exception handler: the process is about to terminate, so the
-    /// normal async logging queue would not get a chance to flush. This bypasses the queue
-    /// and writes directly so the crash record survives.
+    /// Used by the uncaught-exception handler: the process is about to terminate, so a plain
+    /// `diagnosticsQueue.async` write would not get a chance to run. This still goes through
+    /// `diagnosticsQueue` via `.sync` rather than writing directly, so it can never interleave
+    /// with a concurrently-executing `log()` write to the same files (a real race previously —
+    /// nothing guarded `debug.log`/the diagnostics JSONL store against a normal `log()` call's
+    /// queued write and this bypassing write landing at the same time). A serial queue's
+    /// `.sync` still guarantees this call blocks until the write is done, preserving the
+    /// "must complete before the process might terminate" requirement.
     public static func logCrash(_ message: String) {
         NSLog("[DexDictate] CRASH %@", message)
         guard let dir = appSupportURL else { return }
-        let record = DiagnosticRecord(timestamp: Date(), category: .general, message: message)
-        DiagnosticsStore(directoryURL: dir).append(record)
-        appendLegacyLogLine(message, in: dir)
+        diagnosticsQueue.sync {
+            let record = DiagnosticRecord(timestamp: Date(), category: .general, message: message)
+            DiagnosticsStore(directoryURL: dir).append(record)
+            appendLegacyLogLine(message, in: dir)
+        }
     }
 
     /// Opens Console.app to help the user inspect system logs during troubleshooting.

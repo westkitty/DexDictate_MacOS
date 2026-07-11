@@ -2,9 +2,12 @@ import Foundation
 
 /// A schema-versioned, atomic-write, corruption-quarantining local JSON store.
 ///
-/// All values are persisted as a versioned envelope `{"version": Int, "payload": T}`.
-/// Reads are migration-aware: if the stored version predates the current schema version,
-/// the optional `legacyMigrate` closure is tried before quarantining.
+/// All values are persisted as a versioned envelope `{"version": Int, "payload": T}`. The
+/// `version` field is written on every save but not compared on read — any successfully
+/// decoded envelope is accepted regardless of its version (see `load()`'s doc for why this is
+/// forward-compatible by design). Reads are migration-aware in a different sense: if the
+/// *envelope itself* fails to decode (e.g. a pre-envelope legacy file), the optional
+/// `legacyMigrate` closure is tried on the raw data before quarantining.
 /// Corrupt or unreadable files are renamed to `<name>.corrupt-<ISO8601>` and never deleted,
 /// preserving forensic data while returning the caller-supplied `defaultValue`.
 ///

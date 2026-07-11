@@ -23,11 +23,15 @@ struct VocabularyCommandsPage: View {
                 Text(SettingsPage.vocabularyCommands.title)
                     .font(.title2.bold())
 
-                VocabularySettingsView(vocabularyManager: engine.vocabularyManager)
+                // Ordered to match the actual processing order stated in the caption below
+                // (TranscriptionEngine.prepareTranscriptionResult runs CommandProcessor before
+                // VocabularyManager) — this previously showed Vocabulary above Commands, the
+                // reverse of what the caption said ran first.
+                CustomCommandsView(manager: engine.customCommandsManager)
 
                 Divider()
 
-                CustomCommandsView(manager: engine.customCommandsManager)
+                VocabularySettingsView(vocabularyManager: engine.vocabularyManager)
 
                 Divider()
 

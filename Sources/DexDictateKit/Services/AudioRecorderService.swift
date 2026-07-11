@@ -2,6 +2,7 @@ import AppKit
 import AVFoundation
 import CoreAudio
 import DexDictateObjCSupport
+import os.lock
 
 // MARK: - Core Audio default-device callback (file-scope C-style function)
 
@@ -51,11 +52,28 @@ public final class AudioRecorderService: ObservableObject {
     /// Optional passthrough of the raw tap buffer for opt-in features that need live audio
     /// alongside Whisper's own accumulation — currently only the Apple Speech live-preview
     /// provider. `nil` by default (zero cost, zero behavior change). Invoked synchronously on
-    /// AVAudioEngine's real-time audio thread, same as the rest of `processAudioBuffer` —
-    /// consumers must not block, allocate unboundedly, or throw. Set only from the main actor;
-    /// read only from the audio thread (single-writer/single-reader), matching this file's
-    /// existing `nonisolated(unsafe)` pattern for cross-thread audio state.
-    nonisolated(unsafe) public var onRawAudioBuffer: ((AVAudioPCMBuffer) -> Void)?
+    /// AVAudioEngine's real-time audio thread, same as the rest of `processAudioBuffer`.
+    /// Written from the main actor (`TranscriptionEngine`) while the tap can be firing
+    /// concurrently on the audio thread — unlike this file's other cross-thread state, there
+    /// is no single-writer/single-reader invariant here (the closure itself is reassigned,
+    /// not just read), so it's guarded by `os_unfair_lock` the same way `PreTriggerAudioBuffer`
+    /// guards its state. The getter releases the lock before invoking the closure, so
+    /// consumers still must not block, allocate unboundedly, or throw, but a slow consumer
+    /// can no longer hold this lock.
+    nonisolated(unsafe) private var _onRawAudioBuffer: ((AVAudioPCMBuffer) -> Void)?
+    nonisolated(unsafe) private var onRawAudioBufferLock = os_unfair_lock()
+    public var onRawAudioBuffer: ((AVAudioPCMBuffer) -> Void)? {
+        get {
+            os_unfair_lock_lock(&onRawAudioBufferLock)
+            defer { os_unfair_lock_unlock(&onRawAudioBufferLock) }
+            return _onRawAudioBuffer
+        }
+        set {
+            os_unfair_lock_lock(&onRawAudioBufferLock)
+            defer { os_unfair_lock_unlock(&onRawAudioBufferLock) }
+            _onRawAudioBuffer = newValue
+        }
+    }
 
     private var sleepObserver: NSObjectProtocol?
     private var wakeObserver: NSObjectProtocol?
@@ -630,6 +648,13 @@ public final class AudioRecorderService: ObservableObject {
             Safety.log("performStartAttempt() — calling engine.start()", category: .audio)
             try engine.start()
         } catch {
+            // installInputTapSafely just succeeded above, so isTapInstalled is true — but the
+            // engine never actually started. Without tearing down here, the tap stays
+            // registered on a stopped engine until some *later* start attempt happens to call
+            // teardownEngineUnsafe() as its first step; if this was the terminal attempt (e.g.
+            // the final system-default fallback), the tap dangles until/unless a fresh start.
+            teardownEngineUnsafe()
+            engine.reset()
             throw wrapAudioStartError(error, selection: selection, reason: reason, attemptIndex: attemptIndex)
         }
 

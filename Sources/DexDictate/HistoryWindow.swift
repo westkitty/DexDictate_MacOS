@@ -70,6 +70,7 @@ struct FullHistoryView: View {
     @State private var draft = VocabularyCorrectionDraft()
     @State private var isCorrectionSheetPresented = false
     @State private var cachedAppIcon: NSImage? = nil
+    @State private var exportErrorMessage: String?
 
     private var filteredItems: [HistoryItem] {
         guard !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
@@ -180,12 +181,27 @@ struct FullHistoryView: View {
             contentType: .plainText,
             defaultFilename: "Transcription Export"
         ) { result in
-            #if DEBUG
+            // Previously DEBUG-only: in a Release build a failed export (disk full,
+            // permission denied, sandbox issue) gave the user zero feedback — they could
+            // easily believe their history was exported when it silently was not.
             switch result {
-            case .success(let url): print("Saved to \(url)")
-            case .failure(let error): print("Export failed: \(error.localizedDescription)")
+            case .success(let url):
+                Safety.log("FullHistoryView — exported history to \(url.path)", category: .general)
+            case .failure(let error):
+                Safety.log("FullHistoryView — export failed: \(error.localizedDescription)", category: .general)
+                exportErrorMessage = error.localizedDescription
             }
-            #endif
+        }
+        .alert(
+            NSLocalizedString("Export Failed", comment: "History export failure alert title"),
+            isPresented: Binding(
+                get: { exportErrorMessage != nil },
+                set: { if !$0 { exportErrorMessage = nil } }
+            )
+        ) {
+            Button(NSLocalizedString("OK", comment: ""), role: .cancel) { exportErrorMessage = nil }
+        } message: {
+            Text(exportErrorMessage ?? "")
         }
         .sheet(isPresented: $isCorrectionSheetPresented) {
             VocabularyCorrectionSheet(draft: $draft) {

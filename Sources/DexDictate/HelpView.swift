@@ -467,7 +467,7 @@ private struct WelcomeContent: View {
             VStack(alignment: .leading, spacing: 12) {
                 helpBody("DexDictate lives in your menu bar and converts speech to text using a local Whisper AI model. No internet connection is required — your audio never leaves your Mac.")
                 helpBody("Press your configured trigger to start speaking. DexDictate transcribes what you say and types it into whatever app is in focus.")
-                helpCallout("If DexDictate cannot open your selected microphone or reports Core Audio error -10868, open Quick Settings > Advanced and use Reset Core Audio. This restarts macOS audio and can fix missing or frozen microphones.")
+                helpCallout("If DexDictate cannot open your selected microphone or reports Core Audio error -10868, open Settings → Diagnostics & Recovery and use Reset Core Audio. This restarts macOS audio and can fix missing or frozen microphones.")
                 helpHeading("Key ideas")
                 VStack(alignment: .leading, spacing: 6) {
                     Label("Runs entirely on your Mac — Apple Silicon optimized", systemImage: "cpu")
@@ -543,15 +543,15 @@ private struct TriggerSetupContent: View {
             helpBody("The trigger is the key or button you hold (or click) to start and stop dictation. It fires globally — even when another app is in focus.")
             helpCallout("Default trigger: Middle mouse button")
             helpHeading("Changing your trigger")
-            helpBody("Open the popover → expand Quick Settings → scroll to the Input section → click the shortcut recorder field → press your desired key or button combination.")
+            helpBody("Settings → Dictation → click the shortcut recorder field → press your desired key or button combination.")
             helpBody("Supported triggers: any keyboard key (with optional Cmd/Shift/Ctrl/Option modifiers), mouse buttons (middle, back, forward), or combinations.")
             helpHeading("Hold to Talk (default)")
             helpBody("Hold trigger → recording starts. Release → recording stops, transcription begins immediately. Best for short utterances.")
             helpHeading("Click to Toggle")
             helpBody("Press once to start. Press again to stop. Better for long-form dictation where holding is tiring.")
-            helpBody("Switch mode: Quick Settings → Input → Trigger Mode (segmented control: Hold / Toggle).")
+            helpBody("Switch mode: Settings → Dictation → Trigger Mode (segmented control: Hold / Toggle). Also pinned in the popover for quick access.")
             HelpScreenshot("help-trigger-settings",
-                           caption: "The Input section of Quick Settings showing Trigger Mode and shortcut recorder.")
+                           caption: "The Dictation settings page showing Trigger Mode and the shortcut recorder.")
         }
     }
 }
@@ -564,9 +564,9 @@ private struct RecordingAudioContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             helpHeading("Microphone selection")
-            helpBody("Quick Settings → Input → Input Device.\n\nShows all audio input devices macOS detects: built-in mic, USB mics, Bluetooth headsets, audio interfaces.")
+            helpBody("Settings → Audio & Microphone → Input Device. Also pinned in the popover for quick access.\n\nShows all audio input devices macOS detects: built-in mic, USB mics, Bluetooth headsets, audio interfaces.")
             helpHeading("Silence timeout")
-            helpBody("Auto-stops recording after N seconds of silence, even if you haven't released the trigger.\n\nEnable: Quick Settings → Input → Silence Timeout → drag the slider (0 = Disabled).\n\nA countdown appears in the history panel: \"Auto-stopping in Xs…\"")
+            helpBody("Auto-stops recording after N seconds of silence, even if you haven't released the trigger.\n\nEnable: Settings → Dictation → Silence Timeout → drag the slider (0 = Disabled).\n\nA countdown appears in the history panel: \"Auto-stopping in Xs…\"")
             helpHeading("File import")
             helpBody("Drag and drop an audio file onto the DexDictate popover to transcribe it. Supported: WAV, MP3, M4A, and other formats supported by macOS AVFoundation.")
             helpHeading("Live preview")
@@ -624,17 +624,17 @@ private struct OutputPastingContent: View {
                 HelpRow(key: "Auto-paste off", value: "Saves to history only; nothing is delivered to the app")
             }
             helpHeading("Auto-paste")
-            helpBody("Quick Settings → Output → Auto-Paste. On by default. Turn off to save text to history only.")
+            helpBody("Settings → Output & Insertion → Auto-Paste (Insert at Cursor). On by default. Turn off to save text to history only.")
             helpHeading("Copy-only in sensitive fields")
-            helpBody("Quick Settings → Output → Copy Only in Sensitive Fields. On by default. Detects password fields via Accessibility API and switches to clipboard-only automatically.")
+            helpBody("Settings → Output & Insertion → Copy Only in Sensitive Fields. On by default. Detects password fields via Accessibility API and switches to clipboard-only automatically.")
             helpHeading("Accessibility API insertion")
-            helpBody("Quick Settings → Output → Use Accessibility API for Insertion. Inserts text directly into the focused element. More reliable in some apps; may not work in all.")
+            helpBody("Settings → Output & Insertion → Use Accessibility API for Insertion. Inserts text directly into the focused element. More reliable in some apps; may not work in all.")
             helpHeading("Per-app rules")
-            helpBody("Quick Settings → Output → Per-App Insertion Rules → Manage...\n\nSet clipboard-only or Accessibility API mode for specific apps by bundle ID.")
+            helpBody("Settings → Output & Insertion → Manage Per-App Rules…\n\nSet clipboard-only or Accessibility API mode for specific apps by bundle ID.")
             helpHeading("Profanity filter")
-            helpBody("Quick Settings → Output → Filter Profanity. Replaces matched words before delivery. Add or remove words using the fields that appear when the filter is enabled.")
+            helpBody("Settings → Output & Insertion → Filter Profanity. Replaces matched words before delivery. Add or remove words using the fields that appear when the filter is enabled.")
             HelpScreenshot("help-output-settings",
-                           caption: "The Output section of Quick Settings with all delivery toggles visible.")
+                           caption: "The Output & Insertion settings page with all delivery toggles visible.")
         }
     }
 }
@@ -663,7 +663,7 @@ private struct HistoryContent: View {
             HelpScreenshot("help-history-window",
                            caption: "The detached history window with search, export, and clear controls.")
             helpHeading("History persistence")
-            helpBody("History clears when you close the popover by default. Enable persistence at:\nQuick Settings → Mode → Persist History Across Sessions.\n\nWhen on, history is saved to disk and restored on next launch.")
+            helpBody("History clears when you close the popover by default. Enable persistence at:\nSettings → History → Persist History Across Sessions.\n\nWhen on, history is saved to disk and restored on next launch.")
         }
     }
 }
@@ -704,7 +704,7 @@ private struct VoiceCommandsContent: View {
                     HelpRow(key: "\"New Line\" / \"Next Line\"", value: "Inserts a line break")
                 }
                 helpHeading("Custom commands")
-                helpBody("Quick Settings → Input → Voice Commands → Manage...\n\nCustom commands use the prefix \"Dex\" followed by your keyword:")
+                helpBody("Settings → Vocabulary & Commands.\n\nCustom commands use the prefix \"Dex\" followed by your keyword:")
                 VStack(alignment: .leading, spacing: 4) {
                     HelpRow(key: "\"Dex comma\"", value: "Inserts ,")
                     HelpRow(key: "\"Dex period\"", value: "Inserts .")
@@ -735,11 +735,11 @@ private struct ProfilesContent: View {
                     HelpRow(key: "Aussie", value: "Australian English spelling and terms")
                 }
                 helpHeading("Switching profiles")
-                helpBody("Quick Settings → Mode → Profile selector. Click \"Return to Standard\" to go back to the default.")
+                helpBody("Settings → Dexter & Personality → Profile selector. Click \"Return to Standard\" to go back to the default.")
                 helpHeading("Flavor ticker")
-                helpBody("Rotating motivational text shown below the app title, sourced from the active profile.\n\nToggle: Quick Settings → Mode → Show Flavor Ticker.")
+                helpBody("Rotating motivational text shown below the app title, sourced from the active profile.\n\nToggle: Settings → Dexter & Personality → Show Flavor Ticker.")
                 helpHeading("Stats ticker")
-                helpBody("Current session word count, duration, and WPM.\n\nToggle: Quick Settings → Mode → Show Dictation Stats.")
+                helpBody("Current session word count, duration, and WPM.\n\nToggle: Settings → History → Show Dictation Stats.")
             }
         }
     }
@@ -755,7 +755,7 @@ private struct AppearanceContent: View {
             SectionWatermark(systemName: "paintbrush")
             VStack(alignment: .leading, spacing: 12) {
                 helpHeading("Themes")
-                helpBody("Quick Settings → Appearance section → theme picker.")
+                helpBody("Settings → Dexter & Personality → Appearance picker.")
                 VStack(alignment: .leading, spacing: 4) {
                     HelpRow(key: "System", value: "Follows macOS light/dark mode; material background")
                     HelpRow(key: "Cyberpunk", value: "Dark with cyan accents")
@@ -763,7 +763,7 @@ private struct AppearanceContent: View {
                     HelpRow(key: "High Contrast", value: "Enhanced contrast for accessibility")
                 }
                 helpHeading("Menu bar icon style")
-                helpBody("Quick Settings → Menu Bar Style section.")
+                helpBody("Settings → General → Menu Bar Style section.")
                 VStack(alignment: .leading, spacing: 4) {
                     HelpRow(key: "Mic + Text", value: "Waveform icon with status text")
                     HelpRow(key: "Mic Only", value: "Waveform icon alone")
@@ -772,7 +772,7 @@ private struct AppearanceContent: View {
                     HelpRow(key: "Emoji", value: "Any emoji you enter")
                 }
                 HelpScreenshot("help-appearance-settings",
-                               caption: "The Appearance and Menu Bar Style sections of Quick Settings.")
+                               caption: "The Dexter & Personality and General settings pages.")
             }
         }
     }
@@ -796,11 +796,11 @@ private struct FloatingHUDContent: View {
                     HelpRow(key: "Orange", value: "Error state")
                 }
                 helpHeading("Enabling")
-                helpBody("Quick Settings → Output → Show Floating HUD.")
+                helpBody("Settings → General → Show Floating HUD.")
                 helpHeading("Moving")
                 helpBody("Drag it by its background. Position is saved automatically and restored on next launch.")
                 helpHeading("Hiding")
-                helpBody("Toggle off in Quick Settings, or close the window. It will reopen on next launch if the setting is on.")
+                helpBody("Toggle off in Settings → General, or close the window. It will reopen on next launch if the setting is on.")
                 HelpScreenshot("help-floating-hud-states",
                                caption: "The Floating HUD in recording (red) and idle (green) states.")
             }
@@ -818,9 +818,9 @@ private struct SafeModeContent: View {
             helpBody("Safe Mode applies a low-risk preset: Hold to Talk trigger, clipboard-only output (no auto-paste), and no sound effects.")
             helpCallout("Use Safe Mode when troubleshooting, testing in sensitive apps, or when normal dictation is behaving unexpectedly.")
             helpHeading("Enabling Safe Mode")
-            helpBody("Quick Settings → Output → Safe Mode toggle.\n\nWhen on, your current settings are snapshotted. Turning it off restores them exactly.")
+            helpBody("Settings → Diagnostics & Recovery → Safe Mode toggle.\n\nWhen on, your current settings are snapshotted. Turning it off restores them exactly.")
             HelpScreenshot("help-safe-mode-toggle",
-                           caption: "The Safe Mode toggle in the Output section of Quick Settings.")
+                           caption: "The Safe Mode toggle in Settings → Diagnostics & Recovery.")
             helpHeading("Stable Dictation Defaults")
             helpBody("Resets transcription-specific settings (model, end preset, trim) to known-good values without affecting output or appearance preferences.\n\nLocation: Settings → Models & Accuracy → Benchmark Tools → Restore Stable Defaults button.")
             helpHeading("Restore Defaults")
@@ -917,7 +917,7 @@ private struct DiagnosticsContent: View {
             helpHeading("Transcription is empty or wrong")
             helpBody("1. Confirm Microphone permission is granted.\n2. Check Input Device in Settings → Audio & Microphone → Input Device.\n3. Enable Safe Mode (clipboard-only) to rule out output issues.\n4. Try the bundled tiny.en model in Settings → Models & Accuracy → Active Model.")
             helpHeading("Text pasting in wrong place / not pasting")
-            helpBody("1. Ensure the target app is in focus when you release the trigger.\n2. Check per-app rules in Quick Settings → Output → Per-App Insertion Rules → Manage...\n3. Try enabling Accessibility API insertion.")
+            helpBody("1. Ensure the target app is in focus when you release the trigger.\n2. Check per-app rules in Settings → Output & Insertion → Manage Per-App Rules…\n3. Try enabling Accessibility API insertion.")
 
             // MARK: Zoom compatibility
 
@@ -926,21 +926,21 @@ private struct DiagnosticsContent: View {
             helpBody("DexDictate works while Zoom is open. Different failure modes have different causes:")
 
             VStack(alignment: .leading, spacing: 4) {
-                HelpRow(key: "Microphone fails during Zoom call", value: "Zoom may change the selected audio device. Check Route Health in Quick Settings. If recovery doesn't resume automatically, check the Input Device setting.")
+                HelpRow(key: "Microphone fails during Zoom call", value: "Zoom may change the selected audio device. Check Route Health in Settings → Diagnostics & Recovery. If recovery doesn't resume automatically, check the Input Device setting.")
                 HelpRow(key: "Zoom chat doesn't receive text", value: "Click directly inside the Zoom chat box before triggering dictation. If text still doesn't appear, set a per-app rule for Zoom (us.zoom.xos) to use Clipboard Paste. Zoom's Electron-based chat may not support Accessibility API insertion.")
-                HelpRow(key: "Works in TextEdit but not Zoom", value: "This is a target-app insertion issue, not a global failure. Set a per-app Clipboard Paste rule for Zoom. Quick Settings → Output → Per-App Insertion Rules → Manage…")
+                HelpRow(key: "Works in TextEdit but not Zoom", value: "This is a target-app insertion issue, not a global failure. Set a per-app Clipboard Paste rule for Zoom. Settings → Output & Insertion → Manage Per-App Rules…")
                 HelpRow(key: "Works outside calls but not during", value: "Probable audio route switch during the call. Zoom typically changes the input device when joining. DexDictate's route recovery should resume automatically — check Route Health for recovery count and status.")
                 HelpRow(key: "Password / OTP / verification fields", value: "DexDictate intentionally does not insert into detected secure fields. Text is copied to clipboard instead. This is expected safety behaviour.")
             }
 
-            helpCallout("For Zoom chat specifically: Quick Settings → Output → Per-App Insertion Rules → Manage… → add bundle ID \"us.zoom.xos\" → Clipboard Paste.")
+            helpCallout("For Zoom chat specifically: Settings → Output & Insertion → Manage Per-App Rules… → add bundle ID \"us.zoom.xos\" → Clipboard Paste.")
 
             // MARK: CoreAudio -10868
 
             helpHeading("Core Audio Error (-10868)")
-            helpBody("If DexDictate cannot open your selected microphone or reports Core Audio error -10868, open Quick Settings > Advanced and use Reset Core Audio. This restarts macOS audio and can fix missing or frozen microphones.")
+            helpBody("If DexDictate cannot open your selected microphone or reports Core Audio error -10868, open Settings → Diagnostics & Recovery and use Reset Core Audio. This restarts macOS audio and can fix missing or frozen microphones.")
             helpWarning("Resetting Core Audio briefly interrupts all system audio.")
-            helpBody("Use Quick Settings → Advanced → Reset Core Audio. DexDictate will ask for confirmation, macOS will ask for administrator permission, and then DexDictate will reload input devices.")
+            helpBody("Use Settings → Diagnostics & Recovery → Reset Core Audio. DexDictate will ask for confirmation, macOS will ask for administrator permission, and then DexDictate will reload input devices.")
 
             // MARK: Diagnostics log
 

@@ -148,22 +148,35 @@ public final class NemotronTranscriptionProvider: TranscriptionProvider, Streami
         // itself always copies into a local array before doing anything async.
         guard let bufferCopy = Self.copyBuffer(buffer) else { return }
         let manager = self.manager
+        let myGeneration = sessionGeneration
         Task {
             do {
                 try await manager.appendAudio(bufferCopy)
                 try await manager.processBufferedAudio()
             } catch {
+                // Same staleness check as the partial-result callback above — without it, an
+                // error from a superseded session's buffered-audio processing could still
+                // surface via onError after a new session has already started.
                 MainActorDispatch.async { [weak self] in
-                    self?.onError?(error)
+                    guard let self, self.sessionGeneration == myGeneration else { return }
+                    self.onError?(error)
                 }
             }
         }
     }
 
     public func stopTranscription() {
+        // Bump the generation unconditionally, even when `isSessionActive` is still false —
+        // startTranscription()'s async setup (manager.reset() + setPartialCallback) can still
+        // be in flight when this is called (e.g. a very quick tap-and-release). Previously
+        // this whole function no-op'd in that case, so the generation was never bumped; the
+        // in-flight startup Task's own generation check then still matched and set
+        // isSessionActive = true after the caller believed the session was already stopped —
+        // "resurrecting" a session nothing ever tore down (manager.finish() was never called
+        // for it either).
+        sessionGeneration &+= 1
         guard isSessionActive else { return }
         isSessionActive = false
-        sessionGeneration &+= 1
         let manager = self.manager
         Task {
             _ = try? await manager.finish()

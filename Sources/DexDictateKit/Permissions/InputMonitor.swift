@@ -171,6 +171,12 @@ final class InputMonitor {
         guard let runLoopSource = runLoopSource, let eventTap = eventTap else { return }
         CFRunLoopRemoveSource(CFRunLoopGetCurrent(), runLoopSource, .commonModes)
         CGEvent.tapEnable(tap: eventTap, enable: false)
+        // Without this, the Mach port itself is never released — just disabled and dropped
+        // from our side. `setupInputMonitor()`/`retryInputMonitor()` (TranscriptionEngine)
+        // tear down and recreate InputMonitor on every accessibility-permission-recovery
+        // cycle, so this was a real, repeatable leak, not a one-time cost. Matches the same
+        // call `OnboardingValidation`'s throwaway probe tap already makes.
+        CFMachPortInvalidate(eventTap)
         self.runLoopSource = nil
         self.eventTap = nil
     }

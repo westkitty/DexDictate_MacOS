@@ -538,7 +538,19 @@ public class AppSettings: ObservableObject {
         pauseBrowserMediaDuringDictation = false
         selectedMenuBarIconIdentifier = ""
         selectedMenuBarEmoji = "🐶"
-        
+
+        liveTranscriptionEnabled = true
+        commandModeEnabled = true
+        preferredPrimaryEngineID = ""
+        showInlineResultQuote = false
+        livePreviewEnabled = false
+        enableContextInjection = false
+        useExperimentalStateFirstUI = false
+        useExperimentalNanoHUD = false
+        useExperimentalCommandPalette = false
+        useExperimentalDexterFeed = false
+        useSlimPopover = true
+
         userShortcutData = (try? JSONEncoder().encode(UserShortcut.defaultMiddleMouse)) ?? Data()
     }
 

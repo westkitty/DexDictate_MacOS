@@ -199,9 +199,17 @@ public struct OutputCoordinator: OutputCoordinating {
             return OutputDeliveryDecision(delivery: .copiedOnly(reason: "Per-app clipboard-only mode"))
         }
 
-        activateTargetApplicationIfNeeded(targetApplication)
+        let didTriggerActivation = activateTargetApplicationIfNeeded(targetApplication)
 
         if protectSensitiveContexts {
+            // NSRunningApplication.activate() is asynchronous with no completion callback.
+            // Without waiting here, inspectFocusedContext() below can read the *previous*
+            // frontmost app's focused element — a real secure field in the target app would
+            // then be misclassified as .standard and auto-pasted into. Bounded so a target
+            // that never actually activates (e.g. it quit mid-flight) can't hang delivery.
+            if let targetApplication, didTriggerActivation {
+                waitForTargetActivation(targetApplication)
+            }
             let context = contextInspector.inspectFocusedContext()
             if case .sensitive(let reason) = context {
                 writer.copy(text)
@@ -214,15 +222,46 @@ public struct OutputCoordinator: OutputCoordinating {
             return OutputDeliveryDecision(delivery: .pastedToActiveApp)
         }
 
+        let outputText = textWithAutoSpacing(text)
+
         if insertionMode == .accessibilityAPI,
            canAttemptDirectAccessibilityInsertion(for: targetApplication) {
-            if insertViaAccessibility(text) {
+            if insertViaAccessibility(outputText) {
                 return OutputDeliveryDecision(delivery: .pastedToActiveApp)
             }
         }
 
-        writer.copyAndPaste(text, targetApplication: targetApplication)
+        writer.copyAndPaste(outputText, targetApplication: targetApplication)
         return OutputDeliveryDecision(delivery: .pastedToActiveApp)
+    }
+
+    /// Prepends a space to `text` when it's about to be inserted immediately after a
+    /// sentence-ending period with no space in between (e.g. cursor right after "...done."),
+    /// which otherwise produces "done.Nexttext" when dictation lands mid-flow between fields.
+    /// Reads the focused element's value and cursor position via the Accessibility API;
+    /// returns `text` unchanged whenever that isn't available (no AX element, cursor at the
+    /// very start of the field, `text` already starts with whitespace, or the preceding
+    /// character isn't a period).
+    private func textWithAutoSpacing(_ text: String) -> String {
+        guard let firstScalar = text.unicodeScalars.first,
+              !CharacterSet.whitespacesAndNewlines.contains(firstScalar) else {
+            return text
+        }
+        guard let element = axOperator.focusedElement(),
+              let selectedRange = axOperator.getSelectedRange(element: element),
+              selectedRange.location > 0,
+              let currentValue = axOperator.getString(kAXValueAttribute as CFString, element: element) else {
+            return text
+        }
+
+        let currentNSString = currentValue as NSString
+        guard selectedRange.location <= currentNSString.length else { return text }
+        let precedingCharacter = currentNSString.substring(
+            with: NSRange(location: selectedRange.location - 1, length: 1)
+        )
+        guard precedingCharacter == "." else { return text }
+
+        return " " + text
     }
 
     /// Attempts to insert text at the current cursor position via the Accessibility API.
@@ -238,21 +277,28 @@ public struct OutputCoordinator: OutputCoordinating {
         let valueSettable = axOperator.isSettable(kAXValueAttribute as CFString, element: element)
 
         // Strategy 1: replace the selected range inside the full value
-        if valueSettable,
-           let currentValue = axOperator.getString(kAXValueAttribute as CFString, element: element),
-           let selectedRange = axOperator.getSelectedRange(element: element) {
-            let updatedValue = replacingText(in: currentValue, selectedRange: selectedRange, with: text)
-            let result = axOperator.set(updatedValue as CFTypeRef, for: kAXValueAttribute as CFString, element: element)
-            if result == .success {
-                axOperator.setCursor(
-                    location: selectedRange.location + accessibilityCharacterCount(text),
-                    element: element
-                )
-                return true
+        if valueSettable {
+            if let currentValue = axOperator.getString(kAXValueAttribute as CFString, element: element),
+               let selectedRange = axOperator.getSelectedRange(element: element) {
+                let updatedValue = replacingText(in: currentValue, selectedRange: selectedRange, with: text)
+                let result = axOperator.set(updatedValue as CFTypeRef, for: kAXValueAttribute as CFString, element: element)
+                if result == .success {
+                    axOperator.setCursor(
+                        location: selectedRange.location + accessibilityCharacterCount(text),
+                        element: element
+                    )
+                    return true
+                }
+                Safety.log("insertViaAccessibility() — strategy 1 (value+range) failed: AXError \(result.rawValue)", category: .output)
+            } else {
+                // kAXValueAttribute is settable, but reading the current value and/or the
+                // selected range failed — previously this fell through to strategy 2 with no
+                // log line at all, contradicting this method's own doc comment promising every
+                // failed strategy is logged.
+                Safety.log("insertViaAccessibility() — strategy 1 skipped: could not read current value and/or selected range", category: .output)
             }
-            Safety.log("insertViaAccessibility() — strategy 1 (value+range) failed: AXError \(result.rawValue)", category: .output)
-        } else if !valueSettable {
-            Safety.log("insertViaAccessibility() — strategies 1 skipped: kAXValueAttribute not settable", category: .output)
+        } else {
+            Safety.log("insertViaAccessibility() — strategy 1 skipped: kAXValueAttribute not settable", category: .output)
         }
 
         // Strategy 2: replace the selected text directly
@@ -269,17 +315,36 @@ public struct OutputCoordinator: OutputCoordinating {
         return false
     }
 
-    private func activateTargetApplicationIfNeeded(_ targetApplication: OutputTargetApplication?) {
-        guard let targetApplication else { return }
+    /// Returns `true` when it actually called `activate()` — i.e. the target existed, wasn't
+    /// us, and wasn't already frontmost — which is exactly when the caller needs to worry
+    /// about activation still being in flight.
+    @discardableResult
+    private func activateTargetApplicationIfNeeded(_ targetApplication: OutputTargetApplication?) -> Bool {
+        guard let targetApplication else { return false }
         let currentProcessIdentifier = ProcessInfo.processInfo.processIdentifier
         guard targetApplication.processIdentifier != currentProcessIdentifier else {
-            return
+            return false
         }
         guard targetApplication.processIdentifier != applicationActivator.frontmostProcessIdentifier else {
-            return
+            return false
         }
 
         applicationActivator.activate(targetApplication)
+        return true
+    }
+
+    /// Spins the run loop (not a hard `Thread.sleep`) until `targetApplication` actually
+    /// becomes frontmost, or `timeout` elapses. Bounded so a target that never activates
+    /// (e.g. it quit between capture and delivery) can't hang dictation delivery.
+    private func waitForTargetActivation(
+        _ targetApplication: OutputTargetApplication,
+        timeout: TimeInterval = 0.15
+    ) {
+        let deadline = Date().addingTimeInterval(timeout)
+        while applicationActivator.frontmostProcessIdentifier != targetApplication.processIdentifier,
+              Date() < deadline {
+            RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.01))
+        }
     }
 
     private func canAttemptDirectAccessibilityInsertion(for targetApplication: OutputTargetApplication?) -> Bool {
@@ -301,6 +366,13 @@ public struct OutputCoordinator: OutputCoordinating {
     /// Returns the character count AX text-range APIs use for cursor advancement.
     /// AX positions are Unicode scalar offsets, not UTF-16 code units.
     /// The two diverge for characters outside the BMP (e.g. emoji).
+    ///
+    /// This is deliberately `unicodeScalars.count`, not `utf16.count` — see
+    /// `AccessibilityInsertionTests.testCursorOffsetEmojiUsesUnicodeScalarsNotUTF16` and its
+    /// sibling cursor-offset tests, which lock in this exact choice against real emoji/CJK
+    /// cases. (A prior review pass considered switching this to `utf16.count` on the theory
+    /// that AX ranges are NSString/UTF-16-based; that would fail all four of those tests and
+    /// was not applied.)
     private func accessibilityCharacterCount(_ text: String) -> Int {
         text.unicodeScalars.count
     }

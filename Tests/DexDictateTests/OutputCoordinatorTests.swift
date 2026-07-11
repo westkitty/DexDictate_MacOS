@@ -197,6 +197,7 @@ final class OutputCoordinatorTests: XCTestCase {
         XCTAssertTrue(axOperator.didAttemptSetValue)
     }
 
+
     func testAccessibilityModeFallsBackToClipboardPasteWhenTargetIsNotFrontmost() {
         let writer = MockOutputWriter()
         let target = OutputTargetApplication(bundleIdentifier: "com.example.chat", processIdentifier: 4242)
@@ -397,6 +398,232 @@ final class OutputCoordinatorTests: XCTestCase {
         XCTAssertEqual(writer.pastedTexts, ["three"])
         XCTAssertEqual(writer.selectAllAndPastedTexts, ["five"])
     }
+
+    // MARK: - Auto-space after sentence-ending punctuation
+
+    func testAutoSpaceInsertedWhenCursorImmediatelyFollowsPeriod() {
+        let writer = MockOutputWriter()
+        let axOperator = MockAccessibilityElementOperator(
+            valueIsSettable: true,
+            selectedTextIsSettable: false,
+            setValueResult: .success,
+            setSelectedTextResult: .failure,
+            existingValue: "First sentence.",
+            selectedRange: NSRange(location: 15, length: 0)
+        )
+        let coordinator = OutputCoordinator(
+            writer: writer,
+            contextInspector: MockFocusedContextInspector(context: .standard),
+            applicationActivator: MockApplicationActivator(),
+            axOperator: axOperator
+        )
+
+        let decision = coordinator.deliver(
+            text: "Second sentence.",
+            autoPaste: true,
+            protectSensitiveContexts: true,
+            insertionMode: .clipboardPaste
+        )
+
+        XCTAssertEqual(decision.delivery, .pastedToActiveApp)
+        XCTAssertEqual(writer.pastedTexts, [" Second sentence."])
+    }
+
+    func testAutoSpaceNotInsertedWhenSpaceAlreadyPresent() {
+        let writer = MockOutputWriter()
+        let axOperator = MockAccessibilityElementOperator(
+            valueIsSettable: true,
+            selectedTextIsSettable: false,
+            setValueResult: .success,
+            setSelectedTextResult: .failure,
+            existingValue: "First sentence. ",
+            selectedRange: NSRange(location: 16, length: 0)
+        )
+        let coordinator = OutputCoordinator(
+            writer: writer,
+            contextInspector: MockFocusedContextInspector(context: .standard),
+            applicationActivator: MockApplicationActivator(),
+            axOperator: axOperator
+        )
+
+        let decision = coordinator.deliver(
+            text: "Second sentence.",
+            autoPaste: true,
+            protectSensitiveContexts: true,
+            insertionMode: .clipboardPaste
+        )
+
+        XCTAssertEqual(decision.delivery, .pastedToActiveApp)
+        XCTAssertEqual(writer.pastedTexts, ["Second sentence."])
+    }
+
+    func testAutoSpaceNotInsertedWhenPrecedingCharacterIsNotSentenceEnding() {
+        let writer = MockOutputWriter()
+        let axOperator = MockAccessibilityElementOperator(
+            valueIsSettable: true,
+            selectedTextIsSettable: false,
+            setValueResult: .success,
+            setSelectedTextResult: .failure,
+            existingValue: "hello",
+            selectedRange: NSRange(location: 5, length: 0)
+        )
+        let coordinator = OutputCoordinator(
+            writer: writer,
+            contextInspector: MockFocusedContextInspector(context: .standard),
+            applicationActivator: MockApplicationActivator(),
+            axOperator: axOperator
+        )
+
+        let decision = coordinator.deliver(
+            text: "world",
+            autoPaste: true,
+            protectSensitiveContexts: true,
+            insertionMode: .clipboardPaste
+        )
+
+        XCTAssertEqual(decision.delivery, .pastedToActiveApp)
+        XCTAssertEqual(writer.pastedTexts, ["world"])
+    }
+
+    func testAutoSpaceNotInsertedAtStartOfField() {
+        let writer = MockOutputWriter()
+        let axOperator = MockAccessibilityElementOperator(
+            valueIsSettable: true,
+            selectedTextIsSettable: false,
+            setValueResult: .success,
+            setSelectedTextResult: .failure,
+            existingValue: "",
+            selectedRange: NSRange(location: 0, length: 0)
+        )
+        let coordinator = OutputCoordinator(
+            writer: writer,
+            contextInspector: MockFocusedContextInspector(context: .standard),
+            applicationActivator: MockApplicationActivator(),
+            axOperator: axOperator
+        )
+
+        let decision = coordinator.deliver(
+            text: "New sentence.",
+            autoPaste: true,
+            protectSensitiveContexts: true,
+            insertionMode: .clipboardPaste
+        )
+
+        XCTAssertEqual(decision.delivery, .pastedToActiveApp)
+        XCTAssertEqual(writer.pastedTexts, ["New sentence."])
+    }
+
+    func testAutoSpaceNotAppliedWhenReplacingEntireField() {
+        let writer = MockOutputWriter()
+        let axOperator = MockAccessibilityElementOperator(
+            valueIsSettable: true,
+            selectedTextIsSettable: false,
+            setValueResult: .success,
+            setSelectedTextResult: .failure,
+            existingValue: "First sentence.",
+            selectedRange: NSRange(location: 15, length: 0)
+        )
+        let coordinator = OutputCoordinator(
+            writer: writer,
+            contextInspector: MockFocusedContextInspector(context: .standard),
+            applicationActivator: MockApplicationActivator(),
+            axOperator: axOperator
+        )
+
+        let decision = coordinator.deliver(
+            text: "Replacement.",
+            autoPaste: true,
+            protectSensitiveContexts: true,
+            insertionMode: .replaceFieldWithClipboardPaste
+        )
+
+        XCTAssertEqual(decision.delivery, .pastedToActiveApp)
+        XCTAssertEqual(writer.selectAllAndPastedTexts, ["Replacement."])
+    }
+
+    func testAutoSpaceAppliedForDirectAccessibilityInsertion() {
+        let writer = MockOutputWriter()
+        let axOperator = MockAccessibilityElementOperator(
+            valueIsSettable: true,
+            selectedTextIsSettable: false,
+            setValueResult: .success,
+            setSelectedTextResult: .failure,
+            existingValue: "First sentence.",
+            selectedRange: NSRange(location: 15, length: 0)
+        )
+        let coordinator = OutputCoordinator(
+            writer: writer,
+            contextInspector: MockFocusedContextInspector(context: .standard),
+            applicationActivator: MockApplicationActivator(),
+            axOperator: axOperator
+        )
+
+        let decision = coordinator.deliver(
+            text: "Second sentence.",
+            autoPaste: true,
+            protectSensitiveContexts: true,
+            insertionMode: .accessibilityAPI
+        )
+
+        XCTAssertEqual(decision.delivery, .pastedToActiveApp)
+        XCTAssertEqual(axOperator.lastSetValue, "First sentence. Second sentence.")
+        XCTAssertTrue(writer.pastedTexts.isEmpty)
+    }
+
+    // MARK: - Sensitive-context check waits for activation to actually complete
+
+    func testSensitiveContextCheckWaitsForActivationBeforeInspecting() {
+        let writer = MockOutputWriter()
+        let target = OutputTargetApplication(bundleIdentifier: "com.example.chat", processIdentifier: 4242)
+        let activator = DelayedActivationMockActivator(initialFrontmostProcessIdentifier: 9001, readsUntilFrontmost: 3)
+        let coordinator = OutputCoordinator(
+            writer: writer,
+            contextInspector: ActivationAwareContextInspector(activator: activator, target: target),
+            applicationActivator: activator
+        )
+
+        let decision = coordinator.deliver(
+            text: "secret",
+            autoPaste: true,
+            protectSensitiveContexts: true,
+            insertionMode: .clipboardPaste,
+            targetApplication: target
+        )
+
+        // If the sensitivity check ran immediately after activate() (the pre-fix behavior),
+        // it would have read the stale frontmost app and returned .standard, auto-pasting
+        // "secret" straight into what is actually a secure field in the target app.
+        XCTAssertEqual(decision.delivery, .copiedOnly(reason: "Detected likely secure input context (password)."))
+        XCTAssertEqual(writer.copiedTexts, ["secret"])
+        XCTAssertTrue(writer.pastedTexts.isEmpty)
+    }
+
+    func testAutoSpaceSkippedWhenNoFocusedElementIsReadable() {
+        let writer = MockOutputWriter()
+        let axOperator = MockAccessibilityElementOperator(
+            valueIsSettable: true,
+            selectedTextIsSettable: false,
+            setValueResult: .success,
+            setSelectedTextResult: .failure,
+            hasFocusedElement: false
+        )
+        let coordinator = OutputCoordinator(
+            writer: writer,
+            contextInspector: MockFocusedContextInspector(context: .standard),
+            applicationActivator: MockApplicationActivator(),
+            axOperator: axOperator
+        )
+
+        let decision = coordinator.deliver(
+            text: "Second sentence.",
+            autoPaste: true,
+            protectSensitiveContexts: true,
+            insertionMode: .clipboardPaste
+        )
+
+        XCTAssertEqual(decision.delivery, .pastedToActiveApp)
+        XCTAssertEqual(writer.pastedTexts, ["Second sentence."])
+    }
 }
 
 private final class MockOutputWriter: OutputWriting {
@@ -429,6 +656,11 @@ private struct MockFocusedContextInspector: FocusedContextInspecting {
 }
 
 private final class MockApplicationActivator: OutputApplicationActivating {
+    // Deliberately does NOT update frontmostProcessIdentifier when activate() is called —
+    // several tests rely on "activation was attempted but the target still isn't frontmost"
+    // (e.g. testAccessibilityModeFallsBackToClipboardPasteWhenTargetIsNotFrontmost). This also
+    // means those tests now pay OutputCoordinator's real bounded wait-for-activation timeout
+    // (~150ms) when protectSensitiveContexts is on — correct behavior, just slower.
     let frontmostProcessIdentifier: pid_t?
     private(set) var activatedApplications: [OutputTargetApplication] = []
 
@@ -441,31 +673,91 @@ private final class MockApplicationActivator: OutputApplicationActivating {
     }
 }
 
+/// Simulates `NSRunningApplication.activate()` being genuinely asynchronous:
+/// `frontmostProcessIdentifier` keeps reporting the pre-activation app for
+/// `readsUntilFrontmost` reads after `activate()` is called, then reports the real target —
+/// deterministically exercising `OutputCoordinator`'s wait-for-activation loop without
+/// depending on wall-clock timing.
+private final class DelayedActivationMockActivator: OutputApplicationActivating {
+    private let initialFrontmostProcessIdentifier: pid_t?
+    private var readsRemainingBeforeFrontmost: Int
+    private var activatedTargetPID: pid_t?
+    private(set) var activatedApplications: [OutputTargetApplication] = []
+
+    init(initialFrontmostProcessIdentifier: pid_t?, readsUntilFrontmost: Int) {
+        self.initialFrontmostProcessIdentifier = initialFrontmostProcessIdentifier
+        self.readsRemainingBeforeFrontmost = readsUntilFrontmost
+    }
+
+    var frontmostProcessIdentifier: pid_t? {
+        guard let activatedTargetPID else { return initialFrontmostProcessIdentifier }
+        if readsRemainingBeforeFrontmost > 0 {
+            readsRemainingBeforeFrontmost -= 1
+            return initialFrontmostProcessIdentifier
+        }
+        return activatedTargetPID
+    }
+
+    func activate(_ targetApplication: OutputTargetApplication) {
+        activatedApplications.append(targetApplication)
+        activatedTargetPID = targetApplication.processIdentifier
+    }
+}
+
+/// Reports `.sensitive` only once `activator` actually reports the target as frontmost —
+/// i.e. only once activation has genuinely caught up — standing in for a real AX read of
+/// the target application's focused element.
+private final class ActivationAwareContextInspector: FocusedContextInspecting {
+    private let activator: DelayedActivationMockActivator
+    private let target: OutputTargetApplication
+
+    init(activator: DelayedActivationMockActivator, target: OutputTargetApplication) {
+        self.activator = activator
+        self.target = target
+    }
+
+    func inspectFocusedContext() -> OutputTargetContext {
+        activator.frontmostProcessIdentifier == target.processIdentifier
+            ? .sensitive(reason: "Detected likely secure input context (password).")
+            : .standard
+    }
+}
+
 private final class MockAccessibilityElementOperator: AccessibilityElementOperating {
     private let valueIsSettable: Bool
     private let selectedTextIsSettable: Bool
     private let setValueResult: AXError
     private let setSelectedTextResult: AXError
     private let focused = AXUIElementCreateSystemWide()
-    private let selectedRange = NSRange(location: 0, length: 0)
+    private let existingValue: String
+    private let selectedRange: NSRange
+    /// When false, `focusedElement()` returns nil (simulates no readable AX element).
+    private let hasFocusedElement: Bool
 
     private(set) var didAttemptSetValue = false
     private(set) var setCursorLocations: [Int] = []
+    private(set) var lastSetValue: String?
 
     init(
         valueIsSettable: Bool,
         selectedTextIsSettable: Bool,
         setValueResult: AXError,
-        setSelectedTextResult: AXError
+        setSelectedTextResult: AXError,
+        existingValue: String = "existing",
+        selectedRange: NSRange = NSRange(location: 0, length: 0),
+        hasFocusedElement: Bool = true
     ) {
         self.valueIsSettable = valueIsSettable
         self.selectedTextIsSettable = selectedTextIsSettable
         self.setValueResult = setValueResult
         self.setSelectedTextResult = setSelectedTextResult
+        self.existingValue = existingValue
+        self.selectedRange = selectedRange
+        self.hasFocusedElement = hasFocusedElement
     }
 
     func focusedElement() -> AXUIElement? {
-        focused
+        hasFocusedElement ? focused : nil
     }
 
     func isSettable(_ attribute: CFString, element: AXUIElement) -> Bool {
@@ -476,7 +768,7 @@ private final class MockAccessibilityElementOperator: AccessibilityElementOperat
     }
 
     func getString(_ attribute: CFString, element: AXUIElement) -> String? {
-        "existing"
+        existingValue
     }
 
     func getSelectedRange(element: AXUIElement) -> NSRange? {
@@ -487,6 +779,7 @@ private final class MockAccessibilityElementOperator: AccessibilityElementOperat
         let key = attribute as String
         if key == kAXValueAttribute as String {
             didAttemptSetValue = true
+            lastSetValue = value as? String
             return setValueResult
         }
         if key == kAXSelectedTextAttribute as String {

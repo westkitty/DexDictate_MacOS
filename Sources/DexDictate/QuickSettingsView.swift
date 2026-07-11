@@ -42,7 +42,10 @@ struct QuickSettingsView: View {
     private let showLegacyTailTimingRows = false
     /// Auto-Paste, Copy Only in Sensitive Fields, Use Accessibility API for Insertion,
     /// Filter Profanity, and the Per-App Insertion Rules button now live in Settings →
-    /// Output & Insertion (Packet 05). Safe Mode and Show Floating HUD stay here.
+    /// Output & Insertion (Packet 05). Safe Mode and Show Floating HUD stayed in this card
+    /// at the time this comment was written, but both were hidden by later packets — see
+    /// `showLegacySafeModeRow` (→ Settings → Diagnostics & Recovery) and
+    /// `showLegacyShowFloatingHUDRow` (→ Settings → General) below.
     private let showLegacyOutputRows = false
     /// Correction Sheet toggle now lives in Settings → Output & Insertion (Packet 05),
     /// grouped with the other output-safety controls even though it's declared in the
@@ -563,10 +566,16 @@ struct QuickSettingsView: View {
                                 Toggle("Persist History Across Sessions", isOn: $settings.persistHistory)
                             }
 
-                            Text("Ticker motion still yields to macOS Reduce Motion even when animation stays enabled here. Stats show word count, session duration, and words per minute for the current session.")
-                                .font(.caption2)
-                                .foregroundStyle(.white.opacity(0.5))
-                                .fixedSize(horizontal: false, vertical: true)
+                            // Describes the ticker/stats toggles above — gated behind the same
+                            // flags as those toggles so this caption can't outlive them (it did:
+                            // both toggle groups are currently hidden, but this caption wasn't,
+                            // leaving an orphaned description with no matching controls).
+                            if showLegacyProfileTickerRows || showLegacyShowDictationStatsRow {
+                                Text("Ticker motion still yields to macOS Reduce Motion even when animation stays enabled here. Stats show word count, session duration, and words per minute for the current session.")
+                                    .font(.caption2)
+                                    .foregroundStyle(.white.opacity(0.5))
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
                         }
                     }
 
@@ -1038,7 +1047,6 @@ struct QuickSettingsView: View {
     // Retain the vocabulary window so we can reuse it instead of creating duplicates.
     @State private var vocabularyWindow: NSWindow?
     @State private var customCommandsWindow: NSWindow?
-    @State private var perAppInsertionWindow: NSWindow?
 
     private func openVocabularyWindow() {
         MainActorAction.run {
@@ -1063,22 +1071,7 @@ struct QuickSettingsView: View {
 
     private func openPerAppInsertionWindow() {
         MainActorAction.run {
-            if let existing = perAppInsertionWindow, existing.isVisible {
-                existing.makeKeyAndOrderFront(nil)
-                NSApp.activate()
-                return
-            }
-            let view = PerAppInsertionView(manager: engine.appInsertionOverridesManager)
-            let hosting = NSHostingController(rootView: view)
-            let window = NSWindow(contentViewController: hosting)
-            window.title = NSLocalizedString("Per-App Insertion Rules", comment: "")
-            window.setContentSize(NSSize(width: 500, height: 380))
-            window.styleMask = [.titled, .closable, .resizable, .miniaturizable]
-            window.center()
-            window.isReleasedWhenClosed = false
-            window.makeKeyAndOrderFront(nil)
-            NSApp.activate()
-            perAppInsertionWindow = window
+            PerAppInsertionWindowController.shared.show(manager: engine.appInsertionOverridesManager)
         }
     }
 

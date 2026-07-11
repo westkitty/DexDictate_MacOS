@@ -51,6 +51,15 @@ public final class LivePreviewController: ObservableObject {
         self.settings = settings
     }
 
+    deinit {
+        // Without this, an instance deallocated without going through endSession()/
+        // killForSession() (e.g. replaced by a new controller elsewhere without the old
+        // one's session ever ending) would leave its repeating 2s health-check timer
+        // running indefinitely — harmless since `[weak self]` makes the closure a no-op,
+        // but a real perpetual-timer leak.
+        healthCheckTimer?.invalidate()
+    }
+
     /// Idempotent — safe to call on every popover open, matching this app's existing
     /// `historyController.setup(...)` / `adaptiveBenchmarkController.start(engine:)` pattern.
     public func start(engine: TranscriptionEngine) {

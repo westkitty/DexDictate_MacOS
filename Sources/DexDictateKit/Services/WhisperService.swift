@@ -16,8 +16,18 @@ public class WhisperService: ObservableObject {
     @Published public private(set) var loadedDecodeProfileName: String?
     private var loadedDecodeProfile: ExperimentFlags.DecodeProfile = ExperimentFlags.whisperDecodeProfile
 
-    /// Serialises transcription calls — cancels the previous task before starting a new one,
-    /// preventing concurrent access to the non-thread-safe whisper.cpp C++ object.
+    /// Tracks the current transcription's wrapping Swift `Task`. NOTE: cancelling this Task
+    /// (here or in `cancelTranscription()`) does NOT interrupt the underlying `whisper_full()`
+    /// C call — SwiftWhisper runs it synchronously on a background queue with no cancellation
+    /// hook, so it always runs to completion regardless, and its result still reaches
+    /// `ontranscriptionComplete` via the `WhisperDelegate` callbacks below (those aren't gated
+    /// by this Task's cancellation either). Protection against a stale/superseded result being
+    /// acted on relies entirely on the caller checking its own session id inside the
+    /// `ontranscriptionComplete` closure it installs (see `TranscriptionEngine.
+    /// runWhisperTranscription`) — not on anything in this class. If a second `transcribe()`
+    /// call arrives while a `whisper_full()` call is still genuinely in flight, SwiftWhisper
+    /// rejects it outright with `WhisperError.instanceBusy` (see the dedicated handling for
+    /// that case below); it does not queue or merge with the first call.
     private var transcriptionTask: Task<Void, Never>?
 
     /// Monotonically-increasing generation counter.  Each new transcription increments this
@@ -312,7 +322,20 @@ public class WhisperService: ObservableObject {
                 Safety.log("Whisper transcribe completed in \(elapsedMs)ms", category: .transcription)
             } catch {
                 if !(error is CancellationError) {
-                    Safety.log("ERROR: Whisper transcription failed: \(error)", category: .transcription)
+                    if case WhisperError.instanceBusy = error {
+                        // A prior transcribe() call's whisper_full() is still genuinely
+                        // running in the background — this request was rejected outright,
+                        // not queued or merged with it. Logged distinctly (rather than
+                        // folded into the generic error path below) so a real occurrence is
+                        // immediately diagnosable instead of looking like an ordinary
+                        // "transcription failed" error.
+                        Safety.log(
+                            "WARNING: Whisper rejected transcribe() — a previous call is still in flight (instanceBusy); delivering empty result for this request",
+                            category: .transcription
+                        )
+                    } else {
+                        Safety.log("ERROR: Whisper transcription failed: \(error)", category: .transcription)
+                    }
                     didHandleError = true
                     let myGen = myGeneration
                     // Drive the engine back to ready via the empty-result path.
@@ -336,7 +359,11 @@ public class WhisperService: ObservableObject {
         return true
     }
 
-    /// Cancels any in-flight transcription task. Call before stopping recording.
+    /// Cancels the wrapping Swift Task for any in-flight transcription and resets
+    /// `isTranscribing`/generation bookkeeping. Does NOT interrupt `whisper_full()` itself if
+    /// it's already running — see the note on `transcriptionTask` — so a call already in
+    /// flight still runs to completion in the background; this just stops its result from
+    /// being delivered. Call before stopping recording.
     public func cancelTranscription() {
         transcriptionTask?.cancel()
         transcriptionTask = nil

@@ -50,14 +50,24 @@ struct ShortcutRecorder: View {
         
         monitor = NSEvent.addLocalMonitorForEvents(matching: mask) { event in
             // Must be on main thread
-            
+
             // Ignore flagsChanged alone (wait for key/click)
             if event.type == .flagsChanged {
                  // We don't capture just modifiers usually, but we could dynamic update text?
                  // For now, wait for a real key/click
                  return event
             }
-            
+
+            // Escape cancels recording instead of being captured as the shortcut itself —
+            // this is the only way to back out once recording starts. Without it, any click
+            // anywhere else in the same window (e.g. a "Back"/"Next" button during onboarding,
+            // or a different Settings tab) was silently consumed and reassigned as the new
+            // shortcut instead of performing its own action, with no way to escape that.
+            if event.type == .keyDown, event.keyCode == 53 {
+                self.stopRecording()
+                return nil
+            }
+
             var newShortcut: AppSettings.UserShortcut?
             
             if event.type == .keyDown {

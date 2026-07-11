@@ -2,6 +2,42 @@ import SwiftUI
 import AppKit
 import DexDictateKit
 
+/// Owns the single "Per-App Insertion Rules" window, following the same pattern as
+/// `HistoryWindowController`. Previously both `QuickSettingsView` and `OutputSettingsPage`
+/// kept their own `@State private var perAppInsertionWindow: NSWindow?` — SwiftUI does not
+/// preserve `@State` across a `switch`-case identity change (e.g. navigating away from and
+/// back to a Settings sidebar page), so returning to Output & Insertion after visiting another
+/// page reset that state to `nil` even though the previously-opened window was still on
+/// screen (`isReleasedWhenClosed = false`), producing a second, duplicate window instead of
+/// refocusing the first. A single controller owned at the app root survives both that
+/// navigation and switching between the popover and the Settings window entirely.
+@MainActor
+final class PerAppInsertionWindowController: ObservableObject {
+    static let shared = PerAppInsertionWindowController()
+    private var window: NSWindow?
+
+    private init() {}
+
+    func show(manager: AppInsertionOverridesManager) {
+        if let existing = window, existing.isVisible {
+            existing.makeKeyAndOrderFront(nil)
+            NSApp.activate()
+            return
+        }
+        let view = PerAppInsertionView(manager: manager)
+        let hosting = NSHostingController(rootView: view)
+        let window = NSWindow(contentViewController: hosting)
+        window.title = NSLocalizedString("Per-App Insertion Rules", comment: "")
+        window.setContentSize(NSSize(width: 500, height: 380))
+        window.styleMask = [.titled, .closable, .resizable, .miniaturizable]
+        window.center()
+        window.isReleasedWhenClosed = false
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate()
+        self.window = window
+    }
+}
+
 /// Modal window content for configuring per-application text insertion modes.
 struct PerAppInsertionView: View {
     @ObservedObject var manager: AppInsertionOverridesManager

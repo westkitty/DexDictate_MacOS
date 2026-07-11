@@ -422,6 +422,17 @@ public final class WhisperModelCatalog: ObservableObject {
         stream.open()
         defer { stream.close() }
 
+        // open() can fail even when InputStream(url:) itself succeeded (e.g. a permission
+        // error, or the file being removed between the existence check and this call). When
+        // that happens `hasBytesAvailable` is simply false, so the read loop below never
+        // executes and would otherwise silently return the hash of zero bytes — indistinguishable
+        // from a legitimately empty file, and persisted as this model's identity/cache key.
+        guard stream.streamStatus != .error else {
+            throw DictationError.unknown(
+                "Failed to open model file for hashing \(url.lastPathComponent): \(stream.streamError?.localizedDescription ?? "unknown")"
+            )
+        }
+
         var hasher = SHA256()
         let bufferSize = 65_536
         var buffer = [UInt8](repeating: 0, count: bufferSize)
@@ -435,6 +446,14 @@ public final class WhisperModelCatalog: ObservableObject {
             }
             if bytesRead == 0 { break }
             hasher.update(data: Data(buffer[..<bytesRead]))
+        }
+
+        // A stream that never reached .atEnd (e.g. it errored partway through, or was closed
+        // by something else) must not silently yield a hash of whatever partial data was read.
+        guard stream.streamStatus == .atEnd else {
+            throw DictationError.unknown(
+                "Hashing \(url.lastPathComponent) did not complete (status=\(stream.streamStatus.rawValue)): \(stream.streamError?.localizedDescription ?? "unknown")"
+            )
         }
 
         let digest = hasher.finalize()

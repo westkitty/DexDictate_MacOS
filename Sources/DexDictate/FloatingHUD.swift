@@ -283,8 +283,13 @@ class FloatingHUDController: ObservableObject {
                 )
                 rootView = AnyView(stdView)
             }
+            // Origin must start at (0, 0), not some arbitrary placeholder — the `.zero` check
+            // below (matching showHubPanel()'s already-correct pattern) is how a fresh install
+            // with no saved `FloatingHUDPosition` autosave frame centers itself on first use.
+            // A non-zero placeholder here meant that check could never be true, so centering
+            // never actually happened.
             window = FloatingHUDWindow(
-                contentRect: NSRect(x: 100, y: 100, width: 200, height: 60),
+                contentRect: NSRect(x: 0, y: 0, width: 200, height: 60),
                 rootView: rootView
             )
             window?.minSize = NSSize(width: 150, height: 40)
@@ -317,13 +322,20 @@ class FloatingHUDController: ObservableObject {
         if shouldShow { show() } else { hide() }
     }
 
-    /// Tear down the existing window and reopen it, picking up any flag changes
-    /// (e.g. `useExperimentalNanoHUD`). Safe to call when HUD is hidden — no-op.
+    /// Tear down the existing window so the next `show()` rebuilds it from the current flags
+    /// (e.g. `useExperimentalNanoHUD`), and reopens it immediately if it was visible.
+    ///
+    /// Must tear down unconditionally, not just when visible: `show()` only builds a new
+    /// `rootView`/`window` when `window == nil` — it otherwise reuses whatever was built last,
+    /// baked-in flag values and all. Previously this only tore down `if wasVisible`, so toggling
+    /// the Nano HUD setting while the HUD was hidden left the stale window in place; the next
+    /// `show()` call (e.g. from the "Show Floating HUD" toggle) reused it as-is, and the toggled
+    /// setting had no visible effect until the app was relaunched.
     func refresh() {
         let wasVisible = window?.isVisible ?? false
+        window?.close()
+        window = nil
         if wasVisible {
-            window?.close()
-            window = nil
             show()
         }
     }

@@ -27,7 +27,18 @@ public final class CustomCommandsManager: ObservableObject {
 
     public init() { load() }
 
+    /// Adds `command`, or replaces the existing command with the same keyword (case/whitespace-
+    /// insensitive) if one exists. `CommandProcessor` resolves a spoken keyword via `first(where:)`,
+    /// so two commands sharing a keyword previously meant the second was silently unreachable —
+    /// added or imported with no indication it would never fire.
     public func add(_ command: CustomCommand) {
+        let normalizedKeyword = command.keyword.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if let existingIndex = commands.firstIndex(where: {
+            $0.keyword.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == normalizedKeyword
+        }) {
+            commands[existingIndex] = command
+            return
+        }
         commands.append(command)
     }
 

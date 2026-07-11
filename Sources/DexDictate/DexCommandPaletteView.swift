@@ -6,7 +6,6 @@ import DexDictateKit
 struct DexPaletteCommand: Identifiable {
     enum ActionKind {
         case live(() -> Void)   // performs an action now
-        case toggle             // handled externally via binding
         case disabled(String)   // affordance with reason shown in help text
     }
 
@@ -26,11 +25,6 @@ struct DexPaletteCommand: Identifiable {
     var isDisabled: Bool {
         if case .disabled = action { return true }
         return false
-    }
-
-    var disabledReason: String? {
-        if case .disabled(let reason) = action { return reason }
-        return nil
     }
 }
 

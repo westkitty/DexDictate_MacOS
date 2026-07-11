@@ -49,16 +49,24 @@ public struct VocabularySettingsView: View {
                 Button(action: addItem) {
                     Image(systemName: "plus")
                 }
-                .disabled(newOriginal.isEmpty || newReplacement.isEmpty)
+                .disabled(
+                    newOriginal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+                    newReplacement.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                )
             }
         }
         .padding()
         .frame(width: 400)
     }
-    
+
     private func addItem() {
+        // Trim before validating/adding — a whitespace-only entry (e.g. a single space)
+        // otherwise passed the non-empty check above and got added as a real correction rule.
+        let original = newOriginal.trimmingCharacters(in: .whitespacesAndNewlines)
+        let replacement = newReplacement.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !original.isEmpty, !replacement.isEmpty else { return }
         withAnimation {
-            try? vocabularyManager.add(original: newOriginal, replacement: newReplacement)
+            try? vocabularyManager.add(original: original, replacement: replacement)
             newOriginal = ""
             newReplacement = ""
         }

@@ -14,7 +14,6 @@ struct OutputSettingsPage: View {
     @ObservedObject private var settings = AppSettings.shared
     @State private var profanityAdditionsText: String = ""
     @State private var profanityRemovalsText: String = ""
-    @State private var perAppInsertionWindow: NSWindow?
 
     var body: some View {
         ScrollView {
@@ -114,27 +113,11 @@ struct OutputSettingsPage: View {
         }
     }
 
-    /// Same window-hosting code as the popover's `openPerAppInsertionWindow()` — a second
-    /// call site onto the unmodified `PerAppInsertionView`/`AppInsertionOverridesManager`,
-    /// not a rewrite of either.
     private func openPerAppInsertionWindow() {
         MainActorAction.run {
-            if let existing = perAppInsertionWindow, existing.isVisible {
-                existing.makeKeyAndOrderFront(nil)
-                NSApp.activate()
-                return
-            }
-            let view = PerAppInsertionView(manager: TranscriptionEngine.shared.appInsertionOverridesManager)
-            let hosting = NSHostingController(rootView: view)
-            let window = NSWindow(contentViewController: hosting)
-            window.title = NSLocalizedString("Per-App Insertion Rules", comment: "")
-            window.setContentSize(NSSize(width: 500, height: 380))
-            window.styleMask = [.titled, .closable, .resizable, .miniaturizable]
-            window.center()
-            window.isReleasedWhenClosed = false
-            window.makeKeyAndOrderFront(nil)
-            NSApp.activate()
-            perAppInsertionWindow = window
+            PerAppInsertionWindowController.shared.show(
+                manager: TranscriptionEngine.shared.appInsertionOverridesManager
+            )
         }
     }
 }

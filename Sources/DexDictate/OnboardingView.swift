@@ -5,7 +5,12 @@ import DexDictateKit
 struct OnboardingView: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var permissionManager: PermissionManager
-    var onboardingWindow: NSWindow?
+    // weak: `window.contentViewController` (an NSHostingController) holds this view as its
+    // rootView, and a strong reference here back to that same window would form a retain
+    // cycle (window → contentViewController → rootView → window) that ARC can never break —
+    // the window, and every AVPlayer backing its hero animations, would leak on every
+    // onboarding presentation (including each debug replay via presentOnboardingForDebug()).
+    weak var onboardingWindow: NSWindow?
     
     // We can use a TabView for pages
     @State private var currentPage = 0

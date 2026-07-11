@@ -23,17 +23,25 @@ public class CommandProcessor {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return (text, .none) }
 
+        // Whisper frequently appends terminal punctuation to short utterances (e.g.
+        // "Scratch that."), which would otherwise defeat the end-anchored ($) patterns
+        // below and silently insert the phrase as literal text instead of running the
+        // command. Strip trailing punctuation/whitespace for matching purposes only —
+        // `text`/`trimmed` (with punctuation intact) are still what's returned/inserted
+        // when no command matches.
+        let commandMatchText = strippedForCommandMatch(trimmed)
+
         if !customCommands.isEmpty,
-           let result = processHotWordCommand(trimmed, commands: customCommands) {
+           let result = processHotWordCommand(commandMatchText, commands: customCommands) {
             return result
         }
 
-        if matchesCommand(trimmed, pattern: #"(?i)(?:^|\s)scratch that$"#) {
+        if matchesCommand(commandMatchText, pattern: #"(?i)(?:^|\s)scratch that$"#) {
             return ("", .deleteLastSentence)
         }
 
-        if matchesCommand(trimmed, pattern: #"(?i)(?:^|\s)all caps$"#) {
-            let content = trimmed.replacingOccurrences(
+        if matchesCommand(commandMatchText, pattern: #"(?i)(?:^|\s)all caps$"#) {
+            let content = commandMatchText.replacingOccurrences(
                 of: #"(?i)(?:^|\s)all caps$"#,
                 with: "",
                 options: .regularExpression
@@ -47,6 +55,14 @@ public class CommandProcessor {
         }
 
         return (text, .none)
+    }
+
+    private func strippedForCommandMatch(_ text: String) -> String {
+        var result = Substring(text)
+        while let last = result.last, last.isPunctuation || last.isWhitespace {
+            result.removeLast()
+        }
+        return String(result)
     }
 
     private func processHotWordCommand(_ text: String, commands: [CustomCommand]) -> (String, DictationCommand)? {

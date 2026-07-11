@@ -56,4 +56,34 @@ final class CommandProcessorTests: XCTestCase {
         XCTAssertEqual(text, ",")
         XCTAssertEqual(command, .none)
     }
+
+    // MARK: - Trailing punctuation (Whisper commonly appends a period to short utterances)
+
+    func testScratchThatMatchesWithTrailingPeriod() {
+        let processor = CommandProcessor()
+
+        let (text, command) = processor.process("Hello world scratch that.")
+
+        XCTAssertEqual(text, "")
+        XCTAssertEqual(command, .deleteLastSentence)
+    }
+
+    func testAllCapsMatchesWithTrailingPeriod() {
+        let processor = CommandProcessor()
+
+        let (text, command) = processor.process("DexDictate all caps.")
+
+        XCTAssertEqual(text, "DEXDICTATE")
+        XCTAssertEqual(command, .none)
+    }
+
+    func testCustomHotWordCommandMatchesWithTrailingPeriod() {
+        let processor = CommandProcessor()
+        let commands = [CustomCommand(keyword: "comma", insertText: ",")]
+
+        let (text, command) = processor.process("Dex comma.", customCommands: commands)
+
+        XCTAssertEqual(text, ",")
+        XCTAssertEqual(command, .none)
+    }
 }
