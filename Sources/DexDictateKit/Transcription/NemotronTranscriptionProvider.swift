@@ -43,6 +43,13 @@ public final class NemotronTranscriptionProvider: TranscriptionProvider, Streami
     /// of bleeding stale captions into the next utterance's live preview. Same idiom
     /// `WhisperService` uses (`transcriptionGeneration`) for the equivalent problem.
     private var sessionGeneration = 0
+    /// The tail of a strict FIFO chain: `startTranscription()`'s `reset()`/
+    /// `setPartialCallback()` setup is the first link, and every subsequent
+    /// `appendAudioBuffer(_:)` call appends one more link that awaits this before doing its
+    /// own actor work, then replaces it with its own task. See the root-cause comment on
+    /// `appendAudioBuffer(_:)` for why this chain — not one independent `Task` per buffer —
+    /// is required for correctness, not just style.
+    private var pendingSessionTask: Task<Void, Never>?
 
     public init() {}
 
@@ -106,16 +113,18 @@ public final class NemotronTranscriptionProvider: TranscriptionProvider, Streami
         guard isModelLoaded else {
             throw TranscriptionProviderError.unavailable(healthCheck().reason ?? "Nemotron is unavailable.")
         }
-        // isSessionActive only flips once reset() + callback registration are actually done —
-        // otherwise a buffer arriving from the real-time audio tap immediately after this call
-        // returns (appendAudioBuffer(_:) below) could race the reset, processing audio against
-        // stale state from a previous session or dropping early partials whose callback wasn't
-        // registered yet. Task {} inherits this @MainActor's isolation, so `self.isSessionActive
-        // = true` below runs back on the main actor after both awaits complete.
         sessionGeneration &+= 1
         let myGeneration = sessionGeneration
         let manager = self.manager
-        Task { [weak self] in
+
+        // Marking active synchronously (not after an async Task completes) means no real
+        // microphone buffer is ever silently dropped just because it arrived before setup
+        // finished — `AudioRecorderService`'s tap can fire within milliseconds of this call
+        // returning. Correctness relative to `reset()`/`setPartialCallback()` is preserved by
+        // chaining this setup work as the first link of `pendingSessionTask` (see
+        // `appendAudioBuffer(_:)`), not by a timing assumption.
+        isSessionActive = true
+        pendingSessionTask = Task { [weak self] in
             await manager.reset()
             await manager.setPartialCallback { text in
                 // `self` is @MainActor-isolated; FluidAudio's `NemotronPartialCallback` is
@@ -131,8 +140,6 @@ public final class NemotronTranscriptionProvider: TranscriptionProvider, Streami
                     self.onPartialResult?(text)
                 }
             }
-            guard let self, self.sessionGeneration == myGeneration else { return }
-            self.isSessionActive = true
         }
     }
 
@@ -149,7 +156,34 @@ public final class NemotronTranscriptionProvider: TranscriptionProvider, Streami
         guard let bufferCopy = Self.copyBuffer(buffer) else { return }
         let manager = self.manager
         let myGeneration = sessionGeneration
-        Task {
+
+        // Root-cause fix (Nemotron reports "Ready" and accepts every buffer without error,
+        // but zero partial — or final — text is ever decoded): each call used to spawn its
+        // OWN independent `Task`, so a real utterance's ~90+ tap buffers all raced each other
+        // into `manager`'s actor mailbox with no ordering guarantee relative to one another.
+        // RNNT streaming decode carries encoder/decoder cache state (`cacheChannel`,
+        // `hState`/`cState`, `melCache`, `lastToken`) forward chunk-to-chunk — if
+        // `appendAudio`/`processBufferedAudio` calls for different buffers interleave out of
+        // recording order, the model decodes a temporally scrambled mel-spectrogram sequence
+        // and greedily predicts blank for every frame: no error, no crash, just silent
+        // 100%-blank output, which is exactly what was observed.
+        //
+        // Verified empirically: driving the SAME `StreamingNemotronAsrManager` directly
+        // (bypassing this class) with the exact same ~4096-frame buffers but serialized —
+        // each call awaited in order — reproduced FluidAudio's own correct reference
+        // transcript; the identical buffers fed through this class's old one-Task-per-buffer
+        // code produced empty output every time (see `NemotronDirectManagerDiagnosticTests`
+        // and `NemotronRealAudioPartialPipelineTests`).
+        //
+        // Chaining each buffer's work onto `pendingSessionTask` — awaiting the previous link
+        // before doing this buffer's own `appendAudio`/`processBufferedAudio` — guarantees
+        // buffers are appended and processed in strict arrival order, with no buffer's work
+        // starting before the previous one's has fully finished, while still returning
+        // immediately to the real-time audio thread (this method itself never awaits).
+        let previous = pendingSessionTask
+        pendingSessionTask = Task { [weak self] in
+            await previous?.value
+            guard let self, self.sessionGeneration == myGeneration else { return }
             do {
                 try await manager.appendAudio(bufferCopy)
                 try await manager.processBufferedAudio()
@@ -166,19 +200,21 @@ public final class NemotronTranscriptionProvider: TranscriptionProvider, Streami
     }
 
     public func stopTranscription() {
-        // Bump the generation unconditionally, even when `isSessionActive` is still false —
-        // startTranscription()'s async setup (manager.reset() + setPartialCallback) can still
-        // be in flight when this is called (e.g. a very quick tap-and-release). Previously
-        // this whole function no-op'd in that case, so the generation was never bumped; the
-        // in-flight startup Task's own generation check then still matched and set
-        // isSessionActive = true after the caller believed the session was already stopped —
-        // "resurrecting" a session nothing ever tore down (manager.finish() was never called
-        // for it either).
+        // Bump the generation unconditionally — any in-flight `appendAudioBuffer` Task still
+        // chained on `pendingSessionTask` (or a partial callback already queued on the actor)
+        // for this session must see a stale generation and bail out once it resumes.
         sessionGeneration &+= 1
         guard isSessionActive else { return }
         isSessionActive = false
         let manager = self.manager
+        // Chain finish() after whatever's still pending, same as every buffer append does —
+        // otherwise a trailing in-flight appendAudio/processBufferedAudio call could still be
+        // running when finish() pads and processes the remainder, reintroducing the same
+        // out-of-order-actor-access defect appendAudioBuffer(_:) just fixed.
+        let previous = pendingSessionTask
+        pendingSessionTask = nil
         Task {
+            await previous?.value
             _ = try? await manager.finish()
         }
     }

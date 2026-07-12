@@ -49,7 +49,11 @@ let package = Package(
         ),
         .testTarget(
             name: "DexDictateTests",
-            dependencies: ["DexDictateKit", "DexDictateObjCSupport"]
+            dependencies: [
+                "DexDictateKit",
+                "DexDictateObjCSupport",
+                .product(name: "FluidAudio", package: "FluidAudio")
+            ]
         ),
         .executableTarget(
             name: "VerificationRunner",
