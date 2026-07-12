@@ -382,8 +382,23 @@ struct PopoverRootView: View {
             liveText: engine.liveTranscript,
             recentText: nil,
             inputLevel: engine.inputLevel,
-            silenceCountdown: engine.silenceCountdown
+            silenceCountdown: engine.silenceCountdown,
+            unavailableReason: liveTranscriptUnavailableReason
         )
+    }
+
+    /// Honest explanation for why no live words are appearing, shown only once we actually
+    /// know this session resolved to a non-streaming engine — never guessed or shown before
+    /// the resolver has run. `nil` (the card falls back to "No recent transcription") whenever
+    /// Live Transcription is off entirely, so this stays specific to the "the feature is on
+    /// but this engine can't stream" case Phase 6 asks to make honest.
+    private var liveTranscriptUnavailableReason: String? {
+        guard settings.liveTranscriptionEnabled,
+              let resolution = engine.transcriptionProviderRegistry.lastResolution,
+              !resolution.usesLiveStreaming else {
+            return nil
+        }
+        return "Live text is unavailable with the selected transcription engine (\(resolution.selectedProviderDisplayName)). Final transcription will still appear when recording ends."
     }
 
     private func loadWatermarkImage() -> NSImage? {

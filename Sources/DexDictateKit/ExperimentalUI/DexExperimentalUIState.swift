@@ -94,12 +94,24 @@ public struct TranscriptDisplayState: Equatable {
     public let recentText: String?
     public let inputLevel: Double
     public let silenceCountdown: Double?
+    /// Non-nil while listening whenever Live Transcription is enabled but the resolved
+    /// provider for this session can't produce partial results (no streaming-capable engine
+    /// installed/authorized). Lets the card distinguish "listening, no words yet" from "this
+    /// session will never show live words" instead of silently showing nothing either way.
+    public let unavailableReason: String?
 
-    public init(liveText: String, recentText: String?, inputLevel: Double, silenceCountdown: Double?) {
+    public init(
+        liveText: String,
+        recentText: String?,
+        inputLevel: Double,
+        silenceCountdown: Double?,
+        unavailableReason: String? = nil
+    ) {
         self.liveText = liveText
         self.recentText = recentText
         self.inputLevel = inputLevel
         self.silenceCountdown = silenceCountdown
+        self.unavailableReason = unavailableReason
     }
 }
 

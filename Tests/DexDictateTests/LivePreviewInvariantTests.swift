@@ -143,4 +143,121 @@ final class LivePreviewInvariantTests: XCTestCase {
         XCTAssertFalse(controller.isFinalizing, "Finalizing badge must clear once transcription completes")
         XCTAssertEqual(controller.caption, "", "stale caption must not persist into idle state")
     }
+
+    // MARK: - Honest "unavailable" state (live-transcription-doesn't-show-text fix)
+
+    /// Root-cause regression: in any environment without a genuinely available streaming
+    /// provider (no Nemotron model downloaded, no Apple Speech permission granted — the
+    /// default/typical state this bug report described), `resolveActiveProvider` correctly
+    /// falls back to Whisper compatibility. Previously nothing told the user why the caption
+    /// area stayed blank while they spoke; it now must explain itself instead of looking broken.
+    func testUnavailableReasonExplainsSilentCaptionWhenNoStreamingProviderResolved() throws {
+        let settings = AppSettings.shared
+        let wasPreview = settings.livePreviewEnabled
+        let wasLiveTranscription = settings.liveTranscriptionEnabled
+        settings.livePreviewEnabled = true
+        settings.liveTranscriptionEnabled = true
+        defer {
+            settings.livePreviewEnabled = wasPreview
+            settings.liveTranscriptionEnabled = wasLiveTranscription
+        }
+
+        let engine = TranscriptionEngine()
+        let controller = LivePreviewController(settings: settings)
+        controller.start(engine: engine)
+
+        // Real resolution against the real registry — resolveActiveProvider() is public and
+        // does a genuine healthCheck() on every provider. In a test/CI sandbox neither
+        // Nemotron (model never downloaded) nor Apple Speech (permission never granted under
+        // test) can be available, so this deterministically falls back to Whisper.
+        let resolution = engine.transcriptionProviderRegistry.resolveActiveProvider(liveTranscriptionEnabled: true)
+        try XCTSkipIf(resolution.usesLiveStreaming, "A streaming provider is genuinely available in this environment; this test only exercises the unavailable path.")
+
+        engine.state = .listening
+
+        XCTAssertNotNil(controller.unavailableReason, "must explain why no live words will appear instead of staying silently blank")
+        XCTAssertTrue(controller.caption.isEmpty)
+    }
+
+    /// Same scenario, opposite ordering: `TranscriptionEngine.startListening()` actually
+    /// flips `state` to `.listening` (via `applyLifecycle`) *before* it calls
+    /// `resolveActiveProvider()` — so `beginSession()` can run with no resolution yet. The
+    /// reactive `$lastResolution` subscription (not a one-time read inside `beginSession()`)
+    /// is what makes this ordering still work; this test pins that specific behavior.
+    func testUnavailableReasonUpdatesReactivelyWhenResolutionArrivesAfterListeningBegins() throws {
+        let settings = AppSettings.shared
+        let wasPreview = settings.livePreviewEnabled
+        let wasLiveTranscription = settings.liveTranscriptionEnabled
+        settings.livePreviewEnabled = true
+        settings.liveTranscriptionEnabled = true
+        defer {
+            settings.livePreviewEnabled = wasPreview
+            settings.liveTranscriptionEnabled = wasLiveTranscription
+        }
+
+        let engine = TranscriptionEngine()
+        let controller = LivePreviewController(settings: settings)
+        controller.start(engine: engine)
+
+        engine.state = .listening
+        XCTAssertNil(controller.unavailableReason, "no resolution has been published yet — nothing to explain")
+
+        let resolution = engine.transcriptionProviderRegistry.resolveActiveProvider(liveTranscriptionEnabled: true)
+        try XCTSkipIf(resolution.usesLiveStreaming, "A streaming provider is genuinely available in this environment; this test only exercises the unavailable path.")
+
+        XCTAssertNotNil(controller.unavailableReason, "publishing the resolution while already listening must update the reason reactively")
+    }
+
+    /// The explanation must never appear when the user deliberately turned Live
+    /// Transcription off — `resolveActiveProvider(liveTranscriptionEnabled: false)` also
+    /// reports `usesLiveStreaming: false`, but that's a deliberate choice, not an engine
+    /// limitation; showing the "unavailable" copy there would misattribute one for the other.
+    func testUnavailableReasonStaysNilWhenLiveTranscriptionIsDeliberatelyOff() {
+        let settings = AppSettings.shared
+        let wasPreview = settings.livePreviewEnabled
+        let wasLiveTranscription = settings.liveTranscriptionEnabled
+        settings.livePreviewEnabled = true
+        settings.liveTranscriptionEnabled = false
+        defer {
+            settings.livePreviewEnabled = wasPreview
+            settings.liveTranscriptionEnabled = wasLiveTranscription
+        }
+
+        let engine = TranscriptionEngine()
+        let controller = LivePreviewController(settings: settings)
+        controller.start(engine: engine)
+
+        _ = engine.transcriptionProviderRegistry.resolveActiveProvider(liveTranscriptionEnabled: false)
+        engine.state = .listening
+
+        XCTAssertNil(controller.unavailableReason, "turning Live Transcription off deliberately must not show an engine-limitation message")
+    }
+
+    /// The reason must clear like every other per-session preview field once the session
+    /// ends — it must not bleed into the next dictation (e.g. after the user downloads a
+    /// streaming model or grants permission mid-session and starts again).
+    func testUnavailableReasonClearsWhenSessionEnds() throws {
+        let settings = AppSettings.shared
+        let wasPreview = settings.livePreviewEnabled
+        let wasLiveTranscription = settings.liveTranscriptionEnabled
+        settings.livePreviewEnabled = true
+        settings.liveTranscriptionEnabled = true
+        defer {
+            settings.livePreviewEnabled = wasPreview
+            settings.liveTranscriptionEnabled = wasLiveTranscription
+        }
+
+        let engine = TranscriptionEngine()
+        let controller = LivePreviewController(settings: settings)
+        controller.start(engine: engine)
+
+        let resolution = engine.transcriptionProviderRegistry.resolveActiveProvider(liveTranscriptionEnabled: true)
+        try XCTSkipIf(resolution.usesLiveStreaming, "A streaming provider is genuinely available in this environment; this test only exercises the unavailable path.")
+
+        engine.state = .listening
+        XCTAssertNotNil(controller.unavailableReason)
+
+        engine.state = .ready
+        XCTAssertNil(controller.unavailableReason, "must not persist into the idle state between dictations")
+    }
 }

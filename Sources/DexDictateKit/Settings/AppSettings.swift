@@ -175,8 +175,16 @@ public class AppSettings: ObservableObject {
     /// Packet 14: display-only live preview captions while listening, sourced from
     /// whichever streaming provider the engine already resolved (Nemotron/Apple Speech).
     /// Batch Whisper remains the only committed-output path — this flag never touches it.
-    /// New key, default off (experimental).
-    @AppStorage("livePreviewEnabled") public var livePreviewEnabled: Bool = false
+    ///
+    /// Originally shipped default-off as a cautious opt-in for a brand-new display surface.
+    /// Now default **true**, matching `liveTranscriptionEnabled`: the two had drifted into
+    /// two independently-gated settings on two different Settings pages, so a user who
+    /// enabled "Live Transcription" (whose own description already promises "shows live
+    /// partial captions while you speak") saw nothing until they separately found and
+    /// enabled this one too — this flag's actual behavior is now well-exercised (its own
+    /// regression suite, health-based kill switch), so there's no remaining reason to keep
+    /// it off by default once `liveTranscriptionEnabled` is on.
+    @AppStorage("livePreviewEnabled") public var livePreviewEnabled: Bool = true
 
     /// Whether to show a second stats ticker (word count, duration, WPM) below the flavor ticker.
     @AppStorage("showDictationStats_v1") public var showDictationStats: Bool = false
@@ -543,7 +551,7 @@ public class AppSettings: ObservableObject {
         commandModeEnabled = true
         preferredPrimaryEngineID = ""
         showInlineResultQuote = false
-        livePreviewEnabled = false
+        livePreviewEnabled = true
         enableContextInjection = false
         useExperimentalStateFirstUI = false
         useExperimentalNanoHUD = false

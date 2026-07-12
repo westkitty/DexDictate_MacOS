@@ -551,6 +551,17 @@ public final class TranscriptionEngine: ObservableObject {
         currentRecordingStartedAt = Date()
         automaticRetryOriginalText = nil
 
+        // Re-request if the user missed or dismissed the one-shot prompt in startSystem() —
+        // requestAuthorizationIfNeeded() is a no-op once authorization is anything other than
+        // .notDetermined, so this is safe to call on every listen. It can't help *this*
+        // session (the OS dialog is asynchronous; the user hasn't answered it yet), but means
+        // the very next attempt already sees Apple Speech available instead of silently
+        // falling back to Whisper-only forever because a passive launch-time prompt was easy
+        // to miss and nothing ever asked again.
+        if AppSettings.shared.liveTranscriptionEnabled {
+            transcriptionProviderRegistry.appleSpeechProvider.requestAuthorizationIfNeeded()
+        }
+
         let providerResolution = transcriptionProviderRegistry.resolveActiveProvider(
             liveTranscriptionEnabled: AppSettings.shared.liveTranscriptionEnabled
         )

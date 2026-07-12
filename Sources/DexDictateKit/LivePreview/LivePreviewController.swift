@@ -37,6 +37,11 @@ public final class LivePreviewController: ObservableObject {
     @Published public private(set) var isFinalizing: Bool = false
     @Published public private(set) var isKilledForSession: Bool = false
     @Published public private(set) var killReason: String?
+    /// Non-nil while listening whenever Live Preview is enabled but this session's resolved
+    /// provider can't produce partial results (no streaming-capable engine installed/
+    /// authorized) — distinguishes "listening, no words yet" from "this session will never
+    /// show words" instead of silently showing nothing either way. See `handleResolutionChanged`.
+    @Published public private(set) var unavailableReason: String?
 
     private weak var engine: TranscriptionEngine?
     private weak var registry: TranscriptionProviderRegistry?
@@ -76,6 +81,17 @@ public final class LivePreviewController: ObservableObject {
         engine.$state
             .sink { [weak self] state in self?.handleStateChanged(state) }
             .store(in: &lifecycleCancellables)
+
+        // Subscribed once for this controller's whole lifetime, not per-session: ordering
+        // between this and the `$state` transition to `.listening` isn't guaranteed —
+        // `TranscriptionEngine.startListening()` flips `state` to `.listening` (triggering
+        // `beginSession()` above) *before* it calls `resolveActiveProvider()` (which publishes
+        // here). Subscribing once and re-checking on every publish, rather than reading
+        // `registry.lastResolution` synchronously inside `beginSession()`, means this session's
+        // real resolution is always picked up once it lands, regardless of which fired first.
+        engine.transcriptionProviderRegistry.$lastResolution
+            .sink { [weak self] resolution in self?.handleResolutionChanged(resolution) }
+            .store(in: &lifecycleCancellables)
     }
 
     private func handleStateChanged(_ state: EngineState) {
@@ -102,11 +118,29 @@ public final class LivePreviewController: ObservableObject {
         }
     }
 
+    private func handleResolutionChanged(_ resolution: TranscriptionProviderRegistry.Resolution?) {
+        guard settings.livePreviewEnabled, !isKilledForSession, engine?.state == .listening else { return }
+        updateUnavailableReason(from: resolution)
+    }
+
+    private func updateUnavailableReason(from resolution: TranscriptionProviderRegistry.Resolution?) {
+        // Only explain a genuine engine limitation — if the user turned Live Transcription
+        // off deliberately, resolveActiveProvider() also reports usesLiveStreaming: false,
+        // but showing an "unavailable" message there would misattribute a deliberate choice
+        // to a capability gap. Stay silent (matches pre-existing behavior) in that case.
+        guard settings.liveTranscriptionEnabled, let resolution, !resolution.usesLiveStreaming else {
+            unavailableReason = nil
+            return
+        }
+        unavailableReason = "Live text is unavailable with the selected transcription engine (\(resolution.selectedProviderDisplayName)). Final transcription will still appear when recording ends."
+    }
+
     private func beginSession() {
         guard let engine else { return }
         isFinalizing = false
         caption = ""
         micLevel = 0
+        updateUnavailableReason(from: registry?.lastResolution)
 
         engine.$liveTranscript
             .throttle(for: .milliseconds(250), scheduler: DispatchQueue.main, latest: true)
@@ -129,6 +163,7 @@ public final class LivePreviewController: ObservableObject {
             caption = ""
             micLevel = 0
             isFinalizing = false
+            unavailableReason = nil
         }
     }
 

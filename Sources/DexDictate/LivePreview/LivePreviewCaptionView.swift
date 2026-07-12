@@ -14,7 +14,24 @@ struct LivePreviewCaptionView: View {
             finalizingBadge
         } else if !controller.caption.isEmpty {
             captionRow
+        } else if let reason = controller.unavailableReason {
+            unavailableRow(reason)
         }
+    }
+
+    private func unavailableRow(_ reason: String) -> some View {
+        HStack(alignment: .top, spacing: 6) {
+            Image(systemName: "text.badge.xmark")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            Text(reason)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityLabel(reason)
+        }
+        .transition(.opacity)
     }
 
     private var captionRow: some View {

@@ -359,6 +359,13 @@ struct DexTranscriptCard: View {
                     .foregroundStyle(.white.opacity(0.65))
                     .lineLimit(2)
                     .accessibilityLabel("Live transcript: \(transcript.liveText)")
+            } else if let reason = transcript.unavailableReason {
+                Text(reason)
+                    .font(.caption2)
+                    .foregroundStyle(.white.opacity(0.45))
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityLabel(reason)
             } else if let recent = transcript.recentText {
                 Text(recent)
                     .font(.caption)

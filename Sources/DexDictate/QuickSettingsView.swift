@@ -1901,7 +1901,7 @@ struct LiveTranscriptionStatusView: View {
         VStack(alignment: .leading, spacing: 10) {
             SettingToggleWithInfo(
                 title: "Live Transcription",
-                info: "Uses streaming transcription when available. When on, DexDictate shows live partial captions while you speak, preferring Nemotron (if installed), then Apple Speech (on-device). This only affects the live preview — see \"Primary dictation engine\" below for what actually gets typed.",
+                info: "Uses streaming transcription when available. When on, DexDictate shows live partial captions while you speak, preferring Nemotron (if installed), then Apple Speech (on-device). Neither is available until you download Nemotron's model below or grant Speech Recognition permission — until then, the status line below explains why and dictation still works normally, just without live words. This only affects the live preview — see \"Primary dictation engine\" below for what actually gets typed.",
                 isOn: $settings.liveTranscriptionEnabled
             )
             .onChange(of: settings.liveTranscriptionEnabled) { _, _ in

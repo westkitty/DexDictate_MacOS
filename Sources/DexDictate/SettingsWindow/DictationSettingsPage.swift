@@ -12,8 +12,7 @@ struct DictationSettingsPage: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: SurfaceTokens.settingsSectionSpacing) {
-                Text(SettingsPage.dictation.title)
-                    .font(.title2.bold())
+                DexPageTitle(SettingsPage.dictation.title)
 
                 triggerModeSection
 
@@ -44,8 +43,7 @@ struct DictationSettingsPage: View {
 
                 Divider()
 
-                Text("During Dictation")
-                    .font(.headline)
+                DexSectionTitle("During Dictation")
                 SettingToggleWithInfo(
                     title: "Pause browser media during dictation",
                     info: "Pauses video and audio in Chrome, Brave, or Edge tabs when recording starts, then resumes them when you stop. macOS will ask for Automation permission the first time it runs. Skips automatically when Zoom is active. Safari and Firefox are not supported.",
@@ -55,8 +53,8 @@ struct DictationSettingsPage: View {
                 Divider()
 
                 SettingToggleWithInfo(
-                    title: "Live Preview (experimental)",
-                    info: "Shows a dimmed, italic \"PREVIEW\" caption in the popover and Floating HUD while you're speaking, sourced from whichever engine is already handling live captions. Display-only — batch Whisper remains the only source of the text that actually gets inserted, and this never changes it. Off by default.",
+                    title: "Live Preview",
+                    info: "Shows a dimmed, italic \"PREVIEW\" caption in the popover and Floating HUD while you're speaking, sourced from whichever engine \"Live Transcription\" (Settings → Models & Accuracy) resolved. Display-only — batch Whisper remains the only source of the text that actually gets inserted, and this never changes it. Requires Live Transcription to also be on, and a streaming-capable engine (Nemotron downloaded, or Apple Speech permission granted) to actually have words to show — otherwise the preview area explains why instead of staying silently blank.",
                     isOn: $settings.livePreviewEnabled
                 )
             }
@@ -91,12 +89,9 @@ struct DictationSettingsPage: View {
             .clipShape(RoundedRectangle(cornerRadius: 6))
             .disabled(settings.safeModeEnabled)
 
-            Text(settings.triggerMode == .holdToTalk
+            DexSecondaryText(settings.triggerMode == .holdToTalk
                  ? "Hold: records only while the trigger is pressed."
                  : "Toggle: first press starts, second press stops.")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -113,9 +108,7 @@ struct DictationSettingsPage: View {
             }
             Slider(value: $settings.silenceTimeout, in: 0...15, step: 1)
                 .tint(.cyan)
-            Text("For long dictation, raise this or turn it off.")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+            DexSecondaryText("For long dictation, raise this or turn it off.")
         }
     }
 
