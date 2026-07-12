@@ -709,9 +709,23 @@ public final class TranscriptionEngine: ObservableObject {
         return error.localizedDescription
     }
 
+    /// Pure decision extracted for testability (no audio engine / timers involved).
+    ///
+    /// Hold-to-Talk's entire contract (stated verbatim in Settings: "records only while the
+    /// trigger is pressed") is that the user controls start/stop by holding/releasing the
+    /// key — a silence-based auto-stop firing while the key is still held silently breaks
+    /// that contract mid-dictation (e.g. a natural pause to think or breathe stops the
+    /// recording out from under the user, who is still holding the trigger). The Silence
+    /// Timeout setting exists as a safety net specifically for Toggle mode, where there's no
+    /// "release" gesture to end a forgotten recording — it must not also apply to
+    /// Hold-to-Talk, where the trigger key itself is already that safety net.
+    static func shouldRunSilenceCountdown(triggerMode: AppSettings.TriggerMode, timeout: Double) -> Bool {
+        triggerMode != .holdToTalk && timeout > 0
+    }
+
     private func startSilenceCountdownIfNeeded() {
         let timeout = AppSettings.shared.silenceTimeout
-        guard timeout > 0 else { return }
+        guard Self.shouldRunSilenceCountdown(triggerMode: AppSettings.shared.triggerMode, timeout: timeout) else { return }
         silenceTimeoutTask?.cancel()
         silenceCountdown = timeout
         let tickInterval: Double = 0.25

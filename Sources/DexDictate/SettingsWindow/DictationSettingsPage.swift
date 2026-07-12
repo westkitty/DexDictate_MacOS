@@ -108,7 +108,10 @@ struct DictationSettingsPage: View {
             }
             Slider(value: $settings.silenceTimeout, in: 0...15, step: 1)
                 .tint(.cyan)
-            DexSecondaryText("For long dictation, raise this or turn it off.")
+                .disabled(settings.triggerMode == .holdToTalk)
+            DexSecondaryText(settings.triggerMode == .holdToTalk
+                ? "Only applies in Toggle mode — Hold-to-Talk already stops when you release the key."
+                : "For long dictation, raise this or turn it off.")
         }
     }
 

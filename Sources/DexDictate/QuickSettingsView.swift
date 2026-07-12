@@ -172,6 +172,7 @@ struct QuickSettingsView: View {
                                     }
                                     Slider(value: $settings.silenceTimeout, in: 0...15, step: 1)
                                         .tint(.cyan)
+                                        .disabled(settings.triggerMode == .holdToTalk)
                                 }
                             }
 
