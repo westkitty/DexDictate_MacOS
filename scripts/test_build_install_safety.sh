@@ -1,7 +1,10 @@
 #!/bin/bash
 # Unit tests for the duplicate-install safety net in build.sh (install_locations_collide,
 # alternate_install_dir, is_allowed_bundle_path, pids_under_bundle,
-# terminate_stale_bundle_processes, cleanup_alternate_install, verify_single_install).
+# terminate_bundle_processes, ensure_bundle_process_stopped, cleanup_alternate_install,
+# verify_single_install) — covering both the alternate/stale bundle (the duplicate-install
+# fix) and the selected/current bundle (the pre-install shutdown hardening, so the
+# selected bundle is never replaced while a process is still running from it).
 #
 # Never touches the real /Applications or ~/Applications, and never touches the real
 # running DexDictate process: every scenario overrides APP_NAME/EXECUTABLE_NAME/
@@ -21,6 +24,8 @@ BUILD_SH="$ROOT_DIR/build.sh"
 WORKDIR="$(mktemp -d)"
 SLEEPER_SRC="$WORKDIR/sleeper.c"
 SLEEPER_BIN="$WORKDIR/sleeper"
+STUBBORN_SRC="$WORKDIR/stubborn.c"
+STUBBORN_BIN="$WORKDIR/stubborn"
 
 PASS_COUNT=0
 FAIL_COUNT=0
@@ -50,20 +55,53 @@ EOF
     clang -O0 -o "$SLEEPER_BIN" "$SLEEPER_SRC"
 }
 
+# A variant that ignores SIGTERM, so tests can exercise the SIGKILL escalation path (and
+# the "cannot be stopped, abort" path, by additionally ignoring SIGKILL — which is not
+# actually possible for any process to do, so that path is instead exercised by killing
+# the process out from under pids_under_bundle's own detection — see
+# test_selected_bundle_cannot_be_stopped_aborts below for how that's simulated safely).
+build_stubborn_sleeper() {
+    cat > "$STUBBORN_SRC" <<'EOF'
+#include <unistd.h>
+#include <stdlib.h>
+#include <signal.h>
+int main(int argc, char **argv) {
+    signal(SIGTERM, SIG_IGN);
+    unsigned int secs = argc > 1 ? (unsigned int)atoi(argv[1]) : 30;
+    sleep(secs);
+    return 0;
+}
+EOF
+    clang -O0 -o "$STUBBORN_BIN" "$STUBBORN_SRC"
+}
+
 # Creates a fake "installed bundle" directory at $1 with a copy of the sleeper binary at
-# Contents/MacOS/$2 (the fake EXECUTABLE_NAME for this scenario).
+# Contents/MacOS/$2 (the fake EXECUTABLE_NAME for this scenario). $3, if "stubborn", uses
+# the SIGTERM-ignoring binary instead, so a scenario can exercise the SIGKILL escalation
+# path.
 make_fake_bundle() {
-    local bundle_path="$1" exec_name="$2"
+    local bundle_path="$1" exec_name="$2" variant="${3:-normal}"
     mkdir -p "$bundle_path/Contents/MacOS"
-    cp "$SLEEPER_BIN" "$bundle_path/Contents/MacOS/$exec_name"
+    if [ "$variant" = "stubborn" ]; then
+        cp "$STUBBORN_BIN" "$bundle_path/Contents/MacOS/$exec_name"
+    else
+        cp "$SLEEPER_BIN" "$bundle_path/Contents/MacOS/$exec_name"
+    fi
     chmod +x "$bundle_path/Contents/MacOS/$exec_name"
 }
 
-# Starts a background sleeper process from the given fake bundle and prints its PID.
+# Starts a background sleeper process from the given fake bundle and prints its PID. The
+# brief settle delay after backgrounding matters specifically for the "stubborn" (SIGTERM-
+# ignoring) variant: `signal(SIGTERM, SIG_IGN)` must actually execute before any test sends
+# SIGTERM, or the still-default disposition (terminate) applies instead — verified during
+# development that a 0.3s gap was sometimes too short (and reproduced the flake) while 1s
+# reliably was not.
 start_fake_process() {
     local bundle_path="$1" exec_name="$2" secs="${3:-30}"
     "$bundle_path/Contents/MacOS/$exec_name" "$secs" >/dev/null 2>&1 &
-    printf '%s' "$!"
+    local new_pid="$!"
+    sleep 0.5
+    printf '%s' "$new_pid"
 }
 
 wait_for_pid_gone() {
@@ -397,9 +435,263 @@ test_is_allowed_bundle_path_rejects_degenerate_inputs() {
     fi
 }
 
+# ===========================================================================
+# Selected/current-bundle shutdown scenarios (pre-install hardening):
+# ensure_bundle_process_stopped() / terminate_bundle_processes() must confirm, by
+# executable path, that the bundle about to be replaced has no running process — never by
+# name alone, and never a process from a different bundle.
+# ===========================================================================
+
+# Scenario: selected bundle has no running process → no-op, no error.
+test_selected_bundle_no_running_process() {
+    local root="$WORKDIR/sel1" exec_name="fakeexecsel1"
+    local sel_bundle="$root/Selected/App.app"
+    mkdir -p "$root/Selected"
+    make_fake_bundle "$sel_bundle" "$exec_name"
+
+    run_scenario 'ensure_bundle_process_stopped "$SEL_BUNDLE"' \
+        APP_NAME=App EXECUTABLE_NAME="$exec_name" \
+        SYSTEM_INSTALL_DIR="$root/Sys" USER_INSTALL_DIR="$root/User" \
+        INSTALL_DIR="$root/Sys" HOME="$root/home" \
+        SEL_BUNDLE="$sel_bundle"
+
+    if [ "$SCENARIO_EXIT" -eq 0 ] && [ -d "$sel_bundle" ]; then
+        log_pass "selected bundle, no running process: no-op"
+    else
+        log_fail "selected bundle, no running process: expected clean no-op (exit=$SCENARIO_EXIT): $SCENARIO_OUTPUT"
+    fi
+}
+
+# Scenario: selected bundle has one running process, exits on SIGTERM → confirmed stopped.
+test_selected_bundle_process_exits_on_sigterm() {
+    local root="$WORKDIR/sel2" exec_name="fakeexecsel2"
+    local sel_bundle="$root/Selected/App.app"
+    mkdir -p "$root/Selected"
+    make_fake_bundle "$sel_bundle" "$exec_name"
+
+    local pid
+    pid="$(start_fake_process "$sel_bundle" "$exec_name" 20)"
+
+    run_scenario 'ensure_bundle_process_stopped "$SEL_BUNDLE"' \
+        APP_NAME=App EXECUTABLE_NAME="$exec_name" \
+        SYSTEM_INSTALL_DIR="$root/Sys" USER_INSTALL_DIR="$root/User" \
+        INSTALL_DIR="$root/Sys" HOME="$root/home" \
+        SEL_BUNDLE="$sel_bundle"
+
+    local ok=1
+    [ "$SCENARIO_EXIT" -eq 0 ] || ok=0
+    kill -0 "$pid" 2>/dev/null && ok=0  # must be gone (SIGTERM was enough)
+
+    if [ "$ok" -eq 1 ]; then
+        log_pass "selected bundle, SIGTERM-responsive process: stopped, exit 0"
+    else
+        log_fail "selected bundle, SIGTERM-responsive process: expected stopped (exit=$SCENARIO_EXIT): $SCENARIO_OUTPUT"
+        kill -9 "$pid" 2>/dev/null || true
+    fi
+}
+
+# Scenario: selected bundle process ignores SIGTERM → escalates to SIGKILL, still confirmed
+# stopped, still exit 0.
+test_selected_bundle_process_requires_sigkill() {
+    local root="$WORKDIR/sel3" exec_name="fakeexecsel3"
+    local sel_bundle="$root/Selected/App.app"
+    mkdir -p "$root/Selected"
+    make_fake_bundle "$sel_bundle" "$exec_name" stubborn
+
+    local pid
+    pid="$(start_fake_process "$sel_bundle" "$exec_name" 20)"
+
+    run_scenario 'ensure_bundle_process_stopped "$SEL_BUNDLE"' \
+        APP_NAME=App EXECUTABLE_NAME="$exec_name" \
+        SYSTEM_INSTALL_DIR="$root/Sys" USER_INSTALL_DIR="$root/User" \
+        INSTALL_DIR="$root/Sys" HOME="$root/home" \
+        SEL_BUNDLE="$sel_bundle"
+
+    local ok=1
+    [ "$SCENARIO_EXIT" -eq 0 ] || ok=0
+    case "$SCENARIO_OUTPUT" in *"SIGKILL"*) ;; *) ok=0 ;; esac
+    kill -0 "$pid" 2>/dev/null && ok=0  # must be gone even though it ignored SIGTERM
+
+    if [ "$ok" -eq 1 ]; then
+        log_pass "selected bundle, SIGTERM-ignoring process: escalated to SIGKILL, stopped, exit 0"
+    else
+        log_fail "selected bundle, SIGTERM-ignoring process: expected SIGKILL escalation + stopped (exit=$SCENARIO_EXIT): $SCENARIO_OUTPUT"
+        kill -9 "$pid" 2>/dev/null || true
+    fi
+}
+
+# Scenario: selected bundle process cannot be confirmed stopped → install aborts (nonzero
+# exit), no false success logged. Simulated by shadowing `kill` as a no-op inside the
+# scenario (a real process cannot ignore SIGKILL, so this is the honest way to exercise
+# "even SIGKILL didn't work" without relying on undefined behavior).
+test_selected_bundle_cannot_be_stopped_aborts() {
+    local root="$WORKDIR/sel4" exec_name="fakeexecsel4"
+    local sel_bundle="$root/Selected/App.app"
+    mkdir -p "$root/Selected"
+    make_fake_bundle "$sel_bundle" "$exec_name" stubborn
+
+    local pid
+    pid="$(start_fake_process "$sel_bundle" "$exec_name" 20)"
+
+    run_scenario '
+        kill() { return 0; }  # simulate signals never actually reaching the process
+        ensure_bundle_process_stopped "$SEL_BUNDLE"
+    ' APP_NAME=App EXECUTABLE_NAME="$exec_name" \
+        SYSTEM_INSTALL_DIR="$root/Sys" USER_INSTALL_DIR="$root/User" \
+        INSTALL_DIR="$root/Sys" HOME="$root/home" \
+        SEL_BUNDLE="$sel_bundle"
+
+    local ok=1
+    [ "$SCENARIO_EXIT" -ne 0 ] || ok=0
+    case "$SCENARIO_OUTPUT" in *"ERROR:"*"Refusing to proceed"*) ;; *) ok=0 ;; esac
+    case "$SCENARIO_OUTPUT" in *"Installed to"*|*"Verified exactly one"*) ok=0 ;; esac  # no false success
+
+    kill -9 "$pid" 2>/dev/null || true  # real cleanup, outside the shadowed scenario
+
+    if [ "$ok" -eq 1 ]; then
+        log_pass "selected bundle, unstoppable process: aborts nonzero, no false success logged"
+    else
+        log_fail "selected bundle, unstoppable process: expected nonzero abort + clear error + no success (exit=$SCENARIO_EXIT): $SCENARIO_OUTPUT"
+    fi
+}
+
+# Scenario: a process sharing the same executable name but running from a DIFFERENT
+# bundle (not the selected one) must never be touched by ensure_bundle_process_stopped.
+test_selected_bundle_shutdown_ignores_other_bundle() {
+    local root="$WORKDIR/sel5" exec_name="fakeexecsel5"
+    local sel_bundle="$root/Selected/App.app" other_bundle="$root/Unrelated/App.app"
+    mkdir -p "$root/Selected" "$root/Unrelated"
+    make_fake_bundle "$sel_bundle" "$exec_name"
+    make_fake_bundle "$other_bundle" "$exec_name"
+
+    # Only the OTHER (non-selected) bundle has a running process; the selected one has
+    # none. ensure_bundle_process_stopped for the selected bundle must not touch it.
+    local other_pid
+    other_pid="$(start_fake_process "$other_bundle" "$exec_name" 20)"
+
+    run_scenario 'ensure_bundle_process_stopped "$SEL_BUNDLE"' \
+        APP_NAME=App EXECUTABLE_NAME="$exec_name" \
+        SYSTEM_INSTALL_DIR="$root/Sys" USER_INSTALL_DIR="$root/User" \
+        INSTALL_DIR="$root/Sys" HOME="$root/home" \
+        SEL_BUNDLE="$sel_bundle"
+
+    local ok=1
+    [ "$SCENARIO_EXIT" -eq 0 ] || ok=0
+    kill -0 "$other_pid" 2>/dev/null || ok=0  # unrelated-bundle process must survive
+
+    kill "$other_pid" 2>/dev/null || true
+    wait "$other_pid" 2>/dev/null || true
+
+    if [ "$ok" -eq 1 ]; then
+        log_pass "selected bundle shutdown: process from an unrelated bundle (same exec name) survives"
+    else
+        log_fail "selected bundle shutdown: expected unrelated-bundle process to survive (exit=$SCENARIO_EXIT): $SCENARIO_OUTPUT"
+    fi
+}
+
+# Scenario: selected-bundle and alternate-bundle process handling compose correctly in the
+# same run — both get stopped where running, only the alternate bundle gets removed.
+test_selected_and_alternate_compose() {
+    local root="$WORKDIR/sel6" exec_name="fakeexecsel6"
+    local sys_dir="$root/SystemApps" user_dir="$root/UserApps"
+    mkdir -p "$sys_dir" "$user_dir"
+    make_fake_bundle "$sys_dir/App.app" "$exec_name"
+    make_fake_bundle "$user_dir/App.app" "$exec_name"
+
+    local selected_pid alt_pid
+    selected_pid="$(start_fake_process "$sys_dir/App.app" "$exec_name" 20)"
+    alt_pid="$(start_fake_process "$user_dir/App.app" "$exec_name" 20)"
+
+    run_scenario '
+        ensure_bundle_process_stopped "$INSTALL_DIR/$APP_NAME.app"
+        cleanup_alternate_install
+    ' APP_NAME=App EXECUTABLE_NAME="$exec_name" \
+        SYSTEM_INSTALL_DIR="$sys_dir" USER_INSTALL_DIR="$user_dir" \
+        INSTALL_DIR="$sys_dir" HOME="$root/home"
+
+    local ok=1
+    [ "$SCENARIO_EXIT" -eq 0 ] || ok=0
+    kill -0 "$selected_pid" 2>/dev/null && ok=0   # selected bundle's OWN old process stopped too
+    kill -0 "$alt_pid" 2>/dev/null && ok=0         # alternate bundle's process stopped
+    [ -d "$sys_dir/App.app" ] || ok=0              # selected bundle directory remains
+    [ ! -e "$user_dir/App.app" ] || ok=0           # alternate bundle directory removed
+
+    kill -9 "$selected_pid" "$alt_pid" 2>/dev/null || true
+
+    if [ "$ok" -eq 1 ]; then
+        log_pass "selected + alternate compose: both processes stopped, only alternate bundle removed"
+    else
+        log_fail "selected + alternate compose: unexpected result (exit=$SCENARIO_EXIT): $SCENARIO_OUTPUT"
+    fi
+}
+
+# Scenario: no replacement happens before selected-bundle shutdown is confirmed — a
+# simulated "replace" step (writing a marker file, standing in for install_bundle()'s real
+# rm -rf + ditto) must never run when ensure_bundle_process_stopped aborts first.
+test_no_replacement_before_shutdown_confirmed() {
+    local root="$WORKDIR/sel7" exec_name="fakeexecsel7"
+    local sel_bundle="$root/Selected/App.app"
+    local marker="$root/replaced.marker"
+    mkdir -p "$root/Selected"
+    make_fake_bundle "$sel_bundle" "$exec_name" stubborn
+
+    local pid
+    pid="$(start_fake_process "$sel_bundle" "$exec_name" 20)"
+
+    run_scenario '
+        kill() { return 0; }
+        ensure_bundle_process_stopped "$SEL_BUNDLE"
+        : > "$MARKER"   # stands in for install_bundle()'"'"'s rm -rf + ditto
+    ' APP_NAME=App EXECUTABLE_NAME="$exec_name" \
+        SYSTEM_INSTALL_DIR="$root/Sys" USER_INSTALL_DIR="$root/User" \
+        INSTALL_DIR="$root/Sys" HOME="$root/home" \
+        SEL_BUNDLE="$sel_bundle" MARKER="$marker"
+
+    local ok=1
+    [ "$SCENARIO_EXIT" -ne 0 ] || ok=0
+    [ ! -e "$marker" ] || ok=0  # the "replace" step must never have run
+
+    kill -9 "$pid" 2>/dev/null || true
+
+    if [ "$ok" -eq 1 ]; then
+        log_pass "no replacement before confirmed shutdown: replace step never ran"
+    else
+        log_fail "no replacement before confirmed shutdown: replace step ran when it must not have (exit=$SCENARIO_EXIT): $SCENARIO_OUTPUT"
+    fi
+}
+
+# Scenario: paths containing spaces are handled safely for selected-bundle shutdown too.
+test_selected_bundle_paths_with_spaces() {
+    local root="$WORKDIR/sel8 with space" exec_name="fakeexecsel8"
+    local sel_bundle="$root/Selected App/App.app"
+    mkdir -p "$root/Selected App"
+    make_fake_bundle "$sel_bundle" "$exec_name"
+
+    local pid
+    pid="$(start_fake_process "$sel_bundle" "$exec_name" 20)"
+
+    run_scenario 'ensure_bundle_process_stopped "$SEL_BUNDLE"' \
+        APP_NAME=App EXECUTABLE_NAME="$exec_name" \
+        SYSTEM_INSTALL_DIR="$root/Sys" USER_INSTALL_DIR="$root/User" \
+        INSTALL_DIR="$root/Sys" HOME="$root/home with space" \
+        SEL_BUNDLE="$sel_bundle"
+
+    local ok=1
+    [ "$SCENARIO_EXIT" -eq 0 ] || ok=0
+    kill -0 "$pid" 2>/dev/null && ok=0
+
+    if [ "$ok" -eq 1 ]; then
+        log_pass "selected bundle shutdown: paths with spaces handled safely"
+    else
+        log_fail "selected bundle shutdown: expected clean stop with spaced paths (exit=$SCENARIO_EXIT): $SCENARIO_OUTPUT"
+        kill -9 "$pid" 2>/dev/null || true
+    fi
+}
+
 main() {
-    echo "Building test sleeper helper..."
+    echo "Building test sleeper helpers..."
     build_sleeper
+    build_stubborn_sleeper
 
     echo "Running build.sh install-safety scenarios..."
     test_system_selected_stale_user_exists
@@ -414,6 +706,16 @@ main() {
     test_cleanup_failure_nonzero_exit
     test_full_pipeline_composition
     test_is_allowed_bundle_path_rejects_degenerate_inputs
+
+    echo "Running selected-bundle shutdown scenarios..."
+    test_selected_bundle_no_running_process
+    test_selected_bundle_process_exits_on_sigterm
+    test_selected_bundle_process_requires_sigkill
+    test_selected_bundle_cannot_be_stopped_aborts
+    test_selected_bundle_shutdown_ignores_other_bundle
+    test_selected_and_alternate_compose
+    test_no_replacement_before_shutdown_confirmed
+    test_selected_bundle_paths_with_spaces
 
     echo ""
     echo "Results: $PASS_COUNT passed, $FAIL_COUNT failed"

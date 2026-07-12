@@ -163,17 +163,19 @@ stop_running_instances() {
     done
     osascript -e "tell application id \"$BUNDLE_IDENTIFIER\" to quit" >/dev/null 2>&1 || true
 
-    local waited=0
-    while pgrep -x "$EXECUTABLE_NAME" >/dev/null 2>&1 && [ "$waited" -lt 20 ]; do
-        sleep 0.25
-        waited=$((waited + 1))
-    done
-
-    if pgrep -x "$EXECUTABLE_NAME" >/dev/null 2>&1; then
-        log_warn "DexDictate is still running; terminating remaining processes before install."
-        pkill -x "$EXECUTABLE_NAME" >/dev/null 2>&1 || true
-        sleep 1
-    fi
+    # The graceful quit requests above are best-effort and name/ID-based (an Apple Event
+    # only actually quits something if a matching process happens to be running — it can't
+    # accidentally target the wrong process). What follows is the hard gate: confirm, by
+    # executable path (not just the name "DexDictate"), that the bundle this build is about
+    # to replace has actually stopped, escalating to termination if it hasn't. This used to
+    # be a blind `pgrep -x/pkill -x "$EXECUTABLE_NAME"` sweep, which would terminate ANY
+    # process merely named "DexDictate" — including one running from a different installed
+    # copy or, in principle, a relocated dev build sharing that exact name. It never
+    # confirmed the SELECTED bundle specifically was clear before install_bundle() replaced
+    # it. ensure_bundle_process_stopped()/terminate_bundle_processes() (defined below) fix
+    # both: path-verified detection, and a hard abort (nonzero exit, no install, no success
+    # reported) if the confirmed process can't be stopped even after SIGKILL.
+    ensure_bundle_process_stopped "$INSTALL_DIR/$APP_NAME.app"
 }
 
 assemble_bundle() {
@@ -308,18 +310,25 @@ pids_under_bundle() {
 }
 
 # Terminates only processes proven (via pids_under_bundle) to originate from the given
-# stale bundle — never touches the currently installed/selected bundle's process, even if
-# it shares the same executable name. Escalates from SIGTERM to SIGKILL only for PIDs
-# still confirmed running from that same stale bundle after the grace period; fails loudly
-# (via `fail`, nonzero exit) rather than proceeding to delete a bundle whose process could
-# not be confirmed stopped.
-terminate_stale_bundle_processes() {
+# bundle path — never touches a process from a different bundle or a local dev/debug
+# build, even if it shares the same executable name (a raw `swift run`/`.build` binary is
+# named $SWIFT_PRODUCT, not $EXECUTABLE_NAME, so it's excluded even before the path check;
+# see build_sleeper's/pids_under_bundle's own doc comments). Escalates from SIGTERM to
+# SIGKILL only for PIDs still confirmed running from that same bundle after the grace
+# period; fails loudly (via `fail`, nonzero exit) rather than proceeding — whether the
+# caller was about to delete this bundle (the alternate-install case) or replace it (the
+# selected-install case) — with a process still running from it.
+#
+# Shared by both cleanup_alternate_install() (the alternate/stale bundle) and
+# ensure_bundle_process_stopped() (the selected/current bundle, called before
+# install_bundle() replaces it) — one implementation, not two divergent ones.
+terminate_bundle_processes() {
     local bundle_path="$1"
     local pids
     pids="$(pids_under_bundle "$bundle_path")"
     [ -n "$pids" ] || return 0
 
-    log_warn "Stopping stale DexDictate process(es) from $bundle_path before removing it..."
+    log_warn "Stopping DexDictate process(es) running from $bundle_path..."
     local pid
     for pid in $pids; do
         kill "$pid" 2>/dev/null || true
@@ -333,16 +342,28 @@ terminate_stale_bundle_processes() {
 
     pids="$(pids_under_bundle "$bundle_path")"
     if [ -n "$pids" ]; then
-        log_warn "Stale process(es) from $bundle_path did not exit gracefully; sending SIGKILL."
+        log_warn "Process(es) from $bundle_path did not exit gracefully; sending SIGKILL."
         for pid in $pids; do
             kill -9 "$pid" 2>/dev/null || true
         done
         sleep 0.5
         pids="$(pids_under_bundle "$bundle_path")"
         if [ -n "$pids" ]; then
-            fail "Could not terminate stale DexDictate process(es) from $bundle_path (PIDs: $pids). Refusing to delete a bundle with a process still running from it."
+            fail "Could not terminate DexDictate process(es) from $bundle_path (PIDs: $pids). Refusing to proceed while a process is still running from it."
         fi
     fi
+}
+
+# Confirms no process is running from the given installed bundle path, terminating any
+# found (by path, via terminate_bundle_processes — never by name alone) so it's safe to
+# replace or remove. No-ops if the bundle doesn't exist yet (nothing installed there to
+# check). Called both from stop_running_instances() (early, before the build starts) and
+# again immediately before install_bundle() (defense in depth — idempotent and cheap, so
+# calling it twice costs nothing when the first call already confirmed a clean state).
+ensure_bundle_process_stopped() {
+    local bundle_path="$1"
+    [ -d "$bundle_path" ] || return 0
+    terminate_bundle_processes "$bundle_path"
 }
 
 # Removes the alternate installed bundle (the one NOT selected for this run) so only one
@@ -374,7 +395,7 @@ cleanup_alternate_install() {
         fail "Refusing to remove computed alternate bundle path '$alt_bundle' — it did not pass the allowed-path safety check."
     fi
 
-    terminate_stale_bundle_processes "$alt_bundle"
+    terminate_bundle_processes "$alt_bundle"
 
     if [ ! -w "$alt_dir" ]; then
         fail "Found a stale DexDictate build at '$alt_bundle' but '$alt_dir' is not writable, so it cannot be removed automatically. Remove it manually (e.g. rm -rf \"$alt_bundle\") or fix its permissions, then re-run ./build.sh."
@@ -491,6 +512,12 @@ if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
     stop_running_instances
     assemble_bundle
     sign_bundle
+    # Defense in depth: stop_running_instances() already confirmed this above, before the
+    # build even started, but re-confirming immediately before install_bundle() replaces
+    # the bundle means this guarantee doesn't silently depend on that earlier call always
+    # running first (e.g. if this flow is ever reordered). Idempotent and cheap when
+    # already clear.
+    ensure_bundle_process_stopped "$INSTALL_DIR/$APP_NAME.app"
     install_bundle
     cleanup_alternate_install
     verify_single_install
