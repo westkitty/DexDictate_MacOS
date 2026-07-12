@@ -35,7 +35,11 @@ struct GeneralSettingsPage: View {
                 Divider()
 
                 DexSectionTitle("Interface")
-                Toggle("Show Floating HUD", isOn: $settings.showFloatingHUD)
+                SettingToggleWithInfo(
+                    title: "Show Floating HUD",
+                    info: "Keeps a small status window on screen at all times, showing the dictation state and mic level even when nothing is being recorded. Separate from Live Preview (Settings → Dictation) — Live Preview shows its own caption automatically while you speak regardless of this setting.",
+                    isOn: $settings.showFloatingHUD
+                )
 
                 Divider()
 

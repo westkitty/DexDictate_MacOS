@@ -170,15 +170,16 @@ struct DexDictateApp: App {
                     await engine.startSystem()
                 }
 
-                if settings.showFloatingHUD {
-                    hudController.show()
-                }
+                // Show/hide is decided once, centrally, in FloatingHUDController.refreshVisibility() —
+                // it's already visible if Live Preview needs its caption surface, independent
+                // of this setting; this call just accounts for the persistent setting too.
+                hudController.refreshVisibility()
             }
-            .onChange(of: settings.showFloatingHUD) { _, newValue in
-                hudController.toggle(shouldShow: newValue)
+            .onChange(of: settings.showFloatingHUD) { _, _ in
+                hudController.refreshVisibility()
             }
             .onChange(of: settings.useExperimentalNanoHUD) { _, _ in
-                hudController.refresh()
+                hudController.refreshVisibility()
             }
             .onChange(of: settings.localizationMode) { _, _ in
                 profileManager.synchronizeFromSettings()

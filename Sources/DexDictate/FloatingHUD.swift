@@ -10,7 +10,7 @@ class FloatingHUDWindow: NSPanel {
                    styleMask: [.nonactivatingPanel, .hudWindow, .utilityWindow, .titled],
                    backing: .buffered,
                    defer: false)
-        
+
         self.isFloatingPanel = true
         self.level = .floating
         self.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
@@ -19,7 +19,15 @@ class FloatingHUDWindow: NSPanel {
         self.isMovableByWindowBackground = true
         self.backgroundColor = .clear
         self.hasShadow = true
-        
+        // Root-cause fix (live caption visibility): NSPanel defaults `hidesOnDeactivate` to
+        // `true` (NSWindow itself defaults `false` — panels are the exception). DexDictate is
+        // an LSUIElement menu-bar app whose entire point is showing this HUD *while the user
+        // types into some other app*; the moment they click into that target app, DexDictate
+        // resigns active status, and an unset `hidesOnDeactivate` silently hides this panel —
+        // even if the user had explicitly turned "Show Floating HUD" on. Explicit `false` is
+        // required, not optional, for this window's stated purpose.
+        self.hidesOnDeactivate = false
+
         let hostingView = NSHostingView(rootView: rootView)
         self.contentView = hostingView
     }
@@ -228,12 +236,21 @@ class FloatingHUDController: ObservableObject {
     private var livePreviewController: LivePreviewController?
     private var onDetachHistory: (() -> Void)?
     private var onOpenHelp: (() -> Void)?
+    /// Which content mode the currently-built `window` holds, if any — lets
+    /// `refreshVisibility()` detect when it must tear down and rebuild with different
+    /// content (e.g. Live Preview needs the standard caption view but a persistent Nano HUD
+    /// window is already open) rather than just reusing whatever was built last.
+    private var currentContentIsNano: Bool?
 
     /// Drives toast notifications across both HUD variants.
     let toastState = ToastState()
 
     /// Retains the Combine subscription that clears the toast when the engine stops.
     private var stateObserver: AnyCancellable?
+    /// Retains the subscription that re-evaluates visibility whenever Live Preview's own
+    /// caption-worthiness changes — the mechanism that lets Live Preview show a caption
+    /// surface independent of the "Show Floating HUD" setting.
+    private var livePreviewCancellable: AnyCancellable?
 
     init() {}
 
@@ -260,13 +277,42 @@ class FloatingHUDController: ObservableObject {
         stateObserver = engine.$state
             .filter { $0 == .stopped }
             .sink { [weak self] _ in self?.toastState.clear() }
+
+        livePreviewCancellable = livePreviewController.$shouldShowCaptionSurface
+            .sink { [weak self] _ in self?.refreshVisibility() }
     }
 
-    func show() {
+    /// The single entry point for every visibility decision — call whenever any input to
+    /// `FloatingHUDVisibilityDecision` changes: the "Show Floating HUD" setting, the "Nano
+    /// HUD" setting, or (via the subscription in `setup()`) Live Preview's own
+    /// `shouldShowCaptionSurface`.
+    func refreshVisibility() {
+        let settings = AppSettings.shared
+        let shouldShowCaption = livePreviewController?.shouldShowCaptionSurface ?? false
+        let visible = FloatingHUDVisibilityDecision.isVisible(
+            showFloatingHUD: settings.showFloatingHUD,
+            shouldShowCaptionSurface: shouldShowCaption
+        )
+        guard visible else {
+            hide()
+            return
+        }
+        let wantsNano = FloatingHUDVisibilityDecision.useNanoContent(
+            useExperimentalNanoHUD: settings.useExperimentalNanoHUD,
+            showFloatingHUD: settings.showFloatingHUD,
+            shouldShowCaptionSurface: shouldShowCaption
+        )
+        show(useNanoContent: wantsNano)
+    }
+
+    private func show(useNanoContent: Bool) {
         guard let engine = engine, let profileManager = profileManager, let livePreviewController else { return }
-        if window == nil {
+        if window == nil || currentContentIsNano != useNanoContent {
+            let priorFrame = window?.frame
+            window?.close()
+
             let rootView: AnyView
-            if AppSettings.shared.useExperimentalNanoHUD {
+            if useNanoContent {
                 let nanoView = DexNanoHUDView(
                     engine: engine,
                     profileManager: profileManager,
@@ -289,55 +335,41 @@ class FloatingHUDController: ObservableObject {
             // A non-zero placeholder here meant that check could never be true, so centering
             // never actually happened.
             window = FloatingHUDWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 200, height: 60),
+                contentRect: priorFrame ?? NSRect(x: 0, y: 0, width: 200, height: 60),
                 rootView: rootView
             )
+            currentContentIsNano = useNanoContent
             window?.minSize = NSSize(width: 150, height: 40)
             window?.maxSize = NSSize(width: 480, height: 200)
             window?.setFrameAutosaveName("FloatingHUDPosition")
-            if window?.frame.origin == .zero {
+            if let frame = window?.frame, frame.origin == .zero {
                 window?.center()
+            } else if let frame = window?.frame {
+                // Recover a position that referenced a display disconnected since the last
+                // launch — otherwise the autosaved frame could sit entirely off any current
+                // screen, making the window unreachable even though it's technically "shown."
+                let corrected = FloatingHUDFramePositioning.correctedFrame(
+                    frame, visibleFrames: NSScreen.screens.map { $0.visibleFrame }
+                )
+                if corrected != frame {
+                    window?.setFrame(corrected, display: false)
+                }
             }
             // BUG-004 fix: the HUD sits at `.floating` level, above every normal app
-            // window (Settings, History, Help, etc.). It also centers itself on first
-            // use (see above), landing on the exact same screen point Settings/History
-            // center themselves on, and its position persists afterward via
-            // `setFrameAutosaveName`. The standard FloatingHUDView has no click-driven
-            // content at all (only the Nano HUD variant's `onOpenHub` responds to taps),
-            // so it was silently intercepting clicks meant for whatever normal window
-            // happened to be underneath it, with nothing to show for it. Ignoring mouse
-            // events lets clicks pass through to the window below — safe for the
+            // window (Settings, History, Help, etc.). The standard FloatingHUDView has no
+            // click-driven content at all (only the Nano HUD variant's `onOpenHub` responds
+            // to taps), so it was silently intercepting clicks meant for whatever normal
+            // window happened to be underneath it, with nothing to show for it. Ignoring
+            // mouse events lets clicks pass through to the window below — safe for the
             // standard HUD (nothing is lost) and skipped for the Nano HUD (which still
             // needs to open its hub panel on tap).
-            window?.ignoresMouseEvents = !AppSettings.shared.useExperimentalNanoHUD
+            window?.ignoresMouseEvents = !useNanoContent
         }
         window?.orderFront(nil)
     }
 
     func hide() {
         window?.orderOut(nil)
-    }
-
-    func toggle(shouldShow: Bool) {
-        if shouldShow { show() } else { hide() }
-    }
-
-    /// Tear down the existing window so the next `show()` rebuilds it from the current flags
-    /// (e.g. `useExperimentalNanoHUD`), and reopens it immediately if it was visible.
-    ///
-    /// Must tear down unconditionally, not just when visible: `show()` only builds a new
-    /// `rootView`/`window` when `window == nil` — it otherwise reuses whatever was built last,
-    /// baked-in flag values and all. Previously this only tore down `if wasVisible`, so toggling
-    /// the Nano HUD setting while the HUD was hidden left the stale window in place; the next
-    /// `show()` call (e.g. from the "Show Floating HUD" toggle) reused it as-is, and the toggled
-    /// setting had no visible effect until the app was relaunched.
-    func refresh() {
-        let wasVisible = window?.isVisible ?? false
-        window?.close()
-        window = nil
-        if wasVisible {
-            show()
-        }
     }
 
     /// Open a floating feature-hub panel from the Nano HUD so the HUD is never a dead end.

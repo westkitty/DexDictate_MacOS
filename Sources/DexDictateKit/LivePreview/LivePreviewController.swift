@@ -42,6 +42,16 @@ public final class LivePreviewController: ObservableObject {
     /// authorized) — distinguishes "listening, no words yet" from "this session will never
     /// show words" instead of silently showing nothing either way. See `handleResolutionChanged`.
     @Published public private(set) var unavailableReason: String?
+    /// True exactly while there is something worth showing to the user — from the moment a
+    /// listening session begins through finalizing, until the engine returns to idle.
+    /// Independent of any window/HUD settings: this is Live Preview's own authority over
+    /// whether *some* visible caption surface should be on screen right now, regardless of
+    /// whether the menu-bar popover happens to be open or the general "Show Floating HUD"
+    /// setting is on. A window coordinator (`FloatingHUDController`) observes this to decide
+    /// when to auto-show/hide a caption surface — see `docs/bug_fixes/live_caption_surface_visibility.md`
+    /// for why this exists: enabling Live Preview previously had no visible effect unless the
+    /// user separately discovered and enabled an unrelated setting.
+    @Published public private(set) var shouldShowCaptionSurface: Bool = false
 
     private weak var engine: TranscriptionEngine?
     private weak var registry: TranscriptionProviderRegistry?
@@ -140,6 +150,7 @@ public final class LivePreviewController: ObservableObject {
         isFinalizing = false
         caption = ""
         micLevel = 0
+        shouldShowCaptionSurface = true
         updateUnavailableReason(from: registry?.lastResolution)
 
         engine.$liveTranscript
@@ -159,6 +170,10 @@ public final class LivePreviewController: ObservableObject {
         stopThrottledSubscriptions()
         healthCheckTimer?.invalidate()
         healthCheckTimer = nil
+        // The surface itself always hides once a session ends, independent of whether the
+        // text content clears immediately — there is nothing left to show once `endSession`
+        // runs, regardless of `clearImmediately`.
+        shouldShowCaptionSurface = false
         if clearImmediately {
             caption = ""
             micLevel = 0

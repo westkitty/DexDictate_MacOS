@@ -54,7 +54,7 @@ struct DictationSettingsPage: View {
 
                 SettingToggleWithInfo(
                     title: "Live Preview",
-                    info: "Shows a dimmed, italic \"PREVIEW\" caption in the popover and Floating HUD while you're speaking, sourced from whichever engine \"Live Transcription\" (Settings → Models & Accuracy) resolved. Display-only — batch Whisper remains the only source of the text that actually gets inserted, and this never changes it. Requires Live Transcription to also be on, and a streaming-capable engine (Nemotron downloaded, or Apple Speech permission granted) to actually have words to show — otherwise the preview area explains why instead of staying silently blank.",
+                    info: "Shows a floating caption while you speak — it appears on its own the moment you start dictating and disappears when you're done, with no other setting required. Sourced from whichever engine \"Live Transcription\" (Settings → Models & Accuracy) resolved. Display-only — batch Whisper remains the only source of the text that actually gets inserted, and this never changes it. Requires Live Transcription to also be on, and a streaming-capable engine (Nemotron downloaded, or Apple Speech permission granted) to actually have words to show — otherwise the caption explains why instead of staying silently blank. \"Show Floating HUD\" (Settings → General) is a separate, always-on status window and has no effect on whether this caption appears.",
                     isOn: $settings.livePreviewEnabled
                 )
             }
