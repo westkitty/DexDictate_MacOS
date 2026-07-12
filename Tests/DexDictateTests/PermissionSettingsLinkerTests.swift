@@ -26,6 +26,13 @@ final class PermissionSettingsLinkerTests: XCTestCase {
                       "Expected Privacy_ListenEvent fragment, got: \(url.absoluteString)")
     }
 
+    func testSpeechRecognitionURL() throws {
+        let url = try XCTUnwrap(PermissionSettingsLinker.url(for: .speechRecognition))
+        XCTAssertEqual(url.scheme, "x-apple.systempreferences")
+        XCTAssertTrue(url.absoluteString.contains("Privacy_SpeechRecognition"),
+                      "Expected Privacy_SpeechRecognition fragment, got: \(url.absoluteString)")
+    }
+
     func testFallbackURL() throws {
         let url = try XCTUnwrap(PermissionSettingsLinker.fallbackURL)
         XCTAssertEqual(url.scheme, "x-apple.systempreferences")
