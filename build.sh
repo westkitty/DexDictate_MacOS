@@ -227,6 +227,23 @@ install_bundle() {
         "$LSREGISTER" -f "$INSTALL_DIR/$APP_NAME.app" >/dev/null 2>&1 || true
     fi
 
+    # Remove any stale copy at the OTHER install location. DEFAULT_INSTALL_DIR falls back
+    # from /Applications to ~/Applications depending on whether /Applications happens to be
+    # writable on a given run — so two builds run under different permissions can silently
+    # land in two different places, leaving an old copy behind that Spotlight/Finder/
+    # Launchpad can't distinguish from the current one and may launch instead of it. Only
+    # one installed copy should ever exist after a successful build.
+    local other_dir
+    if [ "$INSTALL_DIR" = "$SYSTEM_INSTALL_DIR" ]; then
+        other_dir="$USER_INSTALL_DIR"
+    else
+        other_dir="$SYSTEM_INSTALL_DIR"
+    fi
+    if [ -d "$other_dir/$APP_NAME.app" ] && [ -w "$other_dir/$APP_NAME.app" ]; then
+        log_warn "Removing stale build at $other_dir/$APP_NAME.app (installed to $INSTALL_DIR instead)"
+        rm -rf "$other_dir/$APP_NAME.app"
+    fi
+
     log_success "Installed to $INSTALL_DIR/$APP_NAME.app"
     printf 'Open with: open "%s/%s.app"\n' "$INSTALL_DIR" "$APP_NAME"
 }
