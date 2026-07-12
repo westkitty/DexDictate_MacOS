@@ -273,6 +273,17 @@ public final class TranscriptionEngine: ObservableObject {
         if AppSettings.shared.liveTranscriptionEnabled {
             transcriptionProviderRegistry.appleSpeechProvider.requestAuthorizationIfNeeded()
         }
+        // Load any Nemotron/Parakeet/Moonshine models already downloaded from a prior
+        // session — zero network activity. Without this, a fully-downloaded model reported
+        // "downloaded but not loaded yet" forever, since load state lives in memory and
+        // resets every launch while the files persist on disk. Detached from startSystem()'s
+        // own completion — model loading can take a moment and must not delay input-monitor
+        // setup (the trigger becoming responsive).
+        let registry = transcriptionProviderRegistry
+        let settings = AppSettings.shared
+        Task {
+            await registry.loadAlreadyDownloadedModelsIfNeeded(settings: settings)
+        }
         setupInputMonitor()
         Safety.log("startSystem() complete — state=\(state)", category: .lifecycle)
     }

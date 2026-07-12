@@ -59,6 +59,46 @@ public final class TranscriptionProviderRegistry: ObservableObject {
         refreshHealthReport()
     }
 
+    /// Loads models that are **already downloaded on disk** but not yet loaded into this
+    /// process — zero network activity, safe to call unconditionally (e.g. once at app
+    /// launch).
+    ///
+    /// Root-cause fix: `isModelLoaded`/`manager != nil` on each provider is in-memory state
+    /// that resets to "not loaded" on every single app launch, while the downloaded model
+    /// *files* persist on disk across launches. Without this, a model a user (or a prior
+    /// session) already fully downloaded permanently reported "downloaded but not loaded
+    /// yet" every subsequent launch until the user manually re-clicked the exact same
+    /// download/select row — indistinguishable, from the user's perspective, from the
+    /// provider being broken or "inaccessible."
+    ///
+    /// Reuses `downloadModelsIfNeeded(for:)` — the same call the manual download button
+    /// already triggers — which itself only initiates a network download when
+    /// `modelInstallStatus` isn't already `.installed`; since this method only calls it when
+    /// that's already true, the download branch never executes here. Each candidate is
+    /// gated on the setting that actually governs whether it should be active, so this
+    /// can't silently start using CPU/ANE for a feature the user has turned off.
+    public func loadAlreadyDownloadedModelsIfNeeded(settings: AppSettings) async {
+        if settings.liveTranscriptionEnabled {
+            await loadIfInstalledButNotYetAvailable(id: .nemotron35ASRStreaming06B, provider: nemotronProvider)
+        }
+        if settings.commandModeEnabled {
+            await loadIfInstalledButNotYetAvailable(id: .moonshineV2, provider: moonshineProvider)
+        }
+        // Parakeet is a primary-engine candidate independent of Live Transcription/Command
+        // Mode, so it's not gated behind either setting.
+        await loadIfInstalledButNotYetAvailable(id: .parakeetTDT06Bv3, provider: parakeetProvider)
+
+        // Recompute lastResolution immediately (not just healthReport) so anything bound to
+        // it — Settings status rows, LivePreviewController's honest "unavailable" messaging —
+        // reflects the newly-loaded provider without waiting for the next dictation attempt.
+        _ = resolveActiveProvider(liveTranscriptionEnabled: settings.liveTranscriptionEnabled)
+    }
+
+    private func loadIfInstalledButNotYetAvailable(id: TranscriptionProviderID, provider: any TranscriptionProvider) async {
+        guard provider.modelInstallStatus == .installed, provider.healthCheck().isAvailable == false else { return }
+        await downloadModelsIfNeeded(for: id)
+    }
+
     public var allProviders: [any TranscriptionProvider] {
         [parakeetProvider, nemotronProvider, whisperKitProvider, moonshineProvider, appleSpeechProvider]
     }

@@ -16,6 +16,7 @@ public enum PermissionSettingsLinker {
         case microphone
         case accessibility
         case inputMonitoring
+        case speechRecognition
     }
 
     // MARK: - URL construction
@@ -31,6 +32,8 @@ public enum PermissionSettingsLinker {
             string = "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
         case .inputMonitoring:
             string = "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent"
+        case .speechRecognition:
+            string = "x-apple.systempreferences:com.apple.preference.security?Privacy_SpeechRecognition"
         }
         return URL(string: string)
     }

@@ -1753,6 +1753,8 @@ struct LiveTranscriptionStatusView: View {
     @State private var downloadingIDs: Set<TranscriptionProviderID> = []
     @State private var downloadingWhisperID: String?
     @State private var isModelListExpanded = true
+    @State private var speechAuthorizationState = AppleSpeechTranscriptionProvider.authorizationState
+    @State private var isRequestingSpeechAuthorization = false
 
     private static let downloadableProviderIDs: Set<TranscriptionProviderID> = [
         .parakeetTDT06Bv3, .nemotron35ASRStreaming06B, .moonshineV2
@@ -1773,6 +1775,10 @@ struct LiveTranscriptionStatusView: View {
 
     private var primaryEngineStatusExplanation: String {
         ModelSelectionActions.primaryEngineStatusExplanation(settings: settings, registry: registry)
+    }
+
+    private var liveStreamingStatus: ModelSelectionActions.LiveStreamingStatus {
+        ModelSelectionActions.liveStreamingStatus(settings: settings, registry: registry)
     }
 
     /// One row in the Model Library. `.whisper`/`.parakeet` are real, mutually-exclusive
@@ -1935,12 +1941,17 @@ struct LiveTranscriptionStatusView: View {
                         Circle()
                             .fill(resolution.usesLiveStreaming ? Color.green.opacity(0.8) : Color.white.opacity(0.35))
                             .frame(width: 6, height: 6)
-                        Text("Live preview: \(resolution.selectedProviderDisplayName) (\(resolution.modeName))")
+                        Text("Live preview: \(liveStreamingStatus.headline)")
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(.white.opacity(0.75))
                     }
 
-                    if let explanation = resolution.fallbackExplanation {
+                    if let detail = liveStreamingStatus.detail {
+                        Text(detail)
+                            .font(.caption2)
+                            .foregroundStyle(.orange.opacity(0.9))
+                            .fixedSize(horizontal: false, vertical: true)
+                    } else if let explanation = resolution.fallbackExplanation {
                         Text(explanation)
                             .font(.caption2)
                             .foregroundStyle(.orange.opacity(0.9))
@@ -1974,13 +1985,78 @@ struct LiveTranscriptionStatusView: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.bottom, 2)
                     ForEach(engineRoleRows) { row in rowView(row) }
+
+                    speechAuthorizationRow
                 }
                 .padding(.top, 6)
             }
             .font(.caption.weight(.semibold))
             .foregroundStyle(.white.opacity(0.82))
         }
-        .onAppear { refreshStatus() }
+        .onAppear {
+            refreshStatus()
+            speechAuthorizationState = AppleSpeechTranscriptionProvider.authorizationState
+        }
+    }
+
+    /// Phase 8: an explicit, always-visible action for Apple Speech's permission state —
+    /// distinct from the engine-role row above, which only shows the *reason* text
+    /// (`healthCheck().reason`) and never actually requests or redirects to System Settings.
+    /// `.authorized` renders nothing (nothing to do); every other state gets a concrete action.
+    @ViewBuilder
+    private var speechAuthorizationRow: some View {
+        if speechAuthorizationState != .authorized {
+            HStack(spacing: 8) {
+                Text(speechAuthorizationRowLabel)
+                    .font(.caption2)
+                    .foregroundStyle(.white.opacity(0.6))
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer()
+                Button {
+                    handleSpeechAuthorizationButtonTapped()
+                } label: {
+                    HStack(spacing: 4) {
+                        if isRequestingSpeechAuthorization {
+                            ProgressView().controlSize(.mini)
+                        }
+                        Text(speechAuthorizationState == .notDetermined ? "Request Speech Recognition Access" : "Open Speech Recognition Settings")
+                    }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .disabled(isRequestingSpeechAuthorization)
+            }
+            .padding(.top, 2)
+        }
+    }
+
+    private var speechAuthorizationRowLabel: String {
+        switch speechAuthorizationState {
+        case .notDetermined:
+            return "Speech Recognition permission hasn't been requested yet."
+        case .denied:
+            return "Speech Recognition permission was denied."
+        case .restricted:
+            return "Speech Recognition is restricted on this Mac (e.g. by MDM/parental controls)."
+        case .authorized:
+            return ""
+        }
+    }
+
+    private func handleSpeechAuthorizationButtonTapped() {
+        switch speechAuthorizationState {
+        case .notDetermined:
+            isRequestingSpeechAuthorization = true
+            AppleSpeechTranscriptionProvider.requestAuthorization { newState in
+                speechAuthorizationState = newState
+                isRequestingSpeechAuthorization = false
+                refreshStatus()
+            }
+        case .denied, .restricted:
+            PermissionSettingsLinker.open(.speechRecognition)
+        case .authorized:
+            break
+        }
     }
 
     private func modelSectionHeader(_ title: String) -> some View {

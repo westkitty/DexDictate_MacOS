@@ -87,6 +87,45 @@ public final class AppleSpeechTranscriptionProvider: TranscriptionProvider, Stre
         SFSpeechRecognizer.requestAuthorization { _ in }
     }
 
+    /// Mirrors `SFSpeechRecognizer.authorizationStatus()` without requiring `import Speech`
+    /// at Settings-UI call sites — Phase 8's explicit "Request Speech Recognition Access"
+    /// button needs to render different labels/actions for each of these four states.
+    public enum AuthorizationState: Equatable {
+        case notDetermined
+        case authorized
+        case denied
+        case restricted
+
+        fileprivate init(_ status: SFSpeechRecognizerAuthorizationStatus) {
+            switch status {
+            case .notDetermined: self = .notDetermined
+            case .authorized: self = .authorized
+            case .denied: self = .denied
+            case .restricted: self = .restricted
+            @unknown default: self = .restricted
+            }
+        }
+    }
+
+    public static var authorizationState: AuthorizationState {
+        AuthorizationState(SFSpeechRecognizer.authorizationStatus())
+    }
+
+    /// Explicitly triggers the macOS Speech Recognition permission prompt, unlike
+    /// `requestAuthorizationIfNeeded()` which silently no-ops once any decision (including
+    /// "denied") already exists. Used by the Settings page's "Request Speech Recognition
+    /// Access" button: if the user has never been asked, this shows the system prompt; if
+    /// they already denied it, `SFSpeechRecognizer.requestAuthorization` re-delivers the
+    /// existing `.denied` decision immediately (macOS never re-prompts), so the button's
+    /// caller should route `.denied` to System Settings instead of calling this again.
+    public static func requestAuthorization(completion: @escaping @MainActor @Sendable (AuthorizationState) -> Void) {
+        SFSpeechRecognizer.requestAuthorization { status in
+            MainActorDispatch.async {
+                completion(AuthorizationState(status))
+            }
+        }
+    }
+
     public func startTranscription() throws {
         guard !isSessionActive else { return }
         let health = healthCheck()

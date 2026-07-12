@@ -166,4 +166,60 @@ public enum ModelSelectionActions {
                 : "Whisper produces the text that gets typed. Download Parakeet below to make it the primary engine instead."
         }
     }
+
+    // MARK: - Live-streaming (partial captions) status vocabulary
+
+    /// Distinct from `primaryEngineStatusExplanation` above, which describes the *committed*
+    /// dictation engine (Parakeet/Whisper) — this describes which provider (if any) is
+    /// driving the *live partial preview* while the user is speaking, using the fixed
+    /// vocabulary the Settings UI surfaces verbatim: "Ready — Nemotron", "Ready — Apple
+    /// Speech", "Nemotron loading", and "Final-only fallback — Whisper" with one of three
+    /// specific reasons attached.
+    public enum LiveStreamingStatus: Equatable {
+        case liveTranscriptionOff
+        case readyNemotron
+        case readyAppleSpeech
+        case nemotronLoading
+        case finalOnlyFallback(reason: FallbackReason)
+
+        public enum FallbackReason: Equatable {
+            case nemotronNotInstalled
+            case speechPermissionRequired
+            case noStreamingProviderAvailable
+        }
+
+        public var headline: String {
+            switch self {
+            case .liveTranscriptionOff: return "Live Transcription is off"
+            case .readyNemotron: return "Ready — Nemotron"
+            case .readyAppleSpeech: return "Ready — Apple Speech"
+            case .nemotronLoading: return "Nemotron loading"
+            case .finalOnlyFallback: return "Final-only fallback — Whisper"
+            }
+        }
+
+        public var detail: String? {
+            guard case .finalOnlyFallback(let reason) = self else { return nil }
+            switch reason {
+            case .nemotronNotInstalled: return "Nemotron model not installed"
+            case .speechPermissionRequired: return "Speech Recognition permission required"
+            case .noStreamingProviderAvailable: return "No streaming provider available"
+            }
+        }
+    }
+
+    @MainActor
+    public static func liveStreamingStatus(settings: AppSettings, registry: TranscriptionProviderRegistry) -> LiveStreamingStatus {
+        guard settings.liveTranscriptionEnabled else { return .liveTranscriptionOff }
+        if registry.healthReport[.nemotron35ASRStreaming06B]?.isAvailable == true { return .readyNemotron }
+        if registry.nemotronProvider.isDownloading { return .nemotronLoading }
+        if registry.healthReport[.appleSpeech]?.isAvailable == true { return .readyAppleSpeech }
+        if registry.nemotronProvider.modelInstallStatus == .notInstalled {
+            return .finalOnlyFallback(reason: .nemotronNotInstalled)
+        }
+        if AppleSpeechTranscriptionProvider.authorizationState != .authorized {
+            return .finalOnlyFallback(reason: .speechPermissionRequired)
+        }
+        return .finalOnlyFallback(reason: .noStreamingProviderAvailable)
+    }
 }
