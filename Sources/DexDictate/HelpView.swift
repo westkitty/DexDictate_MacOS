@@ -566,7 +566,7 @@ private struct RecordingAudioContent: View {
             helpHeading("Microphone selection")
             helpBody("Settings → Audio & Microphone → Input Device. Also pinned in the popover for quick access.\n\nShows all audio input devices macOS detects: built-in mic, USB mics, Bluetooth headsets, audio interfaces.")
             helpHeading("Silence timeout")
-            helpBody("Auto-stops recording after N seconds of silence, even if you haven't released the trigger.\n\nEnable: Settings → Dictation → Silence Timeout → drag the slider (0 = Disabled).\n\nA countdown appears in the history panel: \"Auto-stopping in Xs…\"")
+            helpBody("Auto-stops recording after N seconds of silence. Only applies in Toggle mode — Hold-to-Talk always stops when you release the trigger, so the slider is disabled there.\n\nEnable: Settings → Dictation → Silence Timeout → drag the slider (0 = Disabled).\n\nA countdown appears in the history panel: \"Auto-stopping in Xs…\"")
             helpHeading("File import")
             helpBody("Drag and drop an audio file onto the DexDictate popover to transcribe it. Supported: WAV, MP3, M4A, and other formats supported by macOS AVFoundation.")
             helpHeading("Live preview")
@@ -590,7 +590,7 @@ private struct TranscriptionContent: View {
                 helpHeading("Bundled model: tiny.en")
                 helpBody("A compact English-only model that balances speed and accuracy on Apple Silicon. Loaded automatically on first launch.")
                 helpHeading("Active model & selection")
-                helpBody("Settings → Models & Accuracy → Active Model.\n\nThe Model Selection picker below it controls whether DexDictate manages the model automatically (Auto Idle Benchmark) or lets you pick manually.")
+                helpBody("Settings → Models & Accuracy → Active Dictation Model.\n\nThe Model Auto-Promotion picker below it controls whether DexDictate manages the model automatically (Auto Idle Benchmark) or lets you pick manually.")
                 helpHeading("End Preset")
                 helpBody("Controls how aggressively DexDictate trims silence at the end of a recording. Found at: Settings → Dictation → End Preset.")
                 VStack(alignment: .leading, spacing: 4) {
@@ -735,7 +735,7 @@ private struct ProfilesContent: View {
                     HelpRow(key: "Aussie", value: "Australian English spelling and terms")
                 }
                 helpHeading("Switching profiles")
-                helpBody("Settings → Dexter & Personality → Profile selector. Click \"Return to Standard\" to go back to the default.")
+                helpBody("Settings → Dexter & Personality → click a profile card to switch. Click the \"Standard\" card to go back to the default.")
                 helpHeading("Flavor ticker")
                 helpBody("Rotating motivational text shown below the app title, sourced from the active profile.\n\nToggle: Settings → Dexter & Personality → Show Flavor Ticker.")
                 helpHeading("Stats ticker")
@@ -824,7 +824,7 @@ private struct SafeModeContent: View {
             helpHeading("Stable Dictation Defaults")
             helpBody("Resets transcription-specific settings (model, end preset, trim) to known-good values without affecting output or appearance preferences.\n\nLocation: Settings → Models & Accuracy → Benchmark Tools → Restore Stable Defaults button.")
             helpHeading("Restore Defaults")
-            helpBody("Footer → Restore Defaults resets all settings to factory defaults. Custom vocabulary and voice commands are not affected.")
+            helpBody("Settings → General → Restore Defaults resets all settings to factory defaults (with a confirmation prompt first). Custom vocabulary and voice commands are not affected.")
         }
     }
 }
@@ -850,7 +850,7 @@ private struct BenchmarkingContent: View {
                 HelpScreenshot("help-benchmark-capture",
                                caption: "The Benchmark Capture window showing a reference prompt and recording controls.")
                 helpHeading("Model selection")
-                helpBody("Settings → Models & Accuracy → Active Model picks the current model.\n\nModel Selection below it controls auto vs manual: set it to your preferred model or leave it on Auto Idle Benchmark to let DexDictate benchmark and pick during idle time.")
+                helpBody("Settings → Models & Accuracy → Active Dictation Model picks the current model.\n\nModel Auto-Promotion below it controls auto vs manual: set it to your preferred model or leave it on Auto Idle Benchmark to let DexDictate benchmark and pick during idle time.")
                 HelpScreenshot("help-model-settings",
                                caption: "The Models & Accuracy page showing model and selection controls.")
                 helpHeading("Benchmark Tools")
@@ -915,7 +915,7 @@ private struct DiagnosticsContent: View {
             helpHeading("Trigger not firing")
             helpBody("1. Check Permissions — Accessibility and Input Monitoring must both be granted.\n2. Fully quit DexDictate and relaunch.\n3. Confirm your shortcut is set in Settings → Dictation → Trigger Mode and the shortcut recorder field.")
             helpHeading("Transcription is empty or wrong")
-            helpBody("1. Confirm Microphone permission is granted.\n2. Check Input Device in Settings → Audio & Microphone → Input Device.\n3. Enable Safe Mode (clipboard-only) to rule out output issues.\n4. Try the bundled tiny.en model in Settings → Models & Accuracy → Active Model.")
+            helpBody("1. Confirm Microphone permission is granted.\n2. Check Input Device in Settings → Audio & Microphone → Input Device.\n3. Enable Safe Mode (clipboard-only) to rule out output issues.\n4. Try the bundled tiny.en model in Settings → Models & Accuracy → Active Dictation Model.")
             helpHeading("Text pasting in wrong place / not pasting")
             helpBody("1. Ensure the target app is in focus when you release the trigger.\n2. Check per-app rules in Settings → Output & Insertion → Manage Per-App Rules…\n3. Try enabling Accessibility API insertion.")
 
