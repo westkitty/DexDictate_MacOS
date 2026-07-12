@@ -196,7 +196,7 @@ final class SmartCleanupCoordinatorTests: XCTestCase {
         let history = TranscriptionHistory()
         coordinator.start(history: history)
 
-        XCTAssertEqual(coordinator.reachability, .disabled)
+        XCTAssertEqual(coordinator.reachability, .notEnabled)
     }
 
     func testAddingHistoryItemWhileDisabledDoesNotChangeReachability() {
@@ -210,6 +210,313 @@ final class SmartCleanupCoordinatorTests: XCTestCase {
         coordinator.start(history: history)
         history.add("this must not trigger any network request")
 
-        XCTAssertEqual(coordinator.reachability, .disabled)
+        XCTAssertEqual(coordinator.reachability, .notEnabled)
+    }
+
+    func testEnablingAfterStartTransitionsThroughUnknownAndTriggersRefresh() {
+        let settings = SmartCleanupSettings.shared
+        let wasEnabled = settings.enabled
+        let wasURL = settings.baseURLString
+        settings.enabled = false
+        settings.baseURLString = ""
+        defer {
+            settings.enabled = wasEnabled
+            settings.baseURLString = wasURL
+        }
+
+        let coordinator = SmartCleanupCoordinator(settings: settings)
+        let history = TranscriptionHistory()
+        coordinator.start(history: history)
+        XCTAssertEqual(coordinator.reachability, .notEnabled)
+
+        settings.enabled = true
+        coordinator.handleEnabledSettingChanged()
+        // Immediately after flipping the setting, reachability must not still read
+        // .notEnabled — it must become .unknown right away (a check kicks off in the
+        // background), even though the empty base URL means that check will resolve to
+        // .serviceUnavailable shortly after.
+        XCTAssertEqual(coordinator.reachability, .unknown)
+    }
+
+    func testDisablingAfterEnabledResetsToNotEnabled() {
+        let settings = SmartCleanupSettings.shared
+        let wasEnabled = settings.enabled
+        settings.enabled = true
+        defer { settings.enabled = wasEnabled }
+
+        let coordinator = SmartCleanupCoordinator(settings: settings)
+        let history = TranscriptionHistory()
+        coordinator.start(history: history)
+
+        settings.enabled = false
+        coordinator.handleEnabledSettingChanged()
+        XCTAssertEqual(coordinator.reachability, .notEnabled)
+    }
+
+    func testRefreshReachabilityWithNoBaseURLReportsServiceUnavailable() async {
+        let settings = SmartCleanupSettings.shared
+        let wasEnabled = settings.enabled
+        let wasURL = settings.baseURLString
+        settings.enabled = true
+        settings.baseURLString = ""
+        defer {
+            settings.enabled = wasEnabled
+            settings.baseURLString = wasURL
+        }
+
+        let coordinator = SmartCleanupCoordinator(settings: settings)
+        await coordinator.refreshReachability()
+
+        guard case .serviceUnavailable = coordinator.reachability else {
+            return XCTFail("expected .serviceUnavailable with an empty base URL, got \(coordinator.reachability)")
+        }
+    }
+
+    func testRefreshReachabilityWhileDisabledStaysNotEnabled() async {
+        let settings = SmartCleanupSettings.shared
+        let wasEnabled = settings.enabled
+        settings.enabled = false
+        defer { settings.enabled = wasEnabled }
+
+        let coordinator = SmartCleanupCoordinator(settings: settings)
+        await coordinator.refreshReachability()
+
+        XCTAssertEqual(coordinator.reachability, .notEnabled)
+    }
+}
+
+// MARK: - SmartCleanupReachability label/detail mapping
+
+final class SmartCleanupReachabilityLabelTests: XCTestCase {
+
+    func testNotEnabledLabel() {
+        XCTAssertEqual(SmartCleanupReachability.notEnabled.statusLabel, "Not enabled")
+        XCTAssertNil(SmartCleanupReachability.notEnabled.detail)
+    }
+
+    func testReadyLabel() {
+        XCTAssertEqual(SmartCleanupReachability.ready.statusLabel, "Ready")
+        XCTAssertNil(SmartCleanupReachability.ready.detail)
+    }
+
+    func testServiceUnavailableCarriesReasonAsDetail() {
+        let state = SmartCleanupReachability.serviceUnavailable(reason: "No server address configured.")
+        XCTAssertEqual(state.statusLabel, "Service unavailable")
+        XCTAssertEqual(state.detail, "No server address configured.")
+    }
+
+    func testModelNotInstalledCarriesReasonAsDetail() {
+        let state = SmartCleanupReachability.modelNotInstalled(reason: "Model 'llama3' not found.")
+        XCTAssertEqual(state.statusLabel, "Model not installed")
+        XCTAssertEqual(state.detail, "Model 'llama3' not found.")
+    }
+
+    func testAuthenticationRequiredHasNoDetail() {
+        XCTAssertEqual(SmartCleanupReachability.authenticationRequired.statusLabel, "Authentication required")
+        XCTAssertNil(SmartCleanupReachability.authenticationRequired.detail)
+    }
+
+    func testLastRequestFailedCarriesReasonAsDetail() {
+        let state = SmartCleanupReachability.lastRequestFailed(reason: "Connection reset.")
+        XCTAssertEqual(state.statusLabel, "Last request failed")
+        XCTAssertEqual(state.detail, "Connection reset.")
+    }
+}
+
+// MARK: - Mocked-backend coordinator behavior
+
+/// Intercepts requests made through `URLSession.shared` (what `SmartCleanupClient` uses
+/// internally) so the coordinator's request/response mapping can be tested against a
+/// canned backend without a real server — `SmartCleanupClient`'s network calls take a
+/// `session` parameter, but the coordinator itself always calls them with the default
+/// `.shared`, so intercepting at the `URLProtocol` layer is the only seam that doesn't
+/// require changing production call sites.
+private final class SmartCleanupMockURLProtocol: URLProtocol {
+    nonisolated(unsafe) static var responseProvider: (@Sendable (URLRequest) -> (Int, Data))?
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
+    override func startLoading() {
+        guard let provider = Self.responseProvider, let url = request.url else {
+            client?.urlProtocol(self, didFailWithError: URLError(.unknown))
+            return
+        }
+        let (status, data) = provider(request)
+        let response = HTTPURLResponse(
+            url: url, statusCode: status, httpVersion: "HTTP/1.1",
+            headerFields: ["Content-Type": "application/json"]
+        )!
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: data)
+        client?.urlProtocolDidFinishLoading(self)
+    }
+
+    override func stopLoading() {}
+}
+
+/// Free function (not MainActor-isolated) — `responseProvider` runs on the URL loading
+/// system's background thread, so anything it captures must be callable from there.
+private func smartCleanupMockModelsResponseJSON(ids: [String]) -> Data {
+    let payload: [String: Any] = ["data": ids.map { ["id": $0] }]
+    return try! JSONSerialization.data(withJSONObject: payload)
+}
+
+@MainActor
+final class SmartCleanupCoordinatorMockedBackendTests: XCTestCase {
+
+    override func setUp() {
+        super.setUp()
+        URLProtocol.registerClass(SmartCleanupMockURLProtocol.self)
+    }
+
+    override func tearDown() {
+        URLProtocol.unregisterClass(SmartCleanupMockURLProtocol.self)
+        SmartCleanupMockURLProtocol.responseProvider = nil
+        super.tearDown()
+    }
+
+    func testRefreshReachabilityReportsReadyWhenConfiguredModelIsPresent() async {
+        let settings = SmartCleanupSettings.shared
+        let wasEnabled = settings.enabled
+        let wasURL = settings.baseURLString
+        let wasModel = settings.model
+        settings.enabled = true
+        settings.baseURLString = "http://127.0.0.1:59991/v1"
+        settings.model = "llama3"
+        defer {
+            settings.enabled = wasEnabled
+            settings.baseURLString = wasURL
+            settings.model = wasModel
+        }
+
+        SmartCleanupMockURLProtocol.responseProvider = { _ in
+            (200, smartCleanupMockModelsResponseJSON(ids: ["llama3", "mistral"]))
+        }
+
+        let coordinator = SmartCleanupCoordinator(settings: settings)
+        await coordinator.refreshReachability()
+
+        XCTAssertEqual(coordinator.reachability, .ready)
+    }
+
+    func testRefreshReachabilityReportsModelNotInstalledWhenConfiguredModelIsMissing() async {
+        let settings = SmartCleanupSettings.shared
+        let wasEnabled = settings.enabled
+        let wasURL = settings.baseURLString
+        let wasModel = settings.model
+        settings.enabled = true
+        settings.baseURLString = "http://127.0.0.1:59992/v1"
+        settings.model = "llama3"
+        defer {
+            settings.enabled = wasEnabled
+            settings.baseURLString = wasURL
+            settings.model = wasModel
+        }
+
+        SmartCleanupMockURLProtocol.responseProvider = { _ in
+            (200, smartCleanupMockModelsResponseJSON(ids: ["mistral", "phi3"]))
+        }
+
+        let coordinator = SmartCleanupCoordinator(settings: settings)
+        await coordinator.refreshReachability()
+
+        guard case .modelNotInstalled(let reason) = coordinator.reachability else {
+            return XCTFail("expected .modelNotInstalled, got \(coordinator.reachability)")
+        }
+        XCTAssertTrue(reason.contains("llama3"))
+    }
+
+    func testRefreshReachabilityReportsAuthenticationRequiredOn401() async {
+        let settings = SmartCleanupSettings.shared
+        let wasEnabled = settings.enabled
+        let wasURL = settings.baseURLString
+        settings.enabled = true
+        settings.baseURLString = "http://127.0.0.1:59993/v1"
+        defer {
+            settings.enabled = wasEnabled
+            settings.baseURLString = wasURL
+        }
+
+        SmartCleanupMockURLProtocol.responseProvider = { _ in (401, Data()) }
+
+        let coordinator = SmartCleanupCoordinator(settings: settings)
+        await coordinator.refreshReachability()
+
+        XCTAssertEqual(coordinator.reachability, .authenticationRequired)
+    }
+
+    func testSuccessfulCleanupAttachesCleanedTextAndReportsReady() async throws {
+        let settings = SmartCleanupSettings.shared
+        let wasEnabled = settings.enabled
+        let wasURL = settings.baseURLString
+        settings.enabled = true
+        settings.baseURLString = "http://127.0.0.1:59994/v1"
+        defer {
+            settings.enabled = wasEnabled
+            settings.baseURLString = wasURL
+        }
+
+        SmartCleanupMockURLProtocol.responseProvider = { _ in
+            let payload: [String: Any] = [
+                "choices": [["message": ["role": "assistant", "content": "Hello, world."]]]
+            ]
+            return (200, try! JSONSerialization.data(withJSONObject: payload))
+        }
+
+        let coordinator = SmartCleanupCoordinator(settings: settings)
+        let history = TranscriptionHistory()
+        coordinator.start(history: history)
+        let added = history.add("hello world")
+        let itemID = try XCTUnwrap(added?.id)
+
+        // The coordinator's own history-change subscription drives cleanup asynchronously;
+        // poll briefly rather than assuming a fixed delay is always enough on a loaded CI box.
+        // Note: start(history:) also fires its own background refreshReachability() against
+        // this same mock — since the mock always returns the chat-completion shape (not the
+        // /models list shape), that connection-test request fails to decode and settles on
+        // .serviceUnavailable independently of the cleanup call. Only the cleanup path (this
+        // test's actual subject) sets .ready on success, so poll on cleanedText — the durable
+        // signal that the real cleanup attempt finished — rather than on reachability.
+        for _ in 0..<50 where history.items.first(where: { $0.id == itemID })?.cleanedText == nil {
+            try await Task.sleep(nanoseconds: 20_000_000)
+        }
+
+        XCTAssertEqual(history.items.first(where: { $0.id == itemID })?.cleanedText, "Hello, world.")
+    }
+
+    func testFailedCleanupReportsLastRequestFailedAndLeavesRawTextStanding() async throws {
+        let settings = SmartCleanupSettings.shared
+        let wasEnabled = settings.enabled
+        let wasURL = settings.baseURLString
+        settings.enabled = true
+        settings.baseURLString = "http://127.0.0.1:59995/v1"
+        defer {
+            settings.enabled = wasEnabled
+            settings.baseURLString = wasURL
+        }
+
+        SmartCleanupMockURLProtocol.responseProvider = { _ in (500, Data()) }
+
+        let coordinator = SmartCleanupCoordinator(settings: settings)
+        let history = TranscriptionHistory()
+        coordinator.start(history: history)
+        let added = history.add("this stays raw")
+        let itemID = try XCTUnwrap(added?.id)
+
+        // start(history:) also kicks off its own refreshReachability() in the background
+        // (against the same mocked 500 response), which would settle on .serviceUnavailable
+        // before the item-triggered cleanup attempt overwrites it with .lastRequestFailed —
+        // so poll specifically for the final state this test cares about, not just "changed".
+        for _ in 0..<75 {
+            if case .lastRequestFailed = coordinator.reachability { break }
+            try await Task.sleep(nanoseconds: 20_000_000)
+        }
+
+        guard case .lastRequestFailed = coordinator.reachability else {
+            return XCTFail("expected .lastRequestFailed, got \(coordinator.reachability)")
+        }
+        XCTAssertNil(history.items.first(where: { $0.id == itemID })?.cleanedText)
+        XCTAssertEqual(history.items.first(where: { $0.id == itemID })?.text, "this stays raw")
     }
 }

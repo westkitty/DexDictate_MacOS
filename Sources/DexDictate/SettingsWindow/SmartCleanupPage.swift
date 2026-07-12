@@ -29,6 +29,8 @@ struct SmartCleanupPage: View {
 
                 Toggle("Enable Smart Cleanup", isOn: $settings.enabled)
 
+                statusRow
+
                 Text("Provider")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -98,10 +100,40 @@ struct SmartCleanupPage: View {
             baseURLDraft = settings.baseURLString
             modelDraft = settings.model
             apiKeyDraft = settings.apiKey
+            // Refresh on every page open, not just on enable/toggle — reachability can go
+            // stale between visits (server restarted, model swapped on the backend, etc.).
+            Task { await coordinator.refreshReachability() }
         }
         .onChange(of: baseURLDraft) { _, newValue in settings.baseURLString = newValue }
         .onChange(of: modelDraft) { _, newValue in settings.model = newValue }
         .onChange(of: apiKeyDraft) { _, newValue in settings.apiKey = newValue }
+        .onChange(of: settings.enabled) { _, _ in
+            coordinator.handleEnabledSettingChanged()
+        }
+    }
+
+    private var statusRow: some View {
+        HStack(spacing: 8) {
+            Text("Status:")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(coordinator.reachability.statusLabel)
+                .font(.caption.weight(.semibold))
+            if let detail = coordinator.reachability.detail {
+                Text("— \(detail)")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+            Spacer()
+            Button("Check Again") {
+                Task { await coordinator.refreshReachability() }
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .disabled(!settings.enabled)
+        }
     }
 
     private var connectionFields: some View {

@@ -76,6 +76,21 @@ struct DiagnosticsPage: View {
                 Text("Smart Cleanup")
                     .font(.headline)
                 diagnosticRow(label: "Smart Cleanup endpoint", value: smartCleanupStatusLabel)
+                if let detail = smartCleanupCoordinator.reachability.detail {
+                    Text(detail)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                HStack {
+                    Spacer()
+                    Button("Check Again") {
+                        Task { await smartCleanupCoordinator.refreshReachability() }
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .disabled(!smartCleanupSettings.enabled)
+                }
 
                 Divider()
 
@@ -182,13 +197,7 @@ struct DiagnosticsPage: View {
     }
 
     private var smartCleanupStatusLabel: String {
-        guard smartCleanupSettings.enabled else { return "disabled" }
-        switch smartCleanupCoordinator.reachability {
-        case .disabled: return "disabled"
-        case .unknown: return "unknown — no check yet"
-        case .reachable: return "reachable"
-        case .unreachable: return "unreachable"
-        }
+        smartCleanupCoordinator.reachability.statusLabel
     }
 
     private var safeModeBinding: Binding<Bool> {
