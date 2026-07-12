@@ -14,8 +14,7 @@ struct GeneralSettingsPage: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: SurfaceTokens.settingsSectionSpacing) {
-                Text(SettingsPage.general.title)
-                    .font(.title2.bold())
+                DexPageTitle(SettingsPage.general.title)
 
                 statusColorRow
 
@@ -35,8 +34,7 @@ struct GeneralSettingsPage: View {
 
                 Divider()
 
-                Text("Interface")
-                    .font(.headline)
+                DexSectionTitle("Interface")
                 Toggle("Show Floating HUD", isOn: $settings.showFloatingHUD)
 
                 Divider()

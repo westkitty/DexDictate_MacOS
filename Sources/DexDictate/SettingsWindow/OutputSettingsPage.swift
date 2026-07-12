@@ -18,18 +18,15 @@ struct OutputSettingsPage: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: SurfaceTokens.settingsSectionSpacing) {
-                Text(SettingsPage.outputInsertion.title)
-                    .font(.title2.bold())
+                DexPageTitle(SettingsPage.outputInsertion.title)
 
-                Text("Where text goes")
-                    .font(.headline)
+                DexSectionTitle("Where text goes")
                 Toggle("Auto-Paste (Insert at Cursor)", isOn: $settings.autoPaste)
                 Toggle("Use Accessibility API for Insertion", isOn: $settings.useAccessibilityInsertion)
 
                 Divider()
 
-                Text("Safety")
-                    .font(.headline)
+                DexSectionTitle("Safety")
                 Toggle("Copy Only in Sensitive Fields", isOn: $settings.copyOnlyInSensitiveFields)
 
                 SettingToggleWithInfo(
@@ -43,21 +40,16 @@ struct OutputSettingsPage: View {
                     profanityEditors
                 }
 
-                Text("DexDictate copies your previous clipboard contents before inserting, then restores them afterward (capped to a maximum payload size).")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                DexSectionDescription("DexDictate copies your previous clipboard contents before inserting, then restores them afterward (capped to a maximum payload size).")
 
                 Divider()
 
-                Text("Per-App Rules")
-                    .font(.headline)
+                DexSectionTitle("Per-App Rules")
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Per-App Insertion Rules")
                             .font(.subheadline.weight(.semibold))
-                        Text("Use app-specific presets and insertion overrides without bloating the main surface.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        DexSecondaryText("Use app-specific presets and insertion overrides without bloating the main surface.")
                     }
                     Spacer()
                     Button("Manage Per-App Rules…") {
