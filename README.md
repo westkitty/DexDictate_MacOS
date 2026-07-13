@@ -56,14 +56,14 @@ It does not "phone home."
 
 ### Option 1: Install the latest packaged release (recommended)
 
-Use the newest release artifact first. Current latest release: **v1.5.3**  
-Release page: [v1.5.3](https://github.com/westkitty/DexDictate_MacOS/releases/tag/v1.5.3)
+Use the newest release artifact first. Current latest release: **v1.7.0**  
+Release page: [v1.7.0](https://github.com/westkitty/DexDictate_MacOS/releases/tag/v1.7.0)
 
 Download one of these Apple Silicon artifacts:
 
-- `DexDictate-1.5.3-macos-arm64.dmg`
-- `DexDictate-1.5.3-macos-arm64.zip`
-- `DexDictate-1.5.3-macos-arm64-SHA256SUMS.txt`
+- `DexDictate-1.7.0-macos-arm64.dmg`
+- `DexDictate-1.7.0-macos-arm64.zip`
+- `DexDictate-1.7.0-macos-arm64-SHA256SUMS.txt`
 
 Standard `.dmg` flow:
 
