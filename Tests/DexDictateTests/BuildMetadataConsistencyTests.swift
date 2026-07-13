@@ -25,14 +25,26 @@ final class BuildMetadataConsistencyTests: XCTestCase {
         assertEqual(source, template, key: "NSMicrophoneUsageDescription")
         assertEqual(source, template, key: "NSAccessibilityUsageDescription")
         assertEqual(source, template, key: "NSSpeechRecognitionUsageDescription")
-
-        XCTAssertNil(source["NSAppleEventsUsageDescription"])
-        XCTAssertNil(template["NSAppleEventsUsageDescription"])
+        assertEqual(source, template, key: "NSAppleEventsUsageDescription")
 
         XCTAssertNil(source["CFBundleDisplayName"])
         XCTAssertNil(template["CFBundleDisplayName"])
         XCTAssertNil(source["LSApplicationCategoryType"])
         XCTAssertNil(template["LSApplicationCategoryType"])
+    }
+
+    /// Regression coverage for the Apple Events privacy description: BrowserMediaPauseService
+    /// (Settings -> Dictation -> "Pause browser media during dictation") genuinely sends Apple
+    /// Events to Chrome/Brave/Edge via `osascript`/`tell application id "..."`, so macOS requires
+    /// this key to show a proper (rather than generic) Automation permission prompt.
+    func testAppleEventsUsageDescriptionExplainsOptionalBrowserPauseFeature() throws {
+        let source = try plistDictionary(atPath: sourceInfoPath)
+        let template = try plistDictionary(atPath: templateInfoPath)
+
+        let expected = "DexDictate uses Automation access to optionally pause and resume media playback in Chrome, Brave, or Edge tabs while you dictate. Denying access does not affect transcription."
+
+        XCTAssertEqual(source["NSAppleEventsUsageDescription"] as? String, expected)
+        XCTAssertEqual(template["NSAppleEventsUsageDescription"] as? String, expected)
     }
 
     private func plistDictionary(atPath path: String) throws -> [String: Any] {
