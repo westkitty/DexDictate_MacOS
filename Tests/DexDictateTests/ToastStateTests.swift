@@ -70,26 +70,56 @@ final class ToastStateTests: XCTestCase {
     }
 
     func testNewShowCancelsOldDismissTimer() async throws {
+        // Uses a virtual clock instead of real sleeps: the previous version of
+        // this test polled real wall-clock delays with ~16-32ms margins, which
+        // CI scheduling jitter could violate in either direction. Advancing
+        // the clock only makes the dismiss Task *ready*; `settle()` yields
+        // cooperatively (no real time elapses) until it has actually run.
+        let clock = ManualClock()
         let dismissDelay: TimeInterval = 0.08
-        let state = ToastState(dismissAfter: dismissDelay)
+        let state = ToastState(dismissAfter: dismissDelay, clock: clock)
 
         // Show first toast.
         state.show(.outputInserted)
 
-        // After half the dismiss window, replace it with a new toast.
-        try await Task.sleep(nanoseconds: UInt64(dismissDelay * 0.5 * 1_000_000_000))
+        // After half the dismiss window, replace it with a new toast. This
+        // should cancel the original timer outright.
+        clock.advance(by: .seconds(dismissDelay * 0.5))
+        await settleTurns()
         state.show(.outputSavedOnly)
         XCTAssertEqual(state.current, .outputSavedOnly)
+        await settleTurns() // let the cancelled timer's cancellation handler finish removing it
 
-        // The original timer should have been cancelled; new toast is still visible
-        // just before the full dismiss window of the replacement would expire.
-        try await Task.sleep(nanoseconds: UInt64(dismissDelay * 0.6 * 1_000_000_000))
+        // Advance to just before the replacement's own dismiss window elapses.
+        // If the original (cancelled) timer were still active it would have
+        // fired well before this point, so this proves cancellation worked.
+        clock.advance(by: .seconds(dismissDelay * 0.9))
+        await settleTurns()
         XCTAssertEqual(state.current, .outputSavedOnly,
             "Replacement toast should still be visible — its own timer hasn't expired yet")
 
-        // After the full replacement dismiss window expires, the toast should be gone.
-        try await Task.sleep(nanoseconds: UInt64(dismissDelay * 0.6 * 1_000_000_000))
+        // Advance past the replacement's full dismiss window.
+        clock.advance(by: .seconds(dismissDelay * 0.2))
+        await settleUntil { state.current == nil }
         XCTAssertNil(state.current, "Replacement toast should have auto-dismissed")
+    }
+
+    /// Cooperatively yields a fixed number of scheduler turns. No real time
+    /// elapses, so this is immediate regardless of system load — unlike a
+    /// real sleep, it never races against CI scheduling jitter.
+    private func settleTurns(_ turns: Int = 10) async {
+        for _ in 0..<turns {
+            await Task.yield()
+        }
+    }
+
+    /// Cooperatively yields until `condition` holds or the turn budget runs
+    /// out (in which case the subsequent assertion reports the real failure).
+    private func settleUntil(maxTurns: Int = 100, _ condition: () -> Bool) async {
+        for _ in 0..<maxTurns {
+            if condition() { return }
+            await Task.yield()
+        }
     }
 
     // MARK: - ToastEvent properties

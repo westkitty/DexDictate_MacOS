@@ -11,10 +11,15 @@ public final class ToastState: ObservableObject {
     @Published public private(set) var current: ToastEvent? = nil
 
     private let dismissAfter: TimeInterval
+    private let clock: any Clock<Duration>
     private var dismissTask: Task<Void, Never>?
 
-    public init(dismissAfter: TimeInterval = 2.5) {
+    /// - Parameter clock: Source of the auto-dismiss delay. Defaults to a real
+    ///   `ContinuousClock`; tests inject a virtual clock to advance the dismiss
+    ///   timer deterministically instead of racing real wall-clock sleeps.
+    public init(dismissAfter: TimeInterval = 2.5, clock: any Clock<Duration> = ContinuousClock()) {
         self.dismissAfter = dismissAfter
+        self.clock = clock
     }
 
     /// Present a toast event and schedule auto-dismiss.
@@ -23,9 +28,10 @@ public final class ToastState: ObservableObject {
         dismissTask?.cancel()
         current = event
         let delay = dismissAfter
+        let clock = self.clock
         dismissTask = Task { [weak self] in
             do {
-                try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                try await clock.sleep(for: .seconds(delay))
             } catch {
                 // Cancelled — a newer event is taking over.
                 return
