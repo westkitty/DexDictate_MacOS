@@ -333,6 +333,11 @@ final class SmartCleanupReachabilityLabelTests: XCTestCase {
 /// require changing production call sites.
 private final class SmartCleanupMockURLProtocol: URLProtocol {
     nonisolated(unsafe) static var responseProvider: (@Sendable (URLRequest) -> (Int, Data))?
+    /// Optional artificial per-request delay (seconds), keyed off the request itself — lets a
+    /// test deterministically force which of two concurrent requests resolves first, instead
+    /// of hoping real scheduling happens to land a particular way. `nil`/0 means "no delay,"
+    /// which is every existing test's behavior.
+    nonisolated(unsafe) static var responseDelayProvider: (@Sendable (URLRequest) -> TimeInterval)?
 
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
@@ -343,13 +348,20 @@ private final class SmartCleanupMockURLProtocol: URLProtocol {
             return
         }
         let (status, data) = provider(request)
-        let response = HTTPURLResponse(
-            url: url, statusCode: status, httpVersion: "HTTP/1.1",
-            headerFields: ["Content-Type": "application/json"]
-        )!
-        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-        client?.urlProtocol(self, didLoad: data)
-        client?.urlProtocolDidFinishLoading(self)
+        let delay = Self.responseDelayProvider?(request) ?? 0
+
+        func deliver() {
+            let response = HTTPURLResponse(
+                url: url, statusCode: status, httpVersion: "HTTP/1.1",
+                headerFields: ["Content-Type": "application/json"]
+            )!
+            client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+            client?.urlProtocol(self, didLoad: data)
+            client?.urlProtocolDidFinishLoading(self)
+        }
+
+        guard delay > 0 else { return deliver() }
+        DispatchQueue.global().asyncAfter(deadline: .now() + delay, execute: deliver)
     }
 
     override func stopLoading() {}
@@ -373,6 +385,7 @@ final class SmartCleanupCoordinatorMockedBackendTests: XCTestCase {
     override func tearDown() {
         URLProtocol.unregisterClass(SmartCleanupMockURLProtocol.self)
         SmartCleanupMockURLProtocol.responseProvider = nil
+        SmartCleanupMockURLProtocol.responseDelayProvider = nil
         super.tearDown()
     }
 
@@ -518,5 +531,61 @@ final class SmartCleanupCoordinatorMockedBackendTests: XCTestCase {
         }
         XCTAssertNil(history.items.first(where: { $0.id == itemID })?.cleanedText)
         XCTAssertEqual(history.items.first(where: { $0.id == itemID })?.text, "this stays raw")
+    }
+
+    /// Regression test for a genuine production race: `start(history:)` kicks off its own
+    /// background `refreshReachability()` (hits `/models`), and a real cleanup attempt
+    /// triggered by a new history item (hits `/chat/completions`) runs concurrently — with no
+    /// ordering guarantee between them. Before the generation-guard fix in
+    /// `SmartCleanupCoordinator`, whichever network response happened to arrive *last* won,
+    /// so a slow, stale auto-refresh could silently overwrite a real cleanup attempt's more
+    /// specific `.lastRequestFailed`. `testFailedCleanupReportsLastRequestFailedAndLeavesRawTextStanding`
+    /// above only reproduced this ~40% of the time, since it depended on real scheduling
+    /// happening to land the "wrong" way under full-suite contention. This test instead
+    /// *forces* that exact adversarial ordering deterministically via `responseDelayProvider`,
+    /// so it fails every single run without the fix and passes every single run with it.
+    func testStaleAutoRefreshCannotOverwriteNewerCleanupResult() async throws {
+        let settings = SmartCleanupSettings.shared
+        let wasEnabled = settings.enabled
+        let wasURL = settings.baseURLString
+        settings.enabled = true
+        settings.baseURLString = "http://127.0.0.1:59996/v1"
+        defer {
+            settings.enabled = wasEnabled
+            settings.baseURLString = wasURL
+        }
+
+        SmartCleanupMockURLProtocol.responseProvider = { _ in (500, Data()) }
+        // The /models request (start()'s auto-refresh) is deliberately delayed well past the
+        // /chat/completions request (the real cleanup attempt) so the auto-refresh — despite
+        // starting first — is guaranteed to *resolve* last every time.
+        SmartCleanupMockURLProtocol.responseDelayProvider = { request in
+            request.url?.lastPathComponent == "models" ? 0.3 : 0
+        }
+
+        let coordinator = SmartCleanupCoordinator(settings: settings)
+        let history = TranscriptionHistory()
+        coordinator.start(history: history)
+        let added = history.add("this stays raw despite the stale auto-refresh")
+        let itemID = try XCTUnwrap(added?.id)
+
+        // The undelayed cleanup attempt should resolve almost immediately.
+        for _ in 0..<50 {
+            if case .lastRequestFailed = coordinator.reachability { break }
+            try await Task.sleep(nanoseconds: 20_000_000)
+        }
+        guard case .lastRequestFailed = coordinator.reachability else {
+            return XCTFail("expected the fast cleanup attempt to report .lastRequestFailed first, got \(coordinator.reachability)")
+        }
+
+        // Wait well past the artificial /models delay so the stale auto-refresh has
+        // definitely resolved too. Before the fix, this is exactly where it would silently
+        // overwrite .lastRequestFailed with .serviceUnavailable.
+        try await Task.sleep(nanoseconds: 500_000_000)
+
+        guard case .lastRequestFailed = coordinator.reachability else {
+            return XCTFail("stale auto-refresh overwrote a newer, real cleanup result — got \(coordinator.reachability)")
+        }
+        XCTAssertNil(history.items.first(where: { $0.id == itemID })?.cleanedText)
     }
 }

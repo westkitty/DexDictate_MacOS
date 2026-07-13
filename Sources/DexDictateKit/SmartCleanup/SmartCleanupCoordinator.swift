@@ -71,6 +71,19 @@ public final class SmartCleanupCoordinator: ObservableObject {
     private var cancellable: AnyCancellable?
     private var didStart = false
 
+    /// `start(history:)`'s own background `refreshReachability()` and a real
+    /// `attemptCleanup(item:)` triggered by a new history item both run as independent,
+    /// unstructured `Task`s and both eventually write `reachability` — with no ordering
+    /// guarantee between them, since each just resolves whenever its network call happens to
+    /// complete. Without this counter, whichever task's HTTP response arrives *last* wins,
+    /// even if it was the *earlier*-started (now stale) check — so a slow, generic
+    /// auto-refresh kicked off at `start()` could silently overwrite a real cleanup attempt's
+    /// more specific, more recent `.lastRequestFailed`/`.ready` result. Every write is now
+    /// gated behind the generation captured when its operation began: only the
+    /// latest-*started* operation is ever allowed to apply its result, regardless of which
+    /// one's network response actually lands first.
+    private var reachabilityGeneration = 0
+
     /// Bug sweep fix: a default-argument expression referencing a `@MainActor`-isolated
     /// static (`SmartCleanupSettings.shared`) is evaluated in a nonisolated context by
     /// Swift's own default-argument rules — a warning today ("this is an error in the
@@ -87,7 +100,7 @@ public final class SmartCleanupCoordinator: ObservableObject {
         didStart = true
         self.history = history
         lastSeenItemID = history.items.first?.id
-        reachability = settings.enabled ? .unknown : .notEnabled
+        setReachabilityImmediately(settings.enabled ? .unknown : .notEnabled)
         if settings.enabled {
             Task { await refreshReachability() }
         }
@@ -105,16 +118,16 @@ public final class SmartCleanupCoordinator: ObservableObject {
     /// user separately visited the Smart Cleanup settings page and clicked Test Connection.
     public func handleEnabledSettingChanged() {
         guard settings.enabled else {
-            reachability = .notEnabled
+            setReachabilityImmediately(.notEnabled)
             return
         }
-        reachability = .unknown
+        setReachabilityImmediately(.unknown)
         Task { await refreshReachability() }
     }
 
     private func handleItemsChanged(_ items: [HistoryItem]) {
         guard settings.enabled else {
-            reachability = .notEnabled
+            setReachabilityImmediately(.notEnabled)
             return
         }
         guard let newest = items.first, newest.id != lastSeenItemID else { return }
@@ -125,6 +138,7 @@ public final class SmartCleanupCoordinator: ObservableObject {
     }
 
     private func attemptCleanup(item: HistoryItem) async {
+        let generation = beginReachabilityOperation()
         let result = await SmartCleanupClient.cleanup(
             text: item.text,
             baseURLString: settings.baseURLString,
@@ -133,14 +147,14 @@ public final class SmartCleanupCoordinator: ObservableObject {
         )
         switch result {
         case .success(let cleaned):
-            reachability = .ready
+            applyReachability(.ready, generation: generation)
             history?.setCleanedText(cleaned, forItemID: item.id)
         case .failure(let error):
             // Raw result stands regardless — single attempt, no retry, no modal. This is a
             // real cleanup attempt (not an explicit connection test), so a failure here is
             // reported as `.lastRequestFailed` rather than `.serviceUnavailable` — distinct
             // language for "it broke just now" vs. "you haven't configured this yet."
-            reachability = Self.reachability(forRealRequestFailure: error)
+            applyReachability(Self.reachability(forRealRequestFailure: error), generation: generation)
         }
     }
 
@@ -150,9 +164,10 @@ public final class SmartCleanupCoordinator: ObservableObject {
     /// unreachable" from "server reachable but the configured model isn't installed there."
     public func refreshReachability() async {
         guard settings.enabled else {
-            reachability = .notEnabled
+            setReachabilityImmediately(.notEnabled)
             return
         }
+        let generation = beginReachabilityOperation()
         let result = await SmartCleanupClient.testConnection(
             baseURLString: settings.baseURLString,
             apiKey: settings.apiKey
@@ -161,14 +176,17 @@ public final class SmartCleanupCoordinator: ObservableObject {
         case .success(let models):
             let configuredModel = settings.model.trimmingCharacters(in: .whitespacesAndNewlines)
             if !configuredModel.isEmpty, !models.modelIDs.isEmpty, !models.modelIDs.contains(configuredModel) {
-                reachability = .modelNotInstalled(
-                    reason: "Model '\(configuredModel)' not found on server. Available: \(models.modelIDs.prefix(5).joined(separator: ", "))"
+                applyReachability(
+                    .modelNotInstalled(
+                        reason: "Model '\(configuredModel)' not found on server. Available: \(models.modelIDs.prefix(5).joined(separator: ", "))"
+                    ),
+                    generation: generation
                 )
             } else {
-                reachability = .ready
+                applyReachability(.ready, generation: generation)
             }
         case .failure(let error):
-            reachability = Self.reachability(forConnectionTestFailure: error)
+            applyReachability(Self.reachability(forConnectionTestFailure: error), generation: generation)
         }
     }
 
@@ -192,5 +210,29 @@ public final class SmartCleanupCoordinator: ObservableObject {
         default:
             return .lastRequestFailed(reason: error.localizedDescription)
         }
+    }
+
+    /// A synchronous, unconditionally-authoritative write (nothing async is racing a call made
+    /// from non-suspending code) — still bumps the generation so any already-in-flight async
+    /// operation started earlier can no longer clobber it once that operation resolves.
+    private func setReachabilityImmediately(_ value: SmartCleanupReachability) {
+        reachabilityGeneration += 1
+        reachability = value
+    }
+
+    /// Call at the start of any async network operation that will eventually write
+    /// `reachability`. The returned token must be passed to `applyReachability(_:generation:)`
+    /// when that operation resolves.
+    private func beginReachabilityOperation() -> Int {
+        reachabilityGeneration += 1
+        return reachabilityGeneration
+    }
+
+    /// Applies `value` only if no newer reachability-affecting operation (async or immediate)
+    /// has started since `generation` was captured — otherwise this result is stale and is
+    /// silently discarded rather than overwriting whatever the newer operation already set.
+    private func applyReachability(_ value: SmartCleanupReachability, generation: Int) {
+        guard generation == reachabilityGeneration else { return }
+        reachability = value
     }
 }
