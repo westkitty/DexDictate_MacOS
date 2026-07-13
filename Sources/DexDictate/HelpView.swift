@@ -11,6 +11,7 @@ enum HelpSection: String, CaseIterable, Identifiable, Hashable {
     case triggerSetup
     case recordingAudio
     case transcription
+    case smartCleanup
     case outputPasting
     case history
     case vocabulary
@@ -35,6 +36,7 @@ enum HelpSection: String, CaseIterable, Identifiable, Hashable {
         case .triggerSetup:   return "Trigger Setup"
         case .recordingAudio: return "Recording & Audio"
         case .transcription:  return "Transcription"
+        case .smartCleanup:   return "Smart Cleanup"
         case .outputPasting:  return "Output & Pasting"
         case .history:        return "Transcription History"
         case .vocabulary:     return "Custom Vocabulary"
@@ -59,6 +61,7 @@ enum HelpSection: String, CaseIterable, Identifiable, Hashable {
         case .triggerSetup:   return "keyboard"
         case .recordingAudio: return "waveform"
         case .transcription:  return "text.bubble"
+        case .smartCleanup:   return "wand.and.stars"
         case .outputPasting:  return "doc.on.clipboard"
         case .history:        return "clock.arrow.circlepath"
         case .vocabulary:     return "book.closed"
@@ -83,7 +86,8 @@ enum HelpSection: String, CaseIterable, Identifiable, Hashable {
         case .permissions:    return ["accessibility", "input monitoring", "microphone", "privacy", "permission denied", "not working"]
         case .triggerSetup:   return ["shortcut", "hotkey", "button", "hold", "toggle", "middle mouse", "key", "bind"]
         case .recordingAudio: return ["mic", "microphone", "input", "audio", "record", "silence", "timeout", "device", "file import", "zoom", "audio route", "route change", "device switch"]
-        case .transcription:  return ["whisper", "model", "accuracy", "local", "offline", "wer", "utterance", "preset", "retry"]
+        case .transcription:  return ["whisper", "model", "accuracy", "local", "offline", "wer", "utterance", "preset", "retry", "parakeet", "nemotron", "moonshine", "live transcription", "command mode", "engine", "apple speech"]
+        case .smartCleanup:   return ["smart cleanup", "cleanup", "llm", "ollama", "language model", "tunnel", "rewrite", "punctuation", "last request failed"]
         case .outputPasting:  return ["paste", "copy", "insert", "secure", "password", "auto-paste", "clipboard", "per app", "profanity", "zoom", "zoom chat", "electron", "not pasting", "no text", "wrong app"]
         case .history:        return ["history", "log", "export", "search", "detach", "previous", "transcript", "save"]
         case .vocabulary:     return ["words", "replacements", "vocabulary", "correction", "learn", "custom", "phrase"]
@@ -108,9 +112,10 @@ enum HelpSection: String, CaseIterable, Identifiable, Hashable {
         case .permissions:    return [.gettingStarted, .diagnostics]
         case .triggerSetup:   return [.recordingAudio, .gettingStarted]
         case .recordingAudio: return [.triggerSetup, .transcription, .history]
-        case .transcription:  return [.benchmarking, .recordingAudio, .outputPasting]
+        case .transcription:  return [.benchmarking, .recordingAudio, .smartCleanup]
+        case .smartCleanup:   return [.transcription, .history, .diagnostics]
         case .outputPasting:  return [.history, .transcription, .safeMode]
-        case .history:        return [.vocabulary, .outputPasting]
+        case .history:        return [.vocabulary, .outputPasting, .smartCleanup]
         case .vocabulary:     return [.voiceCommands, .transcription, .profiles]
         case .voiceCommands:  return [.vocabulary, .triggerSetup, .recordingAudio]
         case .profiles:       return [.appearance, .vocabulary]
@@ -278,6 +283,7 @@ struct HelpContentView: View {
         case .triggerSetup:   TriggerSetupContent()
         case .recordingAudio: RecordingAudioContent()
         case .transcription:  TranscriptionContent()
+        case .smartCleanup:   SmartCleanupContent()
         case .outputPasting:  OutputPastingContent()
         case .history:        HistoryContent()
         case .vocabulary:     VocabularyContent()
@@ -586,11 +592,18 @@ private struct TranscriptionContent: View {
         ZStack(alignment: .topTrailing) {
             SectionWatermark(systemName: "text.bubble")
             VStack(alignment: .leading, spacing: 12) {
-                helpBody("DexDictate uses OpenAI's Whisper model running entirely on your Mac. No audio or text is sent to any server.")
+                helpBody("DexDictate uses OpenAI's Whisper model running entirely on your Mac. No audio or text is sent to any server during transcription.")
                 helpHeading("Bundled model: tiny.en")
                 helpBody("A compact English-only model that balances speed and accuracy on Apple Silicon. Loaded automatically on first launch.")
                 helpHeading("Active model & selection")
                 helpBody("Settings → Models & Accuracy → Active Dictation Model.\n\nThe Model Auto-Promotion picker below it controls whether DexDictate manages the model automatically (Auto Idle Benchmark) or lets you pick manually.")
+                helpHeading("Alternate engine: Parakeet")
+                helpBody("Parakeet TDT 0.6B v3 is a faster local batch engine — a real alternative to Whisper for the committed transcript, not a separate feature. It requires Apple Silicon and is not downloaded by default.\n\nDownload it from the Model Library section on this same page (Settings → Models & Accuracy). Once downloaded and healthy, DexDictate automatically prefers it over Whisper; Whisper is always the fallback if Parakeet ever becomes unavailable.")
+                helpHeading("Live Transcription (captions while you speak)")
+                helpBody("Settings → Models & Accuracy → Live Transcription toggle.\n\nWhen on, shows a live partial caption while you're talking, sourced from Nemotron 3.5 ASR Streaming 0.6B if it's been downloaded, or Apple Speech (on-device, requires Speech Recognition permission) if not. This only affects the live caption — Whisper or Parakeet still produce the actual text that gets typed, unchanged.")
+                helpCallout("Nemotron also requires Apple Silicon and is not downloaded automatically. Download it from the Model Library below the Live Transcription toggle.")
+                helpHeading("Command Mode (voice commands by phrase)")
+                helpBody("Settings → Models & Accuracy → Command Mode toggle.\n\nWhen on, recordings under 2.5 seconds are tried against Moonshine v2 (Tiny Streaming, English) first, to catch a recognized command phrase before falling through to the primary dictation engine. Not downloaded automatically; see Voice Commands for the phrases themselves.")
                 helpHeading("End Preset")
                 helpBody("Controls how aggressively DexDictate trims silence at the end of a recording. Found at: Settings → Dictation → End Preset.")
                 VStack(alignment: .leading, spacing: 4) {
@@ -603,6 +616,40 @@ private struct TranscriptionContent: View {
                 helpWarning("Accuracy depends on microphone quality and background noise. Very short phrases (under ~1 second) may not transcribe reliably. Non-English speech will produce unpredictable results with the default tiny.en model.")
                 HelpScreenshot("help-transcription-model",
                                caption: "The Models & Accuracy page showing model and preset controls.")
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SMART CLEANUP
+// ─────────────────────────────────────────────────────────────────────────────
+
+private struct SmartCleanupContent: View {
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            SectionWatermark(systemName: "wand.and.stars")
+            VStack(alignment: .leading, spacing: 12) {
+                helpBody("Smart Cleanup sends your already-transcribed text to a language model you configure, to lightly fix punctuation and capitalization. It runs after your text has already been delivered to whatever app you were dictating into — it never blocks or delays insertion, and the original raw transcript always stands if cleanup fails or is never attempted.")
+                helpWarning("Unlike the rest of DexDictate, Smart Cleanup sends text over the network to the server you configure. It is off by default and is never enabled or pointed at a server automatically.")
+                helpHeading("Setting it up")
+                helpBody("Settings → Smart Cleanup.\n\nRequires an OpenAI-compatible endpoint (e.g. a local Ollama, or a remote one reached through your own SSH/Tailscale tunnel) — DexDictate does not bundle or default to any server. Enter a Base URL and Model name, and an optional API Key (stored in the macOS Keychain, never in plain settings), then use Test Connection / Test Inference to confirm it works before switching Enable Smart Cleanup on.")
+                helpCallout("Use SSH or Tailscale for a remote server's tunnel — never expose its port directly to the internet. DexDictate warns if your Base URL is plain http to a non-loopback host.")
+                helpHeading("What happens on success or failure")
+                helpBody("Each committed transcript gets exactly one cleanup attempt — no retries, no modal, no polling. On success, a \"Cleaned\" variant is attached to that history item alongside the untouched original. On failure, nothing changes: the raw transcript is what you already have, and nothing is retried automatically.")
+                helpHeading("Where the cleaned version shows up")
+                helpBody("The detached History window (Transcription History → expand icon) shows the cleaned version by default, labeled \"Cleaned,\" with a \"Use raw\" toggle to see the original. The inline history panel in the main popover always shows the original raw transcript — it does not show cleaned variants.")
+                helpHeading("Status")
+                VStack(alignment: .leading, spacing: 4) {
+                    HelpRow(key: "Not enabled", value: "The feature toggle itself is off")
+                    HelpRow(key: "Unknown", value: "No check has run yet since enabling")
+                    HelpRow(key: "Ready", value: "Connected, and the configured model (if any) was confirmed present")
+                    HelpRow(key: "Service unavailable", value: "No server configured, or it couldn't be reached")
+                    HelpRow(key: "Model not installed", value: "Server reached, but the configured model name isn't in its list")
+                    HelpRow(key: "Authentication required", value: "Server returned 401/403 — check the API Key")
+                    HelpRow(key: "Last request failed", value: "A real cleanup attempt just failed — distinct from Service unavailable, which means \"not configured/reachable\" rather than \"just broke\"")
+                }
+                helpBody("Live status: Settings → Smart Cleanup's own status row, or Settings → Diagnostics & Recovery → Smart Cleanup — both have a Check Again button.")
             }
         }
     }
@@ -1036,8 +1083,8 @@ private struct AboutContent: View {
             helpBody("DexDictate is a local-first macOS dictation app built for speed, privacy, and reliability on Apple Silicon.")
 
             VStack(alignment: .leading, spacing: 6) {
-                Label("All transcription runs on-device using OpenAI's open-source Whisper model", systemImage: "cpu")
-                Label("No audio or text is sent to external servers", systemImage: "lock.shield")
+                Label("All transcription runs on-device — Whisper by default, or Parakeet if you download it", systemImage: "cpu")
+                Label("Audio never leaves your Mac; text only does if you turn on and configure Smart Cleanup", systemImage: "lock.shield")
                 Label("Source code available on GitHub", systemImage: "chevron.left.forwardslash.chevron.right")
             }
             .font(.callout)
