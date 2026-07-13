@@ -64,3 +64,7 @@ SNAPSHOT/
 # Benchmark corpus source-download archives (re-downloadable; keep small provenance text only)
 benchmark_samples/**/downloads/*.zip
 benchmark_samples/**/downloads/slr83-line_index_all.csv
+
+# SwiftLint scratch baselines: only .swiftlint-baseline.json is committed
+.swiftlint-baseline.local.json
+.swiftlint-baseline.gate-test.json
