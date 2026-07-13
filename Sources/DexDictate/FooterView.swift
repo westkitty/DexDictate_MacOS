@@ -9,7 +9,7 @@ struct FooterView: View {
 
     var body: some View {
         VStack(spacing: 6) {
-            Button(action: { settings.restoreDefaults() }) {
+            Button(action: { RestoreDefaultsPrompt.confirmAndRestore(settings) }) {
                 Text(NSLocalizedString("Restore Defaults", comment: ""))
                     .font(.caption2)
                     .foregroundStyle(.white.opacity(0.5))

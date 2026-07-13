@@ -562,6 +562,19 @@ public class AppSettings: ObservableObject {
         userShortcutData = (try? JSONEncoder().encode(UserShortcut.defaultMiddleMouse)) ?? Data()
     }
 
+    /// Gates `restoreDefaults()` behind a confirmation callback so no user-facing Restore
+    /// Defaults control — Settings → General's button and the classic popover footer's link
+    /// alike — can wipe shortcuts, input device, and custom word lists without the user
+    /// explicitly confirming first. `confirm` is injected rather than hard-coding an NSAlert
+    /// here so this stays testable from `DexDictateKit` without an AppKit dependency; the
+    /// call sites in the `DexDictate` app target supply the real alert.
+    @discardableResult
+    public func restoreDefaults(ifConfirmedBy confirm: () -> Bool) -> Bool {
+        guard confirm() else { return false }
+        restoreDefaults()
+        return true
+    }
+
     public func restoreStableDictationDefaults() {
         activeWhisperModelID = "tiny.en"
         utteranceEndPreset = .stable

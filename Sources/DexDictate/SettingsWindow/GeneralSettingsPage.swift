@@ -56,8 +56,14 @@ struct GeneralSettingsPage: View {
                     }
                     .buttonStyle(.bordered)
 
+                    // Resets nearly every setting in the app — including custom
+                    // vocabulary/profanity word lists and the shortcut binding — with no
+                    // undo. It sits right next to "Replay Onboarding" with identical styling,
+                    // one accidental click from irreversible data loss, so it's gated behind
+                    // RestoreDefaultsPrompt's confirmation (shared with the classic popover's
+                    // footer link) rather than resetting immediately.
                     Button("Restore Defaults") {
-                        confirmAndRestoreDefaults()
+                        RestoreDefaultsPrompt.confirmAndRestore(settings)
                     }
                     .buttonStyle(.bordered)
                 }
@@ -186,25 +192,5 @@ struct GeneralSettingsPage: View {
     /// instance rather than by modifying `OnboardingView.swift` internals.
     private func replayOnboarding() {
         (NSApp.delegate as? AppDelegate)?.presentOnboardingForDebug()
-    }
-
-    /// "Restore Defaults" resets nearly every setting in the app — including custom
-    /// vocabulary/profanity word lists and the shortcut binding — with no undo. It sat
-    /// unguarded right next to "Replay Onboarding" with identical styling, one accidental
-    /// click from irreversible data loss. Gated behind the same confirmation pattern
-    /// DiagnosticsPage uses for the far less consequential "Reset Core Audio" action.
-    private func confirmAndRestoreDefaults() {
-        let alert = NSAlert()
-        alert.messageText = "Restore Defaults?"
-        alert.informativeText = "This resets shortcuts, input device, model selection, theme, and custom profanity word lists to their factory defaults. This cannot be undone."
-        alert.alertStyle = .warning
-        alert.addButton(withTitle: "Restore Defaults")
-        alert.addButton(withTitle: "Cancel")
-
-        guard alert.runModal() == .alertFirstButtonReturn else {
-            return
-        }
-
-        settings.restoreDefaults()
     }
 }
