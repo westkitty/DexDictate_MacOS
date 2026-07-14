@@ -7,10 +7,47 @@ import DexDictateKit
 final class LaunchIntroController {
     static let shared = LaunchIntroController()
 
+    /// Named delays for the intro's playback-hold / exit-fade / safety-net timers — grouped
+    /// here purely for self-documentation of the magic numbers below.
+    private struct Timing {
+        var holdAfterPlaybackSeconds: Double
+        var fadeOutDurationSeconds: Double
+        var fallbackDeadlineSeconds: Double
+        var hardDeadlineSeconds: Double
+
+        static let production = Timing(
+            holdAfterPlaybackSeconds: 1.5,
+            fadeOutDurationSeconds: 0.7,
+            // Safety fallback: exit regardless (longest video at 1.5x is ~6.7 s).
+            fallbackDeadlineSeconds: 10.0,
+            // Hard guarantee, independent of the fade animation: if its own completion
+            // handler never fires (e.g. Core Animation servicing for this backgrounded
+            // LSUIElement process stalls behind a fullscreen app), the panel must still
+            // disappear rather than get stuck on screen indefinitely.
+            hardDeadlineSeconds: 12.0
+        )
+    }
+
+    private let timing = Timing.production
+
     private var hasPlayedThisSession = false
     private var panel: LaunchIntroPanel?
     private var player: AVPlayer?
     private var endObserver: Any?
+    private var pendingExitTask: Task<Void, Never>?
+    private var fallbackWorkItem: DispatchWorkItem?
+    private var hardDeadlineWorkItem: DispatchWorkItem?
+    /// Held for the intro's lifetime so App Nap doesn't delay the dismissal timers/animation
+    /// below — DexDictate is an `LSUIElement` accessory app with no Dock-visible window, which
+    /// is exactly what App Nap targets first when another app (e.g. a fullscreen game) has
+    /// focus. Without this, the exit fade can stall, delaying dismissal.
+    private var activityToken: NSObjectProtocol?
+    /// Guards `forceDismiss()` so it's safe to call from the fade completion, either timer, or
+    /// app shutdown without double-running teardown, and so any stale callback that fires after
+    /// dismissal is a harmless no-op rather than mutating a dismissed (or future) panel. See
+    /// `LaunchIntroDismissalGate`'s doc comment (in `DexDictateKit`) for why this idempotency
+    /// guarantee is factored out as its own unit-testable type.
+    private let dismissalGate = LaunchIntroDismissalGate()
 
     private static let animationNames: [String] = (1...8).map { String(format: "LaunchAnimation_%02d", $0) }
     // These clips have no "DexDictate" branding in the video itself.
@@ -29,6 +66,12 @@ final class LaunchIntroController {
         else {
             return
         }
+
+        dismissalGate.reset()
+        activityToken = ProcessInfo.processInfo.beginActivity(
+            options: [.userInitiated],
+            reason: "DexDictate launch intro animation"
+        )
 
         let playerItem = AVPlayerItem(url: url)
         let player = AVPlayer(playerItem: playerItem)
@@ -54,27 +97,47 @@ final class LaunchIntroController {
 
         player.rate = 1.5
 
-        // Hold on the final frame (brand card) for 1.5 s, then exit.
+        // Hold on the final frame (brand card) for a beat, then exit.
         endObserver = NotificationCenter.default.addObserver(
             forName: AVPlayerItem.didPlayToEndTimeNotification,
             object: playerItem,
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor [weak self] in
-                guard let self else { return }
-                try? await Task.sleep(nanoseconds: 1_500_000_000)
-                let exitScreen = NSScreen.main ?? NSScreen.screens.first
-                guard let exitScreen else { return }
-                self.animateExit(on: exitScreen, duration: 0.7)
+                self?.scheduleExitAfterHold()
             }
         }
 
-        // Safety fallback: exit after 10 s regardless (longest video at 1.5x is ~6.7 s).
-        DispatchQueue.main.asyncAfter(deadline: .now() + 10.0) { [weak self] in
+        scheduleSafetyNetTimers()
+    }
+
+    /// The fallback (exit regardless of playback completion) and hard-deadline (exit
+    /// regardless of the fade animation completing) safety-net timers — split out of
+    /// `playIfNeeded()` purely to keep that function's body within the project's length limit.
+    private func scheduleSafetyNetTimers() {
+        let fallback = DispatchWorkItem { [weak self] in
             guard let self, self.panel != nil else { return }
-            let fallbackScreen = NSScreen.main ?? NSScreen.screens.first
-            guard let fallbackScreen else { return }
-            self.animateExit(on: fallbackScreen, duration: 0.7)
+            self.fadeOutAndDismiss(duration: self.timing.fadeOutDurationSeconds)
+        }
+        fallbackWorkItem = fallback
+        DispatchQueue.main.asyncAfter(deadline: .now() + timing.fallbackDeadlineSeconds, execute: fallback)
+
+        let hardDeadline = DispatchWorkItem { [weak self] in
+            self?.forceDismiss()
+        }
+        hardDeadlineWorkItem = hardDeadline
+        DispatchQueue.main.asyncAfter(deadline: .now() + timing.hardDeadlineSeconds, execute: hardDeadline)
+    }
+
+    /// Runs on the main actor (called only from within `Task { @MainActor in }` bodies), so
+    /// storing the resulting task on `pendingExitTask` here is properly isolated.
+    private func scheduleExitAfterHold() {
+        let holdSeconds = timing.holdAfterPlaybackSeconds
+        let fadeSeconds = timing.fadeOutDurationSeconds
+        pendingExitTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(holdSeconds * 1_000_000_000))
+            guard let self, !Task.isCancelled else { return }
+            self.fadeOutAndDismiss(duration: fadeSeconds)
         }
     }
 
@@ -91,7 +154,11 @@ final class LaunchIntroController {
         )
     }
 
-    private func animateExit(on screen: NSScreen, duration: Double) {
+    /// The intended full-panel exit: fade the still-full-size intro window to transparent,
+    /// then tear it down. Deliberately does not resize or reposition the panel — it must
+    /// close as the complete launch presentation, not shrink into a small badge/thumbnail
+    /// first (that residual badge state is the bug this replaces).
+    private func fadeOutAndDismiss(duration: Double) {
         guard let panel else { return }
 
         if let obs = endObserver {
@@ -99,27 +166,44 @@ final class LaunchIntroController {
             endObserver = nil
         }
 
-        let finalSize: CGFloat = 64
-        let visibleFrame = screen.visibleFrame
-        let finalFrame = NSRect(
-            x: visibleFrame.midX - finalSize / 2,
-            y: visibleFrame.maxY - finalSize - 4,
-            width: finalSize,
-            height: finalSize
-        )
-
         NSAnimationContext.runAnimationGroup { context in
             context.duration = duration
             context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-            panel.animator().setFrame(finalFrame, display: true)
             panel.animator().alphaValue = 0
         } completionHandler: { [weak self] in
             Task { @MainActor in
-                self?.player?.pause()
-                self?.panel?.orderOut(nil)
-                self?.panel = nil
-                self?.player = nil
+                self?.forceDismiss()
             }
+        }
+    }
+
+    /// The single teardown path for the intro panel — called from the exit fade's completion
+    /// handler on the happy path, from the fallback/hard-deadline timers as guarantees, and
+    /// from app shutdown. `dismissalGate` ensures whichever caller runs first does the work and
+    /// every other (including any stale callback) is a no-op.
+    private func forceDismiss() {
+        guard dismissalGate.fireOnce() else { return }
+
+        if let obs = endObserver {
+            NotificationCenter.default.removeObserver(obs)
+            endObserver = nil
+        }
+        pendingExitTask?.cancel()
+        pendingExitTask = nil
+        fallbackWorkItem?.cancel()
+        fallbackWorkItem = nil
+        hardDeadlineWorkItem?.cancel()
+        hardDeadlineWorkItem = nil
+
+        player?.pause()
+        panel?.orderOut(nil)
+        panel?.close()
+        panel = nil
+        player = nil
+
+        if let token = activityToken {
+            ProcessInfo.processInfo.endActivity(token)
+            activityToken = nil
         }
     }
 }
