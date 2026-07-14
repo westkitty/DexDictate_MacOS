@@ -220,6 +220,7 @@ final class MockAccessibilityOperator: AccessibilityElementOperating {
     var setResults: [String: AXError] = [:]
     private(set) var setCallLog: [String] = []
     private(set) var setCursorLocations: [Int] = []
+    private(set) var lastSetValue: String?
 
     func focusedElement() -> AXUIElement? {
         hasFocusedElement ? AXUIElementCreateSystemWide() : nil
@@ -239,6 +240,7 @@ final class MockAccessibilityOperator: AccessibilityElementOperating {
 
     func set(_ value: CFTypeRef, for attribute: CFString, element: AXUIElement) -> AXError {
         setCallLog.append(attribute as String)
+        lastSetValue = value as? String
         return setResults[attribute as String] ?? .attributeUnsupported
     }
 

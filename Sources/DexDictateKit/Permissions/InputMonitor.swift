@@ -12,6 +12,11 @@ import Cocoa
 /// - Important: Requires the `com.apple.security.device.input-monitoring` entitlement and
 ///   user approval under **System Settings › Privacy & Security › Accessibility**.
 final class InputMonitor {
+    /// HID key code for "Z" — see the "Undo Last Dictation" shortcut check in `start()`.
+    static let undoDictationKeyCode: Int64 = 0x06
+    static let undoDictationModifierMask: UInt64 =
+        CGEventFlags.maskControl.rawValue | CGEventFlags.maskAlternate.rawValue | CGEventFlags.maskCommand.rawValue
+
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
     /// Pending retry work item — cancelled in stop() so a discarded InputMonitor
@@ -76,6 +81,25 @@ final class InputMonitor {
                 }
 
                 let shortcut = AppSettings.shared.userShortcut
+
+                // Fixed global shortcut for "Undo Last Dictation" — Control+Option+Command+Z.
+                // Not user-configurable (unlike the main trigger shortcut above) since it's a
+                // secondary, rarely-used action; chosen specifically to avoid colliding with
+                // any app's own Cmd+Z / Shift+Cmd+Z undo/redo. Skipped when the user's own
+                // trigger shortcut happens to be this exact combination, so it doesn't starve
+                // the main trigger of its keydown.
+                let undoComboMatchesMainTrigger =
+                    Int64(shortcut.keyCode ?? 0) == InputMonitor.undoDictationKeyCode &&
+                    shortcut.modifiers == InputMonitor.undoDictationModifierMask
+                if type == .keyDown, !undoComboMatchesMainTrigger,
+                   event.getIntegerValueField(.keyboardEventKeycode) == InputMonitor.undoDictationKeyCode,
+                   (event.flags.rawValue & InputMonitor.undoDictationModifierMask) == InputMonitor.undoDictationModifierMask {
+                    MainActorDispatch.async {
+                        monitor.engine?.undoLastDictation()
+                    }
+                    return nil // Consume event
+                }
+
                 var match = false
                 var isDown = false
 

@@ -97,6 +97,9 @@ public final class TranscriptionEngine: ObservableObject {
     @Published public private(set) var silenceCountdown: Double? = nil
 
     public var canUndoLastHistoryRemoval: Bool { history.canRestoreLastRemovedItem }
+    /// True when a dictation was pasted into a target app and hasn't been undone (or
+    /// superseded by a newer dictation) yet. Drives the "Undo Last Dictation" button/hotkey.
+    public var canUndoLastDictation: Bool { dictationUndoManager.canUndoLastDictation }
     public var canRetryLastUtterance: Bool {
         AppSettings.shared.enableAccuracyRetry &&
         lastUtteranceSnapshot?.hasAudio == true &&
@@ -121,6 +124,7 @@ public final class TranscriptionEngine: ObservableObject {
     private let commandProcessor = CommandProcessor()
     public let customCommandsManager = CustomCommandsManager()
     public let appInsertionOverridesManager = AppInsertionOverridesManager()
+    private let dictationUndoManager: DictationUndoPerforming = DictationUndoManager()
     
     /// Global input monitor.
     private var inputMonitor: InputMonitor?
@@ -1184,6 +1188,15 @@ public final class TranscriptionEngine: ObservableObject {
         case .pastedToActiveApp:
             resultFeedback = .pastedToActiveApp(modified: preparedResult.wasModified)
             onToast?(.outputInserted)
+            if let undoContext = deliveryDecision.undoContext {
+                dictationUndoManager.record(
+                    DictationUndoRecord(
+                        focusSnapshot: pendingFocusSnapshot,
+                        context: undoContext,
+                        timestamp: Date()
+                    )
+                )
+            }
         case .copiedOnly(let reason):
             resultFeedback = .copiedOnlySensitiveContext(modified: preparedResult.wasModified, reason: reason)
             onToast?(.clipboardFallback(reason: reason))
@@ -1319,6 +1332,38 @@ public final class TranscriptionEngine: ObservableObject {
 
         statusText = NSLocalizedString("Restored previous entry", comment: "")
         resultFeedback = .restoredPreviousHistory
+    }
+
+    /// Reverses the most recently pasted dictation directly in the target app — without
+    /// touching its clipboard or its own undo stack. See `DictationUndoManager` for the
+    /// verification strategies this goes through before it will actually delete anything.
+    public func undoLastDictation() {
+        switch dictationUndoManager.undoLastDictation() {
+        case .undone:
+            statusText = NSLocalizedString("Dictation undone", comment: "")
+            resultFeedback = .dictationUndone
+            onToast?(.dictationUndone)
+        case .nothingToUndo:
+            statusText = NSLocalizedString("Nothing to undo", comment: "")
+            let reason = "No recent dictation to undo."
+            resultFeedback = .dictationUndoUnavailable(reason: reason)
+            onToast?(.dictationUndoUnavailable(reason: reason))
+        case .focusChanged:
+            statusText = NSLocalizedString("Couldn't undo", comment: "")
+            let reason = "The focused field changed since that dictation was inserted."
+            resultFeedback = .dictationUndoUnavailable(reason: reason)
+            onToast?(.dictationUndoUnavailable(reason: reason))
+        case .contentChanged:
+            statusText = NSLocalizedString("Couldn't undo", comment: "")
+            let reason = "That field's content changed since the dictation was inserted."
+            resultFeedback = .dictationUndoUnavailable(reason: reason)
+            onToast?(.dictationUndoUnavailable(reason: reason))
+        case .cannotVerify:
+            statusText = NSLocalizedString("Couldn't undo", comment: "")
+            let reason = "Couldn't confirm the target field via Accessibility."
+            resultFeedback = .dictationUndoUnavailable(reason: reason)
+            onToast?(.dictationUndoUnavailable(reason: reason))
+        }
     }
 
     public func retryLastUtteranceInAccuracyMode() {

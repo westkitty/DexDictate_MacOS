@@ -25,9 +25,42 @@ public enum OutputDelivery: Equatable {
 
 public struct OutputDeliveryDecision: Equatable {
     public let delivery: OutputDelivery
+    /// Populated only when `delivery == .pastedToActiveApp`; carries what's needed to
+    /// reverse this specific insertion later via `DictationUndoManager`. `nil` when nothing
+    /// was actually inserted, or `undoContext` fields are `nil` when Accessibility couldn't
+    /// read the relevant state for this particular field.
+    public let undoContext: DictationUndoContext?
 
-    public init(delivery: OutputDelivery) {
+    public init(delivery: OutputDelivery, undoContext: DictationUndoContext? = nil) {
         self.delivery = delivery
+        self.undoContext = undoContext
+    }
+}
+
+/// Everything needed to reverse a single successful insertion later. Captured at delivery
+/// time because the target field's pre-insertion value and cursor position can't be
+/// reconstructed after the fact — once anything else happens in that field, they're gone.
+public struct DictationUndoContext: Equatable {
+    /// The exact text this delivery actually inserted (after auto-spacing).
+    public let insertedText: String
+    /// Full field value immediately before insertion, when readable via Accessibility.
+    /// `nil` when the field didn't expose a readable `kAXValueAttribute` at delivery time.
+    public let previousFieldValue: String?
+    /// Range inside `previousFieldValue` that `insertedText` replaced (usually zero-length,
+    /// at the cursor; non-zero when replacing a selection or an entire field).
+    public let replacementRange: NSRange?
+    public let targetApplication: OutputTargetApplication?
+
+    public init(
+        insertedText: String,
+        previousFieldValue: String?,
+        replacementRange: NSRange?,
+        targetApplication: OutputTargetApplication?
+    ) {
+        self.insertedText = insertedText
+        self.previousFieldValue = previousFieldValue
+        self.replacementRange = replacementRange
+        self.targetApplication = targetApplication
     }
 }
 
@@ -218,21 +251,61 @@ public struct OutputCoordinator: OutputCoordinating {
         }
 
         if insertionMode == .replaceFieldWithClipboardPaste {
+            let fieldSnapshot = bestEffortFieldSnapshot()
             writer.selectAllAndPaste(text, targetApplication: targetApplication)
-            return OutputDeliveryDecision(delivery: .pastedToActiveApp)
+            let replacementRange = fieldSnapshot.value.map { NSRange(location: 0, length: ($0 as NSString).length) }
+            return OutputDeliveryDecision(
+                delivery: .pastedToActiveApp,
+                undoContext: DictationUndoContext(
+                    insertedText: text,
+                    previousFieldValue: fieldSnapshot.value,
+                    replacementRange: replacementRange,
+                    targetApplication: targetApplication
+                )
+            )
         }
 
         let outputText = textWithAutoSpacing(text)
 
         if insertionMode == .accessibilityAPI,
            canAttemptDirectAccessibilityInsertion(for: targetApplication) {
-            if insertViaAccessibility(outputText) {
-                return OutputDeliveryDecision(delivery: .pastedToActiveApp)
+            let attempt = insertViaAccessibility(outputText)
+            if attempt.succeeded {
+                return OutputDeliveryDecision(
+                    delivery: .pastedToActiveApp,
+                    undoContext: DictationUndoContext(
+                        insertedText: outputText,
+                        previousFieldValue: attempt.previousValue,
+                        replacementRange: attempt.replacementRange,
+                        targetApplication: targetApplication
+                    )
+                )
             }
         }
 
+        let fieldSnapshot = bestEffortFieldSnapshot()
         writer.copyAndPaste(outputText, targetApplication: targetApplication)
-        return OutputDeliveryDecision(delivery: .pastedToActiveApp)
+        return OutputDeliveryDecision(
+            delivery: .pastedToActiveApp,
+            undoContext: DictationUndoContext(
+                insertedText: outputText,
+                previousFieldValue: fieldSnapshot.value,
+                replacementRange: fieldSnapshot.selectedRange,
+                targetApplication: targetApplication
+            )
+        )
+    }
+
+    /// Best-effort, read-only Accessibility snapshot of the focused field's value and
+    /// selection, taken immediately before a clipboard-based insertion. Never affects
+    /// delivery behavior — only feeds `DictationUndoContext` for later undo. Returns `nil`
+    /// values (not an error) when no focused element exists or its value isn't readable.
+    private func bestEffortFieldSnapshot() -> (value: String?, selectedRange: NSRange?) {
+        guard let element = axOperator.focusedElement() else { return (nil, nil) }
+        return (
+            axOperator.getString(kAXValueAttribute as CFString, element: element),
+            axOperator.getSelectedRange(element: element)
+        )
     }
 
     /// Prepends a space to `text` when it's about to be inserted immediately after a
@@ -264,22 +337,35 @@ public struct OutputCoordinator: OutputCoordinating {
         return " " + text
     }
 
+    /// Outcome of `insertViaAccessibility`, including the pre-insertion state needed to
+    /// reverse it later. `previousValue`/`replacementRange` are best-effort reads taken up
+    /// front and may be populated even when `succeeded` is `false`; callers should ignore
+    /// them in that case.
+    private struct AccessibilityInsertionAttempt {
+        let succeeded: Bool
+        let previousValue: String?
+        let replacementRange: NSRange?
+    }
+
     /// Attempts to insert text at the current cursor position via the Accessibility API.
     /// Preflights each attribute with `AXUIElementIsAttributeSettable` before attempting
     /// a set, and logs each failed strategy with the returned `AXError`.
-    /// Returns `true` if any strategy succeeded.
-    private func insertViaAccessibility(_ text: String) -> Bool {
+    private func insertViaAccessibility(_ text: String) -> AccessibilityInsertionAttempt {
         guard let element = axOperator.focusedElement() else {
             Safety.log("insertViaAccessibility() — no focused AX element", category: .output)
-            return false
+            return AccessibilityInsertionAttempt(succeeded: false, previousValue: nil, replacementRange: nil)
         }
+
+        // Read up front — read-only, and needed for undo bookkeeping regardless of which
+        // strategy (if any) below actually succeeds.
+        let currentValue = axOperator.getString(kAXValueAttribute as CFString, element: element)
+        let selectedRange = axOperator.getSelectedRange(element: element)
 
         let valueSettable = axOperator.isSettable(kAXValueAttribute as CFString, element: element)
 
         // Strategy 1: replace the selected range inside the full value
         if valueSettable {
-            if let currentValue = axOperator.getString(kAXValueAttribute as CFString, element: element),
-               let selectedRange = axOperator.getSelectedRange(element: element) {
+            if let currentValue, let selectedRange {
                 let updatedValue = replacingText(in: currentValue, selectedRange: selectedRange, with: text)
                 let result = axOperator.set(updatedValue as CFTypeRef, for: kAXValueAttribute as CFString, element: element)
                 if result == .success {
@@ -287,7 +373,7 @@ public struct OutputCoordinator: OutputCoordinating {
                         location: selectedRange.location + accessibilityCharacterCount(text),
                         element: element
                     )
-                    return true
+                    return AccessibilityInsertionAttempt(succeeded: true, previousValue: currentValue, replacementRange: selectedRange)
                 }
                 Safety.log("insertViaAccessibility() — strategy 1 (value+range) failed: AXError \(result.rawValue)", category: .output)
             } else {
@@ -305,14 +391,16 @@ public struct OutputCoordinator: OutputCoordinating {
         let selectedTextSettable = axOperator.isSettable(kAXSelectedTextAttribute as CFString, element: element)
         if selectedTextSettable {
             let result = axOperator.set(text as CFTypeRef, for: kAXSelectedTextAttribute as CFString, element: element)
-            if result == .success { return true }
+            if result == .success {
+                return AccessibilityInsertionAttempt(succeeded: true, previousValue: currentValue, replacementRange: selectedRange)
+            }
             Safety.log("insertViaAccessibility() — strategy 2 (selectedText) failed: AXError \(result.rawValue)", category: .output)
         } else {
             Safety.log("insertViaAccessibility() — strategy 2 (selectedText) skipped: attribute not settable", category: .output)
         }
 
         Safety.log("insertViaAccessibility() — both strategies failed; falling back to clipboard paste", category: .output)
-        return false
+        return AccessibilityInsertionAttempt(succeeded: false, previousValue: nil, replacementRange: nil)
     }
 
     /// Returns `true` when it actually called `activate()` — i.e. the target existed, wasn't
@@ -378,11 +466,19 @@ public struct OutputCoordinator: OutputCoordinating {
     }
 
     private func replacingText(in currentValue: String, selectedRange: NSRange, with replacement: String) -> String {
-        let currentNSString = currentValue as NSString
-        let maxLocation = currentNSString.length
-        let clampedLocation = min(max(0, selectedRange.location), maxLocation)
-        let clampedLength = min(max(0, selectedRange.length), maxLocation - clampedLocation)
-        let clampedRange = NSRange(location: clampedLocation, length: clampedLength)
-        return currentNSString.replacingCharacters(in: clampedRange, with: replacement)
+        accessibilityReplacingText(in: currentValue, range: selectedRange, with: replacement)
     }
+}
+
+/// Splices `replacement` into `currentValue` at `range`, clamping the range to the string's
+/// bounds. Shared by `OutputCoordinator.insertViaAccessibility` (performing an insertion) and
+/// `DictationUndoManager` (verifying/reversing one), so both sides of an insert/undo pair
+/// agree on exactly the same substitution semantics.
+func accessibilityReplacingText(in currentValue: String, range: NSRange, with replacement: String) -> String {
+    let currentNSString = currentValue as NSString
+    let maxLocation = currentNSString.length
+    let clampedLocation = min(max(0, range.location), maxLocation)
+    let clampedLength = min(max(0, range.length), maxLocation - clampedLocation)
+    let clampedRange = NSRange(location: clampedLocation, length: clampedLength)
+    return currentNSString.replacingCharacters(in: clampedRange, with: replacement)
 }

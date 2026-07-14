@@ -181,6 +181,16 @@ struct ControlsView: View {
                             .accessibilityLabel("Restore the most recently removed history entry")
                         }
 
+                        if engine.canUndoLastDictation {
+                            Button("Undo Last Dictation") {
+                                undoLastDictation()
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                            .accessibilityLabel("Remove the most recently inserted dictation from the active app")
+                            .help("Removes the last dictation from the target app without touching its clipboard or undo history.")
+                        }
+
                         if engine.canRetryLastUtterance {
                             Button("Retry with Higher Quality") {
                                 retryLastUtterance()
@@ -295,6 +305,12 @@ struct ControlsView: View {
     private func undoLastHistoryRemoval() {
         MainActorAction.run {
             engine.undoLastHistoryRemoval()
+        }
+    }
+
+    private func undoLastDictation() {
+        MainActorAction.run {
+            engine.undoLastDictation()
         }
     }
 
