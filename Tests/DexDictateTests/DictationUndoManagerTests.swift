@@ -12,7 +12,7 @@ final class DictationUndoManagerTests: XCTestCase {
     // override instead of the production default, depending on which test happens to run first.
     private static var defaultBackspaceSimulator: (Int, pid_t?) -> Void = { _, _ in }
 
-    override class func setUp() {
+    override static func setUp() {
         super.setUp()
         defaultBackspaceSimulator = DictationUndoManager.backspaceSimulator
     }

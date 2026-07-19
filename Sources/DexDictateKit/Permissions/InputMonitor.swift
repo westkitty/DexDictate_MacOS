@@ -82,18 +82,7 @@ final class InputMonitor {
 
                 let shortcut = AppSettings.shared.userShortcut
 
-                // Fixed global shortcut for "Undo Last Dictation" — Control+Option+Command+Z.
-                // Not user-configurable (unlike the main trigger shortcut above) since it's a
-                // secondary, rarely-used action; chosen specifically to avoid colliding with
-                // any app's own Cmd+Z / Shift+Cmd+Z undo/redo. Skipped when the user's own
-                // trigger shortcut happens to be this exact combination, so it doesn't starve
-                // the main trigger of its keydown.
-                let undoComboMatchesMainTrigger =
-                    Int64(shortcut.keyCode ?? 0) == InputMonitor.undoDictationKeyCode &&
-                    shortcut.modifiers == InputMonitor.undoDictationModifierMask
-                if type == .keyDown, !undoComboMatchesMainTrigger,
-                   event.getIntegerValueField(.keyboardEventKeycode) == InputMonitor.undoDictationKeyCode,
-                   (event.flags.rawValue & InputMonitor.undoDictationModifierMask) == InputMonitor.undoDictationModifierMask {
+                if InputMonitor.isUndoDictationShortcut(type: type, event: event, mainShortcut: shortcut) {
                     MainActorDispatch.async {
                         monitor.engine?.undoLastDictation()
                     }
@@ -203,5 +192,24 @@ final class InputMonitor {
         CFMachPortInvalidate(eventTap)
         self.runLoopSource = nil
         self.eventTap = nil
+    }
+
+    /// True if `type`/`event` is a keydown of the fixed "Undo Last Dictation" shortcut
+    /// (Control+Option+Command+Z) — chosen specifically to avoid colliding with any app's own
+    /// Cmd+Z / Shift+Cmd+Z undo/redo. Not user-configurable (unlike `mainShortcut`) since it's
+    /// a secondary, rarely-used action. Returns `false` when `mainShortcut` happens to be this
+    /// exact combination, so this fixed shortcut never starves the main trigger of its keydown.
+    private static func isUndoDictationShortcut(
+        type: CGEventType, event: CGEvent, mainShortcut: AppSettings.UserShortcut
+    ) -> Bool {
+        guard type == .keyDown else { return false }
+        let mainTriggerIsSameCombo =
+            Int64(mainShortcut.keyCode ?? 0) == undoDictationKeyCode &&
+            mainShortcut.modifiers == undoDictationModifierMask
+        guard !mainTriggerIsSameCombo,
+              event.getIntegerValueField(.keyboardEventKeycode) == undoDictationKeyCode else {
+            return false
+        }
+        return (event.flags.rawValue & undoDictationModifierMask) == undoDictationModifierMask
     }
 }
