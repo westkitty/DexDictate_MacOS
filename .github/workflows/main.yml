@@ -30,6 +30,21 @@ jobs:
       - name: Strict lint against committed baseline
         run: swiftlint lint --strict --baseline .swiftlint-baseline.json
 
+      # TEMPORARY — regenerates a full baseline from HEAD with the pinned SwiftLint binary so
+      # it can be downloaded and diffed against the committed one, to correct entries whose
+      # line numbers shifted from unrelated code changes. Removed once that's done; not meant
+      # to stay in the workflow.
+      - name: TEMP - regenerate baseline for inspection
+        if: always()
+        run: swiftlint lint --strict --write-baseline /tmp/regenerated-baseline.json || true
+
+      - name: TEMP - upload regenerated baseline
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: regenerated-swiftlint-baseline
+          path: /tmp/regenerated-baseline.json
+
       - name: SwiftLint gate regression test
         run: bash scripts/test_swiftlint_gate.sh
 
