@@ -69,6 +69,7 @@
     ".build/checkouts/SwiftWhisper/whisper.cpp/README.md",
     ".build/checkouts/SwiftWhisper/whisper.cpp/samples/README.md",
     ".build/DexDictate.app/Contents/Info.plist",
+    ".build/local-install/DexDictate.app/Contents/Info.plist",
     ".venv_mlx_audio/lib/python3.13/site-packages/mlx/include/metal_cpp/README.md",
     ".venv_mlx_audio/lib/python3.13/site-packages/mlx_whisper/requirements.txt",
     ".venv_mlx_audio/lib/python3.13/site-packages/numpy/_core/tests/examples/cython/setup.py",
@@ -252,14 +253,14 @@
     "available": true,
     "branch": "speech-engine-exploration-benchmarks",
     "dirty": true,
-    "head": "da31ba4f813a8dd26b78285da082685b50752cb7",
-    "head_subject": "fix: bring Experimental UI to parity with Classic for transcription features",
+    "head": "474dd3df7e5fc7c7ba9bc5d41f669fd3be8bcbe2",
+    "head_subject": "chore(release): prepare DexDictate 1.8.0",
     "is_repo": true,
     "remote_url": "git@github.com:westkitty/DexDictate_MacOS.git",
     "repo_root": "/Users/andrew/DexDictate_MacOS.nosync",
     "staged_count": 1,
     "tracked_modified_count": 4,
-    "untracked_count": 0
+    "untracked_count": 3
   },
   "identity": {
     "name": "DexDictate_MacOS.nosync",
@@ -280,9 +281,14 @@
     "Validate the project with the hinted test command: swift test",
     "Validate the project with the hinted build command: ./build.sh"
   ],
-  "scan_timestamp": "2026-07-05T04:31:53+00:00",
+  "scan_timestamp": "2026-07-13T21:01:47+00:00",
   "scanner_version": "1.1.0",
   "secret_risks": [
+    {
+      "category": "openai_sk_prefix",
+      "line": 295,
+      "path": "DexDictate_Fable5_Assessment_Packet.md"
+    },
     {
       "category": "api_key",
       "line": 4,
@@ -5992,6 +5998,141 @@
       "category": "bearer_token",
       "line": 127,
       "path": "tools/whisperkit_sidecar/.build/checkouts/WhisperKit/Sources/ArgmaxCore/External/Hub/Downloader.swift"
+    },
+    {
+      "category": "openai_sk_prefix",
+      "line": 13,
+      "path": "Tests/DexDictateTests/NemotronDirectManagerDiagnosticTests.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 60,
+      "path": "Tests/DexDictateTests/SmartCleanupTests.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 70,
+      "path": "Tests/DexDictateTests/SmartCleanupTests.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 78,
+      "path": "Tests/DexDictateTests/SmartCleanupTests.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 87,
+      "path": "Tests/DexDictateTests/SmartCleanupTests.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 99,
+      "path": "Tests/DexDictateTests/SmartCleanupTests.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 114,
+      "path": "Tests/DexDictateTests/SmartCleanupTests.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 124,
+      "path": "Tests/DexDictateTests/SmartCleanupTests.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 49,
+      "path": "docs/bug_sweeps/opus_deep_sweep/RISK_REGISTER.md"
+    },
+    {
+      "category": "api_key",
+      "line": 175,
+      "path": "docs/bug_sweeps/post_campaign_bug_sweep/BUG_LEDGER.md"
+    },
+    {
+      "category": "openai_sk_prefix",
+      "line": 266,
+      "path": "docs/bug_fixes/nemotron_activation_and_live_transcription.md"
+    },
+    {
+      "category": "openai_sk_prefix",
+      "line": 49,
+      "path": "Sources/DexDictateKit/Transcription/AppleSpeechTranscriptionProvider.swift"
+    },
+    {
+      "category": "openai_sk_prefix",
+      "line": 174,
+      "path": "Sources/DexDictateKit/Transcription/NemotronTranscriptionProvider.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 20,
+      "path": "Sources/DexDictateKit/SmartCleanup/SmartCleanupSettings.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 146,
+      "path": "Sources/DexDictateKit/SmartCleanup/SmartCleanupCoordinator.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 173,
+      "path": "Sources/DexDictateKit/SmartCleanup/SmartCleanupCoordinator.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 40,
+      "path": "Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 56,
+      "path": "Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 81,
+      "path": "Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 85,
+      "path": "Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 107,
+      "path": "Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 112,
+      "path": "Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 137,
+      "path": "Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 149,
+      "path": "Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 109,
+      "path": "Sources/DexDictate/SettingsWindow/SmartCleanupPage.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 200,
+      "path": "Sources/DexDictate/SettingsWindow/SmartCleanupPage.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 215,
+      "path": "Sources/DexDictate/SettingsWindow/SmartCleanupPage.swift"
     },
     {
       "category": "openai_sk_prefix",

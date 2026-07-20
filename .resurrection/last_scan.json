@@ -3,14 +3,14 @@
     "available": true,
     "branch": "speech-engine-exploration-benchmarks",
     "dirty": true,
-    "head": "da31ba4f813a8dd26b78285da082685b50752cb7",
-    "head_subject": "fix: bring Experimental UI to parity with Classic for transcription features",
+    "head": "474dd3df7e5fc7c7ba9bc5d41f669fd3be8bcbe2",
+    "head_subject": "chore(release): prepare DexDictate 1.8.0",
     "is_repo": true,
     "remote_url": "git@github.com:westkitty/DexDictate_MacOS.git",
     "repo_root": "/Users/andrew/DexDictate_MacOS.nosync",
     "staged_count": 1,
     "tracked_modified_count": 4,
-    "untracked_count": 0
+    "untracked_count": 3
   },
   "identity": {
     "name": "DexDictate_MacOS.nosync",
@@ -31,16 +31,16 @@
     "Validate the project with the hinted test command: swift test",
     "Validate the project with the hinted build command: ./build.sh"
   ],
-  "scan_timestamp": "2026-07-05T04:31:53+00:00",
+  "scan_timestamp": "2026-07-13T21:01:47+00:00",
   "scanner_version": "1.1.0",
   "signature": {
     "git_dirty": {
       "dirty": true,
       "staged_count": 1,
       "tracked_modified_count": 4,
-      "untracked_count": 0
+      "untracked_count": 3
     },
-    "git_head": "da31ba4f813a8dd26b78285da082685b50752cb7",
+    "git_head": "474dd3df7e5fc7c7ba9bc5d41f669fd3be8bcbe2",
     "project_type": "swift_package",
     "scanner_version": "1.1.0",
     "watched_files": {
@@ -250,13 +250,13 @@
         "size": 147
       },
       "Package.swift": {
-        "mtime_ns": 1783203138925339097,
-        "sha256": "c619e5850602b5aeafd3810bee5dcdb28da035876811a80a1e9d1fae9902ec11",
-        "size": 2752
+        "mtime_ns": 1783833625723806809,
+        "sha256": "75d530253c3145a4c047d4f2eb5408f843da1becfc883bdfcaf559370ae03642",
+        "size": 2867
       },
       "README.md": {
-        "mtime_ns": 1781833168622768503,
-        "sha256": "feada5b5816059276e38d5de40206b4b64d5dc7745a71d173a9603964ceefb56",
+        "mtime_ns": 1783973853567893973,
+        "sha256": "02f009c4aff22d420459e55797442d43a3bedf23c9f2e9377850688fe1752b40",
         "size": 9487
       },
       "SNAPSHOT/Package.swift": {
@@ -275,9 +275,9 @@
         "size": 4362
       },
       "build.sh": {
-        "mtime_ns": 1781831566348535983,
-        "sha256": "b0e7cb9fbec44f424fcddc2fe094eed86fd8549491c87203caa81b4856b61284",
-        "size": 9253
+        "mtime_ns": 1783858365823400782,
+        "sha256": "3347a2407c3395e60e6f6f02d71f07a415a14047b255afad086fc817af29d3d4",
+        "size": 22208
       },
       "docs/README.md": {
         "mtime_ns": 1781663663835562922,

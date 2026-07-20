@@ -9,7 +9,7 @@ Read this handoff and project_report.md first.
 
 ## Current Git State
 - Repo root: /Users/andrew/DexDictate_MacOS.nosync | Branch: speech-engine-exploration-benchmarks | Status: dirty | Remote: git@github.com:westkitty/DexDictate_MacOS.git
-- Latest commit: da31ba4f813a8dd26b78285da082685b50752cb7 fix: bring Experimental UI to parity with Classic for transcription features
+- Latest commit: 474dd3df7e5fc7c7ba9bc5d41f669fd3be8bcbe2 chore(release): prepare DexDictate 1.8.0
 
 ## Detected Project Type
 - Type: swift_package
@@ -69,6 +69,7 @@ Read this handoff and project_report.md first.
 - .build/checkouts/SwiftWhisper/whisper.cpp/README.md
 - .build/checkouts/SwiftWhisper/whisper.cpp/samples/README.md
 - .build/DexDictate.app/Contents/Info.plist
+- .build/local-install/DexDictate.app/Contents/Info.plist
 - .venv_mlx_audio/lib/python3.13/site-packages/mlx/include/metal_cpp/README.md
 - .venv_mlx_audio/lib/python3.13/site-packages/mlx_whisper/requirements.txt
 - .venv_mlx_audio/lib/python3.13/site-packages/numpy/_core/tests/examples/cython/setup.py
@@ -255,6 +256,7 @@ Read this handoff and project_report.md first.
 - templates
 
 ## Secret-Risk Warning Summary
+- DexDictate_Fable5_Assessment_Packet.md:295 (openai_sk_prefix)
 - .build/checkouts/SwiftWhisper/whisper.cpp/examples/talk-llama/eleven-labs.py:4 (api_key)
 - .build/checkouts/SwiftWhisper/whisper.cpp/examples/talk-llama/eleven-labs.py:5 (api_key)
 - .build/checkouts/SwiftWhisper/whisper.cpp/examples/talk/eleven-labs.py:4 (api_key)
@@ -1397,6 +1399,33 @@ Read this handoff and project_report.md first.
 - tools/whisperkit_sidecar/.build/checkouts/WhisperKit/Examples/ServeCLIClient/Python/test_translate.py:109 (api_key)
 - tools/whisperkit_sidecar/.build/checkouts/WhisperKit/Examples/ServeCLIClient/Python/whisperkit_client.py:25 (api_key)
 - tools/whisperkit_sidecar/.build/checkouts/WhisperKit/Sources/ArgmaxCore/External/Hub/Downloader.swift:127 (bearer_token)
+- Tests/DexDictateTests/NemotronDirectManagerDiagnosticTests.swift:13 (openai_sk_prefix)
+- Tests/DexDictateTests/SmartCleanupTests.swift:60 (api_key)
+- Tests/DexDictateTests/SmartCleanupTests.swift:70 (api_key)
+- Tests/DexDictateTests/SmartCleanupTests.swift:78 (api_key)
+- Tests/DexDictateTests/SmartCleanupTests.swift:87 (api_key)
+- Tests/DexDictateTests/SmartCleanupTests.swift:99 (api_key)
+- Tests/DexDictateTests/SmartCleanupTests.swift:114 (api_key)
+- Tests/DexDictateTests/SmartCleanupTests.swift:124 (api_key)
+- docs/bug_sweeps/opus_deep_sweep/RISK_REGISTER.md:49 (api_key)
+- docs/bug_sweeps/post_campaign_bug_sweep/BUG_LEDGER.md:175 (api_key)
+- docs/bug_fixes/nemotron_activation_and_live_transcription.md:266 (openai_sk_prefix)
+- Sources/DexDictateKit/Transcription/AppleSpeechTranscriptionProvider.swift:49 (openai_sk_prefix)
+- Sources/DexDictateKit/Transcription/NemotronTranscriptionProvider.swift:174 (openai_sk_prefix)
+- Sources/DexDictateKit/SmartCleanup/SmartCleanupSettings.swift:20 (api_key)
+- Sources/DexDictateKit/SmartCleanup/SmartCleanupCoordinator.swift:146 (api_key)
+- Sources/DexDictateKit/SmartCleanup/SmartCleanupCoordinator.swift:173 (api_key)
+- Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift:40 (api_key)
+- Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift:56 (api_key)
+- Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift:81 (api_key)
+- Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift:85 (api_key)
+- Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift:107 (api_key)
+- Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift:112 (api_key)
+- Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift:137 (api_key)
+- Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift:149 (api_key)
+- Sources/DexDictate/SettingsWindow/SmartCleanupPage.swift:109 (api_key)
+- Sources/DexDictate/SettingsWindow/SmartCleanupPage.swift:200 (api_key)
+- Sources/DexDictate/SettingsWindow/SmartCleanupPage.swift:215 (api_key)
 - .venv_mlx_audio/lib/python3.13/site-packages/packaging/licenses/_spdx.py:721 (openai_sk_prefix)
 - .venv_mlx_audio/lib/python3.13/site-packages/packaging/licenses/_spdx.py:722 (openai_sk_prefix)
 - .venv_mlx_audio/lib/python3.13/site-packages/httpcore/_models.py:510 (password_assignment)

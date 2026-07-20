@@ -44,6 +44,7 @@
 .build/checkouts/SwiftWhisper/whisper.cpp/README.md
 .build/checkouts/SwiftWhisper/whisper.cpp/samples/README.md
 .build/DexDictate.app/Contents/Info.plist
+.build/local-install/DexDictate.app/Contents/Info.plist
 .venv_mlx_audio/lib/python3.13/site-packages/mlx/include/metal_cpp/README.md
 .venv_mlx_audio/lib/python3.13/site-packages/mlx_whisper/requirements.txt
 .venv_mlx_audio/lib/python3.13/site-packages/numpy/_core/tests/examples/cython/setup.py
