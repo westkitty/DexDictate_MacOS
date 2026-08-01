@@ -3,14 +3,14 @@
     "available": true,
     "branch": "speech-engine-exploration-benchmarks",
     "dirty": true,
-    "head": "474dd3df7e5fc7c7ba9bc5d41f669fd3be8bcbe2",
-    "head_subject": "chore(release): prepare DexDictate 1.8.0",
+    "head": "55e65de8f2a4593a3cc34d12ac00f4a2ffaa1283",
+    "head_subject": "docs: add DexDictate UI/UX recovery handoff",
     "is_repo": true,
     "remote_url": "git@github.com:westkitty/DexDictate_MacOS.git",
     "repo_root": "/Users/andrew/DexDictate_MacOS.nosync",
     "staged_count": 1,
     "tracked_modified_count": 4,
-    "untracked_count": 3
+    "untracked_count": 0
   },
   "identity": {
     "name": "DexDictate_MacOS.nosync",
@@ -31,16 +31,16 @@
     "Validate the project with the hinted test command: swift test",
     "Validate the project with the hinted build command: ./build.sh"
   ],
-  "scan_timestamp": "2026-07-13T21:01:47+00:00",
+  "scan_timestamp": "2026-07-20T01:41:13+00:00",
   "scanner_version": "1.1.0",
   "signature": {
     "git_dirty": {
       "dirty": true,
       "staged_count": 1,
       "tracked_modified_count": 4,
-      "untracked_count": 3
+      "untracked_count": 0
     },
-    "git_head": "474dd3df7e5fc7c7ba9bc5d41f669fd3be8bcbe2",
+    "git_head": "55e65de8f2a4593a3cc34d12ac00f4a2ffaa1283",
     "project_type": "swift_package",
     "scanner_version": "1.1.0",
     "watched_files": {
@@ -228,6 +228,466 @@
         "mtime_ns": 1783215352337491495,
         "sha256": "eb3b7a263325e658e9292ce1c94c488919b656d32b941454c0c707750406ddc1",
         "size": 1174
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/FluidAudio/AGENTS.md": {
+        "mtime_ns": 1783979126350699070,
+        "sha256": "fce1db984c9a2178acebd7e5b02e31c5e8d6e84499a464d419da2c1f83832e27",
+        "size": 2571
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/FluidAudio/Documentation/README.md": {
+        "mtime_ns": 1783979126359562176,
+        "sha256": "54b24e7e1b7da25b2f4589e2df28fb293556bdd2808760c06fb05c5216696f21",
+        "size": 1495
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/FluidAudio/Package.swift": {
+        "mtime_ns": 1783979126377006440,
+        "sha256": "36d2646a51fdd8a042fa046c7350502db613821435748f86b487244d15ea77ff",
+        "size": 1479
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/FluidAudio/README.md": {
+        "mtime_ns": 1783979126377589167,
+        "sha256": "363cf035d372d1d54733ca593e108f49fea5a239103c66165cf16ae2cc7be981",
+        "size": 40755
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/FluidAudio/Scripts/nemo_ami_benchmark/README.md": {
+        "mtime_ns": 1783979126378617501,
+        "sha256": "fc7aa1d02192d077c95bcbe23a560836dcd6ec27c110995a3e82b12c82d80974",
+        "size": 5996
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/FluidAudio/Scripts/voice_cloning/README.md": {
+        "mtime_ns": 1783979126380059777,
+        "sha256": "94958d176caf74f6367a24755666f82aa392d937d5344058774739948f3722c9",
+        "size": 1904
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/FluidAudio/Sources/FastClusterWrapper/README.md": {
+        "mtime_ns": 1783979126380758208,
+        "sha256": "4223805976b2517270f4c16709f8df00eb192f0e7075f71a72b4245e5e4a049c",
+        "size": 2151
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/FluidAudio/Sources/FluidAudioCLI/README.md": {
+        "mtime_ns": 1783979126444523879,
+        "sha256": "762783eb9757c3431b7d48f7bf723da54612b9dd3a2c471838e5f2a4f38b71c0",
+        "size": 6774
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/Package.swift": {
+        "mtime_ns": 1783979126681922767,
+        "sha256": "11268a9233b9375729bbad5f39a4d01fe0e410455c999cbc1b91fddcf5329a08",
+        "size": 1114
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/README.md": {
+        "mtime_ns": 1783979126682097385,
+        "sha256": "770190c993ae6c6a113c737cf364a27e024ae923bd0f5e60846f89466ceb63ae",
+        "size": 5157
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/README.md": {
+        "mtime_ns": 1783979147850877221,
+        "sha256": "1362f2610c711121f30468d9c4c5081bd017b720c2ec22a60ea17ea5f501d52b",
+        "size": 29618
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/bindings/go/README.md": {
+        "mtime_ns": 1783979147851858849,
+        "sha256": "482666727cb2386d206c9d10ec3cddbab5f4de460267b7818472a521ecfb1026",
+        "size": 2821
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/bindings/ios/Package.swift": {
+        "mtime_ns": 1783979149330601677,
+        "sha256": "04eef00d51ace28d782c02f81ccfa221a9be335c33c2e50bd956208924c18e83",
+        "size": 519
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/bindings/ios/README.md": {
+        "mtime_ns": 1783979149330713839,
+        "sha256": "05d22896f0ab2ab59c1cce09025a2b81a5b1f644bb6bf90ac43a006aa12b7b54",
+        "size": 828
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/bindings/javascript/README.md": {
+        "mtime_ns": 1783979147859877279,
+        "sha256": "cc83b13ffa4efd7ece6e098cf0973a0819ff01e83554c5c31fa5c6a78d522cf4",
+        "size": 2547
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/bindings/javascript/package.json": {
+        "mtime_ns": 1783979147860468131,
+        "sha256": "411c6f32bc77ac7dfda05f071ce5d2df3e324d2e6825fcf409b7943b2c294bfc",
+        "size": 600
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/addon.node/README.md": {
+        "mtime_ns": 1783979147867396980,
+        "sha256": "701f8de0d463bfc93d8780cb35f7764ee52a8fb96ba309dbb68e46e8378dce9a",
+        "size": 1001
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/addon.node/package.json": {
+        "mtime_ns": 1783979147868107369,
+        "sha256": "e962c3f1350478eeb6dc7a6bd258e651a60d553006dc7509aa8adcc3333b3ad3",
+        "size": 288
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/bench.wasm/README.md": {
+        "mtime_ns": 1783979147868504853,
+        "sha256": "268b5825e73ee587c040ed953b2a9cd1b3f2624b79226885093e48c63539d1ad",
+        "size": 502
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/bench/README.md": {
+        "mtime_ns": 1783979147869397984,
+        "sha256": "0675f060f04ad1aafdd0de98d4aa55ac673aac6226b2c73a321e4b5f25cbdfa2",
+        "size": 1978
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/command.wasm/README.md": {
+        "mtime_ns": 1783979147871033711,
+        "sha256": "297c3037c11c2d963ee6b6179b06db504283186bb54298fbcb602d9a31b168b0",
+        "size": 585
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/command/README.md": {
+        "mtime_ns": 1783979147872303743,
+        "sha256": "066a5753b24050435ec4b284c792081aaadfc97ecaa15a68c3ba384668e0fe8c",
+        "size": 1766
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/main/README.md": {
+        "mtime_ns": 1783979147875743857,
+        "sha256": "83a7b24f2bed3204926d17d9022aea80fe2ca3285174042a41ac23c40750f939",
+        "size": 2711
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/quantize/README.md": {
+        "mtime_ns": 1783979147876624946,
+        "sha256": "c6b131f7cfbabe17c9cf46056153325d44759d0f82b52ec9837be475997f7327",
+        "size": 75
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/stream.wasm/README.md": {
+        "mtime_ns": 1783979147877233672,
+        "sha256": "be1d487d80737cac2f1188ba6fd329d6df53ef10750ca0ec9d4af3a29a22509a",
+        "size": 443
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/stream/README.md": {
+        "mtime_ns": 1783979147877961810,
+        "sha256": "1dd425cdeef70dc8703db42cdac75d66cc21ff489f7dacda1666e1b40b54d9e7",
+        "size": 1589
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/talk-llama/README.md": {
+        "mtime_ns": 1783979147878645533,
+        "sha256": "d431f7432098caa651ab07b3b8559f47acd0d591d0748f46461c35e51b1ddc53",
+        "size": 2458
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/talk.wasm/README.md": {
+        "mtime_ns": 1783979147880805447,
+        "sha256": "5e55691b4bbae49daed8a66b3a78e9a76a56829f142f64472d48bb011b776fb3",
+        "size": 3341
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/talk/README.md": {
+        "mtime_ns": 1783979147881932985,
+        "sha256": "c6fc1d34fee81667a57314f366fea041af71352ae703577b0906d47db15adea0",
+        "size": 1292
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.android/README.md": {
+        "mtime_ns": 1783979147884171605,
+        "sha256": "d5f21c58873eb598b223949e4a55b509973af88d0ddcdccc73f579fa5fbf5672",
+        "size": 973
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.nvim/README.md": {
+        "mtime_ns": 1783979147893443902,
+        "sha256": "5eafde947a0d22f89a5f17a62814c426b892ea2220f45cddce635c2bb39987b8",
+        "size": 3766
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.objc/README.md": {
+        "mtime_ns": 1783979147893801846,
+        "sha256": "fef1843658aedce6624ecb30a5e39875feb49cf11d65bc93c29a5f663414d05b",
+        "size": 1742
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.swiftui/README.md": {
+        "mtime_ns": 1783979147896871391,
+        "sha256": "6daef71edabc716ec0dcee21368b27b1d131b58b6f638c32508f52a07cdadffa",
+        "size": 1410
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.wasm/README.md": {
+        "mtime_ns": 1783979147901094806,
+        "sha256": "00af20f4bda4ff185e79e6376c91ee59433a0238cd9c8341a93ece0bff7b8645",
+        "size": 1802
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/models/README.md": {
+        "mtime_ns": 1783979147908639173,
+        "sha256": "0934876d85e0877ed5bc483b7a9b2d8322d5b79d18fe8662751a252c7bc21df5",
+        "size": 3785
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/samples/README.md": {
+        "mtime_ns": 1783979147923305006,
+        "sha256": "9a790f7c4375fb71f7d55e5e004883f1e84c376c70ee298b5547a518747611fe",
+        "size": 367
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/moonshine-swift/Package.swift": {
+        "mtime_ns": 1783979126159966035,
+        "sha256": "eb3b7a263325e658e9292ce1c94c488919b656d32b941454c0c707750406ddc1",
+        "size": 1174
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/Package.swift": {
+        "mtime_ns": 1783978164197438920,
+        "sha256": "75d530253c3145a4c047d4f2eb5408f843da1becfc883bdfcaf559370ae03642",
+        "size": 2867
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/README.md": {
+        "mtime_ns": 1783978164198046777,
+        "sha256": "88c6511159299a04cda74ac13c554cfd63fc173c061d5999870772feaf4763d8",
+        "size": 9487
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/benchmark_samples/benchmark_corpus_mixed_v1_2/README.md": {
+        "mtime_ns": 1783978167381102453,
+        "sha256": "4af7916c6951c999e33d398e75ddc9ce451ee56197b1f0e782f91966644a4422",
+        "size": 4362
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/build.sh": {
+        "mtime_ns": 1783978167576837986,
+        "sha256": "3347a2407c3395e60e6f6f02d71f07a415a14047b255afad086fc817af29d3d4",
+        "size": 22208
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/docs/README.md": {
+        "mtime_ns": 1783978167586391279,
+        "sha256": "9d07d6132b35341cb9645ca207fac93d5b0c3516878e440da7834c52bef92af8",
+        "size": 1526
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/docs/speech_engine_exploration/README.md": {
+        "mtime_ns": 1783978167720007123,
+        "sha256": "b9e9904f8156f5c1b5c71443fc2bfc761bf33f3855075f4c76c9c25bad0d767a",
+        "size": 14327
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/tools/mlx_audio_sidecar/README.md": {
+        "mtime_ns": 1783978167737220265,
+        "sha256": "37279e85e697285f72116817b3d92c4d0f22babec625880c926877ef31500170",
+        "size": 2595
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/tools/speech_swift_sidecar/Package.swift": {
+        "mtime_ns": 1783978167738817924,
+        "sha256": "1e2622ad171cde13a2490794e3e834137c239ddbce7bfe1569abba73bb2ba5ae",
+        "size": 1604
+      },
+      ".claude/worktrees/dexdictate-repo-maintenance-5b1322/tools/whisperkit_sidecar/Package.swift": {
+        "mtime_ns": 1783978167739806811,
+        "sha256": "724aaf9b1dd281b4570b45c2dcd31bb6f66f9d18561dc1a64c0dfe4ed2f8996e",
+        "size": 1216
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/FluidAudio/AGENTS.md": {
+        "mtime_ns": 1784000161607701899,
+        "sha256": "fce1db984c9a2178acebd7e5b02e31c5e8d6e84499a464d419da2c1f83832e27",
+        "size": 2571
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/FluidAudio/Documentation/README.md": {
+        "mtime_ns": 1784000161634613288,
+        "sha256": "54b24e7e1b7da25b2f4589e2df28fb293556bdd2808760c06fb05c5216696f21",
+        "size": 1495
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/FluidAudio/Package.swift": {
+        "mtime_ns": 1784000161685583811,
+        "sha256": "36d2646a51fdd8a042fa046c7350502db613821435748f86b487244d15ea77ff",
+        "size": 1479
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/FluidAudio/README.md": {
+        "mtime_ns": 1784000161686643266,
+        "sha256": "363cf035d372d1d54733ca593e108f49fea5a239103c66165cf16ae2cc7be981",
+        "size": 40755
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/FluidAudio/Scripts/nemo_ami_benchmark/README.md": {
+        "mtime_ns": 1784000161688691220,
+        "sha256": "fc7aa1d02192d077c95bcbe23a560836dcd6ec27c110995a3e82b12c82d80974",
+        "size": 5996
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/FluidAudio/Scripts/voice_cloning/README.md": {
+        "mtime_ns": 1784000161691505766,
+        "sha256": "94958d176caf74f6367a24755666f82aa392d937d5344058774739948f3722c9",
+        "size": 1904
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/FluidAudio/Sources/FastClusterWrapper/README.md": {
+        "mtime_ns": 1784000161693364477,
+        "sha256": "4223805976b2517270f4c16709f8df00eb192f0e7075f71a72b4245e5e4a049c",
+        "size": 2151
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/FluidAudio/Sources/FluidAudioCLI/README.md": {
+        "mtime_ns": 1784000161895860506,
+        "sha256": "762783eb9757c3431b7d48f7bf723da54612b9dd3a2c471838e5f2a4f38b71c0",
+        "size": 6774
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/Package.swift": {
+        "mtime_ns": 1784000139402927160,
+        "sha256": "11268a9233b9375729bbad5f39a4d01fe0e410455c999cbc1b91fddcf5329a08",
+        "size": 1114
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/README.md": {
+        "mtime_ns": 1784000139403279562,
+        "sha256": "770190c993ae6c6a113c737cf364a27e024ae923bd0f5e60846f89466ceb63ae",
+        "size": 5157
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/README.md": {
+        "mtime_ns": 1784000158493288440,
+        "sha256": "1362f2610c711121f30468d9c4c5081bd017b720c2ec22a60ea17ea5f501d52b",
+        "size": 29618
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/bindings/go/README.md": {
+        "mtime_ns": 1784000158496092111,
+        "sha256": "482666727cb2386d206c9d10ec3cddbab5f4de460267b7818472a521ecfb1026",
+        "size": 2821
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/bindings/ios/Package.swift": {
+        "mtime_ns": 1784000160625972564,
+        "sha256": "04eef00d51ace28d782c02f81ccfa221a9be335c33c2e50bd956208924c18e83",
+        "size": 519
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/bindings/ios/README.md": {
+        "mtime_ns": 1784000160626179139,
+        "sha256": "05d22896f0ab2ab59c1cce09025a2b81a5b1f644bb6bf90ac43a006aa12b7b54",
+        "size": 828
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/bindings/javascript/README.md": {
+        "mtime_ns": 1784000158522107663,
+        "sha256": "cc83b13ffa4efd7ece6e098cf0973a0819ff01e83554c5c31fa5c6a78d522cf4",
+        "size": 2547
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/bindings/javascript/package.json": {
+        "mtime_ns": 1784000158523269863,
+        "sha256": "411c6f32bc77ac7dfda05f071ce5d2df3e324d2e6825fcf409b7943b2c294bfc",
+        "size": 600
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/addon.node/README.md": {
+        "mtime_ns": 1784000158546095218,
+        "sha256": "701f8de0d463bfc93d8780cb35f7764ee52a8fb96ba309dbb68e46e8378dce9a",
+        "size": 1001
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/addon.node/package.json": {
+        "mtime_ns": 1784000158549549737,
+        "sha256": "e962c3f1350478eeb6dc7a6bd258e651a60d553006dc7509aa8adcc3333b3ad3",
+        "size": 288
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/bench.wasm/README.md": {
+        "mtime_ns": 1784000158550743935,
+        "sha256": "268b5825e73ee587c040ed953b2a9cd1b3f2624b79226885093e48c63539d1ad",
+        "size": 502
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/bench/README.md": {
+        "mtime_ns": 1784000158553418654,
+        "sha256": "0675f060f04ad1aafdd0de98d4aa55ac673aac6226b2c73a321e4b5f25cbdfa2",
+        "size": 1978
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/command.wasm/README.md": {
+        "mtime_ns": 1784000158556525146,
+        "sha256": "297c3037c11c2d963ee6b6179b06db504283186bb54298fbcb602d9a31b168b0",
+        "size": 585
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/command/README.md": {
+        "mtime_ns": 1784000158557571893,
+        "sha256": "066a5753b24050435ec4b284c792081aaadfc97ecaa15a68c3ba384668e0fe8c",
+        "size": 1766
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/main/README.md": {
+        "mtime_ns": 1784000158565835997,
+        "sha256": "83a7b24f2bed3204926d17d9022aea80fe2ca3285174042a41ac23c40750f939",
+        "size": 2711
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/quantize/README.md": {
+        "mtime_ns": 1784000158569040401,
+        "sha256": "c6b131f7cfbabe17c9cf46056153325d44759d0f82b52ec9837be475997f7327",
+        "size": 75
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/stream.wasm/README.md": {
+        "mtime_ns": 1784000158570582085,
+        "sha256": "be1d487d80737cac2f1188ba6fd329d6df53ef10750ca0ec9d4af3a29a22509a",
+        "size": 443
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/stream/README.md": {
+        "mtime_ns": 1784000158572798990,
+        "sha256": "1dd425cdeef70dc8703db42cdac75d66cc21ff489f7dacda1666e1b40b54d9e7",
+        "size": 1589
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/talk-llama/README.md": {
+        "mtime_ns": 1784000158574582080,
+        "sha256": "d431f7432098caa651ab07b3b8559f47acd0d591d0748f46461c35e51b1ddc53",
+        "size": 2458
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/talk.wasm/README.md": {
+        "mtime_ns": 1784000158581701650,
+        "sha256": "5e55691b4bbae49daed8a66b3a78e9a76a56829f142f64472d48bb011b776fb3",
+        "size": 3341
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/talk/README.md": {
+        "mtime_ns": 1784000158585997757,
+        "sha256": "c6fc1d34fee81667a57314f366fea041af71352ae703577b0906d47db15adea0",
+        "size": 1292
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.android/README.md": {
+        "mtime_ns": 1784000158592423649,
+        "sha256": "d5f21c58873eb598b223949e4a55b509973af88d0ddcdccc73f579fa5fbf5672",
+        "size": 973
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.nvim/README.md": {
+        "mtime_ns": 1784000158616628986,
+        "sha256": "5eafde947a0d22f89a5f17a62814c426b892ea2220f45cddce635c2bb39987b8",
+        "size": 3766
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.objc/README.md": {
+        "mtime_ns": 1784000158617687857,
+        "sha256": "fef1843658aedce6624ecb30a5e39875feb49cf11d65bc93c29a5f663414d05b",
+        "size": 1742
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.swiftui/README.md": {
+        "mtime_ns": 1784000158625314031,
+        "sha256": "6daef71edabc716ec0dcee21368b27b1d131b58b6f638c32508f52a07cdadffa",
+        "size": 1410
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.wasm/README.md": {
+        "mtime_ns": 1784000158640131937,
+        "sha256": "00af20f4bda4ff185e79e6376c91ee59433a0238cd9c8341a93ece0bff7b8645",
+        "size": 1802
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/models/README.md": {
+        "mtime_ns": 1784000158659435151,
+        "sha256": "0934876d85e0877ed5bc483b7a9b2d8322d5b79d18fe8662751a252c7bc21df5",
+        "size": 3785
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/samples/README.md": {
+        "mtime_ns": 1784000158718804731,
+        "sha256": "9a790f7c4375fb71f7d55e5e004883f1e84c376c70ee298b5547a518747611fe",
+        "size": 367
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/moonshine-swift/Package.swift": {
+        "mtime_ns": 1784000162705020863,
+        "sha256": "eb3b7a263325e658e9292ce1c94c488919b656d32b941454c0c707750406ddc1",
+        "size": 1174
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/Package.swift": {
+        "mtime_ns": 1784001381630320978,
+        "sha256": "75d530253c3145a4c047d4f2eb5408f843da1becfc883bdfcaf559370ae03642",
+        "size": 2867
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/README.md": {
+        "mtime_ns": 1783999502378346586,
+        "sha256": "88c6511159299a04cda74ac13c554cfd63fc173c061d5999870772feaf4763d8",
+        "size": 9487
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/benchmark_samples/benchmark_corpus_mixed_v1_2/README.md": {
+        "mtime_ns": 1783999508447405704,
+        "sha256": "4af7916c6951c999e33d398e75ddc9ce451ee56197b1f0e782f91966644a4422",
+        "size": 4362
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/build.sh": {
+        "mtime_ns": 1783999508774011663,
+        "sha256": "3347a2407c3395e60e6f6f02d71f07a415a14047b255afad086fc817af29d3d4",
+        "size": 22208
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/docs/README.md": {
+        "mtime_ns": 1783999508782939322,
+        "sha256": "9d07d6132b35341cb9645ca207fac93d5b0c3516878e440da7834c52bef92af8",
+        "size": 1526
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/docs/speech_engine_exploration/README.md": {
+        "mtime_ns": 1783999509060156106,
+        "sha256": "b9e9904f8156f5c1b5c71443fc2bfc761bf33f3855075f4c76c9c25bad0d767a",
+        "size": 14327
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/tools/mlx_audio_sidecar/README.md": {
+        "mtime_ns": 1783999509079251413,
+        "sha256": "37279e85e697285f72116817b3d92c4d0f22babec625880c926877ef31500170",
+        "size": 2595
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/tools/speech_swift_sidecar/Package.swift": {
+        "mtime_ns": 1783999509080823887,
+        "sha256": "1e2622ad171cde13a2490794e3e834137c239ddbce7bfe1569abba73bb2ba5ae",
+        "size": 1604
+      },
+      ".claude/worktrees/unwanted-popup-hud-b9226d/tools/whisperkit_sidecar/Package.swift": {
+        "mtime_ns": 1783999509081672684,
+        "sha256": "724aaf9b1dd281b4570b45c2dcd31bb6f66f9d18561dc1a64c0dfe4ed2f8996e",
+        "size": 1216
       },
       ".venv_mlx_audio/lib/python3.13/site-packages/mlx/include/metal_cpp/README.md": {
         "mtime_ns": 1781840507028862559,

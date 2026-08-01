@@ -70,6 +70,99 @@
     ".build/checkouts/SwiftWhisper/whisper.cpp/samples/README.md",
     ".build/DexDictate.app/Contents/Info.plist",
     ".build/local-install/DexDictate.app/Contents/Info.plist",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/artifacts/moonshine-swift/Moonshine/Moonshine.xcframework/Info.plist",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/FluidAudio/AGENTS.md",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/FluidAudio/Documentation/README.md",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/FluidAudio/README.md",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/FluidAudio/Scripts/nemo_ami_benchmark/README.md",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/FluidAudio/Scripts/voice_cloning/README.md",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/FluidAudio/Sources/FastClusterWrapper/README.md",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/FluidAudio/Sources/FluidAudioCLI/README.md",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/README.md",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/bindings/go/README.md",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/bindings/ios/README.md",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/bindings/javascript/package.json",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/bindings/javascript/README.md",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/addon.node/package.json",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/addon.node/README.md",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/bench.wasm/README.md",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/bench/README.md",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/command.wasm/README.md",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/command/README.md",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/main/README.md",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/quantize/README.md",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/stream.wasm/README.md",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/stream/README.md",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/talk-llama/README.md",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/talk.wasm/README.md",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/talk/README.md",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.android/README.md",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.nvim/README.md",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.objc/README.md",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.objc/whisper.objc.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.objc/whisper.objc/Info.plist",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.swiftui/README.md",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.swiftui/whisper.swiftui.demo/Supporting files/WhisperCppDemo.entitlements",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.swiftui/whisper.swiftui.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.wasm/README.md",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/models/README.md",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/README.md",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/samples/README.md",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/benchmark_samples/benchmark_corpus_mixed_v1_2/README.md",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/build.sh",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/docs/README.md",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/docs/speech_engine_exploration/README.md",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/README.md",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/Sources/DexDictate/DexDictate.entitlements",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/Sources/DexDictate/Info.plist",
+    ".claude/worktrees/dexdictate-repo-maintenance-5b1322/tools/mlx_audio_sidecar/README.md",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/artifacts/moonshine-swift/Moonshine/Moonshine.xcframework/Info.plist",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/FluidAudio/AGENTS.md",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/FluidAudio/Documentation/README.md",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/FluidAudio/README.md",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/FluidAudio/Scripts/nemo_ami_benchmark/README.md",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/FluidAudio/Scripts/voice_cloning/README.md",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/FluidAudio/Sources/FastClusterWrapper/README.md",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/FluidAudio/Sources/FluidAudioCLI/README.md",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/README.md",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/bindings/go/README.md",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/bindings/ios/README.md",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/bindings/javascript/package.json",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/bindings/javascript/README.md",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/addon.node/package.json",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/addon.node/README.md",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/bench.wasm/README.md",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/bench/README.md",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/command.wasm/README.md",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/command/README.md",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/main/README.md",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/quantize/README.md",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/stream.wasm/README.md",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/stream/README.md",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/talk-llama/README.md",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/talk.wasm/README.md",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/talk/README.md",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.android/README.md",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.nvim/README.md",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.objc/README.md",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.objc/whisper.objc.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.objc/whisper.objc/Info.plist",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.swiftui/README.md",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.swiftui/whisper.swiftui.demo/Supporting files/WhisperCppDemo.entitlements",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.swiftui/whisper.swiftui.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.wasm/README.md",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/models/README.md",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/README.md",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/samples/README.md",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/.build/DexDictate.app/Contents/Info.plist",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/benchmark_samples/benchmark_corpus_mixed_v1_2/README.md",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/build.sh",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/docs/README.md",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/docs/speech_engine_exploration/README.md",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/README.md",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/Sources/DexDictate/DexDictate.entitlements",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/Sources/DexDictate/Info.plist",
+    ".claude/worktrees/unwanted-popup-hud-b9226d/tools/mlx_audio_sidecar/README.md",
     ".venv_mlx_audio/lib/python3.13/site-packages/mlx/include/metal_cpp/README.md",
     ".venv_mlx_audio/lib/python3.13/site-packages/mlx_whisper/requirements.txt",
     ".venv_mlx_audio/lib/python3.13/site-packages/numpy/_core/tests/examples/cython/setup.py",
@@ -87,7 +180,6 @@
     "Sources/DexDictate/DexDictate.entitlements",
     "Sources/DexDictate/Info.plist",
     "tools/mlx_audio_sidecar/README.md",
-    "tools/speech_swift_sidecar/.build/arm64-apple-macosx/release/speech-swift-benchmark.dSYM/Contents/Info.plist",
     "tools/speech_swift_sidecar/.build/artifacts/speech-swift/CSpeechCore/SpeechCore.xcframework/Info.plist",
     "tools/speech_swift_sidecar/.build/checkouts/async-http-client/Examples/README.md",
     "tools/speech_swift_sidecar/.build/checkouts/async-http-client/README.md",
@@ -230,7 +322,6 @@
     "tools/speech_swift_sidecar/.build/checkouts/yyjson/test/xctest/Info.plist",
     "tools/speech_swift_sidecar/.build/plugins/cache/GenerateDoccReference.dSYM/Contents/Info.plist",
     "tools/speech_swift_sidecar/.build/plugins/cache/GenerateManual.dSYM/Contents/Info.plist",
-    "tools/whisperkit_sidecar/.build/arm64-apple-macosx/release/whisperkit-transcribe.dSYM/Contents/Info.plist",
     "tools/whisperkit_sidecar/.build/checkouts/swift-argument-parser/CHANGELOG.md",
     "tools/whisperkit_sidecar/.build/checkouts/swift-argument-parser/README.md",
     "tools/whisperkit_sidecar/.build/checkouts/WhisperKit/Examples/ServeCLIClient/Curl/README.md",
@@ -253,14 +344,14 @@
     "available": true,
     "branch": "speech-engine-exploration-benchmarks",
     "dirty": true,
-    "head": "474dd3df7e5fc7c7ba9bc5d41f669fd3be8bcbe2",
-    "head_subject": "chore(release): prepare DexDictate 1.8.0",
+    "head": "55e65de8f2a4593a3cc34d12ac00f4a2ffaa1283",
+    "head_subject": "docs: add DexDictate UI/UX recovery handoff",
     "is_repo": true,
     "remote_url": "git@github.com:westkitty/DexDictate_MacOS.git",
     "repo_root": "/Users/andrew/DexDictate_MacOS.nosync",
     "staged_count": 1,
     "tracked_modified_count": 4,
-    "untracked_count": 3
+    "untracked_count": 0
   },
   "identity": {
     "name": "DexDictate_MacOS.nosync",
@@ -281,7 +372,7 @@
     "Validate the project with the hinted test command: swift test",
     "Validate the project with the hinted build command: ./build.sh"
   ],
-  "scan_timestamp": "2026-07-13T21:01:47+00:00",
+  "scan_timestamp": "2026-07-20T01:41:13+00:00",
   "scanner_version": "1.1.0",
   "secret_risks": [
     {
@@ -6038,6 +6129,326 @@
       "category": "api_key",
       "line": 124,
       "path": "Tests/DexDictateTests/SmartCleanupTests.swift"
+    },
+    {
+      "category": "openai_sk_prefix",
+      "line": 295,
+      "path": ".claude/worktrees/dexdictate-repo-maintenance-5b1322/DexDictate_Fable5_Assessment_Packet.md"
+    },
+    {
+      "category": "api_key",
+      "line": 4,
+      "path": ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/talk-llama/eleven-labs.py"
+    },
+    {
+      "category": "api_key",
+      "line": 5,
+      "path": ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/talk-llama/eleven-labs.py"
+    },
+    {
+      "category": "api_key",
+      "line": 4,
+      "path": ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/talk/eleven-labs.py"
+    },
+    {
+      "category": "api_key",
+      "line": 5,
+      "path": ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/SwiftWhisper/whisper.cpp/examples/talk/eleven-labs.py"
+    },
+    {
+      "category": "openai_sk_prefix",
+      "line": 13,
+      "path": ".claude/worktrees/dexdictate-repo-maintenance-5b1322/Tests/DexDictateTests/NemotronDirectManagerDiagnosticTests.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 60,
+      "path": ".claude/worktrees/dexdictate-repo-maintenance-5b1322/Tests/DexDictateTests/SmartCleanupTests.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 70,
+      "path": ".claude/worktrees/dexdictate-repo-maintenance-5b1322/Tests/DexDictateTests/SmartCleanupTests.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 78,
+      "path": ".claude/worktrees/dexdictate-repo-maintenance-5b1322/Tests/DexDictateTests/SmartCleanupTests.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 87,
+      "path": ".claude/worktrees/dexdictate-repo-maintenance-5b1322/Tests/DexDictateTests/SmartCleanupTests.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 99,
+      "path": ".claude/worktrees/dexdictate-repo-maintenance-5b1322/Tests/DexDictateTests/SmartCleanupTests.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 114,
+      "path": ".claude/worktrees/dexdictate-repo-maintenance-5b1322/Tests/DexDictateTests/SmartCleanupTests.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 124,
+      "path": ".claude/worktrees/dexdictate-repo-maintenance-5b1322/Tests/DexDictateTests/SmartCleanupTests.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 49,
+      "path": ".claude/worktrees/dexdictate-repo-maintenance-5b1322/docs/bug_sweeps/opus_deep_sweep/RISK_REGISTER.md"
+    },
+    {
+      "category": "api_key",
+      "line": 175,
+      "path": ".claude/worktrees/dexdictate-repo-maintenance-5b1322/docs/bug_sweeps/post_campaign_bug_sweep/BUG_LEDGER.md"
+    },
+    {
+      "category": "openai_sk_prefix",
+      "line": 266,
+      "path": ".claude/worktrees/dexdictate-repo-maintenance-5b1322/docs/bug_fixes/nemotron_activation_and_live_transcription.md"
+    },
+    {
+      "category": "openai_sk_prefix",
+      "line": 49,
+      "path": ".claude/worktrees/dexdictate-repo-maintenance-5b1322/Sources/DexDictateKit/Transcription/AppleSpeechTranscriptionProvider.swift"
+    },
+    {
+      "category": "openai_sk_prefix",
+      "line": 174,
+      "path": ".claude/worktrees/dexdictate-repo-maintenance-5b1322/Sources/DexDictateKit/Transcription/NemotronTranscriptionProvider.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 20,
+      "path": ".claude/worktrees/dexdictate-repo-maintenance-5b1322/Sources/DexDictateKit/SmartCleanup/SmartCleanupSettings.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 146,
+      "path": ".claude/worktrees/dexdictate-repo-maintenance-5b1322/Sources/DexDictateKit/SmartCleanup/SmartCleanupCoordinator.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 173,
+      "path": ".claude/worktrees/dexdictate-repo-maintenance-5b1322/Sources/DexDictateKit/SmartCleanup/SmartCleanupCoordinator.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 40,
+      "path": ".claude/worktrees/dexdictate-repo-maintenance-5b1322/Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 56,
+      "path": ".claude/worktrees/dexdictate-repo-maintenance-5b1322/Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 81,
+      "path": ".claude/worktrees/dexdictate-repo-maintenance-5b1322/Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 85,
+      "path": ".claude/worktrees/dexdictate-repo-maintenance-5b1322/Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 107,
+      "path": ".claude/worktrees/dexdictate-repo-maintenance-5b1322/Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 112,
+      "path": ".claude/worktrees/dexdictate-repo-maintenance-5b1322/Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 137,
+      "path": ".claude/worktrees/dexdictate-repo-maintenance-5b1322/Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 149,
+      "path": ".claude/worktrees/dexdictate-repo-maintenance-5b1322/Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 109,
+      "path": ".claude/worktrees/dexdictate-repo-maintenance-5b1322/Sources/DexDictate/SettingsWindow/SmartCleanupPage.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 200,
+      "path": ".claude/worktrees/dexdictate-repo-maintenance-5b1322/Sources/DexDictate/SettingsWindow/SmartCleanupPage.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 215,
+      "path": ".claude/worktrees/dexdictate-repo-maintenance-5b1322/Sources/DexDictate/SettingsWindow/SmartCleanupPage.swift"
+    },
+    {
+      "category": "openai_sk_prefix",
+      "line": 295,
+      "path": ".claude/worktrees/unwanted-popup-hud-b9226d/DexDictate_Fable5_Assessment_Packet.md"
+    },
+    {
+      "category": "api_key",
+      "line": 4,
+      "path": ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/talk-llama/eleven-labs.py"
+    },
+    {
+      "category": "api_key",
+      "line": 5,
+      "path": ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/talk-llama/eleven-labs.py"
+    },
+    {
+      "category": "api_key",
+      "line": 4,
+      "path": ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/talk/eleven-labs.py"
+    },
+    {
+      "category": "api_key",
+      "line": 5,
+      "path": ".claude/worktrees/unwanted-popup-hud-b9226d/.build/checkouts/SwiftWhisper/whisper.cpp/examples/talk/eleven-labs.py"
+    },
+    {
+      "category": "openai_sk_prefix",
+      "line": 13,
+      "path": ".claude/worktrees/unwanted-popup-hud-b9226d/Tests/DexDictateTests/NemotronDirectManagerDiagnosticTests.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 60,
+      "path": ".claude/worktrees/unwanted-popup-hud-b9226d/Tests/DexDictateTests/SmartCleanupTests.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 70,
+      "path": ".claude/worktrees/unwanted-popup-hud-b9226d/Tests/DexDictateTests/SmartCleanupTests.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 78,
+      "path": ".claude/worktrees/unwanted-popup-hud-b9226d/Tests/DexDictateTests/SmartCleanupTests.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 87,
+      "path": ".claude/worktrees/unwanted-popup-hud-b9226d/Tests/DexDictateTests/SmartCleanupTests.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 99,
+      "path": ".claude/worktrees/unwanted-popup-hud-b9226d/Tests/DexDictateTests/SmartCleanupTests.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 114,
+      "path": ".claude/worktrees/unwanted-popup-hud-b9226d/Tests/DexDictateTests/SmartCleanupTests.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 124,
+      "path": ".claude/worktrees/unwanted-popup-hud-b9226d/Tests/DexDictateTests/SmartCleanupTests.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 49,
+      "path": ".claude/worktrees/unwanted-popup-hud-b9226d/docs/bug_sweeps/opus_deep_sweep/RISK_REGISTER.md"
+    },
+    {
+      "category": "api_key",
+      "line": 175,
+      "path": ".claude/worktrees/unwanted-popup-hud-b9226d/docs/bug_sweeps/post_campaign_bug_sweep/BUG_LEDGER.md"
+    },
+    {
+      "category": "openai_sk_prefix",
+      "line": 266,
+      "path": ".claude/worktrees/unwanted-popup-hud-b9226d/docs/bug_fixes/nemotron_activation_and_live_transcription.md"
+    },
+    {
+      "category": "openai_sk_prefix",
+      "line": 49,
+      "path": ".claude/worktrees/unwanted-popup-hud-b9226d/Sources/DexDictateKit/Transcription/AppleSpeechTranscriptionProvider.swift"
+    },
+    {
+      "category": "openai_sk_prefix",
+      "line": 174,
+      "path": ".claude/worktrees/unwanted-popup-hud-b9226d/Sources/DexDictateKit/Transcription/NemotronTranscriptionProvider.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 20,
+      "path": ".claude/worktrees/unwanted-popup-hud-b9226d/Sources/DexDictateKit/SmartCleanup/SmartCleanupSettings.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 146,
+      "path": ".claude/worktrees/unwanted-popup-hud-b9226d/Sources/DexDictateKit/SmartCleanup/SmartCleanupCoordinator.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 173,
+      "path": ".claude/worktrees/unwanted-popup-hud-b9226d/Sources/DexDictateKit/SmartCleanup/SmartCleanupCoordinator.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 40,
+      "path": ".claude/worktrees/unwanted-popup-hud-b9226d/Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 56,
+      "path": ".claude/worktrees/unwanted-popup-hud-b9226d/Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 81,
+      "path": ".claude/worktrees/unwanted-popup-hud-b9226d/Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 85,
+      "path": ".claude/worktrees/unwanted-popup-hud-b9226d/Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 107,
+      "path": ".claude/worktrees/unwanted-popup-hud-b9226d/Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 112,
+      "path": ".claude/worktrees/unwanted-popup-hud-b9226d/Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 137,
+      "path": ".claude/worktrees/unwanted-popup-hud-b9226d/Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 149,
+      "path": ".claude/worktrees/unwanted-popup-hud-b9226d/Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 109,
+      "path": ".claude/worktrees/unwanted-popup-hud-b9226d/Sources/DexDictate/SettingsWindow/SmartCleanupPage.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 200,
+      "path": ".claude/worktrees/unwanted-popup-hud-b9226d/Sources/DexDictate/SettingsWindow/SmartCleanupPage.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 215,
+      "path": ".claude/worktrees/unwanted-popup-hud-b9226d/Sources/DexDictate/SettingsWindow/SmartCleanupPage.swift"
     },
     {
       "category": "api_key",
