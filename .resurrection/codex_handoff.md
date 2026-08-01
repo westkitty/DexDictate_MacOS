@@ -8,8 +8,8 @@ Read this handoff and project_report.md first.
 - Purpose: Purpose could not be inferred confidently from filesystem signals.
 
 ## Current Git State
-- Repo root: /Users/andrew/DexDictate_MacOS.nosync | Branch: speech-engine-exploration-benchmarks | Status: dirty | Remote: git@github.com:westkitty/DexDictate_MacOS.git
-- Latest commit: 55e65de8f2a4593a3cc34d12ac00f4a2ffaa1283 docs: add DexDictate UI/UX recovery handoff
+- Repo root: /Users/andrew/DexDictate_MacOS.nosync | Branch: speech-engine-exploration-benchmarks | Status: clean | Remote: git@github.com:westkitty/DexDictate_MacOS.git
+- Latest commit: 8bef929aec8a4f64411792e6fa68e2b390c33d94 chore(resurrection): refresh project recovery inventory
 
 ## Detected Project Type
 - Type: swift_package
@@ -23,53 +23,6 @@ Read this handoff and project_report.md first.
 - [test] swift test
 
 ## Fragile Files
-- .build/arm64-apple-macosx/debug/DexDictate_MacOS-entitlement.plist
-- .build/arm64-apple-macosx/debug/DexDictate_MacOS.dSYM/Contents/Info.plist
-- .build/arm64-apple-macosx/debug/DexDictate_MacOSPackageTests.xctest/Contents/MacOS/DexDictate_MacOSPackageTests.dSYM/Contents/Info.plist
-- .build/arm64-apple-macosx/debug/VerificationRunner-entitlement.plist
-- .build/arm64-apple-macosx/debug/VerificationRunner.dSYM/Contents/Info.plist
-- .build/arm64-apple-macosx/release/DexDictate_MacOS.dSYM/Contents/Info.plist
-- .build/arm64-apple-macosx/release/VerificationRunner.dSYM/Contents/Info.plist
-- .build/artifacts/moonshine-swift/Moonshine/Moonshine.xcframework/Info.plist
-- .build/checkouts/FluidAudio/AGENTS.md
-- .build/checkouts/FluidAudio/Documentation/README.md
-- .build/checkouts/FluidAudio/README.md
-- .build/checkouts/FluidAudio/Scripts/nemo_ami_benchmark/README.md
-- .build/checkouts/FluidAudio/Scripts/voice_cloning/README.md
-- .build/checkouts/FluidAudio/Sources/FastClusterWrapper/README.md
-- .build/checkouts/FluidAudio/Sources/FluidAudioCLI/README.md
-- .build/checkouts/SwiftWhisper/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/bindings/go/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/bindings/ios/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/bindings/javascript/package.json
-- .build/checkouts/SwiftWhisper/whisper.cpp/bindings/javascript/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/addon.node/package.json
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/addon.node/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/bench.wasm/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/bench/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/command.wasm/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/command/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/main/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/quantize/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/stream.wasm/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/stream/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/talk-llama/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/talk.wasm/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/talk/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.android/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.nvim/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.objc/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.objc/whisper.objc.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.objc/whisper.objc/Info.plist
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.swiftui/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.swiftui/whisper.swiftui.demo/Supporting files/WhisperCppDemo.entitlements
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.swiftui/whisper.swiftui.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.wasm/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/models/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/samples/README.md
-- .build/DexDictate.app/Contents/Info.plist
-- .build/local-install/DexDictate.app/Contents/Info.plist
 - .claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/artifacts/moonshine-swift/Moonshine/Moonshine.xcframework/Info.plist
 - .claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/FluidAudio/AGENTS.md
 - .claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/FluidAudio/Documentation/README.md
@@ -348,10 +301,6 @@ Read this handoff and project_report.md first.
 
 ## Secret-Risk Warning Summary
 - DexDictate_Fable5_Assessment_Packet.md:295 (openai_sk_prefix)
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/talk-llama/eleven-labs.py:4 (api_key)
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/talk-llama/eleven-labs.py:5 (api_key)
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/talk/eleven-labs.py:4 (api_key)
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/talk/eleven-labs.py:5 (api_key)
 - tools/speech_swift_sidecar/.build/checkouts/swift-argument-parser/Sources/ArgumentParser/Documentation.docc/Articles/CustomizingHelp.md:236 (access_token)
 - tools/speech_swift_sidecar/.build/checkouts/swift-metrics/Sources/CoreMetrics/Docs.docc/Proposals/Proposals.md:38 (openai_sk_prefix)
 - tools/speech_swift_sidecar/.build/checkouts/async-http-client/Tests/AsyncHTTPClientTests/HTTPClientTestUtils.swift:360 (private_key)
@@ -1869,11 +1818,11 @@ Read this handoff and project_report.md first.
 - .venv_mlx_audio/lib/python3.13/site-packages/scipy/interpolate/tests/test_bsplines.py:145 (openai_sk_prefix)
 
 ## Top 5 Recommended Next Actions
-1. Inspect the current uncommitted Git changes before making new edits.
-2. Review secret-risk findings and move sensitive values out of tracked files.
-3. Back up or review fragile configuration files before any risky changes.
-4. Validate the project with the hinted test command: swift test
-5. Validate the project with the hinted build command: ./build.sh
+1. Review secret-risk findings and move sensitive values out of tracked files.
+2. Back up or review fragile configuration files before any risky changes.
+3. Validate the project with the hinted test command: swift test
+4. Validate the project with the hinted build command: ./build.sh
+5. Read `.resurrection/project_report.md` and make one bounded change at a time.
 
 ## Strict Codex Instruction Block
 

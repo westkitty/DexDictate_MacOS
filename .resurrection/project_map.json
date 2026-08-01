@@ -23,53 +23,6 @@
     "templates"
   ],
   "fragile_files": [
-    ".build/arm64-apple-macosx/debug/DexDictate_MacOS-entitlement.plist",
-    ".build/arm64-apple-macosx/debug/DexDictate_MacOS.dSYM/Contents/Info.plist",
-    ".build/arm64-apple-macosx/debug/DexDictate_MacOSPackageTests.xctest/Contents/MacOS/DexDictate_MacOSPackageTests.dSYM/Contents/Info.plist",
-    ".build/arm64-apple-macosx/debug/VerificationRunner-entitlement.plist",
-    ".build/arm64-apple-macosx/debug/VerificationRunner.dSYM/Contents/Info.plist",
-    ".build/arm64-apple-macosx/release/DexDictate_MacOS.dSYM/Contents/Info.plist",
-    ".build/arm64-apple-macosx/release/VerificationRunner.dSYM/Contents/Info.plist",
-    ".build/artifacts/moonshine-swift/Moonshine/Moonshine.xcframework/Info.plist",
-    ".build/checkouts/FluidAudio/AGENTS.md",
-    ".build/checkouts/FluidAudio/Documentation/README.md",
-    ".build/checkouts/FluidAudio/README.md",
-    ".build/checkouts/FluidAudio/Scripts/nemo_ami_benchmark/README.md",
-    ".build/checkouts/FluidAudio/Scripts/voice_cloning/README.md",
-    ".build/checkouts/FluidAudio/Sources/FastClusterWrapper/README.md",
-    ".build/checkouts/FluidAudio/Sources/FluidAudioCLI/README.md",
-    ".build/checkouts/SwiftWhisper/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/bindings/go/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/bindings/ios/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/bindings/javascript/package.json",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/bindings/javascript/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/addon.node/package.json",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/addon.node/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/bench.wasm/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/bench/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/command.wasm/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/command/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/main/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/quantize/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/stream.wasm/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/stream/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/talk-llama/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/talk.wasm/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/talk/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.android/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.nvim/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.objc/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.objc/whisper.objc.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.objc/whisper.objc/Info.plist",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.swiftui/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.swiftui/whisper.swiftui.demo/Supporting files/WhisperCppDemo.entitlements",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.swiftui/whisper.swiftui.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.wasm/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/models/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/samples/README.md",
-    ".build/DexDictate.app/Contents/Info.plist",
-    ".build/local-install/DexDictate.app/Contents/Info.plist",
     ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/artifacts/moonshine-swift/Moonshine/Moonshine.xcframework/Info.plist",
     ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/FluidAudio/AGENTS.md",
     ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/FluidAudio/Documentation/README.md",
@@ -343,14 +296,14 @@
   "git_state": {
     "available": true,
     "branch": "speech-engine-exploration-benchmarks",
-    "dirty": true,
-    "head": "55e65de8f2a4593a3cc34d12ac00f4a2ffaa1283",
-    "head_subject": "docs: add DexDictate UI/UX recovery handoff",
+    "dirty": false,
+    "head": "8bef929aec8a4f64411792e6fa68e2b390c33d94",
+    "head_subject": "chore(resurrection): refresh project recovery inventory",
     "is_repo": true,
     "remote_url": "git@github.com:westkitty/DexDictate_MacOS.git",
     "repo_root": "/Users/andrew/DexDictate_MacOS.nosync",
-    "staged_count": 1,
-    "tracked_modified_count": 4,
+    "staged_count": 0,
+    "tracked_modified_count": 0,
     "untracked_count": 0
   },
   "identity": {
@@ -366,39 +319,19 @@
     "type": "swift_package"
   },
   "recommended_next_actions": [
-    "Inspect the current uncommitted Git changes before making new edits.",
     "Review secret-risk findings and move sensitive values out of tracked files.",
     "Back up or review fragile configuration files before any risky changes.",
     "Validate the project with the hinted test command: swift test",
-    "Validate the project with the hinted build command: ./build.sh"
+    "Validate the project with the hinted build command: ./build.sh",
+    "Read `.resurrection/project_report.md` and make one bounded change at a time."
   ],
-  "scan_timestamp": "2026-07-20T01:41:13+00:00",
+  "scan_timestamp": "2026-08-01T01:06:20+00:00",
   "scanner_version": "1.1.0",
   "secret_risks": [
     {
       "category": "openai_sk_prefix",
       "line": 295,
       "path": "DexDictate_Fable5_Assessment_Packet.md"
-    },
-    {
-      "category": "api_key",
-      "line": 4,
-      "path": ".build/checkouts/SwiftWhisper/whisper.cpp/examples/talk-llama/eleven-labs.py"
-    },
-    {
-      "category": "api_key",
-      "line": 5,
-      "path": ".build/checkouts/SwiftWhisper/whisper.cpp/examples/talk-llama/eleven-labs.py"
-    },
-    {
-      "category": "api_key",
-      "line": 4,
-      "path": ".build/checkouts/SwiftWhisper/whisper.cpp/examples/talk/eleven-labs.py"
-    },
-    {
-      "category": "api_key",
-      "line": 5,
-      "path": ".build/checkouts/SwiftWhisper/whisper.cpp/examples/talk/eleven-labs.py"
     },
     {
       "category": "access_token",

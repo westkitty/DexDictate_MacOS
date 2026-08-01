@@ -2,14 +2,14 @@
   "git_state": {
     "available": true,
     "branch": "speech-engine-exploration-benchmarks",
-    "dirty": true,
-    "head": "55e65de8f2a4593a3cc34d12ac00f4a2ffaa1283",
-    "head_subject": "docs: add DexDictate UI/UX recovery handoff",
+    "dirty": false,
+    "head": "8bef929aec8a4f64411792e6fa68e2b390c33d94",
+    "head_subject": "chore(resurrection): refresh project recovery inventory",
     "is_repo": true,
     "remote_url": "git@github.com:westkitty/DexDictate_MacOS.git",
     "repo_root": "/Users/andrew/DexDictate_MacOS.nosync",
-    "staged_count": 1,
-    "tracked_modified_count": 4,
+    "staged_count": 0,
+    "tracked_modified_count": 0,
     "untracked_count": 0
   },
   "identity": {
@@ -25,210 +25,25 @@
     "type": "swift_package"
   },
   "recommended_next_actions": [
-    "Inspect the current uncommitted Git changes before making new edits.",
     "Review secret-risk findings and move sensitive values out of tracked files.",
     "Back up or review fragile configuration files before any risky changes.",
     "Validate the project with the hinted test command: swift test",
-    "Validate the project with the hinted build command: ./build.sh"
+    "Validate the project with the hinted build command: ./build.sh",
+    "Read `.resurrection/project_report.md` and make one bounded change at a time."
   ],
-  "scan_timestamp": "2026-07-20T01:41:13+00:00",
+  "scan_timestamp": "2026-08-01T01:06:20+00:00",
   "scanner_version": "1.1.0",
   "signature": {
     "git_dirty": {
-      "dirty": true,
-      "staged_count": 1,
-      "tracked_modified_count": 4,
+      "dirty": false,
+      "staged_count": 0,
+      "tracked_modified_count": 0,
       "untracked_count": 0
     },
-    "git_head": "55e65de8f2a4593a3cc34d12ac00f4a2ffaa1283",
+    "git_head": "8bef929aec8a4f64411792e6fa68e2b390c33d94",
     "project_type": "swift_package",
     "scanner_version": "1.1.0",
     "watched_files": {
-      ".build/checkouts/FluidAudio/AGENTS.md": {
-        "mtime_ns": 1783215352501371894,
-        "sha256": "fce1db984c9a2178acebd7e5b02e31c5e8d6e84499a464d419da2c1f83832e27",
-        "size": 2571
-      },
-      ".build/checkouts/FluidAudio/Documentation/README.md": {
-        "mtime_ns": 1783215352507984983,
-        "sha256": "54b24e7e1b7da25b2f4589e2df28fb293556bdd2808760c06fb05c5216696f21",
-        "size": 1495
-      },
-      ".build/checkouts/FluidAudio/Package.swift": {
-        "mtime_ns": 1783215352520887420,
-        "sha256": "36d2646a51fdd8a042fa046c7350502db613821435748f86b487244d15ea77ff",
-        "size": 1479
-      },
-      ".build/checkouts/FluidAudio/README.md": {
-        "mtime_ns": 1783215352521104207,
-        "sha256": "363cf035d372d1d54733ca593e108f49fea5a239103c66165cf16ae2cc7be981",
-        "size": 40755
-      },
-      ".build/checkouts/FluidAudio/Scripts/nemo_ami_benchmark/README.md": {
-        "mtime_ns": 1783215352521878146,
-        "sha256": "fc7aa1d02192d077c95bcbe23a560836dcd6ec27c110995a3e82b12c82d80974",
-        "size": 5996
-      },
-      ".build/checkouts/FluidAudio/Scripts/voice_cloning/README.md": {
-        "mtime_ns": 1783215352522579629,
-        "sha256": "94958d176caf74f6367a24755666f82aa392d937d5344058774739948f3722c9",
-        "size": 1904
-      },
-      ".build/checkouts/FluidAudio/Sources/FastClusterWrapper/README.md": {
-        "mtime_ns": 1783215352523128574,
-        "sha256": "4223805976b2517270f4c16709f8df00eb192f0e7075f71a72b4245e5e4a049c",
-        "size": 2151
-      },
-      ".build/checkouts/FluidAudio/Sources/FluidAudioCLI/README.md": {
-        "mtime_ns": 1783215352574752613,
-        "sha256": "762783eb9757c3431b7d48f7bf723da54612b9dd3a2c471838e5f2a4f38b71c0",
-        "size": 6774
-      },
-      ".build/checkouts/SwiftWhisper/Package.swift": {
-        "mtime_ns": 1783215352818857025,
-        "sha256": "11268a9233b9375729bbad5f39a4d01fe0e410455c999cbc1b91fddcf5329a08",
-        "size": 1114
-      },
-      ".build/checkouts/SwiftWhisper/README.md": {
-        "mtime_ns": 1783215352819032229,
-        "sha256": "770190c993ae6c6a113c737cf364a27e024ae923bd0f5e60846f89466ceb63ae",
-        "size": 5157
-      },
-      ".build/checkouts/SwiftWhisper/whisper.cpp/README.md": {
-        "mtime_ns": 1783215375626525018,
-        "sha256": "1362f2610c711121f30468d9c4c5081bd017b720c2ec22a60ea17ea5f501d52b",
-        "size": 29618
-      },
-      ".build/checkouts/SwiftWhisper/whisper.cpp/bindings/go/README.md": {
-        "mtime_ns": 1783215375627639533,
-        "sha256": "482666727cb2386d206c9d10ec3cddbab5f4de460267b7818472a521ecfb1026",
-        "size": 2821
-      },
-      ".build/checkouts/SwiftWhisper/whisper.cpp/bindings/ios/Package.swift": {
-        "mtime_ns": 1783215377354078772,
-        "sha256": "04eef00d51ace28d782c02f81ccfa221a9be335c33c2e50bd956208924c18e83",
-        "size": 519
-      },
-      ".build/checkouts/SwiftWhisper/whisper.cpp/bindings/ios/README.md": {
-        "mtime_ns": 1783215377354184561,
-        "sha256": "05d22896f0ab2ab59c1cce09025a2b81a5b1f644bb6bf90ac43a006aa12b7b54",
-        "size": 828
-      },
-      ".build/checkouts/SwiftWhisper/whisper.cpp/bindings/javascript/README.md": {
-        "mtime_ns": 1783215375633134149,
-        "sha256": "cc83b13ffa4efd7ece6e098cf0973a0819ff01e83554c5c31fa5c6a78d522cf4",
-        "size": 2547
-      },
-      ".build/checkouts/SwiftWhisper/whisper.cpp/bindings/javascript/package.json": {
-        "mtime_ns": 1783215375633653262,
-        "sha256": "411c6f32bc77ac7dfda05f071ce5d2df3e324d2e6825fcf409b7943b2c294bfc",
-        "size": 600
-      },
-      ".build/checkouts/SwiftWhisper/whisper.cpp/examples/addon.node/README.md": {
-        "mtime_ns": 1783215375638778971,
-        "sha256": "701f8de0d463bfc93d8780cb35f7764ee52a8fb96ba309dbb68e46e8378dce9a",
-        "size": 1001
-      },
-      ".build/checkouts/SwiftWhisper/whisper.cpp/examples/addon.node/package.json": {
-        "mtime_ns": 1783215375639334249,
-        "sha256": "e962c3f1350478eeb6dc7a6bd258e651a60d553006dc7509aa8adcc3333b3ad3",
-        "size": 288
-      },
-      ".build/checkouts/SwiftWhisper/whisper.cpp/examples/bench.wasm/README.md": {
-        "mtime_ns": 1783215375639651949,
-        "sha256": "268b5825e73ee587c040ed953b2a9cd1b3f2624b79226885093e48c63539d1ad",
-        "size": 502
-      },
-      ".build/checkouts/SwiftWhisper/whisper.cpp/examples/bench/README.md": {
-        "mtime_ns": 1783215375640355557,
-        "sha256": "0675f060f04ad1aafdd0de98d4aa55ac673aac6226b2c73a321e4b5f25cbdfa2",
-        "size": 1978
-      },
-      ".build/checkouts/SwiftWhisper/whisper.cpp/examples/command.wasm/README.md": {
-        "mtime_ns": 1783215375641677109,
-        "sha256": "297c3037c11c2d963ee6b6179b06db504283186bb54298fbcb602d9a31b168b0",
-        "size": 585
-      },
-      ".build/checkouts/SwiftWhisper/whisper.cpp/examples/command/README.md": {
-        "mtime_ns": 1783215375642276678,
-        "sha256": "066a5753b24050435ec4b284c792081aaadfc97ecaa15a68c3ba384668e0fe8c",
-        "size": 1766
-      },
-      ".build/checkouts/SwiftWhisper/whisper.cpp/examples/main/README.md": {
-        "mtime_ns": 1783215375645069485,
-        "sha256": "83a7b24f2bed3204926d17d9022aea80fe2ca3285174042a41ac23c40750f939",
-        "size": 2711
-      },
-      ".build/checkouts/SwiftWhisper/whisper.cpp/examples/quantize/README.md": {
-        "mtime_ns": 1783215375645796967,
-        "sha256": "c6b131f7cfbabe17c9cf46056153325d44759d0f82b52ec9837be475997f7327",
-        "size": 75
-      },
-      ".build/checkouts/SwiftWhisper/whisper.cpp/examples/stream.wasm/README.md": {
-        "mtime_ns": 1783215375646325371,
-        "sha256": "be1d487d80737cac2f1188ba6fd329d6df53ef10750ca0ec9d4af3a29a22509a",
-        "size": 443
-      },
-      ".build/checkouts/SwiftWhisper/whisper.cpp/examples/stream/README.md": {
-        "mtime_ns": 1783215375646906273,
-        "sha256": "1dd425cdeef70dc8703db42cdac75d66cc21ff489f7dacda1666e1b40b54d9e7",
-        "size": 1589
-      },
-      ".build/checkouts/SwiftWhisper/whisper.cpp/examples/talk-llama/README.md": {
-        "mtime_ns": 1783215375647481051,
-        "sha256": "d431f7432098caa651ab07b3b8559f47acd0d591d0748f46461c35e51b1ddc53",
-        "size": 2458
-      },
-      ".build/checkouts/SwiftWhisper/whisper.cpp/examples/talk.wasm/README.md": {
-        "mtime_ns": 1783215375649287507,
-        "sha256": "5e55691b4bbae49daed8a66b3a78e9a76a56829f142f64472d48bb011b776fb3",
-        "size": 3341
-      },
-      ".build/checkouts/SwiftWhisper/whisper.cpp/examples/talk/README.md": {
-        "mtime_ns": 1783215375650217527,
-        "sha256": "c6fc1d34fee81667a57314f366fea041af71352ae703577b0906d47db15adea0",
-        "size": 1292
-      },
-      ".build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.android/README.md": {
-        "mtime_ns": 1783215375651946443,
-        "sha256": "d5f21c58873eb598b223949e4a55b509973af88d0ddcdccc73f579fa5fbf5672",
-        "size": 973
-      },
-      ".build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.nvim/README.md": {
-        "mtime_ns": 1783215375658988522,
-        "sha256": "5eafde947a0d22f89a5f17a62814c426b892ea2220f45cddce635c2bb39987b8",
-        "size": 3766
-      },
-      ".build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.objc/README.md": {
-        "mtime_ns": 1783215375659337972,
-        "sha256": "fef1843658aedce6624ecb30a5e39875feb49cf11d65bc93c29a5f663414d05b",
-        "size": 1742
-      },
-      ".build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.swiftui/README.md": {
-        "mtime_ns": 1783215375662929301,
-        "sha256": "6daef71edabc716ec0dcee21368b27b1d131b58b6f638c32508f52a07cdadffa",
-        "size": 1410
-      },
-      ".build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.wasm/README.md": {
-        "mtime_ns": 1783215375666889372,
-        "sha256": "00af20f4bda4ff185e79e6376c91ee59433a0238cd9c8341a93ece0bff7b8645",
-        "size": 1802
-      },
-      ".build/checkouts/SwiftWhisper/whisper.cpp/models/README.md": {
-        "mtime_ns": 1783215375672199785,
-        "sha256": "0934876d85e0877ed5bc483b7a9b2d8322d5b79d18fe8662751a252c7bc21df5",
-        "size": 3785
-      },
-      ".build/checkouts/SwiftWhisper/whisper.cpp/samples/README.md": {
-        "mtime_ns": 1783215375684233243,
-        "sha256": "9a790f7c4375fb71f7d55e5e004883f1e84c376c70ee298b5547a518747611fe",
-        "size": 367
-      },
-      ".build/checkouts/moonshine-swift/Package.swift": {
-        "mtime_ns": 1783215352337491495,
-        "sha256": "eb3b7a263325e658e9292ce1c94c488919b656d32b941454c0c707750406ddc1",
-        "size": 1174
-      },
       ".claude/worktrees/dexdictate-repo-maintenance-5b1322/.build/checkouts/FluidAudio/AGENTS.md": {
         "mtime_ns": 1783979126350699070,
         "sha256": "fce1db984c9a2178acebd7e5b02e31c5e8d6e84499a464d419da2c1f83832e27",
