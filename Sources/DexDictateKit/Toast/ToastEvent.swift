@@ -21,6 +21,12 @@ public enum ToastEvent: Equatable, Sendable {
     /// Auto-paste is off — text was saved to history only, no insertion attempted.
     case outputSavedOnly
 
+    /// The most recently inserted dictation was removed from the target app.
+    case dictationUndone
+
+    /// "Undo Last Dictation" was requested but could not be safely performed.
+    case dictationUndoUnavailable(reason: String)
+
     // MARK: - Display
 
     public var label: String {
@@ -35,6 +41,10 @@ public enum ToastEvent: Equatable, Sendable {
             return "Copied to clipboard"
         case .outputSavedOnly:
             return "Saved to history"
+        case .dictationUndone:
+            return "Dictation undone"
+        case .dictationUndoUnavailable:
+            return "Couldn't undo"
         }
     }
 
@@ -48,6 +58,10 @@ public enum ToastEvent: Equatable, Sendable {
             return "doc.on.doc.fill"
         case .outputSavedOnly:
             return "tray.and.arrow.down.fill"
+        case .dictationUndone:
+            return "arrow.uturn.backward.circle.fill"
+        case .dictationUndoUnavailable:
+            return "exclamationmark.arrow.trianglehead.counterclockwise"
         }
     }
 }

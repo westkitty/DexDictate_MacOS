@@ -15,6 +15,8 @@ final class TranscriptionFeedbackTests: XCTestCase {
             "Copied only instead of pasting"
         )
         XCTAssertEqual(TranscriptionFeedback.pastedToActiveApp(modified: false).title, "Pasted into active app")
+        XCTAssertEqual(TranscriptionFeedback.dictationUndone.title, "Dictation undone")
+        XCTAssertEqual(TranscriptionFeedback.dictationUndoUnavailable(reason: "x").title, "Couldn't undo")
     }
 
     func testFeedbackToneMatchesOutcome() {
@@ -29,5 +31,7 @@ final class TranscriptionFeedbackTests: XCTestCase {
             .success
         )
         XCTAssertEqual(TranscriptionFeedback.pastedToActiveApp(modified: true).tone, .success)
+        XCTAssertEqual(TranscriptionFeedback.dictationUndone.tone, .success)
+        XCTAssertEqual(TranscriptionFeedback.dictationUndoUnavailable(reason: "x").tone, .warning)
     }
 }

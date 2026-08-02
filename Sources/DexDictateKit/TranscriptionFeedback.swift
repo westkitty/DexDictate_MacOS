@@ -16,6 +16,8 @@ public enum TranscriptionFeedback: Equatable {
     case savedToHistory(modified: Bool)
     case copiedOnlySensitiveContext(modified: Bool, reason: String)
     case pastedToActiveApp(modified: Bool)
+    case dictationUndone
+    case dictationUndoUnavailable(reason: String)
 
     public var title: String {
         switch self {
@@ -37,6 +39,10 @@ public enum TranscriptionFeedback: Equatable {
             return modified ? "Copied only for secure field" : "Copied only instead of pasting"
         case .pastedToActiveApp(let modified):
             return modified ? "Pasted with changes" : "Pasted into active app"
+        case .dictationUndone:
+            return "Dictation undone"
+        case .dictationUndoUnavailable:
+            return "Couldn't undo"
         }
     }
 
@@ -66,6 +72,10 @@ public enum TranscriptionFeedback: Equatable {
             return modified
                 ? "The result was adjusted locally, then pasted into the active app."
                 : "The result was pasted into the active app."
+        case .dictationUndone:
+            return "The most recently inserted dictation was removed from the target app, without touching its clipboard or undo history."
+        case .dictationUndoUnavailable(let reason):
+            return reason
         }
     }
 
@@ -87,6 +97,10 @@ public enum TranscriptionFeedback: Equatable {
             return "doc.on.doc"
         case .pastedToActiveApp:
             return "doc.on.clipboard"
+        case .dictationUndone:
+            return "arrow.uturn.backward.circle.fill"
+        case .dictationUndoUnavailable:
+            return "exclamationmark.arrow.trianglehead.counterclockwise"
         }
     }
 
@@ -94,9 +108,9 @@ public enum TranscriptionFeedback: Equatable {
         switch self {
         case .idle:
             return .neutral
-        case .noSpeechDetected, .nothingToDelete, .deletedPreviousHistory, .discardedCurrentUtterance:
+        case .noSpeechDetected, .nothingToDelete, .deletedPreviousHistory, .discardedCurrentUtterance, .dictationUndoUnavailable:
             return .warning
-        case .restoredPreviousHistory, .savedToHistory, .copiedOnlySensitiveContext, .pastedToActiveApp:
+        case .restoredPreviousHistory, .savedToHistory, .copiedOnlySensitiveContext, .pastedToActiveApp, .dictationUndone:
             return .success
         }
     }

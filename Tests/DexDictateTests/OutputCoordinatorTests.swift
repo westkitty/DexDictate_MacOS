@@ -624,6 +624,118 @@ final class OutputCoordinatorTests: XCTestCase {
         XCTAssertEqual(decision.delivery, .pastedToActiveApp)
         XCTAssertEqual(writer.pastedTexts, ["Second sentence."])
     }
+
+    // MARK: - Undo context capture
+
+    func testAccessibilityInsertionPopulatesUndoContextForExactRestore() {
+        let writer = MockOutputWriter()
+        let axOperator = MockAccessibilityElementOperator(
+            valueIsSettable: true,
+            selectedTextIsSettable: false,
+            setValueResult: .success,
+            setSelectedTextResult: .failure,
+            existingValue: "First sentence.",
+            selectedRange: NSRange(location: 15, length: 0)
+        )
+        let target = OutputTargetApplication(bundleIdentifier: "com.example.chat", processIdentifier: 4242)
+        let coordinator = OutputCoordinator(
+            writer: writer,
+            contextInspector: MockFocusedContextInspector(context: .standard),
+            applicationActivator: MockApplicationActivator(frontmostProcessIdentifier: 4242),
+            axOperator: axOperator
+        )
+
+        let decision = coordinator.deliver(
+            text: "Second sentence.",
+            autoPaste: true,
+            protectSensitiveContexts: false,
+            insertionMode: .accessibilityAPI,
+            targetApplication: target
+        )
+
+        // The auto-space rule prepends a space here (cursor sits right after "..."), so the
+        // text this delivery actually inserted — and what undo needs to reverse — is
+        // " Second sentence.", not the raw dictated "Second sentence.".
+        XCTAssertEqual(decision.undoContext?.insertedText, " Second sentence.")
+        XCTAssertEqual(decision.undoContext?.previousFieldValue, "First sentence.")
+        XCTAssertEqual(decision.undoContext?.replacementRange, NSRange(location: 15, length: 0))
+        XCTAssertEqual(decision.undoContext?.targetApplication, target)
+    }
+
+    func testClipboardPasteStillPopulatesUndoContextFromBestEffortAXRead() {
+        let writer = MockOutputWriter()
+        let axOperator = MockAccessibilityElementOperator(
+            valueIsSettable: false,
+            selectedTextIsSettable: false,
+            setValueResult: .failure,
+            setSelectedTextResult: .failure,
+            existingValue: "before",
+            selectedRange: NSRange(location: 6, length: 0)
+        )
+        let coordinator = OutputCoordinator(
+            writer: writer,
+            contextInspector: MockFocusedContextInspector(context: .standard),
+            applicationActivator: MockApplicationActivator(),
+            axOperator: axOperator
+        )
+
+        let decision = coordinator.deliver(
+            text: "hello",
+            autoPaste: true,
+            protectSensitiveContexts: false,
+            insertionMode: .clipboardPaste
+        )
+
+        XCTAssertEqual(writer.pastedTexts, ["hello"])
+        XCTAssertEqual(decision.undoContext?.insertedText, "hello")
+        XCTAssertEqual(decision.undoContext?.previousFieldValue, "before")
+        XCTAssertEqual(decision.undoContext?.replacementRange, NSRange(location: 6, length: 0))
+    }
+
+    func testReplaceFieldModePopulatesUndoContextWithFullPreviousValueRange() {
+        let writer = MockOutputWriter()
+        let axOperator = MockAccessibilityElementOperator(
+            valueIsSettable: true,
+            selectedTextIsSettable: false,
+            setValueResult: .success,
+            setSelectedTextResult: .failure,
+            existingValue: "old content",
+            selectedRange: NSRange(location: 3, length: 0)
+        )
+        let coordinator = OutputCoordinator(
+            writer: writer,
+            contextInspector: MockFocusedContextInspector(context: .standard),
+            applicationActivator: MockApplicationActivator(),
+            axOperator: axOperator
+        )
+
+        let decision = coordinator.deliver(
+            text: "replacement",
+            autoPaste: true,
+            protectSensitiveContexts: false,
+            insertionMode: .replaceFieldWithClipboardPaste
+        )
+
+        XCTAssertEqual(writer.selectAllAndPastedTexts, ["replacement"])
+        XCTAssertEqual(decision.undoContext?.insertedText, "replacement")
+        XCTAssertEqual(decision.undoContext?.previousFieldValue, "old content")
+        XCTAssertEqual(decision.undoContext?.replacementRange, NSRange(location: 0, length: 11))
+    }
+
+    func testSavedOnlyAndCopiedOnlyDeliveriesCarryNoUndoContext() {
+        let writer = MockOutputWriter()
+        let coordinator = OutputCoordinator(
+            writer: writer,
+            contextInspector: MockFocusedContextInspector(context: .sensitive(reason: "Detected likely secure input context (password).")),
+            applicationActivator: MockApplicationActivator()
+        )
+
+        let savedOnly = coordinator.deliver(text: "hello", autoPaste: false, protectSensitiveContexts: true)
+        let copiedOnly = coordinator.deliver(text: "secret", autoPaste: true, protectSensitiveContexts: true)
+
+        XCTAssertNil(savedOnly.undoContext)
+        XCTAssertNil(copiedOnly.undoContext)
+    }
 }
 
 private final class MockOutputWriter: OutputWriting {
