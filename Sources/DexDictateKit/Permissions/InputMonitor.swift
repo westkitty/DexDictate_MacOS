@@ -27,6 +27,8 @@ final class InputMonitor {
     /// owns the monitor.
     private weak var engine: TranscriptionEngine?
     private let undoEligibilitySnapshot: DictationUndoEligibilitySnapshot
+    /// Keeps a held or hammered ⌃⌥⌘Z from queueing one "nothing to undo" notice per event.
+    private let undoUnavailableRateLimiter = UndoUnavailableNoticeRateLimiter()
 
     /// True after a successful `CGEvent.tapCreate`. Readable from the main actor
     /// immediately after `start()` returns to determine whether to set engine state
@@ -97,7 +99,8 @@ final class InputMonitor {
                         MainActorDispatch.async { [weak monitor] in
                             monitor?.engine?.undoLastDictation()
                         }
-                    }
+                    },
+                    notifyUnavailable: monitor.scheduleUndoUnavailableNotice
                 )
                 switch undoDisposition {
                 case .consume:
@@ -196,6 +199,16 @@ final class InputMonitor {
         runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
         CFRunLoopAddSource(CFRunLoopGetCurrent(), runLoopSource, .commonModes)
         CGEvent.tapEnable(tap: tap, enable: true)
+    }
+
+    /// Called from the Quartz tap callback when ⌃⌥⌘Z arrives with nothing reversible armed.
+    /// The rate-limit check is a lock-protected timestamp compare, so the callback itself
+    /// stays synchronous and non-blocking; only the feedback hops to the main actor.
+    private func scheduleUndoUnavailableNotice() {
+        guard undoUnavailableRateLimiter.shouldNotify() else { return }
+        MainActorDispatch.async { [weak self] in
+            self?.engine?.reportUndoUnavailableForShortcut()
+        }
     }
 
     /// Disables the event tap and removes its run loop source.

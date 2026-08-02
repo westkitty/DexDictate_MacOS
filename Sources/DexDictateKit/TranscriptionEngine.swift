@@ -125,6 +125,12 @@ public final class TranscriptionEngine: ObservableObject {
     public let appInsertionOverridesManager = AppInsertionOverridesManager()
     // Not `private`: read/written from the TranscriptionEngine+DictationUndo.swift extension.
     let dictationUndoManager: DictationUndoPerforming = DictationUndoManager()
+
+    /// Published mirror of `dictationUndoManager.canUndoLastDictation`, so SwiftUI actually
+    /// re-renders when undo is armed or cleared. The manager stays authoritative — this is
+    /// only ever written by `syncUndoAvailability()` in TranscriptionEngine+DictationUndo.swift
+    /// (hence `internal(set)`: read-only to the app target, writable inside the kit).
+    @Published public internal(set) var canUndoLastDictation: Bool = false
     
     /// Global input monitor.
     private var inputMonitor: InputMonitor?
@@ -321,6 +327,8 @@ public final class TranscriptionEngine: ObservableObject {
         currentRecordingStartedAt = nil
         automaticRetryOriginalText = nil
         whisperService.setInitialPrompt(nil)
+        // Stopping the system invalidates the focus/AX context a pending undo depends on.
+        disarmUndo()
     }
 
     public func rebuildAudioAfterCoreAudioReset() async -> Result<String, Error> {
@@ -1192,8 +1200,11 @@ public final class TranscriptionEngine: ObservableObject {
             insertionMode: resolvedInsertionMode(for: pendingOutputTargetApplication),
             targetApplication: pendingOutputTargetApplication,
             completion: { [weak self] completedDecision in
-                guard let self, self.pendingDeliveryID == deliveryID else { return }
-                self.applyDeliveryDecision(completedDecision, modified: preparedResult.wasModified)
+                self?.applyDeliveryCompletion(
+                    completedDecision,
+                    deliveryID: deliveryID,
+                    modified: preparedResult.wasModified
+                )
             }
         )
         applyDeliveryDecision(deliveryDecision, modified: preparedResult.wasModified)

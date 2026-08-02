@@ -235,7 +235,7 @@ struct QuickSettingsView: View {
                             }
 
                             if showLegacyInputRows {
-                                ShortcutRecorder(shortcut: $settings.userShortcut)
+                                ShortcutRecorder(settings: settings)
                             }
                         }
                     }

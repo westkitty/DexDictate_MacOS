@@ -16,6 +16,11 @@ public struct TriggerShortcutConflict: Equatable {
     public let severity: Severity
     public let message: String
 
+    /// `shadowsUndoLastDictation` is the one conflict the app refuses outright: the undo
+    /// chord is fixed, so a trigger that matches it can never be honoured. The others stay
+    /// advisory — they warn without taking a working trigger away from the user.
+    public var blocksApplication: Bool { severity == .shadowsUndoLastDictation }
+
     public init(severity: Severity, message: String) {
         self.severity = severity
         self.message = message
@@ -111,5 +116,26 @@ public enum TriggerShortcutConflictChecker {
         }
 
         return nil
+    }
+}
+
+/// Outcome of routing a proposed trigger through `AppSettings.applyTriggerShortcut(_:)`.
+public enum TriggerShortcutApplication: Equatable {
+    case applied
+    /// Applied, but the user should see `conflict.message` (advisory severities).
+    case appliedWithWarning(TriggerShortcutConflict)
+    /// Not applied — the stored trigger is unchanged and `conflict.message` must be shown.
+    case rejected(TriggerShortcutConflict)
+
+    public var conflict: TriggerShortcutConflict? {
+        switch self {
+        case .applied: return nil
+        case .appliedWithWarning(let conflict), .rejected(let conflict): return conflict
+        }
+    }
+
+    public var didApply: Bool {
+        if case .rejected = self { return false }
+        return true
     }
 }

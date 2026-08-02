@@ -5,15 +5,47 @@ import Foundation
 /// Reads/writes `dictationUndoManager` and `pendingFocusSnapshot`, both declared internal
 /// (not `private`) in the main file for exactly this reason.
 extension TranscriptionEngine {
-    /// True when a dictation was pasted into a target app and hasn't been undone (or
-    /// superseded by a newer dictation) yet. Drives the "Undo Last Dictation" button/hotkey.
-    public var canUndoLastDictation: Bool { dictationUndoManager.canUndoLastDictation }
+    /// Republishes `canUndoLastDictation` from the authoritative manager. Every mutation of
+    /// the undo record goes through `armUndo`/`disarmUndo`/`undoLastDictation()`, all of
+    /// which end here, so the published value cannot drift from the manager.
+    func syncUndoAvailability() {
+        let available = dictationUndoManager.canUndoLastDictation
+        if canUndoLastDictation != available {
+            canUndoLastDictation = available
+        }
+    }
+
+    /// The only production path that arms undo. Keeps the manager and the published mirror
+    /// in lockstep.
+    private func armUndo(_ record: DictationUndoRecord) {
+        dictationUndoManager.record(record)
+        syncUndoAvailability()
+    }
+
+    /// The only production path that clears undo. Safe to call when nothing is armed.
+    /// Not `private`: `stopSystem()` in TranscriptionEngine.swift invalidates undo too.
+    func disarmUndo() {
+        dictationUndoManager.clear()
+        syncUndoAvailability()
+    }
 
     /// Supersedes both a pending delivery callback and any older undo record as soon as a
     /// later delivery cycle begins, including cycles that are later cancelled or fail.
     func beginDeliveryCycle() {
         pendingDeliveryID = nil
-        dictationUndoManager.clear()
+        disarmUndo()
+    }
+
+    /// Applies a delivery result that arrived asynchronously. A callback from a superseded
+    /// delivery cycle is dropped here rather than being allowed to overwrite feedback or
+    /// undo state belonging to a newer cycle.
+    func applyDeliveryCompletion(
+        _ decision: OutputDeliveryDecision,
+        deliveryID: UUID,
+        modified: Bool
+    ) {
+        guard pendingDeliveryID == deliveryID else { return }
+        applyDeliveryDecision(decision, modified: modified)
     }
 
     /// Applies one delivery result to feedback and the single-slot undo record. Every result
@@ -45,14 +77,14 @@ extension TranscriptionEngine {
     }
 
     private func recordDictationUndoIfNeeded(_ decision: OutputDeliveryDecision) {
-        dictationUndoManager.clear()
+        disarmUndo()
         guard decision.delivery == .pastedToActiveApp,
               let undoContext = decision.undoContext,
               undoContext.previousFieldValue != nil,
               undoContext.replacementRange != nil,
               undoContext.targetElement != nil,
               let pendingFocusSnapshot else { return }
-        dictationUndoManager.record(
+        armUndo(
             DictationUndoRecord(
                 focusSnapshot: pendingFocusSnapshot,
                 context: undoContext,
@@ -65,6 +97,9 @@ extension TranscriptionEngine {
     /// touching its clipboard or its own undo stack. See `DictationUndoManager` for the
     /// verification strategies this goes through before it will actually delete anything.
     public func undoLastDictation() {
+        // `DictationUndoManager` consumes the record one-shot, whatever the outcome, so the
+        // published mirror must be refreshed on every branch below.
+        defer { syncUndoAvailability() }
         switch dictationUndoManager.undoLastDictation() {
         case .undone:
             statusText = NSLocalizedString("Dictation undone", comment: "")
@@ -91,5 +126,18 @@ extension TranscriptionEngine {
             resultFeedback = .dictationUndoUnavailable(reason: reason)
             onToast?(.dictationUndoUnavailable(reason: reason))
         }
+    }
+
+    /// Feedback for the ⌃⌥⌘Z chord arriving while nothing reversible is armed. Deliberately
+    /// does *not* claim an undo failed — nothing was attempted, and no Accessibility mutation
+    /// happens on this path. Called from the main actor after the Quartz tap dispatches.
+    public func reportUndoUnavailableForShortcut() {
+        // A real pending record can be armed between the tap's eligibility check and this
+        // main-actor hop; don't contradict the visible button in that window.
+        guard !dictationUndoManager.canUndoLastDictation else { return }
+        statusText = NSLocalizedString("Nothing to undo", comment: "")
+        let reason = "No recent reversible dictation to undo."
+        resultFeedback = .dictationUndoUnavailable(reason: reason)
+        onToast?(.dictationUndoUnavailable(reason: reason))
     }
 }

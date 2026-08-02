@@ -492,7 +492,25 @@ public class AppSettings: ObservableObject {
         }
     }
 
-    
+    /// The single production entry point for changing the trigger shortcut. Every recorder
+    /// surface (Settings, Quick Settings, the state-first pill, Onboarding) goes through
+    /// `ShortcutRecorder`, which calls this — so no UI can persist a trigger that shadows the
+    /// fixed Undo Last Dictation chord (⌃⌥⌘Z), and no conflict is accepted silently.
+    ///
+    /// Rejection leaves `userShortcut` untouched.
+    @discardableResult
+    public func applyTriggerShortcut(_ shortcut: UserShortcut) -> TriggerShortcutApplication {
+        guard let conflict = TriggerShortcutConflictChecker.conflict(for: shortcut) else {
+            userShortcut = shortcut
+            return .applied
+        }
+        guard !conflict.blocksApplication else {
+            return .rejected(conflict)
+        }
+        userShortcut = shortcut
+        return .appliedWithWarning(conflict)
+    }
+
     /// Resets all settings to their factory defaults.
     public func restoreDefaults() {
         triggerMode = .holdToTalk

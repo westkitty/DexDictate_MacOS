@@ -9,33 +9,60 @@ import Carbon
 /// (modifier-only presses) are ignored — a full key or click is required.
 struct ShortcutRecorder: View {
 
-    /// The shortcut being configured. Written when a new key/button is captured.
-    @Binding var shortcut: AppSettings.UserShortcut
+    /// Owner of the trigger shortcut. Captured shortcuts are applied through
+    /// `AppSettings.applyTriggerShortcut(_:)` rather than written directly, so every recorder
+    /// surface in the app shares one validation path and a trigger that shadows the fixed
+    /// Undo Last Dictation chord (⌃⌥⌘Z) can never be persisted silently.
+    @ObservedObject var settings: AppSettings
     @State private var isRecording = false
+    /// Conflict copy from the last capture attempt; `nil` when the last capture was clean.
+    @State private var conflictMessage: String?
+    @State private var conflictWasRejected = false
 
     /// Retained handle for the `NSEvent` local monitor; `nil` when not recording.
     @State private var monitor: Any?
 
+    private var shortcut: AppSettings.UserShortcut { settings.userShortcut }
+
     var body: some View {
-        HStack {
-            Text(NSLocalizedString("Input:", comment: ""))
-                .font(.caption).bold()
-                .foregroundStyle(.white.opacity(0.7))
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(NSLocalizedString("Input:", comment: ""))
+                    .font(.caption).bold()
+                    .foregroundStyle(.white.opacity(0.7))
 
-            Spacer()
+                Spacer()
 
-            Button(action: startRecording) {
-                Text(isRecording ? NSLocalizedString("Press Key/Button...", comment: "") : shortcut.displayString)
-                    .font(.caption)
-                    .frame(minWidth: 100)
-                    .padding(.vertical, 4)
-                    .padding(.horizontal, 8)
-                    .background(isRecording ? Color.red.opacity(0.6) : Color.white.opacity(0.2))
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-                    .foregroundStyle(.white)
+                Button(action: startRecording) {
+                    Text(isRecording ? NSLocalizedString("Press Key/Button...", comment: "") : shortcut.displayString)
+                        .font(.caption)
+                        .frame(minWidth: 100)
+                        .padding(.vertical, 4)
+                        .padding(.horizontal, 8)
+                        .background(isRecording ? Color.red.opacity(0.6) : Color.white.opacity(0.2))
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                        .foregroundStyle(.white)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(isRecording ? "Recording shortcut" : "Shortcut recorder")
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(isRecording ? "Recording shortcut" : "Shortcut recorder")
+
+            if let conflictMessage {
+                HStack(alignment: .top, spacing: 4) {
+                    Image(systemName: conflictWasRejected
+                          ? "exclamationmark.octagon.fill"
+                          : "exclamationmark.triangle.fill")
+                    Text(conflictMessage)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .font(.caption2)
+                .foregroundStyle(conflictWasRejected ? .red : .orange)
+                .accessibilityLabel(
+                    conflictWasRejected
+                    ? "Shortcut not saved. \(conflictMessage)"
+                    : "Shortcut warning. \(conflictMessage)"
+                )
+            }
         }
         .onDisappear { stopRecording() }
     }
@@ -92,7 +119,7 @@ struct ShortcutRecorder: View {
             }
             
             if let sc = newShortcut {
-                self.shortcut = sc
+                self.apply(sc)
                 self.stopRecording()
                 return nil // Consume the event so it doesn't trigger other things
             }
@@ -101,6 +128,14 @@ struct ShortcutRecorder: View {
         }
     }
     
+    /// Routes a captured shortcut through the shared validation path and surfaces whatever
+    /// it reports. A rejected shortcut is never written, so the previous trigger stays live.
+    private func apply(_ candidate: AppSettings.UserShortcut) {
+        let outcome = settings.applyTriggerShortcut(candidate)
+        conflictWasRejected = !outcome.didApply
+        conflictMessage = outcome.conflict?.message
+    }
+
     /// Removes the `NSEvent` monitor and exits recording mode.
     private func stopRecording() {
         if let monitor = monitor {

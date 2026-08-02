@@ -430,7 +430,7 @@ struct ShortcutPage: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 30)
 
-            ShortcutRecorder(shortcut: $settings.userShortcut)
+            ShortcutRecorder(settings: settings)
                 .frame(width: 200)
                 .padding()
                 .background(Color.black.opacity(0.2))

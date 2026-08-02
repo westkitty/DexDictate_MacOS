@@ -327,20 +327,5 @@ struct ControlsView: View {
     }
 }
 
-/// Split out of `ControlsView`'s own body so this feature's markup doesn't grow that
-/// (already oversized) type body further.
-private struct UndoLastDictationButton: View {
-    @ObservedObject var engine: TranscriptionEngine
-
-    var body: some View {
-        if engine.canUndoLastDictation {
-            Button("Undo Last Dictation") {
-                MainActorAction.run { engine.undoLastDictation() }
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
-            .accessibilityLabel("Remove the most recently inserted dictation from the active app")
-            .help("Removes the last dictation from the target app without touching its clipboard or undo history.")
-        }
-    }
-}
+// `UndoLastDictationButton` now lives in its own file and is shared with the active slim
+// popover (`PopoverResultView`) — see Sources/DexDictate/UndoLastDictationButton.swift.

@@ -17,10 +17,15 @@ struct PopoverResultView: View {
     var onOpenHistory: (() -> Void)?
     @State private var isCorrectionSheetPresented = false
     @State private var correctionDraft = VocabularyCorrectionDraft()
-    @State private var preferredVariant: HistoryTextVariant = .cleaned
-    @State private var isExpanded = false
+    /// Per-item display state (Raw/Cleaned choice + expansion). Reset whenever the latest
+    /// item changes identity so a new transcription never inherits the previous one's
+    /// selection — see `LatestResultDisplayState`.
+    @State private var displayState = LatestResultDisplayState()
     @State private var copyFeedback: TranscriptCopyResult?
     @State private var copyFeedbackTask: Task<Void, Never>?
+
+    private var preferredVariant: HistoryTextVariant { displayState.preferredVariant }
+    private var isExpanded: Bool { displayState.isExpanded }
 
     private var latestHistoryItem: HistoryItem? {
         guard let latest = engine.latestHistoryItem else { return nil }
@@ -64,7 +69,7 @@ struct PopoverResultView: View {
                 if canExpand {
                     Button(isExpanded ? "Show Less" : "Show More") {
                         withAnimation(optionalAnimation) {
-                            isExpanded.toggle()
+                            displayState.toggleExpansion()
                         }
                     }
                     .buttonStyle(.bordered)
@@ -80,8 +85,7 @@ struct PopoverResultView: View {
                             .foregroundStyle(.cyan)
                         Button(displayVariant == .cleaned ? "Show Raw" : "Show Cleaned") {
                             withAnimation(optionalAnimation) {
-                                preferredVariant = displayVariant == .cleaned ? .raw : .cleaned
-                                isExpanded = false
+                                displayState.toggleVariant(displayed: displayVariant)
                             }
                         }
                         .buttonStyle(.bordered)
@@ -109,6 +113,12 @@ struct PopoverResultView: View {
                     .clipShape(Capsule())
                     .help(engine.resultFeedback.detail)
                 }
+
+                // Own row: "Undo Last Dictation" is a wide label and would crowd the
+                // Retry/Learn Correction controls out of the 320pt popover if it shared
+                // a line with them.
+                UndoLastDictationButton(engine: engine)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
                 HStack(spacing: 8) {
                     if engine.resultFeedback == .deletedPreviousHistory && engine.canUndoLastHistoryRemoval {
@@ -163,6 +173,17 @@ struct PopoverResultView: View {
             .padding(.horizontal)
             .sheet(isPresented: $isCorrectionSheetPresented) {
                 VocabularyCorrectionSheet(draft: $correctionDraft, onSave: saveCorrection)
+            }
+            .onAppear {
+                displayState.synchronize(with: latest.id)
+            }
+            .onChange(of: latest.id) { _, newID in
+                // A new transcription starts collapsed on Cleaned; stale copy feedback from
+                // the previous item is dropped so it can't be read as this item's result.
+                guard displayState.synchronize(with: newID) else { return }
+                copyFeedbackTask?.cancel()
+                copyFeedbackTask = nil
+                copyFeedback = nil
             }
             .onDisappear {
                 copyFeedbackTask?.cancel()

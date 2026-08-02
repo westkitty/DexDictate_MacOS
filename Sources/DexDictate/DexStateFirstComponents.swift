@@ -232,7 +232,7 @@ struct DexContextChips: View {
             .buttonStyle(.plain)
             .accessibilityLabel("Input: \(settings.userShortcut.displayString). Tap to rebind.")
             .popover(isPresented: $showingTriggerPopover, arrowEdge: .top) {
-                ShortcutRecorder(shortcut: $settings.userShortcut)
+                ShortcutRecorder(settings: settings)
                     .padding(12)
                     .frame(width: 220)
             }

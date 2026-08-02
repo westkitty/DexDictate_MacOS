@@ -16,7 +16,7 @@ struct DictationSettingsPage: View {
 
                 triggerModeSection
 
-                ShortcutRecorder(shortcut: $settings.userShortcut)
+                ShortcutRecorder(settings: settings)
 
                 Divider()
 
