@@ -102,7 +102,7 @@ final class CommandProcessorTests: XCTestCase {
             ("self dash serve", "self-serve"),
             ("well hyphen known", "well-known"),
             ("see open paren below close paren", "see (below)"),
-            ("say open quote hello close quote", "say \"hello\""),
+            ("say open quote hello close quote", "say \"hello\"")
         ]
 
         for (input, expected) in cases {

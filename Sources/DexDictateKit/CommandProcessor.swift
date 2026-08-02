@@ -81,7 +81,7 @@ public class CommandProcessor {
             (#"\s+\bcomma\b"#, ","),
             (#"\s+\bcolon\b"#, ":"),
             (#"\s+\bdash\b\s+"#, "-"),
-            (#"\s+\bhyphen\b\s+"#, "-"),
+            (#"\s+\bhyphen\b\s+"#, "-")
         ]
 
         let paragraphPattern = #"\s+\bnew paragraph\b"#
