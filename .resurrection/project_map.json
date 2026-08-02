@@ -23,52 +23,6 @@
     "templates"
   ],
   "fragile_files": [
-    ".build/arm64-apple-macosx/debug/DexDictate_MacOS-entitlement.plist",
-    ".build/arm64-apple-macosx/debug/DexDictate_MacOS.dSYM/Contents/Info.plist",
-    ".build/arm64-apple-macosx/debug/DexDictate_MacOSPackageTests.xctest/Contents/MacOS/DexDictate_MacOSPackageTests.dSYM/Contents/Info.plist",
-    ".build/arm64-apple-macosx/debug/VerificationRunner-entitlement.plist",
-    ".build/arm64-apple-macosx/debug/VerificationRunner.dSYM/Contents/Info.plist",
-    ".build/arm64-apple-macosx/release/DexDictate_MacOS.dSYM/Contents/Info.plist",
-    ".build/arm64-apple-macosx/release/VerificationRunner.dSYM/Contents/Info.plist",
-    ".build/artifacts/moonshine-swift/Moonshine/Moonshine.xcframework/Info.plist",
-    ".build/checkouts/FluidAudio/AGENTS.md",
-    ".build/checkouts/FluidAudio/Documentation/README.md",
-    ".build/checkouts/FluidAudio/README.md",
-    ".build/checkouts/FluidAudio/Scripts/nemo_ami_benchmark/README.md",
-    ".build/checkouts/FluidAudio/Scripts/voice_cloning/README.md",
-    ".build/checkouts/FluidAudio/Sources/FastClusterWrapper/README.md",
-    ".build/checkouts/FluidAudio/Sources/FluidAudioCLI/README.md",
-    ".build/checkouts/SwiftWhisper/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/bindings/go/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/bindings/ios/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/bindings/javascript/package.json",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/bindings/javascript/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/addon.node/package.json",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/addon.node/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/bench.wasm/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/bench/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/command.wasm/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/command/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/main/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/quantize/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/stream.wasm/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/stream/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/talk-llama/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/talk.wasm/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/talk/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.android/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.nvim/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.objc/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.objc/whisper.objc.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.objc/whisper.objc/Info.plist",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.swiftui/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.swiftui/whisper.swiftui.demo/Supporting files/WhisperCppDemo.entitlements",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.swiftui/whisper.swiftui.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.wasm/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/models/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/README.md",
-    ".build/checkouts/SwiftWhisper/whisper.cpp/samples/README.md",
-    ".build/DexDictate.app/Contents/Info.plist",
     ".venv_mlx_audio/lib/python3.13/site-packages/mlx/include/metal_cpp/README.md",
     ".venv_mlx_audio/lib/python3.13/site-packages/mlx_whisper/requirements.txt",
     ".venv_mlx_audio/lib/python3.13/site-packages/numpy/_core/tests/examples/cython/setup.py",
@@ -77,8 +31,17 @@
     ".venv_mlx_audio/lib/python3.13/site-packages/torchgen/packaged/autograd/README.md",
     "benchmark_samples/benchmark_corpus_mixed_v1_2/README.md",
     "build.sh",
+    "docs/aegis/README.md",
+    "docs/archive/uiux-recovery-2026-07/README.md",
     "docs/README.md",
     "docs/speech_engine_exploration/README.md",
+    "marketing/remotion/package-lock.json",
+    "marketing/remotion/package.json",
+    "marketing/remotion/README.md",
+    "prototypes/dexdictate-ux/package.json",
+    "prototypes/dexdictate-ux/pnpm-lock.yaml",
+    "prototypes/dexdictate-ux/README.md",
+    "prototypes/dexdictate-ux/vite.config.ts",
     "README.md",
     "SNAPSHOT/DexDictate.entitlements",
     "SNAPSHOT/Info.plist",
@@ -86,7 +49,6 @@
     "Sources/DexDictate/DexDictate.entitlements",
     "Sources/DexDictate/Info.plist",
     "tools/mlx_audio_sidecar/README.md",
-    "tools/speech_swift_sidecar/.build/arm64-apple-macosx/release/speech-swift-benchmark.dSYM/Contents/Info.plist",
     "tools/speech_swift_sidecar/.build/artifacts/speech-swift/CSpeechCore/SpeechCore.xcframework/Info.plist",
     "tools/speech_swift_sidecar/.build/checkouts/async-http-client/Examples/README.md",
     "tools/speech_swift_sidecar/.build/checkouts/async-http-client/README.md",
@@ -229,7 +191,6 @@
     "tools/speech_swift_sidecar/.build/checkouts/yyjson/test/xctest/Info.plist",
     "tools/speech_swift_sidecar/.build/plugins/cache/GenerateDoccReference.dSYM/Contents/Info.plist",
     "tools/speech_swift_sidecar/.build/plugins/cache/GenerateManual.dSYM/Contents/Info.plist",
-    "tools/whisperkit_sidecar/.build/arm64-apple-macosx/release/whisperkit-transcribe.dSYM/Contents/Info.plist",
     "tools/whisperkit_sidecar/.build/checkouts/swift-argument-parser/CHANGELOG.md",
     "tools/whisperkit_sidecar/.build/checkouts/swift-argument-parser/README.md",
     "tools/whisperkit_sidecar/.build/checkouts/WhisperKit/Examples/ServeCLIClient/Curl/README.md",
@@ -250,15 +211,15 @@
   ],
   "git_state": {
     "available": true,
-    "branch": "speech-engine-exploration-benchmarks",
-    "dirty": true,
-    "head": "da31ba4f813a8dd26b78285da082685b50752cb7",
-    "head_subject": "fix: bring Experimental UI to parity with Classic for transcription features",
+    "branch": "main",
+    "dirty": false,
+    "head": "041ce7282c3cf2b02c61573370070c2502d4a51b",
+    "head_subject": "Integrate and retire legacy branches without losing work (#6)",
     "is_repo": true,
     "remote_url": "git@github.com:westkitty/DexDictate_MacOS.git",
     "repo_root": "/Users/andrew/DexDictate_MacOS.nosync",
-    "staged_count": 1,
-    "tracked_modified_count": 4,
+    "staged_count": 0,
+    "tracked_modified_count": 0,
     "untracked_count": 0
   },
   "identity": {
@@ -274,34 +235,19 @@
     "type": "swift_package"
   },
   "recommended_next_actions": [
-    "Inspect the current uncommitted Git changes before making new edits.",
     "Review secret-risk findings and move sensitive values out of tracked files.",
     "Back up or review fragile configuration files before any risky changes.",
     "Validate the project with the hinted test command: swift test",
-    "Validate the project with the hinted build command: ./build.sh"
+    "Validate the project with the hinted build command: ./build.sh",
+    "Read `.resurrection/project_report.md` and make one bounded change at a time."
   ],
-  "scan_timestamp": "2026-07-05T04:31:53+00:00",
+  "scan_timestamp": "2026-08-02T02:13:11+00:00",
   "scanner_version": "1.1.0",
   "secret_risks": [
     {
-      "category": "api_key",
-      "line": 4,
-      "path": ".build/checkouts/SwiftWhisper/whisper.cpp/examples/talk-llama/eleven-labs.py"
-    },
-    {
-      "category": "api_key",
-      "line": 5,
-      "path": ".build/checkouts/SwiftWhisper/whisper.cpp/examples/talk-llama/eleven-labs.py"
-    },
-    {
-      "category": "api_key",
-      "line": 4,
-      "path": ".build/checkouts/SwiftWhisper/whisper.cpp/examples/talk/eleven-labs.py"
-    },
-    {
-      "category": "api_key",
-      "line": 5,
-      "path": ".build/checkouts/SwiftWhisper/whisper.cpp/examples/talk/eleven-labs.py"
+      "category": "openai_sk_prefix",
+      "line": 295,
+      "path": "DexDictate_Fable5_Assessment_Packet.md"
     },
     {
       "category": "access_token",
@@ -5992,6 +5938,146 @@
       "category": "bearer_token",
       "line": 127,
       "path": "tools/whisperkit_sidecar/.build/checkouts/WhisperKit/Sources/ArgmaxCore/External/Hub/Downloader.swift"
+    },
+    {
+      "category": "openai_sk_prefix",
+      "line": 13,
+      "path": "Tests/DexDictateTests/NemotronDirectManagerDiagnosticTests.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 60,
+      "path": "Tests/DexDictateTests/SmartCleanupTests.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 70,
+      "path": "Tests/DexDictateTests/SmartCleanupTests.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 78,
+      "path": "Tests/DexDictateTests/SmartCleanupTests.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 87,
+      "path": "Tests/DexDictateTests/SmartCleanupTests.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 99,
+      "path": "Tests/DexDictateTests/SmartCleanupTests.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 114,
+      "path": "Tests/DexDictateTests/SmartCleanupTests.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 124,
+      "path": "Tests/DexDictateTests/SmartCleanupTests.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 49,
+      "path": "docs/bug_sweeps/opus_deep_sweep/RISK_REGISTER.md"
+    },
+    {
+      "category": "api_key",
+      "line": 175,
+      "path": "docs/bug_sweeps/post_campaign_bug_sweep/BUG_LEDGER.md"
+    },
+    {
+      "category": "openai_sk_prefix",
+      "line": 266,
+      "path": "docs/bug_fixes/nemotron_activation_and_live_transcription.md"
+    },
+    {
+      "category": "openai_sk_prefix",
+      "line": 49,
+      "path": "Sources/DexDictateKit/Transcription/AppleSpeechTranscriptionProvider.swift"
+    },
+    {
+      "category": "openai_sk_prefix",
+      "line": 174,
+      "path": "Sources/DexDictateKit/Transcription/NemotronTranscriptionProvider.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 20,
+      "path": "Sources/DexDictateKit/SmartCleanup/SmartCleanupSettings.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 146,
+      "path": "Sources/DexDictateKit/SmartCleanup/SmartCleanupCoordinator.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 173,
+      "path": "Sources/DexDictateKit/SmartCleanup/SmartCleanupCoordinator.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 40,
+      "path": "Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 56,
+      "path": "Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 81,
+      "path": "Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 85,
+      "path": "Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 107,
+      "path": "Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 112,
+      "path": "Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 137,
+      "path": "Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 149,
+      "path": "Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 109,
+      "path": "Sources/DexDictate/SettingsWindow/SmartCleanupPage.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 200,
+      "path": "Sources/DexDictate/SettingsWindow/SmartCleanupPage.swift"
+    },
+    {
+      "category": "api_key",
+      "line": 215,
+      "path": "Sources/DexDictate/SettingsWindow/SmartCleanupPage.swift"
+    },
+    {
+      "category": "access_token",
+      "line": 68,
+      "path": "marketing/remotion/reference/remotion-best-practices/rules/maps.md"
     },
     {
       "category": "openai_sk_prefix",

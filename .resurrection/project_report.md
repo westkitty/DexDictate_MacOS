@@ -10,11 +10,11 @@
   - Found Package.swift
 
 ## Git State
-- Summary: Repo root: /Users/andrew/DexDictate_MacOS.nosync | Branch: speech-engine-exploration-benchmarks | Status: dirty | Remote: git@github.com:westkitty/DexDictate_MacOS.git
-- Latest commit: da31ba4f813a8dd26b78285da082685b50752cb7 fix: bring Experimental UI to parity with Classic for transcription features
-- Tracked modified count: 4
+- Summary: Repo root: /Users/andrew/DexDictate_MacOS.nosync | Branch: main | Status: clean | Remote: git@github.com:westkitty/DexDictate_MacOS.git
+- Latest commit: 041ce7282c3cf2b02c61573370070c2502d4a51b Integrate and retire legacy branches without losing work (#6)
+- Tracked modified count: 0
 - Untracked count: 0
-- Staged count: 1
+- Staged count: 0
 
 ## Commands Detected
 - [build] ./build.sh (build.sh)
@@ -22,52 +22,6 @@
 - [test] swift test (Package.swift)
 
 ## Fragile Files
-- .build/arm64-apple-macosx/debug/DexDictate_MacOS-entitlement.plist
-- .build/arm64-apple-macosx/debug/DexDictate_MacOS.dSYM/Contents/Info.plist
-- .build/arm64-apple-macosx/debug/DexDictate_MacOSPackageTests.xctest/Contents/MacOS/DexDictate_MacOSPackageTests.dSYM/Contents/Info.plist
-- .build/arm64-apple-macosx/debug/VerificationRunner-entitlement.plist
-- .build/arm64-apple-macosx/debug/VerificationRunner.dSYM/Contents/Info.plist
-- .build/arm64-apple-macosx/release/DexDictate_MacOS.dSYM/Contents/Info.plist
-- .build/arm64-apple-macosx/release/VerificationRunner.dSYM/Contents/Info.plist
-- .build/artifacts/moonshine-swift/Moonshine/Moonshine.xcframework/Info.plist
-- .build/checkouts/FluidAudio/AGENTS.md
-- .build/checkouts/FluidAudio/Documentation/README.md
-- .build/checkouts/FluidAudio/README.md
-- .build/checkouts/FluidAudio/Scripts/nemo_ami_benchmark/README.md
-- .build/checkouts/FluidAudio/Scripts/voice_cloning/README.md
-- .build/checkouts/FluidAudio/Sources/FastClusterWrapper/README.md
-- .build/checkouts/FluidAudio/Sources/FluidAudioCLI/README.md
-- .build/checkouts/SwiftWhisper/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/bindings/go/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/bindings/ios/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/bindings/javascript/package.json
-- .build/checkouts/SwiftWhisper/whisper.cpp/bindings/javascript/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/addon.node/package.json
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/addon.node/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/bench.wasm/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/bench/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/command.wasm/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/command/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/main/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/quantize/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/stream.wasm/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/stream/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/talk-llama/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/talk.wasm/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/talk/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.android/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.nvim/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.objc/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.objc/whisper.objc.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.objc/whisper.objc/Info.plist
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.swiftui/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.swiftui/whisper.swiftui.demo/Supporting files/WhisperCppDemo.entitlements
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.swiftui/whisper.swiftui.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.wasm/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/models/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/README.md
-- .build/checkouts/SwiftWhisper/whisper.cpp/samples/README.md
-- .build/DexDictate.app/Contents/Info.plist
 - .venv_mlx_audio/lib/python3.13/site-packages/mlx/include/metal_cpp/README.md
 - .venv_mlx_audio/lib/python3.13/site-packages/mlx_whisper/requirements.txt
 - .venv_mlx_audio/lib/python3.13/site-packages/numpy/_core/tests/examples/cython/setup.py
@@ -76,8 +30,17 @@
 - .venv_mlx_audio/lib/python3.13/site-packages/torchgen/packaged/autograd/README.md
 - benchmark_samples/benchmark_corpus_mixed_v1_2/README.md
 - build.sh
+- docs/aegis/README.md
+- docs/archive/uiux-recovery-2026-07/README.md
 - docs/README.md
 - docs/speech_engine_exploration/README.md
+- marketing/remotion/package-lock.json
+- marketing/remotion/package.json
+- marketing/remotion/README.md
+- prototypes/dexdictate-ux/package.json
+- prototypes/dexdictate-ux/pnpm-lock.yaml
+- prototypes/dexdictate-ux/README.md
+- prototypes/dexdictate-ux/vite.config.ts
 - README.md
 - SNAPSHOT/DexDictate.entitlements
 - SNAPSHOT/Info.plist
@@ -85,7 +48,6 @@
 - Sources/DexDictate/DexDictate.entitlements
 - Sources/DexDictate/Info.plist
 - tools/mlx_audio_sidecar/README.md
-- tools/speech_swift_sidecar/.build/arm64-apple-macosx/release/speech-swift-benchmark.dSYM/Contents/Info.plist
 - tools/speech_swift_sidecar/.build/artifacts/speech-swift/CSpeechCore/SpeechCore.xcframework/Info.plist
 - tools/speech_swift_sidecar/.build/checkouts/async-http-client/Examples/README.md
 - tools/speech_swift_sidecar/.build/checkouts/async-http-client/README.md
@@ -228,7 +190,6 @@
 - tools/speech_swift_sidecar/.build/checkouts/yyjson/test/xctest/Info.plist
 - tools/speech_swift_sidecar/.build/plugins/cache/GenerateDoccReference.dSYM/Contents/Info.plist
 - tools/speech_swift_sidecar/.build/plugins/cache/GenerateManual.dSYM/Contents/Info.plist
-- tools/whisperkit_sidecar/.build/arm64-apple-macosx/release/whisperkit-transcribe.dSYM/Contents/Info.plist
 - tools/whisperkit_sidecar/.build/checkouts/swift-argument-parser/CHANGELOG.md
 - tools/whisperkit_sidecar/.build/checkouts/swift-argument-parser/README.md
 - tools/whisperkit_sidecar/.build/checkouts/WhisperKit/Examples/ServeCLIClient/Curl/README.md
@@ -254,10 +215,7 @@
 - templates
 
 ## Secret-Risk Findings
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/talk-llama/eleven-labs.py:4 (api_key)
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/talk-llama/eleven-labs.py:5 (api_key)
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/talk/eleven-labs.py:4 (api_key)
-- .build/checkouts/SwiftWhisper/whisper.cpp/examples/talk/eleven-labs.py:5 (api_key)
+- DexDictate_Fable5_Assessment_Packet.md:295 (openai_sk_prefix)
 - tools/speech_swift_sidecar/.build/checkouts/swift-argument-parser/Sources/ArgumentParser/Documentation.docc/Articles/CustomizingHelp.md:236 (access_token)
 - tools/speech_swift_sidecar/.build/checkouts/swift-metrics/Sources/CoreMetrics/Docs.docc/Proposals/Proposals.md:38 (openai_sk_prefix)
 - tools/speech_swift_sidecar/.build/checkouts/async-http-client/Tests/AsyncHTTPClientTests/HTTPClientTestUtils.swift:360 (private_key)
@@ -1396,6 +1354,34 @@
 - tools/whisperkit_sidecar/.build/checkouts/WhisperKit/Examples/ServeCLIClient/Python/test_translate.py:109 (api_key)
 - tools/whisperkit_sidecar/.build/checkouts/WhisperKit/Examples/ServeCLIClient/Python/whisperkit_client.py:25 (api_key)
 - tools/whisperkit_sidecar/.build/checkouts/WhisperKit/Sources/ArgmaxCore/External/Hub/Downloader.swift:127 (bearer_token)
+- Tests/DexDictateTests/NemotronDirectManagerDiagnosticTests.swift:13 (openai_sk_prefix)
+- Tests/DexDictateTests/SmartCleanupTests.swift:60 (api_key)
+- Tests/DexDictateTests/SmartCleanupTests.swift:70 (api_key)
+- Tests/DexDictateTests/SmartCleanupTests.swift:78 (api_key)
+- Tests/DexDictateTests/SmartCleanupTests.swift:87 (api_key)
+- Tests/DexDictateTests/SmartCleanupTests.swift:99 (api_key)
+- Tests/DexDictateTests/SmartCleanupTests.swift:114 (api_key)
+- Tests/DexDictateTests/SmartCleanupTests.swift:124 (api_key)
+- docs/bug_sweeps/opus_deep_sweep/RISK_REGISTER.md:49 (api_key)
+- docs/bug_sweeps/post_campaign_bug_sweep/BUG_LEDGER.md:175 (api_key)
+- docs/bug_fixes/nemotron_activation_and_live_transcription.md:266 (openai_sk_prefix)
+- Sources/DexDictateKit/Transcription/AppleSpeechTranscriptionProvider.swift:49 (openai_sk_prefix)
+- Sources/DexDictateKit/Transcription/NemotronTranscriptionProvider.swift:174 (openai_sk_prefix)
+- Sources/DexDictateKit/SmartCleanup/SmartCleanupSettings.swift:20 (api_key)
+- Sources/DexDictateKit/SmartCleanup/SmartCleanupCoordinator.swift:146 (api_key)
+- Sources/DexDictateKit/SmartCleanup/SmartCleanupCoordinator.swift:173 (api_key)
+- Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift:40 (api_key)
+- Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift:56 (api_key)
+- Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift:81 (api_key)
+- Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift:85 (api_key)
+- Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift:107 (api_key)
+- Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift:112 (api_key)
+- Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift:137 (api_key)
+- Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift:149 (api_key)
+- Sources/DexDictate/SettingsWindow/SmartCleanupPage.swift:109 (api_key)
+- Sources/DexDictate/SettingsWindow/SmartCleanupPage.swift:200 (api_key)
+- Sources/DexDictate/SettingsWindow/SmartCleanupPage.swift:215 (api_key)
+- marketing/remotion/reference/remotion-best-practices/rules/maps.md:68 (access_token)
 - .venv_mlx_audio/lib/python3.13/site-packages/packaging/licenses/_spdx.py:721 (openai_sk_prefix)
 - .venv_mlx_audio/lib/python3.13/site-packages/packaging/licenses/_spdx.py:722 (openai_sk_prefix)
 - .venv_mlx_audio/lib/python3.13/site-packages/httpcore/_models.py:510 (password_assignment)
@@ -1684,12 +1670,12 @@
 - .venv_mlx_audio/lib/python3.13/site-packages/scipy/interpolate/tests/test_bsplines.py:145 (openai_sk_prefix)
 
 ## Recommended Next Actions
-1. Inspect the current uncommitted Git changes before making new edits.
-2. Review secret-risk findings and move sensitive values out of tracked files.
-3. Back up or review fragile configuration files before any risky changes.
-4. Validate the project with the hinted test command: swift test
-5. Validate the project with the hinted build command: ./build.sh
+1. Review secret-risk findings and move sensitive values out of tracked files.
+2. Back up or review fragile configuration files before any risky changes.
+3. Validate the project with the hinted test command: swift test
+4. Validate the project with the hinted build command: ./build.sh
+5. Read `.resurrection/project_report.md` and make one bounded change at a time.
 
 ## Scan Metadata
-- Timestamp: 2026-07-05T04:31:53+00:00
+- Timestamp: 2026-08-02T02:13:11+00:00
 - Scanner version: 1.1.0
