@@ -26,6 +26,14 @@ Seven annotated archive tags were pushed. Their peeled targets match the origina
 - `git diff --check HEAD^1..HEAD`: clean
 - Residual manual proof: exercise exact restore, verified trim, refusal, and best-effort Backspace fallback in representative target applications
 
+## UI Recovery Archive
+
+- Merge commit: `2618129`
+- Original speech branch tip `69c6533c` is an ancestor of the integration branch
+- First-parent diff contains only the archive README, two historical Markdown documents, and the screenshot packet ZIP
+- The committed `.resurrection` tree is identical to the merge commit's first parent
+- Project Sentinel's concurrent unstaged `.resurrection` rewrites remain excluded
+
 ## Pending Evidence
 
 Each merge diff, focused tests, artifact builds, combined Swift verification, packaged app, CI, remote parity, ancestry checks, and final branch inventory.
