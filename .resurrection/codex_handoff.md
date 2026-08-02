@@ -9,7 +9,7 @@ Read this handoff and project_report.md first.
 
 ## Current Git State
 - Repo root: /Users/andrew/DexDictate_MacOS.nosync | Branch: main | Status: clean | Remote: git@github.com:westkitty/DexDictate_MacOS.git
-- Latest commit: 041ce7282c3cf2b02c61573370070c2502d4a51b Integrate and retire legacy branches without losing work (#6)
+- Latest commit: 1f66ed69d596cbe8b7a021b6b97de19e14b08814 feat: harden dictation delivery and refine history UX
 
 ## Detected Project Type
 - Type: swift_package
@@ -23,6 +23,52 @@ Read this handoff and project_report.md first.
 - [test] swift test
 
 ## Fragile Files
+- .build/arm64-apple-macosx/debug/DexDictate_MacOS-entitlement.plist
+- .build/arm64-apple-macosx/debug/DexDictate_MacOS.dSYM/Contents/Info.plist
+- .build/arm64-apple-macosx/debug/DexDictate_MacOSPackageTests.xctest/Contents/MacOS/DexDictate_MacOSPackageTests.dSYM/Contents/Info.plist
+- .build/arm64-apple-macosx/debug/VerificationRunner-entitlement.plist
+- .build/arm64-apple-macosx/debug/VerificationRunner.dSYM/Contents/Info.plist
+- .build/arm64-apple-macosx/release/DexDictate_MacOS.dSYM/Contents/Info.plist
+- .build/arm64-apple-macosx/release/VerificationRunner.dSYM/Contents/Info.plist
+- .build/artifacts/moonshine-swift/Moonshine/Moonshine.xcframework/Info.plist
+- .build/checkouts/FluidAudio/AGENTS.md
+- .build/checkouts/FluidAudio/Documentation/README.md
+- .build/checkouts/FluidAudio/README.md
+- .build/checkouts/FluidAudio/Scripts/nemo_ami_benchmark/README.md
+- .build/checkouts/FluidAudio/Scripts/voice_cloning/README.md
+- .build/checkouts/FluidAudio/Sources/FastClusterWrapper/README.md
+- .build/checkouts/FluidAudio/Sources/FluidAudioCLI/README.md
+- .build/checkouts/SwiftWhisper/README.md
+- .build/checkouts/SwiftWhisper/whisper.cpp/bindings/go/README.md
+- .build/checkouts/SwiftWhisper/whisper.cpp/bindings/ios/README.md
+- .build/checkouts/SwiftWhisper/whisper.cpp/bindings/javascript/package.json
+- .build/checkouts/SwiftWhisper/whisper.cpp/bindings/javascript/README.md
+- .build/checkouts/SwiftWhisper/whisper.cpp/examples/addon.node/package.json
+- .build/checkouts/SwiftWhisper/whisper.cpp/examples/addon.node/README.md
+- .build/checkouts/SwiftWhisper/whisper.cpp/examples/bench.wasm/README.md
+- .build/checkouts/SwiftWhisper/whisper.cpp/examples/bench/README.md
+- .build/checkouts/SwiftWhisper/whisper.cpp/examples/command.wasm/README.md
+- .build/checkouts/SwiftWhisper/whisper.cpp/examples/command/README.md
+- .build/checkouts/SwiftWhisper/whisper.cpp/examples/main/README.md
+- .build/checkouts/SwiftWhisper/whisper.cpp/examples/quantize/README.md
+- .build/checkouts/SwiftWhisper/whisper.cpp/examples/stream.wasm/README.md
+- .build/checkouts/SwiftWhisper/whisper.cpp/examples/stream/README.md
+- .build/checkouts/SwiftWhisper/whisper.cpp/examples/talk-llama/README.md
+- .build/checkouts/SwiftWhisper/whisper.cpp/examples/talk.wasm/README.md
+- .build/checkouts/SwiftWhisper/whisper.cpp/examples/talk/README.md
+- .build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.android/README.md
+- .build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.nvim/README.md
+- .build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.objc/README.md
+- .build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.objc/whisper.objc.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+- .build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.objc/whisper.objc/Info.plist
+- .build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.swiftui/README.md
+- .build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.swiftui/whisper.swiftui.demo/Supporting files/WhisperCppDemo.entitlements
+- .build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.swiftui/whisper.swiftui.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+- .build/checkouts/SwiftWhisper/whisper.cpp/examples/whisper.wasm/README.md
+- .build/checkouts/SwiftWhisper/whisper.cpp/models/README.md
+- .build/checkouts/SwiftWhisper/whisper.cpp/README.md
+- .build/checkouts/SwiftWhisper/whisper.cpp/samples/README.md
+- .build/DexDictate.app/Contents/Info.plist
 - .venv_mlx_audio/lib/python3.13/site-packages/mlx/include/metal_cpp/README.md
 - .venv_mlx_audio/lib/python3.13/site-packages/mlx_whisper/requirements.txt
 - .venv_mlx_audio/lib/python3.13/site-packages/numpy/_core/tests/examples/cython/setup.py
@@ -217,6 +263,10 @@ Read this handoff and project_report.md first.
 
 ## Secret-Risk Warning Summary
 - DexDictate_Fable5_Assessment_Packet.md:295 (openai_sk_prefix)
+- .build/checkouts/SwiftWhisper/whisper.cpp/examples/talk-llama/eleven-labs.py:4 (api_key)
+- .build/checkouts/SwiftWhisper/whisper.cpp/examples/talk-llama/eleven-labs.py:5 (api_key)
+- .build/checkouts/SwiftWhisper/whisper.cpp/examples/talk/eleven-labs.py:4 (api_key)
+- .build/checkouts/SwiftWhisper/whisper.cpp/examples/talk/eleven-labs.py:5 (api_key)
 - tools/speech_swift_sidecar/.build/checkouts/swift-argument-parser/Sources/ArgumentParser/Documentation.docc/Articles/CustomizingHelp.md:236 (access_token)
 - tools/speech_swift_sidecar/.build/checkouts/swift-metrics/Sources/CoreMetrics/Docs.docc/Proposals/Proposals.md:38 (openai_sk_prefix)
 - tools/speech_swift_sidecar/.build/checkouts/async-http-client/Tests/AsyncHTTPClientTests/HTTPClientTestUtils.swift:360 (private_key)
