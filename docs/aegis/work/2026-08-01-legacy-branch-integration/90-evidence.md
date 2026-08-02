@@ -44,6 +44,34 @@ Seven annotated archive tags were pushed. Their peeled targets match the origina
 - `DexDictateTests.CommandProcessorTests`: 13 passed, 0 failures
 - Full/onset silence trimming remains disabled because the current experiment flag documents clipping risk; the older implementation remains available through history and its archive tag
 
+## UX Prototype
+
+- Audio/import ancestry merge: `7b8fc06c`
+- Original branch tip `7701b6ff` is an ancestor of the integration branch
+- Prototype extraction commit: `045d8fdb`
+- Recovered project is isolated under `prototypes/dexdictate-ux`; production Swift files were not overlaid
+- `pnpm install --frozen-lockfile`: passed, with four transitive install scripts explicitly approved in project-local policy
+- `pnpm build`: passed
+- `pnpm lint`: passed
+
+## Remotion Explainer
+
+- Ancestry merge: `c9754082`
+- Original branch tip `1bfd3336` is an ancestor of the integration branch
+- Isolated project commit: `8994bcc2`
+- Recovered project is under `marketing/remotion`; root package files and agent-skill symlinks were not overlaid
+- Recovered Remotion reference material is non-discoverable project documentation under `reference/`
+- Lockfile refreshed within declared version ranges: Remotion 4.0.503, 0 audit vulnerabilities
+- Clean `npm ci`: passed with project-local `esbuild@0.28.1` install-script approval
+- `npm run remotion:compositions`: `MainComposition`, 30 fps, 1920x1080, 1574 frames (52.47 seconds)
+
+## Superseded v1.5 Release
+
+- Ancestry merge: `f9d03751`
+- Original branch tip `233ca17a` is an ancestor of the integration branch
+- First-parent tree is unchanged
+- Current `VERSION` remains 1.8.0
+
 ## Pending Evidence
 
 Each merge diff, focused tests, artifact builds, combined Swift verification, packaged app, CI, remote parity, ancestry checks, and final branch inventory.
