@@ -13,15 +13,16 @@ public class CommandProcessor {
     /// Processes text for commands.
     ///
     /// Custom commands use a "Dex [keyword]" hot-word prefix. Built-in commands
-    /// (scratch that, all caps, new line) are checked if no custom command fires.
+    /// (scratch that, all caps, new line, and spoken punctuation) are checked if
+    /// no custom command fires.
     ///
     /// - Parameters:
     ///   - text: Raw transcribed text.
     ///   - customCommands: User-defined hot-word commands to check first.
     /// - Returns: Tuple containing processed text (if any remains) and the command action.
     public func process(_ text: String, customCommands: [CustomCommand] = []) -> (String, DictationCommand) {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return (text, .none) }
+        let originalTrimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !originalTrimmed.isEmpty else { return (text, .none) }
 
         // Whisper frequently appends terminal punctuation to short utterances (e.g.
         // "Scratch that."), which would otherwise defeat the end-anchored ($) patterns
@@ -29,12 +30,16 @@ public class CommandProcessor {
         // command. Strip trailing punctuation/whitespace for matching purposes only —
         // `text`/`trimmed` (with punctuation intact) are still what's returned/inserted
         // when no command matches.
-        let commandMatchText = strippedForCommandMatch(trimmed)
+        let originalCommandMatchText = strippedForCommandMatch(originalTrimmed)
 
         if !customCommands.isEmpty,
-           let result = processHotWordCommand(commandMatchText, commands: customCommands) {
+           let result = processHotWordCommand(originalCommandMatchText, commands: customCommands) {
             return result
         }
+
+        let punctuationResult = processPunctuation(text)
+        let trimmed = punctuationResult.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let commandMatchText = strippedForCommandMatch(trimmed)
 
         if matchesCommand(commandMatchText, pattern: #"(?i)(?:^|\s)scratch that$"#) {
             return ("", .deleteLastSentence)
@@ -54,7 +59,51 @@ public class CommandProcessor {
             return (replaced, .newLine)
         }
 
-        return (text, .none)
+        return (
+            punctuationResult.text,
+            punctuationResult.insertedParagraph ? .newLine : .none
+        )
+    }
+
+    private func processPunctuation(_ text: String) -> (text: String, insertedParagraph: Bool) {
+        let replacements: [(pattern: String, replacement: String)] = [
+            (#"\s*\bopen paren(?:thesis)?\b\s*"#, " ("),
+            (#"\s+\bclose paren(?:thesis)?\b"#, ")"),
+            (#"\s*\bopen (?:quote|quotes)\b\s*"#, " \""),
+            (#"\s+\bclose (?:quote|quotes)\b"#, "\""),
+            (#"\s+\bnew paragraph\b"#, "\n\n"),
+            (#"\s+\bexclamation (?:point|mark)\b"#, "!"),
+            (#"\s+\bquestion mark\b"#, "?"),
+            (#"\s+\bfull stop\b"#, "."),
+            (#"\s+\bsemicolon\b"#, ";"),
+            (#"\s+\bellipsis\b"#, "..."),
+            (#"\s+\bperiod\b"#, "."),
+            (#"\s+\bcomma\b"#, ","),
+            (#"\s+\bcolon\b"#, ":"),
+            (#"\s+\bdash\b\s+"#, "-"),
+            (#"\s+\bhyphen\b\s+"#, "-")
+        ]
+
+        let paragraphPattern = #"\s+\bnew paragraph\b"#
+        let insertedParagraph = text.range(
+            of: paragraphPattern,
+            options: [.regularExpression, .caseInsensitive]
+        ) != nil
+
+        var result = text
+        for (pattern, replacement) in replacements {
+            guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else {
+                continue
+            }
+            let range = NSRange(result.startIndex..<result.endIndex, in: result)
+            result = regex.stringByReplacingMatches(
+                in: result,
+                options: [],
+                range: range,
+                withTemplate: replacement
+            )
+        }
+        return (result, insertedParagraph)
     }
 
     private func strippedForCommandMatch(_ text: String) -> String {

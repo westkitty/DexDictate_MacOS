@@ -156,12 +156,19 @@ resolve_build_artifacts() {
 
 stop_running_instances() {
     local app_path
-    for app_path in "$INSTALL_DIR/$APP_NAME.app" "$SYSTEM_INSTALL_DIR/$APP_NAME.app" "$USER_INSTALL_DIR/$APP_NAME.app" "$BUNDLE"; do
+    local app_paths=("$INSTALL_DIR/$APP_NAME.app" "$BUNDLE")
+    if install_dir_is_standard; then
+        app_paths+=("$SYSTEM_INSTALL_DIR/$APP_NAME.app" "$USER_INSTALL_DIR/$APP_NAME.app")
+    fi
+
+    for app_path in "${app_paths[@]}"; do
         if [ -d "$app_path" ]; then
             osascript -e "tell application \"$app_path\" to quit" >/dev/null 2>&1 || true
         fi
     done
-    osascript -e "tell application id \"$BUNDLE_IDENTIFIER\" to quit" >/dev/null 2>&1 || true
+    if install_dir_is_standard; then
+        osascript -e "tell application id \"$BUNDLE_IDENTIFIER\" to quit" >/dev/null 2>&1 || true
+    fi
 
     # The graceful quit requests above are best-effort and name/ID-based (an Apple Event
     # only actually quits something if a matching process happens to be running — it can't
@@ -264,8 +271,18 @@ install_locations_collide() {
     [ "$SYSTEM_INSTALL_DIR/$APP_NAME.app" = "$USER_INSTALL_DIR/$APP_NAME.app" ]
 }
 
+# True when this run is installing into one of the two canonical application
+# locations managed by the duplicate-install safety net. A caller may set
+# INSTALL_DIR to an isolated verification directory; that custom target must
+# never cause either canonical installation to be stopped, removed, or counted
+# as the selected bundle.
+install_dir_is_standard() {
+    [ "$INSTALL_DIR" = "$SYSTEM_INSTALL_DIR" ] || [ "$INSTALL_DIR" = "$USER_INSTALL_DIR" ]
+}
+
 # Prints the install directory NOT selected as $INSTALL_DIR for this run.
 alternate_install_dir() {
+    install_dir_is_standard || return 1
     if [ "$INSTALL_DIR" = "$SYSTEM_INSTALL_DIR" ]; then
         printf '%s' "$USER_INSTALL_DIR"
     else
@@ -371,6 +388,11 @@ ensure_bundle_process_stopped() {
 # actually needed — if the alternate bundle exists but can't be removed, this fails the
 # build with a clear, actionable message rather than leaving it in place unreported.
 cleanup_alternate_install() {
+    if ! install_dir_is_standard; then
+        log_info "Custom install target '$INSTALL_DIR' — preserving canonical system and user installations."
+        return 0
+    fi
+
     if install_locations_collide; then
         log_warn "System and user install locations resolve to the same path — skipping alternate-bundle cleanup."
         return 0
@@ -416,6 +438,11 @@ cleanup_alternate_install() {
 verify_single_install() {
     local selected_bundle="$INSTALL_DIR/$APP_NAME.app"
     [ -d "$selected_bundle" ] || fail "Verification failed: expected installed bundle '$selected_bundle' does not exist."
+
+    if ! install_dir_is_standard; then
+        log_success "Verified custom installation at $selected_bundle (canonical installations left untouched)"
+        return 0
+    fi
 
     if install_locations_collide; then
         log_success "Verified installed copy at $selected_bundle (system/user locations collide; alternate check skipped)"

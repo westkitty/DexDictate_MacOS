@@ -12,6 +12,11 @@ import Cocoa
 /// - Important: Requires the `com.apple.security.device.input-monitoring` entitlement and
 ///   user approval under **System Settings › Privacy & Security › Accessibility**.
 final class InputMonitor {
+    /// HID key code for "Z" — see the "Undo Last Dictation" shortcut check in `start()`.
+    static let undoDictationKeyCode: Int64 = 0x06
+    static let undoDictationModifierMask: UInt64 =
+        CGEventFlags.maskControl.rawValue | CGEventFlags.maskAlternate.rawValue | CGEventFlags.maskCommand.rawValue
+
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
     /// Pending retry work item — cancelled in stop() so a discarded InputMonitor
@@ -76,6 +81,14 @@ final class InputMonitor {
                 }
 
                 let shortcut = AppSettings.shared.userShortcut
+
+                if InputMonitor.isUndoDictationShortcut(type: type, event: event, mainShortcut: shortcut) {
+                    MainActorDispatch.async {
+                        monitor.engine?.undoLastDictation()
+                    }
+                    return nil // Consume event
+                }
+
                 var match = false
                 var isDown = false
 
@@ -179,5 +192,24 @@ final class InputMonitor {
         CFMachPortInvalidate(eventTap)
         self.runLoopSource = nil
         self.eventTap = nil
+    }
+
+    /// True if `type`/`event` is a keydown of the fixed "Undo Last Dictation" shortcut
+    /// (Control+Option+Command+Z) — chosen specifically to avoid colliding with any app's own
+    /// Cmd+Z / Shift+Cmd+Z undo/redo. Not user-configurable (unlike `mainShortcut`) since it's
+    /// a secondary, rarely-used action. Returns `false` when `mainShortcut` happens to be this
+    /// exact combination, so this fixed shortcut never starves the main trigger of its keydown.
+    private static func isUndoDictationShortcut(
+        type: CGEventType, event: CGEvent, mainShortcut: AppSettings.UserShortcut
+    ) -> Bool {
+        guard type == .keyDown else { return false }
+        let mainTriggerIsSameCombo =
+            Int64(mainShortcut.keyCode ?? 0) == undoDictationKeyCode &&
+            mainShortcut.modifiers == undoDictationModifierMask
+        guard !mainTriggerIsSameCombo,
+              event.getIntegerValueField(.keyboardEventKeycode) == undoDictationKeyCode else {
+            return false
+        }
+        return (event.flags.rawValue & undoDictationModifierMask) == undoDictationModifierMask
     }
 }

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Unit tests for the duplicate-install safety net in build.sh (install_locations_collide,
-# alternate_install_dir, is_allowed_bundle_path, pids_under_bundle,
+# install_dir_is_standard, alternate_install_dir, is_allowed_bundle_path, pids_under_bundle,
 # terminate_bundle_processes, ensure_bundle_process_stopped, cleanup_alternate_install,
 # verify_single_install) — covering both the alternate/stale bundle (the duplicate-install
 # fix) and the selected/current bundle (the pre-install shutdown hardening, so the
@@ -411,6 +411,37 @@ test_full_pipeline_composition() {
 }
 
 # ---------------------------------------------------------------------------
+# Scenario 11: a custom verification target is outside the canonical system/user
+# pair. Cleanup and verification must preserve both canonical bundles and verify
+# only the explicitly selected custom bundle.
+# ---------------------------------------------------------------------------
+test_custom_install_preserves_standard_bundles() {
+    local root="$WORKDIR/s11" exec_name="fakeexec11"
+    local sys_dir="$root/SystemApps" user_dir="$root/UserApps" custom_dir="$root/Verification"
+    mkdir -p "$sys_dir" "$user_dir" "$custom_dir"
+    make_fake_bundle "$sys_dir/App.app" "$exec_name"
+    make_fake_bundle "$user_dir/App.app" "$exec_name"
+    make_fake_bundle "$custom_dir/App.app" "$exec_name"
+
+    run_scenario '
+        install_dir_is_standard && exit 1
+        cleanup_alternate_install
+        verify_single_install
+    ' APP_NAME=App EXECUTABLE_NAME="$exec_name" \
+        SYSTEM_INSTALL_DIR="$sys_dir" USER_INSTALL_DIR="$user_dir" \
+        INSTALL_DIR="$custom_dir" HOME="$root/home"
+
+    if [ "$SCENARIO_EXIT" -eq 0 ] \
+        && [ -d "$sys_dir/App.app" ] \
+        && [ -d "$user_dir/App.app" ] \
+        && [ -d "$custom_dir/App.app" ]; then
+        log_pass "custom install: canonical bundles preserved and selected bundle verified"
+    else
+        log_fail "custom install: expected all three bundles intact and verification success (exit=$SCENARIO_EXIT): $SCENARIO_OUTPUT"
+    fi
+}
+
+# ---------------------------------------------------------------------------
 # Bonus: is_allowed_bundle_path rejects everything except the two allowed forms.
 # ---------------------------------------------------------------------------
 test_is_allowed_bundle_path_rejects_degenerate_inputs() {
@@ -705,6 +736,7 @@ main() {
     test_paths_with_spaces
     test_cleanup_failure_nonzero_exit
     test_full_pipeline_composition
+    test_custom_install_preserves_standard_bundles
     test_is_allowed_bundle_path_rejects_degenerate_inputs
 
     echo "Running selected-bundle shutdown scenarios..."

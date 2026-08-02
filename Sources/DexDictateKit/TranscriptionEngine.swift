@@ -97,6 +97,8 @@ public final class TranscriptionEngine: ObservableObject {
     @Published public private(set) var silenceCountdown: Double? = nil
 
     public var canUndoLastHistoryRemoval: Bool { history.canRestoreLastRemovedItem }
+    // canUndoLastDictation, recordDictationUndoIfNeeded, and undoLastDictation() live in
+    // TranscriptionEngine+DictationUndo.swift.
     public var canRetryLastUtterance: Bool {
         AppSettings.shared.enableAccuracyRetry &&
         lastUtteranceSnapshot?.hasAudio == true &&
@@ -121,6 +123,8 @@ public final class TranscriptionEngine: ObservableObject {
     private let commandProcessor = CommandProcessor()
     public let customCommandsManager = CustomCommandsManager()
     public let appInsertionOverridesManager = AppInsertionOverridesManager()
+    // Not `private`: read/written from the TranscriptionEngine+DictationUndo.swift extension.
+    let dictationUndoManager: DictationUndoPerforming = DictationUndoManager()
     
     /// Global input monitor.
     private var inputMonitor: InputMonitor?
@@ -146,7 +150,8 @@ public final class TranscriptionEngine: ObservableObject {
     private var pendingOutputTargetApplication: OutputTargetApplication?
     /// Snapshot of the focused AX element captured at trigger-down (recording start).
     /// Used to detect focus changes during transcription before committing paste.
-    private var pendingFocusSnapshot: FocusedElementSnapshot?
+    /// Not `private`: also read from the TranscriptionEngine+DictationUndo.swift extension.
+    var pendingFocusSnapshot: FocusedElementSnapshot?
     private var pendingDictationDomain: DictationDomain = .general
     private var currentRecordingStartedAt: Date?
     private var recentCommittedOutputs: [String] = []
@@ -1184,6 +1189,7 @@ public final class TranscriptionEngine: ObservableObject {
         case .pastedToActiveApp:
             resultFeedback = .pastedToActiveApp(modified: preparedResult.wasModified)
             onToast?(.outputInserted)
+            recordDictationUndoIfNeeded(deliveryDecision.undoContext)
         case .copiedOnly(let reason):
             resultFeedback = .copiedOnlySensitiveContext(modified: preparedResult.wasModified, reason: reason)
             onToast?(.clipboardFallback(reason: reason))

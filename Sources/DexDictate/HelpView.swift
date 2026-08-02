@@ -682,6 +682,8 @@ private struct OutputPastingContent: View {
             helpBody("Settings → Output & Insertion → Filter Profanity. Replaces matched words before delivery. Add or remove words using the fields that appear when the filter is enabled.")
             HelpScreenshot("help-output-settings",
                            caption: "The Output & Insertion settings page with all delivery toggles visible.")
+            helpHeading("Undo Last Dictation")
+            helpBody("Press ⌃⌥⌘Z (Control+Option+Command+Z), or click \"Undo Last Dictation\" in the popover after a dictation lands, to remove the most recently inserted text from the active app. This works independently of the target app's own clipboard and Edit ▸ Undo — DexDictate verifies the field still contains exactly what it inserted before removing anything, so it refuses to touch text you've since edited or a field you've since left.")
         }
     }
 }

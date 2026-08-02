@@ -181,6 +181,8 @@ struct ControlsView: View {
                             .accessibilityLabel("Restore the most recently removed history entry")
                         }
 
+                        UndoLastDictationButton(engine: engine)
+
                         if engine.canRetryLastUtterance {
                             Button("Retry with Higher Quality") {
                                 retryLastUtterance()
@@ -321,6 +323,24 @@ struct ControlsView: View {
             guard !incorrect.isEmpty, !corrected.isEmpty else { return }
             try? engine.vocabularyManager.add(original: incorrect, replacement: corrected)
             isCorrectionSheetPresented = false
+        }
+    }
+}
+
+/// Split out of `ControlsView`'s own body so this feature's markup doesn't grow that
+/// (already oversized) type body further.
+private struct UndoLastDictationButton: View {
+    @ObservedObject var engine: TranscriptionEngine
+
+    var body: some View {
+        if engine.canUndoLastDictation {
+            Button("Undo Last Dictation") {
+                MainActorAction.run { engine.undoLastDictation() }
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .accessibilityLabel("Remove the most recently inserted dictation from the active app")
+            .help("Removes the last dictation from the target app without touching its clipboard or undo history.")
         }
     }
 }
