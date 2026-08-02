@@ -63,6 +63,8 @@ final class AccessibilityInsertionTests: XCTestCase {
         ax.hasFocusedElement = true
         ax.settableMap = [kAXValueAttribute as String: false,
                           kAXSelectedTextAttribute as String: true]
+        ax.stringMap = [kAXValueAttribute as String: "existing"]
+        ax.selectedRangeResult = NSRange(location: 8, length: 0)
         ax.setResults = [kAXSelectedTextAttribute as String: .success]
 
         let coordinator = OutputCoordinator(axOperator: ax)
@@ -107,6 +109,8 @@ final class AccessibilityInsertionTests: XCTestCase {
         let ax = MockAccessibilityOperator()
         ax.hasFocusedElement = true
         ax.settableMap = [kAXValueAttribute as String: false, kAXSelectedTextAttribute as String: true]
+        ax.stringMap = [kAXValueAttribute as String: "existing"]
+        ax.selectedRangeResult = NSRange(location: 8, length: 0)
         ax.setResults = [kAXSelectedTextAttribute as String: .failure]
         let writer = MockOutputWriter()
 
@@ -134,7 +138,7 @@ final class AccessibilityInsertionTests: XCTestCase {
         XCTAssertEqual(ax.setCursorLocations.last, 5)  // utf16.count == unicodeScalars.count for ASCII
     }
 
-    func testCursorOffsetEmojiUsesUnicodeScalarsNotUTF16() {
+    func testCursorOffsetEmojiUsesUTF16() {
         let ax = MockAccessibilityOperator()
         ax.hasFocusedElement = true
         ax.settableMap = [kAXValueAttribute as String: true]
@@ -143,11 +147,10 @@ final class AccessibilityInsertionTests: XCTestCase {
         ax.setResults = [kAXValueAttribute as String: .success]
 
         let coordinator = OutputCoordinator(axOperator: ax)
-        // "hello 🎉": 6 ASCII + 1 emoji = 7 unicode scalars, but 8 UTF-16 code units
+        // Accessibility text ranges use UTF-16 code units.
         _ = coordinator.deliver(text: "hello 🎉", autoPaste: true, protectSensitiveContexts: false, insertionMode: .accessibilityAPI)
 
-        XCTAssertEqual(ax.setCursorLocations.last, 7,
-            "Cursor should be at 7 (unicodeScalars.count), not 8 (utf16.count)")
+        XCTAssertEqual(ax.setCursorLocations.last, 8)
     }
 
     func testCursorOffsetCJK() {
@@ -174,11 +177,10 @@ final class AccessibilityInsertionTests: XCTestCase {
         ax.setResults = [kAXValueAttribute as String: .success]
 
         let coordinator = OutputCoordinator(axOperator: ax)
-        // "hi 🎉 世界": h(1)i(1) (1)🎉(1 scalar,2 utf16) (1)世(1)界(1) = 7 scalars, 8 utf16
+        // "hi 🎉 世界" occupies 8 UTF-16 code units.
         _ = coordinator.deliver(text: "hi 🎉 世界", autoPaste: true, protectSensitiveContexts: false, insertionMode: .accessibilityAPI)
 
-        XCTAssertEqual(ax.setCursorLocations.last, 7,
-            "Mixed emoji+CJK: 7 unicode scalars, cursor should land at 7")
+        XCTAssertEqual(ax.setCursorLocations.last, 8)
     }
 
     func testCursorOffsetNonZeroInitialRange() {
@@ -190,10 +192,72 @@ final class AccessibilityInsertionTests: XCTestCase {
         ax.setResults = [kAXValueAttribute as String: .success]
 
         let coordinator = OutputCoordinator(axOperator: ax)
-        // Inserting emoji at position 3: cursor should land at 3+1=4 (not 3+2 for UTF-16)
+        // Inserting an emoji at UTF-16 position 3 advances by two code units.
         _ = coordinator.deliver(text: "🎉", autoPaste: true, protectSensitiveContexts: false, insertionMode: .accessibilityAPI)
 
-        XCTAssertEqual(ax.setCursorLocations.last, 4)
+        XCTAssertEqual(ax.setCursorLocations.last, 5)
+    }
+
+    func testCursorOffsetCombiningSequenceAndFamilyEmojiUsesUTF16() {
+        let ax = MockAccessibilityOperator()
+        ax.hasFocusedElement = true
+        ax.settableMap = [kAXValueAttribute as String: true]
+        ax.stringMap = [kAXValueAttribute as String: ""]
+        ax.selectedRangeResult = NSRange(location: 0, length: 0)
+        ax.setResults = [kAXValueAttribute as String: .success]
+
+        let coordinator = OutputCoordinator(axOperator: ax)
+        _ = coordinator.deliver(
+            text: "e\u{301}👨‍👩‍👧‍👦",
+            autoPaste: true,
+            protectSensitiveContexts: false,
+            insertionMode: .accessibilityAPI
+        )
+
+        XCTAssertEqual(ax.setCursorLocations.last, 13)
+    }
+
+    func testMixedTextInsertionUsesUTF16RangeBeforeAndAfterCursor() {
+        let ax = MockAccessibilityOperator()
+        ax.hasFocusedElement = true
+        ax.settableMap = [kAXValueAttribute as String: true]
+        ax.stringMap = [kAXValueAttribute as String: "A😀Z"]
+        ax.selectedRangeResult = NSRange(location: 3, length: 0)
+        ax.setResults = [kAXValueAttribute as String: .success]
+
+        let coordinator = OutputCoordinator(axOperator: ax)
+        _ = coordinator.deliver(
+            text: "e\u{301}漢",
+            autoPaste: true,
+            protectSensitiveContexts: false,
+            insertionMode: .accessibilityAPI
+        )
+
+        XCTAssertEqual(ax.stringMap[kAXValueAttribute as String], "A😀e\u{301}漢Z")
+        XCTAssertEqual(ax.setCursorLocations.last, 6)
+    }
+
+    func testSuccessfulSetterWithContradictoryReadbackIsUnverified() {
+        let ax = MockAccessibilityOperator()
+        ax.hasFocusedElement = true
+        ax.settableMap = [kAXValueAttribute as String: true]
+        ax.stringMap = [kAXValueAttribute as String: "hello"]
+        ax.selectedRangeResult = NSRange(location: 5, length: 0)
+        ax.setResults = [kAXValueAttribute as String: .success]
+        ax.appliesSuccessfulMutations = false
+        let writer = MockOutputWriter()
+
+        let coordinator = OutputCoordinator(writer: writer, axOperator: ax)
+        let decision = coordinator.deliver(
+            text: " world",
+            autoPaste: true,
+            protectSensitiveContexts: false,
+            insertionMode: .accessibilityAPI
+        )
+
+        XCTAssertEqual(decision.delivery, .requestedButUnverified)
+        XCTAssertNil(decision.undoContext)
+        XCTAssertTrue(writer.pastedTexts.isEmpty, "Do not duplicate a mutation that may have occurred")
     }
 
     func testReturnsFalseAndFallsThroughToClipboardWhenNoFocusedElement() {
@@ -204,7 +268,7 @@ final class AccessibilityInsertionTests: XCTestCase {
         let coordinator = OutputCoordinator(writer: writer, axOperator: ax)
         let decision = coordinator.deliver(text: "hello", autoPaste: true, protectSensitiveContexts: false, insertionMode: .accessibilityAPI)
 
-        XCTAssertEqual(decision.delivery, .pastedToActiveApp)
+        XCTAssertEqual(decision.delivery, .requestedButUnverified)
         XCTAssertEqual(writer.pastedTexts, ["hello"], "Should fall back to clipboard when no focused element")
         XCTAssertTrue(ax.setCallLog.isEmpty, "No AX set calls should occur without a focused element")
     }
@@ -213,17 +277,19 @@ final class AccessibilityInsertionTests: XCTestCase {
 // MARK: - Test doubles
 
 final class MockAccessibilityOperator: AccessibilityElementOperating {
+    let focused = AXUIElementCreateSystemWide()
     var hasFocusedElement: Bool = false
     var settableMap: [String: Bool] = [:]
     var stringMap: [String: String] = [:]
-    var selectedRangeResult: NSRange? = nil
+    var selectedRangeResult: NSRange?
     var setResults: [String: AXError] = [:]
+    var appliesSuccessfulMutations = true
     private(set) var setCallLog: [String] = []
     private(set) var setCursorLocations: [Int] = []
     private(set) var lastSetValue: String?
 
     func focusedElement() -> AXUIElement? {
-        hasFocusedElement ? AXUIElementCreateSystemWide() : nil
+        hasFocusedElement ? focused : nil
     }
 
     func isSettable(_ attribute: CFString, element: AXUIElement) -> Bool {
@@ -241,11 +307,31 @@ final class MockAccessibilityOperator: AccessibilityElementOperating {
     func set(_ value: CFTypeRef, for attribute: CFString, element: AXUIElement) -> AXError {
         setCallLog.append(attribute as String)
         lastSetValue = value as? String
-        return setResults[attribute as String] ?? .attributeUnsupported
+        let result = setResults[attribute as String] ?? .attributeUnsupported
+        guard result == .success, appliesSuccessfulMutations else { return result }
+        if attribute as String == kAXValueAttribute as String, let value = value as? String {
+            stringMap[attribute as String] = value
+        } else if attribute as String == kAXSelectedTextAttribute as String,
+                  let text = value as? String,
+                  let currentValue = stringMap[kAXValueAttribute as String],
+                  let selectedRangeResult,
+                  let updated = accessibilityReplacingText(
+                      in: currentValue,
+                      range: selectedRangeResult,
+                      with: text
+                  ) {
+            stringMap[kAXValueAttribute as String] = updated
+        }
+        return result
     }
 
-    func setCursor(location: Int, element: AXUIElement) {
+    @discardableResult
+    func setCursor(location: Int, element: AXUIElement) -> AXError {
         setCursorLocations.append(location)
+        if appliesSuccessfulMutations {
+            selectedRangeResult = NSRange(location: location, length: 0)
+        }
+        return .success
     }
 }
 
@@ -255,13 +341,29 @@ private final class MockOutputWriter: OutputWriting {
     var selectAllAndPastedTexts: [String] = []
     var lastPasteTargetApplication: OutputTargetApplication?
 
-    func copy(_ text: String) { copiedTexts.append(text) }
-    func copyAndPaste(_ text: String, targetApplication: OutputTargetApplication?) {
+    @discardableResult
+    func copy(_ text: String) -> Bool {
+        copiedTexts.append(text)
+        return true
+    }
+    @discardableResult
+    func copyAndPaste(
+        _ text: String,
+        targetApplication: OutputTargetApplication?,
+        completion: @escaping (OutputDelivery) -> Void
+    ) -> Bool {
         pastedTexts.append(text)
         lastPasteTargetApplication = targetApplication
+        return true
     }
-    func selectAllAndPaste(_ text: String, targetApplication: OutputTargetApplication?) {
+    @discardableResult
+    func selectAllAndPaste(
+        _ text: String,
+        targetApplication: OutputTargetApplication?,
+        completion: @escaping (OutputDelivery) -> Void
+    ) -> Bool {
         selectAllAndPastedTexts.append(text)
         lastPasteTargetApplication = targetApplication
+        return true
     }
 }

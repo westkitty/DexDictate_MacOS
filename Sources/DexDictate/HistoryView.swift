@@ -134,8 +134,7 @@ struct HistoryView: View {
                                     systemName: "doc.on.doc",
                                     accessibilityText: "Copy history item"
                                 ) {
-                                    NSPasteboard.general.clearContents()
-                                    NSPasteboard.general.setString(item.text, forType: .string)
+                                    TranscriptCopyAction.copy(item.text)
                                 }
                             }
                             .padding(6)

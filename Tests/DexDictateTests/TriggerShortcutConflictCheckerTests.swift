@@ -60,4 +60,26 @@ final class TriggerShortcutConflictCheckerTests: XCTestCase {
         let conflict = TriggerShortcutConflictChecker.conflict(for: keyShortcut(0x02, cmd))
         XCTAssertNil(conflict)
     }
+
+    func testUndoChordExactAndSubsetModifierTriggersConflict() {
+        let shadowedModifiers = [
+            cmd,
+            option | cmd,
+            control | cmd,
+            control | option | cmd
+        ]
+
+        for modifiers in shadowedModifiers {
+            let conflict = TriggerShortcutConflictChecker.conflict(for: keyShortcut(0x06, modifiers))
+            XCTAssertEqual(conflict?.severity, .shadowsUndoLastDictation)
+        }
+    }
+
+    func testUndoChordDoesNotShadowTriggerRequiringAdditionalModifier() {
+        let conflict = TriggerShortcutConflictChecker.conflict(
+            for: keyShortcut(0x06, control | option | cmd | shift)
+        )
+
+        XCTAssertNil(conflict)
+    }
 }

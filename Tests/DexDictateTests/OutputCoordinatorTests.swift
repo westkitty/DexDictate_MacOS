@@ -42,7 +42,7 @@ final class OutputCoordinatorTests: XCTestCase {
 
         let decision = coordinator.deliver(text: "hello", autoPaste: true, protectSensitiveContexts: true)
 
-        XCTAssertEqual(decision.delivery, .pastedToActiveApp)
+        XCTAssertEqual(decision.delivery, .requestedButUnverified)
         XCTAssertEqual(writer.copiedTexts, [])
         XCTAssertEqual(writer.pastedTexts, ["hello"])
     }
@@ -120,7 +120,7 @@ final class OutputCoordinatorTests: XCTestCase {
             targetApplication: target
         )
 
-        XCTAssertEqual(decision.delivery, .pastedToActiveApp)
+        XCTAssertEqual(decision.delivery, .requestedButUnverified)
         XCTAssertEqual(writer.lastPasteTargetApplication, target)
     }
 
@@ -142,7 +142,7 @@ final class OutputCoordinatorTests: XCTestCase {
             targetApplication: target
         )
 
-        XCTAssertEqual(decision.delivery, .pastedToActiveApp)
+        XCTAssertEqual(decision.delivery, .requestedButUnverified)
         XCTAssertTrue(activator.activatedApplications.isEmpty)
     }
 
@@ -164,7 +164,7 @@ final class OutputCoordinatorTests: XCTestCase {
             targetApplication: target
         )
 
-        XCTAssertEqual(decision.delivery, .pastedToActiveApp)
+        XCTAssertEqual(decision.delivery, .requestedButUnverified)
         XCTAssertEqual(activator.activatedApplications, [target])
         XCTAssertEqual(writer.lastPasteTargetApplication, target)
     }
@@ -222,7 +222,7 @@ final class OutputCoordinatorTests: XCTestCase {
             targetApplication: target
         )
 
-        XCTAssertEqual(decision.delivery, .pastedToActiveApp)
+        XCTAssertEqual(decision.delivery, .requestedButUnverified)
         XCTAssertEqual(writer.pastedTexts, ["hello"])
         XCTAssertEqual(writer.lastPasteTargetApplication, target)
         XCTAssertFalse(axOperator.didAttemptSetValue)
@@ -250,7 +250,7 @@ final class OutputCoordinatorTests: XCTestCase {
             insertionMode: .accessibilityAPI
         )
 
-        XCTAssertEqual(decision.delivery, .pastedToActiveApp)
+        XCTAssertEqual(decision.delivery, .requestedButUnverified)
         XCTAssertEqual(writer.pastedTexts, ["hello"])
     }
 
@@ -296,7 +296,7 @@ final class OutputCoordinatorTests: XCTestCase {
             protectSensitiveContexts: false
         )
 
-        XCTAssertEqual(decision.delivery, .pastedToActiveApp)
+        XCTAssertEqual(decision.delivery, .requestedButUnverified)
         XCTAssertTrue(writer.copiedTexts.isEmpty)
         XCTAssertEqual(writer.pastedTexts, ["not-secret"])
     }
@@ -316,7 +316,7 @@ final class OutputCoordinatorTests: XCTestCase {
             insertionMode: .replaceFieldWithClipboardPaste
         )
 
-        XCTAssertEqual(decision.delivery, .pastedToActiveApp)
+        XCTAssertEqual(decision.delivery, .requestedButUnverified)
         XCTAssertEqual(writer.selectAllAndPastedTexts, ["hello"])
         XCTAssertTrue(writer.pastedTexts.isEmpty)
         XCTAssertTrue(writer.copiedTexts.isEmpty)
@@ -391,9 +391,9 @@ final class OutputCoordinatorTests: XCTestCase {
 
         XCTAssertEqual(saveOnly.delivery, .savedOnly)
         XCTAssertEqual(clipboardOnly.delivery, .copiedOnly(reason: "Per-app clipboard-only mode"))
-        XCTAssertEqual(clipboardPaste.delivery, .pastedToActiveApp)
+        XCTAssertEqual(clipboardPaste.delivery, .requestedButUnverified)
         XCTAssertEqual(accessibility.delivery, .pastedToActiveApp)
-        XCTAssertEqual(replaceField.delivery, .pastedToActiveApp)
+        XCTAssertEqual(replaceField.delivery, .requestedButUnverified)
         XCTAssertEqual(writer.copiedTexts, ["two"])
         XCTAssertEqual(writer.pastedTexts, ["three"])
         XCTAssertEqual(writer.selectAllAndPastedTexts, ["five"])
@@ -425,7 +425,7 @@ final class OutputCoordinatorTests: XCTestCase {
             insertionMode: .clipboardPaste
         )
 
-        XCTAssertEqual(decision.delivery, .pastedToActiveApp)
+        XCTAssertEqual(decision.delivery, .requestedButUnverified)
         XCTAssertEqual(writer.pastedTexts, [" Second sentence."])
     }
 
@@ -453,7 +453,7 @@ final class OutputCoordinatorTests: XCTestCase {
             insertionMode: .clipboardPaste
         )
 
-        XCTAssertEqual(decision.delivery, .pastedToActiveApp)
+        XCTAssertEqual(decision.delivery, .requestedButUnverified)
         XCTAssertEqual(writer.pastedTexts, ["Second sentence."])
     }
 
@@ -481,7 +481,7 @@ final class OutputCoordinatorTests: XCTestCase {
             insertionMode: .clipboardPaste
         )
 
-        XCTAssertEqual(decision.delivery, .pastedToActiveApp)
+        XCTAssertEqual(decision.delivery, .requestedButUnverified)
         XCTAssertEqual(writer.pastedTexts, ["world"])
     }
 
@@ -509,7 +509,7 @@ final class OutputCoordinatorTests: XCTestCase {
             insertionMode: .clipboardPaste
         )
 
-        XCTAssertEqual(decision.delivery, .pastedToActiveApp)
+        XCTAssertEqual(decision.delivery, .requestedButUnverified)
         XCTAssertEqual(writer.pastedTexts, ["New sentence."])
     }
 
@@ -537,7 +537,7 @@ final class OutputCoordinatorTests: XCTestCase {
             insertionMode: .replaceFieldWithClipboardPaste
         )
 
-        XCTAssertEqual(decision.delivery, .pastedToActiveApp)
+        XCTAssertEqual(decision.delivery, .requestedButUnverified)
         XCTAssertEqual(writer.selectAllAndPastedTexts, ["Replacement."])
     }
 
@@ -621,7 +621,7 @@ final class OutputCoordinatorTests: XCTestCase {
             insertionMode: .clipboardPaste
         )
 
-        XCTAssertEqual(decision.delivery, .pastedToActiveApp)
+        XCTAssertEqual(decision.delivery, .requestedButUnverified)
         XCTAssertEqual(writer.pastedTexts, ["Second sentence."])
     }
 
@@ -662,7 +662,7 @@ final class OutputCoordinatorTests: XCTestCase {
         XCTAssertEqual(decision.undoContext?.targetApplication, target)
     }
 
-    func testClipboardPasteStillPopulatesUndoContextFromBestEffortAXRead() {
+    func testClipboardPasteIsUnverifiedAndDoesNotPopulateUndoContext() {
         let writer = MockOutputWriter()
         let axOperator = MockAccessibilityElementOperator(
             valueIsSettable: false,
@@ -687,12 +687,11 @@ final class OutputCoordinatorTests: XCTestCase {
         )
 
         XCTAssertEqual(writer.pastedTexts, ["hello"])
-        XCTAssertEqual(decision.undoContext?.insertedText, "hello")
-        XCTAssertEqual(decision.undoContext?.previousFieldValue, "before")
-        XCTAssertEqual(decision.undoContext?.replacementRange, NSRange(location: 6, length: 0))
+        XCTAssertEqual(decision.delivery, .requestedButUnverified)
+        XCTAssertNil(decision.undoContext)
     }
 
-    func testReplaceFieldModePopulatesUndoContextWithFullPreviousValueRange() {
+    func testReplaceFieldModeIsUnverifiedAndDoesNotPopulateUndoContext() {
         let writer = MockOutputWriter()
         let axOperator = MockAccessibilityElementOperator(
             valueIsSettable: true,
@@ -717,9 +716,8 @@ final class OutputCoordinatorTests: XCTestCase {
         )
 
         XCTAssertEqual(writer.selectAllAndPastedTexts, ["replacement"])
-        XCTAssertEqual(decision.undoContext?.insertedText, "replacement")
-        XCTAssertEqual(decision.undoContext?.previousFieldValue, "old content")
-        XCTAssertEqual(decision.undoContext?.replacementRange, NSRange(location: 0, length: 11))
+        XCTAssertEqual(decision.delivery, .requestedButUnverified)
+        XCTAssertNil(decision.undoContext)
     }
 
     func testSavedOnlyAndCopiedOnlyDeliveriesCarryNoUndoContext() {
@@ -736,6 +734,51 @@ final class OutputCoordinatorTests: XCTestCase {
         XCTAssertNil(savedOnly.undoContext)
         XCTAssertNil(copiedOnly.undoContext)
     }
+
+    func testScheduledPasteCompletionCanReportBlockedWithoutClaimingInsertion() {
+        let writer = MockOutputWriter()
+        writer.pasteCompletion = .blocked(reason: "Focus invalidated")
+        let coordinator = OutputCoordinator(
+            writer: writer,
+            contextInspector: MockFocusedContextInspector(context: .standard),
+            applicationActivator: MockApplicationActivator()
+        )
+        var completionDecision: OutputDeliveryDecision?
+
+        let initialDecision = coordinator.deliver(
+            text: "hello",
+            autoPaste: true,
+            protectSensitiveContexts: false,
+            insertionMode: .clipboardPaste,
+            targetApplication: nil,
+            completion: { completionDecision = $0 }
+        )
+
+        XCTAssertEqual(initialDecision.delivery, .requestedButUnverified)
+        XCTAssertNil(initialDecision.undoContext)
+        XCTAssertEqual(completionDecision?.delivery, .blocked(reason: "Focus invalidated"))
+        XCTAssertNil(completionDecision?.undoContext)
+    }
+
+    func testClipboardWriteFailureReportsFailed() {
+        let writer = MockOutputWriter()
+        writer.copySucceeds = false
+        let coordinator = OutputCoordinator(
+            writer: writer,
+            contextInspector: MockFocusedContextInspector(context: .standard),
+            applicationActivator: MockApplicationActivator()
+        )
+
+        let decision = coordinator.deliver(
+            text: "hello",
+            autoPaste: true,
+            protectSensitiveContexts: true,
+            insertionMode: .clipboardOnly
+        )
+
+        XCTAssertEqual(decision.delivery, .failed(reason: "Could not copy text to the clipboard."))
+        XCTAssertNil(decision.undoContext)
+    }
 }
 
 private final class MockOutputWriter: OutputWriting {
@@ -743,19 +786,37 @@ private final class MockOutputWriter: OutputWriting {
     var pastedTexts: [String] = []
     var selectAllAndPastedTexts: [String] = []
     var lastPasteTargetApplication: OutputTargetApplication?
+    var copySucceeds = true
+    var pasteCompletion: OutputDelivery?
 
-    func copy(_ text: String) {
+    @discardableResult
+    func copy(_ text: String) -> Bool {
         copiedTexts.append(text)
+        return copySucceeds
     }
 
-    func copyAndPaste(_ text: String, targetApplication: OutputTargetApplication?) {
+    @discardableResult
+    func copyAndPaste(
+        _ text: String,
+        targetApplication: OutputTargetApplication?,
+        completion: @escaping (OutputDelivery) -> Void
+    ) -> Bool {
         pastedTexts.append(text)
         lastPasteTargetApplication = targetApplication
+        if let pasteCompletion { completion(pasteCompletion) }
+        return true
     }
 
-    func selectAllAndPaste(_ text: String, targetApplication: OutputTargetApplication?) {
+    @discardableResult
+    func selectAllAndPaste(
+        _ text: String,
+        targetApplication: OutputTargetApplication?,
+        completion: @escaping (OutputDelivery) -> Void
+    ) -> Bool {
         selectAllAndPastedTexts.append(text)
         lastPasteTargetApplication = targetApplication
+        if let pasteCompletion { completion(pasteCompletion) }
+        return true
     }
 }
 
@@ -841,8 +902,8 @@ private final class MockAccessibilityElementOperator: AccessibilityElementOperat
     private let setValueResult: AXError
     private let setSelectedTextResult: AXError
     private let focused = AXUIElementCreateSystemWide()
-    private let existingValue: String
-    private let selectedRange: NSRange
+    private var currentValue: String
+    private var currentSelectedRange: NSRange
     /// When false, `focusedElement()` returns nil (simulates no readable AX element).
     private let hasFocusedElement: Bool
 
@@ -863,8 +924,8 @@ private final class MockAccessibilityElementOperator: AccessibilityElementOperat
         self.selectedTextIsSettable = selectedTextIsSettable
         self.setValueResult = setValueResult
         self.setSelectedTextResult = setSelectedTextResult
-        self.existingValue = existingValue
-        self.selectedRange = selectedRange
+        currentValue = existingValue
+        currentSelectedRange = selectedRange
         self.hasFocusedElement = hasFocusedElement
     }
 
@@ -880,11 +941,11 @@ private final class MockAccessibilityElementOperator: AccessibilityElementOperat
     }
 
     func getString(_ attribute: CFString, element: AXUIElement) -> String? {
-        existingValue
+        currentValue
     }
 
     func getSelectedRange(element: AXUIElement) -> NSRange? {
-        selectedRange
+        currentSelectedRange
     }
 
     func set(_ value: CFTypeRef, for attribute: CFString, element: AXUIElement) -> AXError {
@@ -892,15 +953,30 @@ private final class MockAccessibilityElementOperator: AccessibilityElementOperat
         if key == kAXValueAttribute as String {
             didAttemptSetValue = true
             lastSetValue = value as? String
+            if setValueResult == .success, let value = value as? String {
+                currentValue = value
+            }
             return setValueResult
         }
         if key == kAXSelectedTextAttribute as String {
+            if setSelectedTextResult == .success,
+               let text = value as? String,
+               let updated = accessibilityReplacingText(
+                   in: currentValue,
+                   range: currentSelectedRange,
+                   with: text
+               ) {
+                currentValue = updated
+            }
             return setSelectedTextResult
         }
         return .failure
     }
 
-    func setCursor(location: Int, element: AXUIElement) {
+    @discardableResult
+    func setCursor(location: Int, element: AXUIElement) -> AXError {
         setCursorLocations.append(location)
+        currentSelectedRange = NSRange(location: location, length: 0)
+        return .success
     }
 }

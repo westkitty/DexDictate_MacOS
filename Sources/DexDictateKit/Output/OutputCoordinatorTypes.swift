@@ -19,21 +19,39 @@ public enum OutputTargetContext: Equatable {
 
 public enum OutputDelivery: Equatable {
     case savedOnly
+    /// Accessibility readback confirmed the target field mutation and resulting selection.
     case pastedToActiveApp
     case copiedOnly(reason: String)
+    case blocked(reason: String)
+    case failed(reason: String)
+    /// Synthetic paste events were scheduled or posted, but macOS offers no delivery receipt.
+    case requestedButUnverified
 }
 
 public struct OutputDeliveryDecision: Equatable {
     public let delivery: OutputDelivery
     /// Populated only when `delivery == .pastedToActiveApp`; carries what's needed to
     /// reverse this specific insertion later via `DictationUndoManager`. `nil` when nothing
-    /// was actually inserted, or `undoContext` fields are `nil` when Accessibility couldn't
-    /// read the relevant state for this particular field.
+    /// was confirmed or when the exact target and pre-insertion state were unavailable.
     public let undoContext: DictationUndoContext?
 
     public init(delivery: OutputDelivery, undoContext: DictationUndoContext? = nil) {
         self.delivery = delivery
         self.undoContext = undoContext
+    }
+}
+
+/// Retains the exact Accessibility element used for a confirmed insertion. `CFEqual`
+/// compares the underlying AX object rather than broad app or role metadata.
+final class AccessibilityElementReference: Equatable {
+    let element: AXUIElement
+
+    init(_ element: AXUIElement) {
+        self.element = element
+    }
+
+    static func == (lhs: AccessibilityElementReference, rhs: AccessibilityElementReference) -> Bool {
+        CFEqual(lhs.element, rhs.element)
     }
 }
 
@@ -50,6 +68,7 @@ public struct DictationUndoContext: Equatable {
     /// at the cursor; non-zero when replacing a selection or an entire field).
     public let replacementRange: NSRange?
     public let targetApplication: OutputTargetApplication?
+    let targetElement: AccessibilityElementReference?
 
     public init(
         insertedText: String,
@@ -61,6 +80,21 @@ public struct DictationUndoContext: Equatable {
         self.previousFieldValue = previousFieldValue
         self.replacementRange = replacementRange
         self.targetApplication = targetApplication
+        self.targetElement = nil
+    }
+
+    init(
+        insertedText: String,
+        previousFieldValue: String?,
+        replacementRange: NSRange?,
+        targetApplication: OutputTargetApplication?,
+        targetElement: AXUIElement
+    ) {
+        self.insertedText = insertedText
+        self.previousFieldValue = previousFieldValue
+        self.replacementRange = replacementRange
+        self.targetApplication = targetApplication
+        self.targetElement = AccessibilityElementReference(targetElement)
     }
 }
 
@@ -72,7 +106,8 @@ public protocol AccessibilityElementOperating {
     func getString(_ attribute: CFString, element: AXUIElement) -> String?
     func getSelectedRange(element: AXUIElement) -> NSRange?
     func set(_ value: CFTypeRef, for attribute: CFString, element: AXUIElement) -> AXError
-    func setCursor(location: Int, element: AXUIElement)
+    @discardableResult
+    func setCursor(location: Int, element: AXUIElement) -> AXError
 }
 
 /// Production implementation that calls the real macOS Accessibility APIs.
@@ -113,28 +148,39 @@ public struct SystemAccessibilityElementOperator: AccessibilityElementOperating 
         guard AXValueGetType(axValue) == .cfRange else { return nil }
         var range = CFRange()
         guard AXValueGetValue(axValue, .cfRange, &range) else { return nil }
-        return NSRange(location: max(0, range.location), length: max(0, range.length))
+        return NSRange(location: range.location, length: range.length)
     }
 
     public func set(_ value: CFTypeRef, for attribute: CFString, element: AXUIElement) -> AXError {
         AXUIElementSetAttributeValue(element, attribute, value)
     }
 
-    public func setCursor(location: Int, element: AXUIElement) {
+    @discardableResult
+    public func setCursor(location: Int, element: AXUIElement) -> AXError {
         var cursor = CFRange(location: location, length: 0)
-        if let cursorValue = AXValueCreate(.cfRange, &cursor) {
-            _ = AXUIElementSetAttributeValue(
-                element, kAXSelectedTextRangeAttribute as CFString, cursorValue
-            )
-        }
+        guard let cursorValue = AXValueCreate(.cfRange, &cursor) else { return .failure }
+        return AXUIElementSetAttributeValue(
+            element, kAXSelectedTextRangeAttribute as CFString, cursorValue
+        )
     }
 }
 
 public protocol OutputWriting {
-    func copy(_ text: String)
-    func copyAndPaste(_ text: String, targetApplication: OutputTargetApplication?)
+    @discardableResult
+    func copy(_ text: String) -> Bool
+    @discardableResult
+    func copyAndPaste(
+        _ text: String,
+        targetApplication: OutputTargetApplication?,
+        completion: @escaping (OutputDelivery) -> Void
+    ) -> Bool
     /// Selects all text in the focused field (Cmd+A) then pastes (Cmd+V).
-    func selectAllAndPaste(_ text: String, targetApplication: OutputTargetApplication?)
+    @discardableResult
+    func selectAllAndPaste(
+        _ text: String,
+        targetApplication: OutputTargetApplication?,
+        completion: @escaping (OutputDelivery) -> Void
+    ) -> Bool
 }
 
 public protocol FocusedContextInspecting {
@@ -142,28 +188,69 @@ public protocol FocusedContextInspecting {
 }
 
 public protocol OutputCoordinating {
+    // Completion is additive so existing five-argument call sites keep their shape.
+    // swiftlint:disable:next function_parameter_count
     func deliver(
         text: String,
         autoPaste: Bool,
         protectSensitiveContexts: Bool,
         insertionMode: InsertionModeOverride,
-        targetApplication: OutputTargetApplication?
+        targetApplication: OutputTargetApplication?,
+        completion: @escaping (OutputDeliveryDecision) -> Void
     ) -> OutputDeliveryDecision
+}
+
+public extension OutputCoordinating {
+    func deliver(
+        text: String,
+        autoPaste: Bool,
+        protectSensitiveContexts: Bool,
+        insertionMode: InsertionModeOverride = .clipboardPaste,
+        targetApplication: OutputTargetApplication? = nil
+    ) -> OutputDeliveryDecision {
+        deliver(
+            text: text,
+            autoPaste: autoPaste,
+            protectSensitiveContexts: protectSensitiveContexts,
+            insertionMode: insertionMode,
+            targetApplication: targetApplication,
+            completion: { _ in }
+        )
+    }
 }
 
 public struct ClipboardOutputWriter: OutputWriting {
     public init() {}
 
-    public func copy(_ text: String) {
+    @discardableResult
+    public func copy(_ text: String) -> Bool {
         ClipboardManager.copy(text)
     }
 
-    public func copyAndPaste(_ text: String, targetApplication: OutputTargetApplication?) {
-        ClipboardManager.copyAndPaste(text, targetApplication: targetApplication)
+    @discardableResult
+    public func copyAndPaste(
+        _ text: String,
+        targetApplication: OutputTargetApplication?,
+        completion: @escaping (OutputDelivery) -> Void
+    ) -> Bool {
+        ClipboardManager.copyAndPaste(
+            text,
+            targetApplication: targetApplication,
+            completion: completion
+        )
     }
 
-    public func selectAllAndPaste(_ text: String, targetApplication: OutputTargetApplication?) {
-        ClipboardManager.copySelectAllAndPaste(text, targetApplication: targetApplication)
+    @discardableResult
+    public func selectAllAndPaste(
+        _ text: String,
+        targetApplication: OutputTargetApplication?,
+        completion: @escaping (OutputDelivery) -> Void
+    ) -> Bool {
+        ClipboardManager.copySelectAllAndPaste(
+            text,
+            targetApplication: targetApplication,
+            completion: completion
+        )
     }
 }
 
@@ -185,15 +272,18 @@ struct AppKitOutputApplicationActivator: OutputApplicationActivating {
     }
 }
 
-/// Splices `replacement` into `currentValue` at `range`, clamping the range to the string's
-/// bounds. Shared by `OutputCoordinator.insertViaAccessibility` (performing an insertion) and
-/// `DictationUndoManager` (verifying/reversing one), so both sides of an insert/undo pair
-/// agree on exactly the same substitution semantics.
-func accessibilityReplacingText(in currentValue: String, range: NSRange, with replacement: String) -> String {
+/// Accessibility text ranges are UTF-16/NSString ranges. Invalid input is rejected rather
+/// than clamped into a different mutation target.
+func isValidAccessibilityRange(_ range: NSRange, in value: String) -> Bool {
+    let utf16Length = (value as NSString).length
+    guard range.location >= 0, range.length >= 0, range.location <= utf16Length else {
+        return false
+    }
+    return range.length <= utf16Length - range.location
+}
+
+func accessibilityReplacingText(in currentValue: String, range: NSRange, with replacement: String) -> String? {
+    guard isValidAccessibilityRange(range, in: currentValue) else { return nil }
     let currentNSString = currentValue as NSString
-    let maxLocation = currentNSString.length
-    let clampedLocation = min(max(0, range.location), maxLocation)
-    let clampedLength = min(max(0, range.length), maxLocation - clampedLocation)
-    let clampedRange = NSRange(location: clampedLocation, length: clampedLength)
-    return currentNSString.replacingCharacters(in: clampedRange, with: replacement)
+    return currentNSString.replacingCharacters(in: range, with: replacement)
 }

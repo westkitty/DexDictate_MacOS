@@ -15,6 +15,15 @@ public enum ToastEvent: Equatable, Sendable {
     /// Text was successfully pasted into the active application.
     case outputInserted
 
+    /// Synthetic paste events were posted, but macOS did not confirm insertion.
+    case outputPasteUnverified
+
+    /// Delivery was blocked before paste events were posted.
+    case outputBlocked(reason: String)
+
+    /// Delivery failed before a paste request could be completed.
+    case outputFailed(reason: String)
+
     /// Text was copied to clipboard instead of pasted (sensitive context or per-app override).
     case clipboardFallback(reason: String)
 
@@ -37,6 +46,12 @@ public enum ToastEvent: Equatable, Sendable {
             return "Dex \(keyword)"
         case .outputInserted:
             return "Inserted"
+        case .outputPasteUnverified:
+            return "Paste requested"
+        case .outputBlocked:
+            return "Paste blocked"
+        case .outputFailed:
+            return "Delivery failed"
         case .clipboardFallback:
             return "Copied to clipboard"
         case .outputSavedOnly:
@@ -54,6 +69,10 @@ public enum ToastEvent: Equatable, Sendable {
             return "bolt.fill"
         case .outputInserted:
             return "checkmark.circle.fill"
+        case .outputPasteUnverified:
+            return "questionmark.circle"
+        case .outputBlocked, .outputFailed:
+            return "exclamationmark.triangle.fill"
         case .clipboardFallback:
             return "doc.on.doc.fill"
         case .outputSavedOnly:

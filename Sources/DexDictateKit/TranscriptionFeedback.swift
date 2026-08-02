@@ -16,6 +16,9 @@ public enum TranscriptionFeedback: Equatable {
     case savedToHistory(modified: Bool)
     case copiedOnlySensitiveContext(modified: Bool, reason: String)
     case pastedToActiveApp(modified: Bool)
+    case pasteRequestedUnverified(modified: Bool)
+    case deliveryBlocked(modified: Bool, reason: String)
+    case deliveryFailed(modified: Bool, reason: String)
     case dictationUndone
     case dictationUndoUnavailable(reason: String)
 
@@ -39,6 +42,12 @@ public enum TranscriptionFeedback: Equatable {
             return modified ? "Copied only for secure field" : "Copied only instead of pasting"
         case .pastedToActiveApp(let modified):
             return modified ? "Pasted with changes" : "Pasted into active app"
+        case .pasteRequestedUnverified(let modified):
+            return modified ? "Paste requested with changes" : "Paste requested"
+        case .deliveryBlocked:
+            return "Paste blocked"
+        case .deliveryFailed:
+            return "Delivery failed"
         case .dictationUndone:
             return "Dictation undone"
         case .dictationUndoUnavailable:
@@ -72,6 +81,14 @@ public enum TranscriptionFeedback: Equatable {
             return modified
                 ? "The result was adjusted locally, then pasted into the active app."
                 : "The result was pasted into the active app."
+        case .pasteRequestedUnverified(let modified):
+            return modified
+                ? "The adjusted result was sent to macOS for pasting, but insertion could not be confirmed."
+                : "The result was sent to macOS for pasting, but insertion could not be confirmed."
+        case .deliveryBlocked(_, let reason):
+            return reason
+        case .deliveryFailed(_, let reason):
+            return reason
         case .dictationUndone:
             return "The most recently inserted dictation was removed from the target app, without touching its clipboard or undo history."
         case .dictationUndoUnavailable(let reason):
@@ -95,8 +112,10 @@ public enum TranscriptionFeedback: Equatable {
             return "tray.and.arrow.down"
         case .copiedOnlySensitiveContext:
             return "doc.on.doc"
-        case .pastedToActiveApp:
+        case .pastedToActiveApp, .pasteRequestedUnverified:
             return "doc.on.clipboard"
+        case .deliveryBlocked, .deliveryFailed:
+            return "exclamationmark.triangle"
         case .dictationUndone:
             return "arrow.uturn.backward.circle.fill"
         case .dictationUndoUnavailable:
@@ -108,10 +127,14 @@ public enum TranscriptionFeedback: Equatable {
         switch self {
         case .idle:
             return .neutral
-        case .noSpeechDetected, .nothingToDelete, .deletedPreviousHistory, .discardedCurrentUtterance, .dictationUndoUnavailable:
+        case .noSpeechDetected, .nothingToDelete, .deletedPreviousHistory, .discardedCurrentUtterance,
+             .deliveryBlocked, .deliveryFailed, .dictationUndoUnavailable:
             return .warning
-        case .restoredPreviousHistory, .savedToHistory, .copiedOnlySensitiveContext, .pastedToActiveApp, .dictationUndone:
+        case .restoredPreviousHistory, .savedToHistory, .copiedOnlySensitiveContext,
+             .pastedToActiveApp, .dictationUndone:
             return .success
+        case .pasteRequestedUnverified:
+            return .neutral
         }
     }
 }

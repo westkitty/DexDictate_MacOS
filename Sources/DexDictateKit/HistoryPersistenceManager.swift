@@ -77,11 +77,40 @@ public enum HistoryPersistenceManager {
         }
     }
 
+    // MARK: - Internal directory-scoped API
+
+    /// Directory-scoped variants keep tests and diagnostics isolated from the user's
+    /// real Application Support data while exercising the production persistence path.
+    static func save(_ items: [HistoryItem], in directoryURL: URL) {
+        queue.sync { _save(items, in: directoryURL) }
+    }
+
+    static func load(from directoryURL: URL) -> [HistoryItem] {
+        queue.sync { _load(from: directoryURL) }
+    }
+
+    static func clear(in directoryURL: URL) {
+        queue.sync { _clear(in: directoryURL) }
+    }
+
     // MARK: - Private implementation (must be called on `queue`)
 
     private static func _save(_ items: [HistoryItem]) {
         guard let dir = Safety.appSupportURL else { return }
+        _save(items, in: dir)
+    }
 
+    private static func _load() -> [HistoryItem] {
+        guard let dir = Safety.appSupportURL else { return [] }
+        return _load(from: dir)
+    }
+
+    private static func _clear() {
+        guard let dir = Safety.appSupportURL else { return }
+        _clear(in: dir)
+    }
+
+    private static func _save(_ items: [HistoryItem], in dir: URL) {
         // Normalize: filter blank text, deduplicate by UUID, cap.
         let normalized = deduplicated(items.filter { !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty })
         let toSave = Array(normalized.prefix(maxDiskItems))
@@ -113,8 +142,7 @@ public enum HistoryPersistenceManager {
         }
     }
 
-    private static func _load() -> [HistoryItem] {
-        guard let dir = Safety.appSupportURL else { return [] }
+    private static func _load(from dir: URL) -> [HistoryItem] {
         let fileURL = dir.appendingPathComponent(filename)
         let fm = FileManager.default
 
@@ -154,8 +182,7 @@ public enum HistoryPersistenceManager {
         return []
     }
 
-    private static func _clear() {
-        guard let dir = Safety.appSupportURL else { return }
+    private static func _clear(in dir: URL) {
         let fileURL = dir.appendingPathComponent(filename)
         do {
             try FileManager.default.removeItem(at: fileURL)

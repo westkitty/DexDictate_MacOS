@@ -9,9 +9,49 @@ extension TranscriptionEngine {
     /// superseded by a newer dictation) yet. Drives the "Undo Last Dictation" button/hotkey.
     public var canUndoLastDictation: Bool { dictationUndoManager.canUndoLastDictation }
 
-    /// Called from `finalizeTranscription` right after a `.pastedToActiveApp` delivery.
-    func recordDictationUndoIfNeeded(_ undoContext: DictationUndoContext?) {
-        guard let undoContext else { return }
+    /// Supersedes both a pending delivery callback and any older undo record as soon as a
+    /// later delivery cycle begins, including cycles that are later cancelled or fail.
+    func beginDeliveryCycle() {
+        pendingDeliveryID = nil
+        dictationUndoManager.clear()
+    }
+
+    /// Applies one delivery result to feedback and the single-slot undo record. Every result
+    /// clears older undo state first; only a confirmed Accessibility write with complete
+    /// pre-insertion and focus context replaces it with a reversible record.
+    func applyDeliveryDecision(_ decision: OutputDeliveryDecision, modified: Bool) {
+        recordDictationUndoIfNeeded(decision)
+
+        switch decision.delivery {
+        case .savedOnly:
+            resultFeedback = .savedToHistory(modified: modified)
+            onToast?(.outputSavedOnly)
+        case .pastedToActiveApp:
+            resultFeedback = .pastedToActiveApp(modified: modified)
+            onToast?(.outputInserted)
+        case .copiedOnly(let reason):
+            resultFeedback = .copiedOnlySensitiveContext(modified: modified, reason: reason)
+            onToast?(.clipboardFallback(reason: reason))
+        case .requestedButUnverified:
+            resultFeedback = .pasteRequestedUnverified(modified: modified)
+            onToast?(.outputPasteUnverified)
+        case .blocked(let reason):
+            resultFeedback = .deliveryBlocked(modified: modified, reason: reason)
+            onToast?(.outputBlocked(reason: reason))
+        case .failed(let reason):
+            resultFeedback = .deliveryFailed(modified: modified, reason: reason)
+            onToast?(.outputFailed(reason: reason))
+        }
+    }
+
+    private func recordDictationUndoIfNeeded(_ decision: OutputDeliveryDecision) {
+        dictationUndoManager.clear()
+        guard decision.delivery == .pastedToActiveApp,
+              let undoContext = decision.undoContext,
+              undoContext.previousFieldValue != nil,
+              undoContext.replacementRange != nil,
+              undoContext.targetElement != nil,
+              let pendingFocusSnapshot else { return }
         dictationUndoManager.record(
             DictationUndoRecord(
                 focusSnapshot: pendingFocusSnapshot,

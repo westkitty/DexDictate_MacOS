@@ -38,14 +38,17 @@ public struct OutputCoordinator: OutputCoordinating {
         autoPaste: Bool,
         protectSensitiveContexts: Bool,
         insertionMode: InsertionModeOverride = .clipboardPaste,
-        targetApplication: OutputTargetApplication? = nil
+        targetApplication: OutputTargetApplication? = nil,
+        completion: @escaping (OutputDeliveryDecision) -> Void
     ) -> OutputDeliveryDecision {
         guard autoPaste else {
             return OutputDeliveryDecision(delivery: .savedOnly)
         }
 
         if insertionMode == .clipboardOnly {
-            writer.copy(text)
+            guard writer.copy(text) else {
+                return OutputDeliveryDecision(delivery: .failed(reason: "Could not copy text to the clipboard."))
+            }
             return OutputDeliveryDecision(delivery: .copiedOnly(reason: "Per-app clipboard-only mode"))
         }
 
@@ -59,7 +62,11 @@ public struct OutputCoordinator: OutputCoordinating {
         }
 
         if insertionMode == .replaceFieldWithClipboardPaste {
-            return deliverByReplacingField(text, targetApplication: targetApplication)
+            return deliverByReplacingField(
+                text,
+                targetApplication: targetApplication,
+                completion: completion
+            )
         }
 
         let outputText = textWithAutoSpacing(text)
@@ -70,7 +77,11 @@ public struct OutputCoordinator: OutputCoordinating {
             return decision
         }
 
-        return deliverViaClipboardPaste(outputText, targetApplication: targetApplication)
+        return deliverViaClipboardPaste(
+            outputText,
+            targetApplication: targetApplication,
+            completion: completion
+        )
     }
 
     /// Waits for activation (when needed) and inspects the focused context. Returns a
@@ -90,24 +101,26 @@ public struct OutputCoordinator: OutputCoordinating {
         }
         let context = contextInspector.inspectFocusedContext()
         guard case .sensitive(let reason) = context else { return nil }
-        writer.copy(text)
+        guard writer.copy(text) else {
+            return OutputDeliveryDecision(delivery: .failed(reason: "Could not copy text to the clipboard."))
+        }
         return OutputDeliveryDecision(delivery: .copiedOnly(reason: reason))
     }
 
     private func deliverByReplacingField(
-        _ text: String, targetApplication: OutputTargetApplication?
+        _ text: String,
+        targetApplication: OutputTargetApplication?,
+        completion: @escaping (OutputDeliveryDecision) -> Void
     ) -> OutputDeliveryDecision {
-        let fieldSnapshot = bestEffortFieldSnapshot()
-        writer.selectAllAndPaste(text, targetApplication: targetApplication)
-        let replacementRange = fieldSnapshot.value.map { NSRange(location: 0, length: ($0 as NSString).length) }
+        guard writer.selectAllAndPaste(
+            text,
+            targetApplication: targetApplication,
+            completion: { completion(OutputDeliveryDecision(delivery: $0)) }
+        ) else {
+            return OutputDeliveryDecision(delivery: .failed(reason: "Could not copy text for replace-field paste."))
+        }
         return OutputDeliveryDecision(
-            delivery: .pastedToActiveApp,
-            undoContext: DictationUndoContext(
-                insertedText: text,
-                previousFieldValue: fieldSnapshot.value,
-                replacementRange: replacementRange,
-                targetApplication: targetApplication
-            )
+            delivery: .requestedButUnverified
         )
     }
 
@@ -117,43 +130,39 @@ public struct OutputCoordinator: OutputCoordinating {
         _ outputText: String, targetApplication: OutputTargetApplication?
     ) -> OutputDeliveryDecision? {
         let attempt = insertViaAccessibility(outputText)
-        guard attempt.succeeded else { return nil }
-        return OutputDeliveryDecision(
-            delivery: .pastedToActiveApp,
-            undoContext: DictationUndoContext(
-                insertedText: outputText,
-                previousFieldValue: attempt.previousValue,
-                replacementRange: attempt.replacementRange,
-                targetApplication: targetApplication
+        switch attempt {
+        case .failed:
+            return nil
+        case .mutatedButUnverified:
+            return OutputDeliveryDecision(delivery: .requestedButUnverified)
+        case .confirmed(let previousValue, let replacementRange, let element):
+            return OutputDeliveryDecision(
+                delivery: .pastedToActiveApp,
+                undoContext: DictationUndoContext(
+                    insertedText: outputText,
+                    previousFieldValue: previousValue,
+                    replacementRange: replacementRange,
+                    targetApplication: targetApplication,
+                    targetElement: element
+                )
             )
-        )
+        }
     }
 
     private func deliverViaClipboardPaste(
-        _ outputText: String, targetApplication: OutputTargetApplication?
+        _ outputText: String,
+        targetApplication: OutputTargetApplication?,
+        completion: @escaping (OutputDeliveryDecision) -> Void
     ) -> OutputDeliveryDecision {
-        let fieldSnapshot = bestEffortFieldSnapshot()
-        writer.copyAndPaste(outputText, targetApplication: targetApplication)
+        guard writer.copyAndPaste(
+            outputText,
+            targetApplication: targetApplication,
+            completion: { completion(OutputDeliveryDecision(delivery: $0)) }
+        ) else {
+            return OutputDeliveryDecision(delivery: .failed(reason: "Could not copy text for paste."))
+        }
         return OutputDeliveryDecision(
-            delivery: .pastedToActiveApp,
-            undoContext: DictationUndoContext(
-                insertedText: outputText,
-                previousFieldValue: fieldSnapshot.value,
-                replacementRange: fieldSnapshot.selectedRange,
-                targetApplication: targetApplication
-            )
-        )
-    }
-
-    /// Best-effort, read-only Accessibility snapshot of the focused field's value and
-    /// selection, taken immediately before a clipboard-based insertion. Never affects
-    /// delivery behavior — only feeds `DictationUndoContext` for later undo. Returns `nil`
-    /// values (not an error) when no focused element exists or its value isn't readable.
-    private func bestEffortFieldSnapshot() -> (value: String?, selectedRange: NSRange?) {
-        guard let element = axOperator.focusedElement() else { return (nil, nil) }
-        return (
-            axOperator.getString(kAXValueAttribute as CFString, element: element),
-            axOperator.getSelectedRange(element: element)
+            delivery: .requestedButUnverified
         )
     }
 
@@ -184,72 +193,6 @@ public struct OutputCoordinator: OutputCoordinating {
         guard precedingCharacter == "." else { return text }
 
         return " " + text
-    }
-
-    /// Outcome of `insertViaAccessibility`, including the pre-insertion state needed to
-    /// reverse it later. `previousValue`/`replacementRange` are best-effort reads taken up
-    /// front and may be populated even when `succeeded` is `false`; callers should ignore
-    /// them in that case.
-    private struct AccessibilityInsertionAttempt {
-        let succeeded: Bool
-        let previousValue: String?
-        let replacementRange: NSRange?
-    }
-
-    /// Attempts to insert text at the current cursor position via the Accessibility API.
-    /// Preflights each attribute with `AXUIElementIsAttributeSettable` before attempting
-    /// a set, and logs each failed strategy with the returned `AXError`.
-    private func insertViaAccessibility(_ text: String) -> AccessibilityInsertionAttempt {
-        guard let element = axOperator.focusedElement() else {
-            Safety.log("insertViaAccessibility() — no focused AX element", category: .output)
-            return AccessibilityInsertionAttempt(succeeded: false, previousValue: nil, replacementRange: nil)
-        }
-
-        // Read up front — read-only, and needed for undo bookkeeping regardless of which
-        // strategy (if any) below actually succeeds.
-        let currentValue = axOperator.getString(kAXValueAttribute as CFString, element: element)
-        let selectedRange = axOperator.getSelectedRange(element: element)
-
-        let valueSettable = axOperator.isSettable(kAXValueAttribute as CFString, element: element)
-
-        // Strategy 1: replace the selected range inside the full value
-        if valueSettable {
-            if let currentValue, let selectedRange {
-                let updatedValue = replacingText(in: currentValue, selectedRange: selectedRange, with: text)
-                let result = axOperator.set(updatedValue as CFTypeRef, for: kAXValueAttribute as CFString, element: element)
-                if result == .success {
-                    axOperator.setCursor(
-                        location: selectedRange.location + accessibilityCharacterCount(text),
-                        element: element
-                    )
-                    return AccessibilityInsertionAttempt(succeeded: true, previousValue: currentValue, replacementRange: selectedRange)
-                }
-                Safety.log("insertViaAccessibility() — strategy 1 (value+range) failed: AXError \(result.rawValue)", category: .output)
-            } else {
-                // kAXValueAttribute is settable, but reading the current value and/or the
-                // selected range failed — previously this fell through to strategy 2 with no
-                // log line at all, contradicting this method's own doc comment promising every
-                // failed strategy is logged.
-                Safety.log("insertViaAccessibility() — strategy 1 skipped: could not read current value and/or selected range", category: .output)
-            }
-        } else {
-            Safety.log("insertViaAccessibility() — strategy 1 skipped: kAXValueAttribute not settable", category: .output)
-        }
-
-        // Strategy 2: replace the selected text directly
-        let selectedTextSettable = axOperator.isSettable(kAXSelectedTextAttribute as CFString, element: element)
-        if selectedTextSettable {
-            let result = axOperator.set(text as CFTypeRef, for: kAXSelectedTextAttribute as CFString, element: element)
-            if result == .success {
-                return AccessibilityInsertionAttempt(succeeded: true, previousValue: currentValue, replacementRange: selectedRange)
-            }
-            Safety.log("insertViaAccessibility() — strategy 2 (selectedText) failed: AXError \(result.rawValue)", category: .output)
-        } else {
-            Safety.log("insertViaAccessibility() — strategy 2 (selectedText) skipped: attribute not settable", category: .output)
-        }
-
-        Safety.log("insertViaAccessibility() — both strategies failed; falling back to clipboard paste", category: .output)
-        return AccessibilityInsertionAttempt(succeeded: false, previousValue: nil, replacementRange: nil)
     }
 
     /// Returns `true` when it actually called `activate()` — i.e. the target existed, wasn't
@@ -300,21 +243,125 @@ public struct OutputCoordinator: OutputCoordinating {
         return true
     }
 
-    /// Returns the character count AX text-range APIs use for cursor advancement.
-    /// AX positions are Unicode scalar offsets, not UTF-16 code units.
-    /// The two diverge for characters outside the BMP (e.g. emoji).
-    ///
-    /// This is deliberately `unicodeScalars.count`, not `utf16.count` — see
-    /// `AccessibilityInsertionTests.testCursorOffsetEmojiUsesUnicodeScalarsNotUTF16` and its
-    /// sibling cursor-offset tests, which lock in this exact choice against real emoji/CJK
-    /// cases. (A prior review pass considered switching this to `utf16.count` on the theory
-    /// that AX ranges are NSString/UTF-16-based; that would fail all four of those tests and
-    /// was not applied.)
-    private func accessibilityCharacterCount(_ text: String) -> Int {
-        text.unicodeScalars.count
+}
+
+private extension OutputCoordinator {
+    enum AccessibilityInsertionAttempt {
+        case failed
+        case mutatedButUnverified
+        case confirmed(previousValue: String, replacementRange: NSRange, element: AXUIElement)
     }
 
-    private func replacingText(in currentValue: String, selectedRange: NSRange, with replacement: String) -> String {
-        accessibilityReplacingText(in: currentValue, range: selectedRange, with: replacement)
+    /// Attempts to insert text at the current cursor position via the Accessibility API.
+    /// Preflights each attribute with `AXUIElementIsAttributeSettable` before attempting
+    /// a set, and logs each failed strategy with the returned `AXError`.
+    func insertViaAccessibility(_ text: String) -> AccessibilityInsertionAttempt {
+        guard let element = axOperator.focusedElement() else {
+            Safety.log("insertViaAccessibility() — no focused AX element", category: .output)
+            return .failed
+        }
+
+        let currentValue = axOperator.getString(kAXValueAttribute as CFString, element: element)
+        let selectedRange = axOperator.getSelectedRange(element: element)
+
+        if let attempt = attemptValueInsertion(
+            text,
+            currentValue: currentValue,
+            selectedRange: selectedRange,
+            element: element
+        ) {
+            return attempt
+        }
+        if let attempt = attemptSelectedTextInsertion(
+            text,
+            currentValue: currentValue,
+            selectedRange: selectedRange,
+            element: element
+        ) {
+            return attempt
+        }
+
+        Safety.log("insertViaAccessibility() — both strategies failed; falling back to clipboard paste", category: .output)
+        return .failed
+    }
+
+    func attemptValueInsertion(
+        _ text: String,
+        currentValue: String?,
+        selectedRange: NSRange?,
+        element: AXUIElement
+    ) -> AccessibilityInsertionAttempt? {
+        guard axOperator.isSettable(kAXValueAttribute as CFString, element: element) else {
+            Safety.log("insertViaAccessibility() — strategy 1 skipped: kAXValueAttribute not settable", category: .output)
+            return nil
+        }
+        guard let currentValue,
+              let selectedRange,
+              let updatedValue = accessibilityReplacingText(in: currentValue, range: selectedRange, with: text) else {
+            Safety.log("insertViaAccessibility() — strategy 1 skipped: current value or range was unavailable or invalid", category: .output)
+            return nil
+        }
+
+        let result = axOperator.set(updatedValue as CFTypeRef, for: kAXValueAttribute as CFString, element: element)
+        guard result == .success else {
+            Safety.log("insertViaAccessibility() — strategy 1 (value+range) failed: AXError \(result.rawValue)", category: .output)
+            return nil
+        }
+
+        let expectedCursor = selectedRange.location + accessibilityCharacterCount(text)
+        _ = axOperator.setCursor(location: expectedCursor, element: element)
+        guard mutationMatches(element: element, expectedValue: updatedValue, expectedCursor: expectedCursor) else {
+            Safety.log(
+                "insertViaAccessibility() — strategy 1 reported success but readback was unavailable or contradictory",
+                category: .output
+            )
+            return .mutatedButUnverified
+        }
+        return .confirmed(previousValue: currentValue, replacementRange: selectedRange, element: element)
+    }
+
+    func attemptSelectedTextInsertion(
+        _ text: String,
+        currentValue: String?,
+        selectedRange: NSRange?,
+        element: AXUIElement
+    ) -> AccessibilityInsertionAttempt? {
+        guard axOperator.isSettable(kAXSelectedTextAttribute as CFString, element: element),
+              let currentValue,
+              let selectedRange,
+              let expectedValue = accessibilityReplacingText(in: currentValue, range: selectedRange, with: text) else {
+            Safety.log("insertViaAccessibility() — strategy 2 skipped: attribute not settable or range unavailable/invalid", category: .output)
+            return nil
+        }
+
+        let result = axOperator.set(text as CFTypeRef, for: kAXSelectedTextAttribute as CFString, element: element)
+        guard result == .success else {
+            Safety.log("insertViaAccessibility() — strategy 2 (selectedText) failed: AXError \(result.rawValue)", category: .output)
+            return nil
+        }
+
+        let expectedCursor = selectedRange.location + accessibilityCharacterCount(text)
+        _ = axOperator.setCursor(location: expectedCursor, element: element)
+        guard mutationMatches(element: element, expectedValue: expectedValue, expectedCursor: expectedCursor) else {
+            Safety.log(
+                "insertViaAccessibility() — strategy 2 reported success but readback was unavailable or contradictory",
+                category: .output
+            )
+            return .mutatedButUnverified
+        }
+        return .confirmed(previousValue: currentValue, replacementRange: selectedRange, element: element)
+    }
+
+    func mutationMatches(element: AXUIElement, expectedValue: String, expectedCursor: Int) -> Bool {
+        guard axOperator.getString(kAXValueAttribute as CFString, element: element) == expectedValue,
+              axOperator.getSelectedRange(element: element) == NSRange(location: expectedCursor, length: 0) else {
+            return false
+        }
+        return true
+    }
+
+    /// Accessibility `CFRange`/`NSRange` offsets follow NSString UTF-16 coordinates.
+    func accessibilityCharacterCount(_ text: String) -> Int {
+        (text as NSString).length
     }
 }

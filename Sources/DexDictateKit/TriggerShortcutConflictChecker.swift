@@ -9,6 +9,8 @@ public struct TriggerShortcutConflict: Equatable {
         case systemReserved
         /// A keyboard key with no modifiers — it will fire during normal typing.
         case firesWhileTyping
+        /// The configured trigger would also match the fixed Undo Last Dictation chord.
+        case shadowsUndoLastDictation
     }
 
     public let severity: Severity
@@ -73,12 +75,26 @@ public enum TriggerShortcutConflictChecker {
         KnownShortcut(keyCode: Key.escape, modifiers: cmd | option, name: "Force Quit (⌥⌘Esc)"),
     ]
 
+    /// Matches `InputMonitor`'s trigger rule: required modifiers may be a subset of those
+    /// currently held. Kept here so conflict detection and event handling cannot drift apart.
+    static func modifiersMatch(required: UInt64, held: UInt64) -> Bool {
+        (held & required) == required
+    }
+
     /// Returns a conflict for the given shortcut, or `nil` if it appears safe to use as a trigger.
     public static func conflict(for shortcut: AppSettings.UserShortcut) -> TriggerShortcutConflict? {
         // Mouse-button triggers do not collide with the keyboard system shortcuts below.
         guard let keyCode = shortcut.keyCode else { return nil }
 
         let normalized = shortcut.modifiers & standardModifierMask
+
+        if Int64(keyCode) == InputMonitor.undoDictationKeyCode,
+           modifiersMatch(required: shortcut.modifiers, held: InputMonitor.undoDictationModifierMask) {
+            return TriggerShortcutConflict(
+                severity: .shadowsUndoLastDictation,
+                message: "This trigger would be shadowed by Undo Last Dictation (⌃⌥⌘Z). Choose a different trigger."
+            )
+        }
 
         if let match = knownSystemShortcuts.first(where: { $0.keyCode == keyCode && $0.modifiers == normalized }) {
             return TriggerShortcutConflict(

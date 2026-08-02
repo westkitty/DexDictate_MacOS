@@ -26,13 +26,18 @@ final class InputMonitor {
     /// Weak reference to the engine; held weakly to prevent a retain cycle since the engine
     /// owns the monitor.
     private weak var engine: TranscriptionEngine?
+    private let undoEligibilitySnapshot: DictationUndoEligibilitySnapshot
 
     /// True after a successful `CGEvent.tapCreate`. Readable from the main actor
     /// immediately after `start()` returns to determine whether to set engine state
     /// to `.ready` or leave it as `.error` (which the async Task in start() will set).
     var isEventTapActive: Bool { eventTap != nil }
 
-    init(engine: TranscriptionEngine) { self.engine = engine }
+    @MainActor
+    init(engine: TranscriptionEngine) {
+        self.engine = engine
+        self.undoEligibilitySnapshot = engine.dictationUndoManager.eligibilitySnapshot
+    }
 
     /// Installs the Quartz event tap and registers it with the current run loop.
     ///
@@ -80,15 +85,30 @@ final class InputMonitor {
                     return Unmanaged.passUnretained(event)
                 }
 
-                let shortcut = AppSettings.shared.userShortcut
-
-                if InputMonitor.isUndoDictationShortcut(type: type, event: event, mainShortcut: shortcut) {
-                    MainActorDispatch.async {
-                        monitor.engine?.undoLastDictation()
+                let undoDisposition = UndoShortcutEventPolicy.handle(
+                    input: UndoShortcutEventInput(
+                        type: type,
+                        keyCode: event.getIntegerValueField(.keyboardEventKeycode),
+                        modifiers: event.flags.rawValue,
+                        isAutorepeat: event.getIntegerValueField(.keyboardEventAutorepeat) != 0
+                    ),
+                    claimEligibility: monitor.undoEligibilitySnapshot.claimIfEligible,
+                    requestUndo: {
+                        MainActorDispatch.async { [weak monitor] in
+                            monitor?.engine?.undoLastDictation()
+                        }
                     }
-                    return nil // Consume event
+                )
+                switch undoDisposition {
+                case .consume:
+                    return nil
+                case .passThrough:
+                    return Unmanaged.passUnretained(event)
+                case .notMatched:
+                    break
                 }
 
+                let shortcut = AppSettings.shared.userShortcut
                 var match = false
                 var isDown = false
 
@@ -98,7 +118,10 @@ final class InputMonitor {
                         let btnNum = event.getIntegerValueField(.mouseEventButtonNumber)
                         if btnNum == requiredButton {
                             let flags = event.flags
-                            if shortcut.modifiers != 0 && (flags.rawValue & shortcut.modifiers) != shortcut.modifiers {
+                            if !TriggerShortcutConflictChecker.modifiersMatch(
+                                required: shortcut.modifiers,
+                                held: flags.rawValue
+                            ) {
                                 return Unmanaged.passUnretained(event)
                             }
                             match = true
@@ -113,7 +136,10 @@ final class InputMonitor {
                         let key = event.getIntegerValueField(.keyboardEventKeycode)
                         if key == Int64(requiredKey) {
                             let flags = event.flags
-                            if (flags.rawValue & shortcut.modifiers) == shortcut.modifiers {
+                            if TriggerShortcutConflictChecker.modifiersMatch(
+                                required: shortcut.modifiers,
+                                held: flags.rawValue
+                            ) {
                                 match = true
                                 isDown = (type == .keyDown)
                             }
@@ -194,22 +220,4 @@ final class InputMonitor {
         self.eventTap = nil
     }
 
-    /// True if `type`/`event` is a keydown of the fixed "Undo Last Dictation" shortcut
-    /// (Control+Option+Command+Z) — chosen specifically to avoid colliding with any app's own
-    /// Cmd+Z / Shift+Cmd+Z undo/redo. Not user-configurable (unlike `mainShortcut`) since it's
-    /// a secondary, rarely-used action. Returns `false` when `mainShortcut` happens to be this
-    /// exact combination, so this fixed shortcut never starves the main trigger of its keydown.
-    private static func isUndoDictationShortcut(
-        type: CGEventType, event: CGEvent, mainShortcut: AppSettings.UserShortcut
-    ) -> Bool {
-        guard type == .keyDown else { return false }
-        let mainTriggerIsSameCombo =
-            Int64(mainShortcut.keyCode ?? 0) == undoDictationKeyCode &&
-            mainShortcut.modifiers == undoDictationModifierMask
-        guard !mainTriggerIsSameCombo,
-              event.getIntegerValueField(.keyboardEventKeycode) == undoDictationKeyCode else {
-            return false
-        }
-        return (event.flags.rawValue & undoDictationModifierMask) == undoDictationModifierMask
-    }
 }

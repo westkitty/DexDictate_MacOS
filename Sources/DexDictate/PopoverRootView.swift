@@ -80,11 +80,17 @@ struct PopoverRootView: View {
                                 }
                             }
 
-                            PopoverResultView(engine: engine, settings: settings, profileManager: profileManager)
+                            PopoverResultView(
+                                engine: engine,
+                                history: engine.history,
+                                settings: settings,
+                                profileManager: profileManager,
+                                onOpenHistory: onDetachHistory
+                            )
 
                             Divider().opacity(0.2).padding(.horizontal, 12)
 
-                            PopoverHistoryTeaser(history: engine.history, onOpenHistory: onDetachHistory)
+                            PopoverHistoryTeaser(history: engine.history)
 
                             statusLine
                         }

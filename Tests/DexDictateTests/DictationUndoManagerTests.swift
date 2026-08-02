@@ -2,25 +2,9 @@ import ApplicationServices
 import XCTest
 @testable import DexDictateKit
 
-/// Tests `DictationUndoManager`'s verification-first undo strategies: exact restore,
-/// verified trim, and the last-resort Backspace fallback — each gated so a mismatch always
-/// aborts instead of guessing.
+/// Tests `DictationUndoManager`'s verification-first undo strategies. Exact target, range,
+/// content, and mutation readback are required; a mismatch always aborts instead of guessing.
 final class DictationUndoManagerTests: XCTestCase {
-
-    // Captured in `+setUp()`, which XCTest guarantees runs once before any test method in this
-    // class — capturing it lazily (e.g. in a `static let`) would risk snapshotting a test's
-    // override instead of the production default, depending on which test happens to run first.
-    private static var defaultBackspaceSimulator: (Int, pid_t?) -> Void = { _, _ in }
-
-    override static func setUp() {
-        super.setUp()
-        defaultBackspaceSimulator = DictationUndoManager.backspaceSimulator
-    }
-
-    override func tearDown() {
-        DictationUndoManager.backspaceSimulator = Self.defaultBackspaceSimulator
-        super.tearDown()
-    }
 
     private func makeTarget(bundleID: String = "com.example.chat", pid: pid_t = 4242) -> OutputTargetApplication {
         OutputTargetApplication(bundleIdentifier: bundleID, processIdentifier: pid)
@@ -31,6 +15,22 @@ final class DictationUndoManagerTests: XCTestCase {
             role: "AXTextField",
             processIdentifier: pid,
             bundleIdentifier: bundleID
+        )
+    }
+
+    private func makeContext(
+        _ ax: MockAccessibilityOperator,
+        insertedText: String,
+        previousFieldValue: String?,
+        replacementRange: NSRange?,
+        targetApplication: OutputTargetApplication? = nil
+    ) -> DictationUndoContext {
+        DictationUndoContext(
+            insertedText: insertedText,
+            previousFieldValue: previousFieldValue,
+            replacementRange: replacementRange,
+            targetApplication: targetApplication ?? makeTarget(),
+            targetElement: ax.focused
         )
     }
 
@@ -57,7 +57,8 @@ final class DictationUndoManagerTests: XCTestCase {
         manager.record(
             DictationUndoRecord(
                 focusSnapshot: focus,
-                context: DictationUndoContext(
+                context: makeContext(
+                    ax,
                     insertedText: " Second sentence.",
                     previousFieldValue: "First sentence.",
                     replacementRange: NSRange(location: 15, length: 0),
@@ -74,13 +75,13 @@ final class DictationUndoManagerTests: XCTestCase {
         XCTAssertFalse(manager.canUndoLastDictation, "Record should be consumed after undo")
     }
 
-    // MARK: - Verified trim (no previous-value snapshot available)
+    // MARK: - Verified trim
 
-    func testVerifiedTrimRemovesTrailingInsertionWhenNoPreviousValueWasCaptured() {
+    func testVerifiedTrimRemovesExactZeroLengthInsertionAtSavedRange() {
         let ax = MockAccessibilityOperator()
         ax.hasFocusedElement = true
         ax.settableMap = [kAXValueAttribute as String: true]
-        ax.stringMap = [kAXValueAttribute as String: "hello world"]
+        ax.stringMap = [kAXValueAttribute as String: "hello world!"]
         ax.selectedRangeResult = NSRange(location: 11, length: 0) // cursor at end
         ax.setResults = [kAXValueAttribute as String: .success]
 
@@ -88,10 +89,11 @@ final class DictationUndoManagerTests: XCTestCase {
         manager.record(
             DictationUndoRecord(
                 focusSnapshot: nil,
-                context: DictationUndoContext(
+                context: makeContext(
+                    ax,
                     insertedText: " world",
-                    previousFieldValue: nil,
-                    replacementRange: nil,
+                    previousFieldValue: "hello",
+                    replacementRange: NSRange(location: 5, length: 0),
                     targetApplication: makeTarget()
                 ),
                 timestamp: Date()
@@ -99,26 +101,26 @@ final class DictationUndoManagerTests: XCTestCase {
         )
 
         XCTAssertEqual(manager.undoLastDictation(), .undone)
-        XCTAssertEqual(ax.lastSetValue, "hello")
+        XCTAssertEqual(ax.lastSetValue, "hello!")
         XCTAssertEqual(ax.setCursorLocations.last, 5)
     }
 
     // MARK: - Content changed since insertion
 
-    func testContentChangedRefusesToDeleteWhenTrailingTextNoLongerMatches() {
+    func testContentChangedRefusesShiftedDuplicateText() {
         let ax = MockAccessibilityOperator()
         ax.hasFocusedElement = true
         ax.settableMap = [kAXValueAttribute as String: true]
-        // User kept typing after the dictation landed — the tail no longer matches.
-        ax.stringMap = [kAXValueAttribute as String: "hello world, more text"]
-        ax.selectedRangeResult = NSRange(location: 22, length: 0)
+        ax.stringMap = [kAXValueAttribute as String: "hello world world"]
+        ax.selectedRangeResult = NSRange(location: 17, length: 0)
         ax.setResults = [kAXValueAttribute as String: .success]
 
         let manager = DictationUndoManager(axOperator: ax, focusProvider: { nil })
         manager.record(
             DictationUndoRecord(
                 focusSnapshot: nil,
-                context: DictationUndoContext(
+                context: makeContext(
+                    ax,
                     insertedText: " world",
                     previousFieldValue: "hello",
                     replacementRange: NSRange(location: 5, length: 0),
@@ -148,7 +150,8 @@ final class DictationUndoManagerTests: XCTestCase {
         manager.record(
             DictationUndoRecord(
                 focusSnapshot: triggerFocus,
-                context: DictationUndoContext(
+                context: makeContext(
+                    ax,
                     insertedText: " world",
                     previousFieldValue: "hello",
                     replacementRange: NSRange(location: 5, length: 0),
@@ -172,7 +175,8 @@ final class DictationUndoManagerTests: XCTestCase {
         manager.record(
             DictationUndoRecord(
                 focusSnapshot: nil,
-                context: DictationUndoContext(
+                context: makeContext(
+                    ax,
                     insertedText: "hello",
                     previousFieldValue: nil,
                     replacementRange: nil,
@@ -185,26 +189,20 @@ final class DictationUndoManagerTests: XCTestCase {
         XCTAssertEqual(manager.undoLastDictation(), .cannotVerify)
     }
 
-    // MARK: - Backspace fallback (unreadable field value)
+    // MARK: - Unreadable field
 
-    func testBackspaceFallbackWhenFieldValueCannotBeRead() {
+    func testUnreadableFieldRefusesUndoWithoutBackspace() {
         let ax = MockAccessibilityOperator()
         ax.hasFocusedElement = true
         // stringMap intentionally empty: getString(kAXValueAttribute) returns nil.
-
-        var simulatedCount: Int?
-        var simulatedPID: pid_t?
-        DictationUndoManager.backspaceSimulator = { count, pid in
-            simulatedCount = count
-            simulatedPID = pid
-        }
 
         let focus = makeFocusSnapshot()
         let manager = DictationUndoManager(axOperator: ax, focusProvider: { focus })
         manager.record(
             DictationUndoRecord(
                 focusSnapshot: focus,
-                context: DictationUndoContext(
+                context: makeContext(
+                    ax,
                     insertedText: "hello",
                     previousFieldValue: nil,
                     replacementRange: nil,
@@ -214,9 +212,108 @@ final class DictationUndoManagerTests: XCTestCase {
             )
         )
 
-        XCTAssertEqual(manager.undoLastDictation(), .undone)
-        XCTAssertEqual(simulatedCount, 5)
-        XCTAssertEqual(simulatedPID, 4242)
+        XCTAssertEqual(manager.undoLastDictation(), .cannotVerify)
+        XCTAssertTrue(ax.setCallLog.isEmpty)
+    }
+}
+
+extension DictationUndoManagerTests {
+    func testInvalidSavedRangeRefusesUndo() {
+        let ax = MockAccessibilityOperator()
+        ax.hasFocusedElement = true
+        ax.stringMap = [kAXValueAttribute as String: "hello world"]
+
+        let manager = DictationUndoManager(axOperator: ax, focusProvider: { nil })
+        manager.record(
+            DictationUndoRecord(
+                focusSnapshot: nil,
+                context: makeContext(
+                    ax,
+                    insertedText: " world",
+                    previousFieldValue: "hello",
+                    replacementRange: NSRange(location: 99, length: 0)
+                ),
+                timestamp: Date()
+            )
+        )
+
+        XCTAssertEqual(manager.undoLastDictation(), .cannotVerify)
+        XCTAssertTrue(ax.setCallLog.isEmpty)
+    }
+
+    func testNonEmptySelectionReplacementCannotUseTrimFallback() {
+        let ax = MockAccessibilityOperator()
+        ax.hasFocusedElement = true
+        ax.settableMap = [kAXValueAttribute as String: true]
+        ax.stringMap = [kAXValueAttribute as String: "hello new!"]
+        ax.selectedRangeResult = NSRange(location: 9, length: 0)
+
+        let manager = DictationUndoManager(axOperator: ax, focusProvider: { nil })
+        manager.record(
+            DictationUndoRecord(
+                focusSnapshot: nil,
+                context: makeContext(
+                    ax,
+                    insertedText: "new",
+                    previousFieldValue: "hello old",
+                    replacementRange: NSRange(location: 6, length: 3)
+                ),
+                timestamp: Date()
+            )
+        )
+
+        XCTAssertEqual(manager.undoLastDictation(), .contentChanged)
+        XCTAssertTrue(ax.setCallLog.isEmpty)
+    }
+
+    func testSameSemanticFocusButDifferentAccessibilityElementRefusesUndo() {
+        let ax = MockAccessibilityOperator()
+        ax.hasFocusedElement = true
+        let focus = makeFocusSnapshot()
+        let manager = DictationUndoManager(axOperator: ax, focusProvider: { focus })
+        manager.record(
+            DictationUndoRecord(
+                focusSnapshot: focus,
+                context: DictationUndoContext(
+                    insertedText: " world",
+                    previousFieldValue: "hello",
+                    replacementRange: NSRange(location: 5, length: 0),
+                    targetApplication: makeTarget(),
+                    targetElement: AXUIElementCreateApplication(4242)
+                ),
+                timestamp: Date()
+            )
+        )
+
+        XCTAssertEqual(manager.undoLastDictation(), .focusChanged)
+        XCTAssertTrue(ax.setCallLog.isEmpty)
+    }
+
+    func testSuccessfulSetterWithContradictoryReadbackIsNotReportedUndone() {
+        let ax = MockAccessibilityOperator()
+        ax.hasFocusedElement = true
+        ax.settableMap = [kAXValueAttribute as String: true]
+        ax.stringMap = [kAXValueAttribute as String: "hello world"]
+        ax.selectedRangeResult = NSRange(location: 11, length: 0)
+        ax.setResults = [kAXValueAttribute as String: .success]
+        ax.appliesSuccessfulMutations = false
+
+        let manager = DictationUndoManager(axOperator: ax, focusProvider: { nil })
+        manager.record(
+            DictationUndoRecord(
+                focusSnapshot: nil,
+                context: makeContext(
+                    ax,
+                    insertedText: " world",
+                    previousFieldValue: "hello",
+                    replacementRange: NSRange(location: 5, length: 0)
+                ),
+                timestamp: Date()
+            )
+        )
+
+        XCTAssertEqual(manager.undoLastDictation(), .cannotVerify)
+        XCTAssertEqual(ax.setCallLog, [kAXValueAttribute as String])
     }
 
     // MARK: - Single-slot record replacement
@@ -233,7 +330,8 @@ final class DictationUndoManagerTests: XCTestCase {
         manager.record(
             DictationUndoRecord(
                 focusSnapshot: nil,
-                context: DictationUndoContext(
+                context: makeContext(
+                    ax,
                     insertedText: "first",
                     previousFieldValue: "",
                     replacementRange: NSRange(location: 0, length: 0),
@@ -245,7 +343,8 @@ final class DictationUndoManagerTests: XCTestCase {
         manager.record(
             DictationUndoRecord(
                 focusSnapshot: nil,
-                context: DictationUndoContext(
+                context: makeContext(
+                    ax,
                     insertedText: "second",
                     previousFieldValue: "",
                     replacementRange: NSRange(location: 0, length: 0),

@@ -229,11 +229,16 @@ struct HistoryItemRow: View {
     /// this just decides which variant this row currently shows.
     @State private var showRaw = false
 
+    private var displayContent: HistoryDisplayContent {
+        HistoryDisplayContent(item: item)
+    }
+
+    private var displayVariant: HistoryTextVariant {
+        displayContent.effectiveVariant(preferred: showRaw ? .raw : .cleaned)
+    }
+
     private var displayText: String {
-        if let cleaned = item.cleanedText, !showRaw {
-            return cleaned
-        }
-        return item.text
+        displayContent.text(preferred: showRaw ? .raw : .cleaned)
     }
 
     var body: some View {
@@ -248,9 +253,9 @@ struct HistoryItemRow: View {
                     .textSelection(.enabled)
                     .fixedSize(horizontal: false, vertical: true)
 
-                if item.cleanedText != nil {
+                if displayContent.hasDistinctCleanedText {
                     HStack(spacing: 6) {
-                        Text(showRaw ? "Raw" : "Cleaned")
+                        Text(displayVariant.label)
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(.cyan)
                         Button(showRaw ? "Use cleaned" : "Use raw") {
@@ -271,8 +276,7 @@ struct HistoryItemRow: View {
             Spacer()
             VStack(spacing: 6) {
                 ChromeIconButton(systemName: "doc.on.doc", accessibilityText: "Copy history item") {
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(displayText, forType: .string)
+                    TranscriptCopyAction.copy(displayText)
                 }
 
                 if AppSettings.shared.enableCorrectionSheet {

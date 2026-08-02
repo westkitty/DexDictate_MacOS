@@ -82,17 +82,21 @@ enum ClipboardManager {
 
     private static let clipboardRestoreDelay: TimeInterval = 1.0
 
-    static func copy(_ text: String) {
-        runOnMainThread {
-            writeString(text, to: NSPasteboard.general)
-        }
+    @discardableResult
+    static func copy(_ text: String) -> Bool {
+        runOnMainThread { writeString(text, to: NSPasteboard.general) }
     }
 
     /// Copies `text` to the general pasteboard, then simulates Cmd+V in the frontmost app.
     /// The clipboard is automatically cleared after paste to prevent data leakage.
     ///
     /// - Parameter text: The string to copy and paste.
-    static func copyAndPaste(_ text: String, targetApplication: OutputTargetApplication?) {
+    @discardableResult
+    static func copyAndPaste(
+        _ text: String,
+        targetApplication: OutputTargetApplication?,
+        completion: @escaping (OutputDelivery) -> Void = { _ in }
+    ) -> Bool {
         runOnMainThread {
             let pasteboard = NSPasteboard.general
             let deliveryProfile = PasteDeliveryProfile.resolve(for: targetApplication)
@@ -100,11 +104,15 @@ enum ClipboardManager {
             // Preserve the full pasteboard payload instead of flattening it to plain text.
             let originalContents = clonePasteboardItems(pasteboard.pasteboardItems)
 
-            writeString(text, to: pasteboard)
+            guard writeString(text, to: pasteboard) else { return false }
             let dictationChangeCount = pasteboard.changeCount
 
             activateTargetApplication(targetApplication)
-            schedulePaste(using: deliveryProfile, targetApplication: targetApplication)
+            schedulePaste(
+                using: deliveryProfile,
+                targetApplication: targetApplication,
+                completion: completion
+            )
 
             // Restore the clipboard only if DexDictate still owns the current string payload.
             let restoreDelay = deliveryProfile.initialDelay + deliveryProfile.activationTimeout + clipboardRestoreDelay
@@ -120,6 +128,7 @@ enum ClipboardManager {
 
                 restorePasteboardContents(originalContents, to: pasteboard, fallbackText: text)
             }
+            return true
         }
     }
 
@@ -172,14 +181,16 @@ enum ClipboardManager {
 
     private static func schedulePaste(
         using profile: PasteDeliveryProfile,
-        targetApplication: OutputTargetApplication?
+        targetApplication: OutputTargetApplication?,
+        completion: @escaping (OutputDelivery) -> Void
     ) {
         let deadline = Date().addingTimeInterval(profile.initialDelay + profile.activationTimeout)
         DispatchQueue.main.asyncAfter(deadline: .now() + profile.initialDelay) {
             waitForTargetActivationAndPaste(
                 targetApplication: targetApplication,
                 profile: profile,
-                deadline: deadline
+                deadline: deadline,
+                completion: completion
             )
         }
     }
@@ -187,24 +198,35 @@ enum ClipboardManager {
     private static func waitForTargetActivationAndPaste(
         targetApplication: OutputTargetApplication?,
         profile: PasteDeliveryProfile,
-        deadline: Date
+        deadline: Date,
+        completion: @escaping (OutputDelivery) -> Void
     ) {
         guard let targetApplication else {
             guard isFocusedElementEditable() else {
                 Safety.log("ClipboardManager — paste aborted: focused element is not editable. Text remains on clipboard.", category: .output)
+                completion(.blocked(reason: "Focused element is not editable. Text remains on clipboard."))
                 return
             }
-            simulatePaste(targetProcessIdentifier: nil)
+            completion(
+                simulatePaste(targetProcessIdentifier: nil)
+                    ? .requestedButUnverified
+                    : .failed(reason: "Could not create synthetic paste events. Text remains on clipboard.")
+            )
             return
         }
 
         if isFrontmost(targetApplication) {
             guard isFocusedElementEditable() else {
                 Safety.log("ClipboardManager — paste aborted: focused element in '\(targetApplication.bundleIdentifier)' is not editable. Text remains on clipboard.", category: .output)
+                completion(.blocked(reason: "Focused element is not editable. Text remains on clipboard."))
                 return
             }
             let targetProcessIdentifier = profile.postsToTargetProcess ? targetApplication.processIdentifier : nil
-            simulatePaste(targetProcessIdentifier: targetProcessIdentifier)
+            completion(
+                simulatePaste(targetProcessIdentifier: targetProcessIdentifier)
+                    ? .requestedButUnverified
+                    : .failed(reason: "Could not create synthetic paste events. Text remains on clipboard.")
+            )
             return
         }
 
@@ -213,6 +235,7 @@ enum ClipboardManager {
             let actualBundle = actualApp?.bundleIdentifier ?? "unknown"
             let actualPID = actualApp?.processIdentifier ?? 0
             Safety.log("ClipboardManager — paste aborted: target application '\(targetApplication.bundleIdentifier)' (PID \(targetApplication.processIdentifier)) is not frontmost at deadline. Current frontmost is '\(actualBundle)' (PID \(actualPID)).", category: .output)
+            completion(.blocked(reason: "Target application was not focused before paste timed out. Text remains on clipboard."))
             return
         }
 
@@ -221,7 +244,8 @@ enum ClipboardManager {
             waitForTargetActivationAndPaste(
                 targetApplication: targetApplication,
                 profile: profile,
-                deadline: deadline
+                deadline: deadline,
+                completion: completion
             )
         }
     }
@@ -231,15 +255,24 @@ enum ClipboardManager {
     /// Copies `text` to the pasteboard, then sends Cmd+A followed by Cmd+V to the target
     /// application, replacing the entire focused field contents. Use only via the
     /// `.replaceFieldWithClipboardPaste` insertion mode; not as a global default.
-    static func copySelectAllAndPaste(_ text: String, targetApplication: OutputTargetApplication?) {
+    @discardableResult
+    static func copySelectAllAndPaste(
+        _ text: String,
+        targetApplication: OutputTargetApplication?,
+        completion: @escaping (OutputDelivery) -> Void = { _ in }
+    ) -> Bool {
         runOnMainThread {
             let pasteboard = NSPasteboard.general
             let deliveryProfile = PasteDeliveryProfile.resolve(for: targetApplication)
             let originalContents = clonePasteboardItems(pasteboard.pasteboardItems)
-            writeString(text, to: pasteboard)
+            guard writeString(text, to: pasteboard) else { return false }
             let dictationChangeCount = pasteboard.changeCount
             activateTargetApplication(targetApplication)
-            scheduleSelectAllAndPaste(using: deliveryProfile, targetApplication: targetApplication)
+            scheduleSelectAllAndPaste(
+                using: deliveryProfile,
+                targetApplication: targetApplication,
+                completion: completion
+            )
             let restoreDelay = deliveryProfile.initialDelay + deliveryProfile.activationTimeout + clipboardRestoreDelay
             DispatchQueue.main.asyncAfter(deadline: .now() + restoreDelay) {
                 guard shouldRestoreClipboard(
@@ -250,19 +283,22 @@ enum ClipboardManager {
                 ) else { return }
                 restorePasteboardContents(originalContents, to: pasteboard, fallbackText: text)
             }
+            return true
         }
     }
 
     private static func scheduleSelectAllAndPaste(
         using profile: PasteDeliveryProfile,
-        targetApplication: OutputTargetApplication?
+        targetApplication: OutputTargetApplication?,
+        completion: @escaping (OutputDelivery) -> Void
     ) {
         let deadline = Date().addingTimeInterval(profile.initialDelay + profile.activationTimeout)
         DispatchQueue.main.asyncAfter(deadline: .now() + profile.initialDelay) {
             waitForTargetActivationAndSelectAllPaste(
                 targetApplication: targetApplication,
                 profile: profile,
-                deadline: deadline
+                deadline: deadline,
+                completion: completion
             )
         }
     }
@@ -270,24 +306,35 @@ enum ClipboardManager {
     private static func waitForTargetActivationAndSelectAllPaste(
         targetApplication: OutputTargetApplication?,
         profile: PasteDeliveryProfile,
-        deadline: Date
+        deadline: Date,
+        completion: @escaping (OutputDelivery) -> Void
     ) {
         guard let targetApplication else {
             guard isFocusedElementEditable() else {
                 Safety.log("ClipboardManager — select-all-paste aborted: focused element is not editable. Text remains on clipboard.", category: .output)
+                completion(.blocked(reason: "Focused element is not editable. Text remains on clipboard."))
                 return
             }
-            simulateSelectAllAndPaste(targetProcessIdentifier: nil)
+            completion(
+                simulateSelectAllAndPaste(targetProcessIdentifier: nil)
+                    ? .requestedButUnverified
+                    : .failed(reason: "Could not create synthetic select-all paste events. Text remains on clipboard.")
+            )
             return
         }
 
         if isFrontmost(targetApplication) {
             guard isFocusedElementEditable() else {
                 Safety.log("ClipboardManager — select-all-paste aborted: focused element in '\(targetApplication.bundleIdentifier)' is not editable. Text remains on clipboard.", category: .output)
+                completion(.blocked(reason: "Focused element is not editable. Text remains on clipboard."))
                 return
             }
             let targetProcessIdentifier = profile.postsToTargetProcess ? targetApplication.processIdentifier : nil
-            simulateSelectAllAndPaste(targetProcessIdentifier: targetProcessIdentifier)
+            completion(
+                simulateSelectAllAndPaste(targetProcessIdentifier: targetProcessIdentifier)
+                    ? .requestedButUnverified
+                    : .failed(reason: "Could not create synthetic select-all paste events. Text remains on clipboard.")
+            )
             return
         }
 
@@ -295,6 +342,7 @@ enum ClipboardManager {
             let actualApp = NSWorkspace.shared.frontmostApplication
             let actualBundle = actualApp?.bundleIdentifier ?? "unknown"
             Safety.log("ClipboardManager — select-all-paste aborted: target '\(targetApplication.bundleIdentifier)' not frontmost at deadline. Current: '\(actualBundle)'.", category: .output)
+            completion(.blocked(reason: "Target application was not focused before replace-field paste timed out. Text remains on clipboard."))
             return
         }
 
@@ -303,12 +351,13 @@ enum ClipboardManager {
             waitForTargetActivationAndSelectAllPaste(
                 targetApplication: targetApplication,
                 profile: profile,
-                deadline: deadline
+                deadline: deadline,
+                completion: completion
             )
         }
     }
 
-    private static func simulateSelectAllAndPaste(targetProcessIdentifier: pid_t?) {
+    private static func simulateSelectAllAndPaste(targetProcessIdentifier: pid_t?) -> Bool {
         let src = CGEventSource(stateID: .hidSystemState)
         // Hold Cmd while sending A then V: Cmd+A selects all, Cmd+V pastes.
         let cmdDown = CGEvent(keyboardEventSource: src, virtualKey: 0x37, keyDown: true)
@@ -318,11 +367,15 @@ enum ClipboardManager {
         let vUp     = CGEvent(keyboardEventSource: src, virtualKey: 0x09, keyDown: false)
         let cmdUp   = CGEvent(keyboardEventSource: src, virtualKey: 0x37, keyDown: false)
 
-        cmdDown?.flags = .maskCommand
-        aDown?.flags   = .maskCommand
-        aUp?.flags     = .maskCommand
-        vDown?.flags   = .maskCommand
-        vUp?.flags     = .maskCommand
+        guard let cmdDown, let aDown, let aUp, let vDown, let vUp, let cmdUp else {
+            return false
+        }
+
+        cmdDown.flags = .maskCommand
+        aDown.flags   = .maskCommand
+        aUp.flags     = .maskCommand
+        vDown.flags   = .maskCommand
+        vUp.flags     = .maskCommand
 
         post(cmdDown, targetProcessIdentifier: targetProcessIdentifier)
         post(aDown,   targetProcessIdentifier: targetProcessIdentifier)
@@ -330,6 +383,7 @@ enum ClipboardManager {
         post(vDown,   targetProcessIdentifier: targetProcessIdentifier)
         post(vUp,     targetProcessIdentifier: targetProcessIdentifier)
         post(cmdUp,   targetProcessIdentifier: targetProcessIdentifier)
+        return true
     }
 
     private static func activateTargetApplication(_ targetApplication: OutputTargetApplication?) {
@@ -408,7 +462,7 @@ enum ClipboardManager {
         isFrontmostProvider(targetApplication)
     }
 
-    private static func simulatePaste(targetProcessIdentifier: pid_t?) {
+    private static func simulatePaste(targetProcessIdentifier: pid_t?) -> Bool {
         let src = CGEventSource(stateID: .hidSystemState)
 
         let cmdDown = CGEvent(keyboardEventSource: src, virtualKey: 0x37, keyDown: true)
@@ -416,14 +470,17 @@ enum ClipboardManager {
         let vUp = CGEvent(keyboardEventSource: src, virtualKey: 0x09, keyDown: false)
         let cmdUp = CGEvent(keyboardEventSource: src, virtualKey: 0x37, keyDown: false)
 
-        cmdDown?.flags = .maskCommand
-        vDown?.flags = .maskCommand
-        vUp?.flags = .maskCommand
+        guard let cmdDown, let vDown, let vUp, let cmdUp else { return false }
+
+        cmdDown.flags = .maskCommand
+        vDown.flags = .maskCommand
+        vUp.flags = .maskCommand
 
         post(cmdDown, targetProcessIdentifier: targetProcessIdentifier)
         post(vDown, targetProcessIdentifier: targetProcessIdentifier)
         post(vUp, targetProcessIdentifier: targetProcessIdentifier)
         post(cmdUp, targetProcessIdentifier: targetProcessIdentifier)
+        return true
     }
 
     private static func post(_ event: CGEvent?, targetProcessIdentifier: pid_t?) {
@@ -482,19 +539,20 @@ enum ClipboardManager {
         return SavedPasteboardItem(representations: representations)
     }
 
-    private static func writeString(_ text: String, to pasteboard: NSPasteboard) {
+    @discardableResult
+    private static func writeString(_ text: String, to pasteboard: NSPasteboard) -> Bool {
         pasteboard.clearContents()
         guard pasteboard.setString(text, forType: .string) else {
             Safety.log("Writing dictation text to the clipboard failed.")
-            return
+            return false
         }
+        return true
     }
 
-    private static func runOnMainThread(_ work: () -> Void) {
+    private static func runOnMainThread<Result>(_ work: () -> Result) -> Result {
         if Thread.isMainThread {
-            work()
-        } else {
-            DispatchQueue.main.sync(execute: work)
+            return work()
         }
+        return DispatchQueue.main.sync(execute: work)
     }
 }

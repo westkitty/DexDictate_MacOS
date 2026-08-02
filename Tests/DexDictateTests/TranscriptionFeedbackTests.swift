@@ -15,6 +15,9 @@ final class TranscriptionFeedbackTests: XCTestCase {
             "Copied only instead of pasting"
         )
         XCTAssertEqual(TranscriptionFeedback.pastedToActiveApp(modified: false).title, "Pasted into active app")
+        XCTAssertEqual(TranscriptionFeedback.pasteRequestedUnverified(modified: false).title, "Paste requested")
+        XCTAssertEqual(TranscriptionFeedback.deliveryBlocked(modified: false, reason: "x").title, "Paste blocked")
+        XCTAssertEqual(TranscriptionFeedback.deliveryFailed(modified: false, reason: "x").title, "Delivery failed")
         XCTAssertEqual(TranscriptionFeedback.dictationUndone.title, "Dictation undone")
         XCTAssertEqual(TranscriptionFeedback.dictationUndoUnavailable(reason: "x").title, "Couldn't undo")
     }
@@ -31,6 +34,9 @@ final class TranscriptionFeedbackTests: XCTestCase {
             .success
         )
         XCTAssertEqual(TranscriptionFeedback.pastedToActiveApp(modified: true).tone, .success)
+        XCTAssertEqual(TranscriptionFeedback.pasteRequestedUnverified(modified: true).tone, .neutral)
+        XCTAssertEqual(TranscriptionFeedback.deliveryBlocked(modified: false, reason: "x").tone, .warning)
+        XCTAssertEqual(TranscriptionFeedback.deliveryFailed(modified: false, reason: "x").tone, .warning)
         XCTAssertEqual(TranscriptionFeedback.dictationUndone.tone, .success)
         XCTAssertEqual(TranscriptionFeedback.dictationUndoUnavailable(reason: "x").tone, .warning)
     }

@@ -1,6 +1,7 @@
 import AppKit
 import ApplicationServices
 import Foundation
+import os.lock
 
 /// A single reversible dictation insertion, kept only in memory for as long as it takes the
 /// user to potentially trigger "Undo Last Dictation" — never persisted to disk, and replaced
@@ -30,54 +31,52 @@ enum DictationUndoOutcome: Equatable {
     case cannotVerify
 }
 
+/// Thread-safe, single-claim view of whether the authoritative undo manager currently has
+/// a pending record. The Quartz event-tap callback uses this Boolean reservation only; the
+/// record itself remains owned and mutated by `DictationUndoManager` on the main actor.
+final class DictationUndoEligibilitySnapshot: @unchecked Sendable {
+    private var lock = os_unfair_lock()
+    private var isEligible = false
+
+    func setEligible(_ eligible: Bool) {
+        os_unfair_lock_lock(&lock)
+        isEligible = eligible
+        os_unfair_lock_unlock(&lock)
+    }
+
+    func claimIfEligible() -> Bool {
+        os_unfair_lock_lock(&lock)
+        defer { os_unfair_lock_unlock(&lock) }
+        guard isEligible else { return false }
+        isEligible = false
+        return true
+    }
+}
+
 protocol DictationUndoPerforming: AnyObject {
     var canUndoLastDictation: Bool { get }
+    var eligibilitySnapshot: DictationUndoEligibilitySnapshot { get }
     func record(_ record: DictationUndoRecord)
+    func clear()
     @discardableResult
     func undoLastDictation() -> DictationUndoOutcome
 }
 
 /// Reverses the single most recent successful dictation insertion — without touching the
-/// target app's clipboard or its own undo stack. Three strategies, tried in order of
-/// precision, each gated by a verification step so a mismatch always aborts instead of
-/// guessing:
+/// target app's clipboard or its own undo stack. Two strategies are allowed, both gated by
+/// exact element, range, content, and mutation-readback verification:
 ///
 /// 1. **Exact restore**: the field's current value still matches exactly what this insertion
 ///    produced — set the field back to its pre-insertion value and restore the cursor.
-/// 2. **Verified trim**: the current value's tail still matches the inserted text ending at
-///    the live cursor — remove just that tail (via AX when settable, otherwise Backspace,
-///    now with confidence instead of a guess).
-/// 3. **Unverified Backspace fallback**: only when Accessibility can confirm the same field
-///    is still focused but cannot read its text value at all (common for custom-drawn text
-///    views) — send one synthetic Backspace per character actually inserted. This never
-///    touches the pasteboard or the target app's own undo history.
+/// 2. **Verified trim**: only for an original zero-length insertion when the exact saved
+///    range still contains the exact inserted text and the cursor is at its end.
 final class DictationUndoManager: DictationUndoPerforming {
     static let shared = DictationUndoManager()
 
     private var pendingRecord: DictationUndoRecord?
     private let axOperator: AccessibilityElementOperating
     private let focusProvider: () -> FocusedElementSnapshot?
-
-    /// Testable hook for the Backspace fallback. Overridden in unit tests; production default
-    /// posts synthetic Backspace keydown/keyup pairs — the same delivery mechanism
-    /// `ClipboardManager` uses for its synthetic paste, but never touching `NSPasteboard` or
-    /// the target app's Edit menu undo stack.
-    static var backspaceSimulator: (_ count: Int, _ targetProcessIdentifier: pid_t?) -> Void = { count, targetProcessIdentifier in
-        guard count > 0 else { return }
-        let source = CGEventSource(stateID: .hidSystemState)
-        let deleteKeyCode: CGKeyCode = 0x33 // kVK_Delete — the Mac keyboard's Backspace key.
-        for _ in 0..<count {
-            let keyDown = CGEvent(keyboardEventSource: source, virtualKey: deleteKeyCode, keyDown: true)
-            let keyUp = CGEvent(keyboardEventSource: source, virtualKey: deleteKeyCode, keyDown: false)
-            if let targetProcessIdentifier, targetProcessIdentifier > 0 {
-                keyDown?.postToPid(targetProcessIdentifier)
-                keyUp?.postToPid(targetProcessIdentifier)
-            } else {
-                keyDown?.post(tap: .cghidEventTap)
-                keyUp?.post(tap: .cghidEventTap)
-            }
-        }
-    }
+    let eligibilitySnapshot = DictationUndoEligibilitySnapshot()
 
     init(
         axOperator: AccessibilityElementOperating = SystemAccessibilityElementOperator(),
@@ -91,6 +90,12 @@ final class DictationUndoManager: DictationUndoPerforming {
 
     func record(_ record: DictationUndoRecord) {
         pendingRecord = record
+        eligibilitySnapshot.setEligible(true)
+    }
+
+    func clear() {
+        eligibilitySnapshot.setEligible(false)
+        pendingRecord = nil
     }
 
     @discardableResult
@@ -98,81 +103,92 @@ final class DictationUndoManager: DictationUndoPerforming {
         guard let record = pendingRecord else { return .nothingToUndo }
         // One-shot: consumed whether or not the attempt below actually succeeds, so a failed
         // undo can't be silently retried against now-stale state.
+        eligibilitySnapshot.setEligible(false)
         pendingRecord = nil
 
-        let currentFocus = focusProvider()
-        if let focusSnapshot = record.focusSnapshot,
-           !FocusedElementIdentityMatcher.isSameContext(
-               focusSnapshot, currentFocus, targetBundleID: record.context.targetApplication?.bundleIdentifier
-           ) {
-            return .focusChanged
+        if let focusSnapshot = record.focusSnapshot {
+            guard let currentFocus = focusProvider() else { return .cannotVerify }
+            guard FocusedElementIdentityMatcher.isSameContext(
+                focusSnapshot,
+                currentFocus,
+                targetBundleID: record.context.targetApplication?.bundleIdentifier
+            ) else {
+                return .focusChanged
+            }
         }
 
-        guard let element = axOperator.focusedElement() else {
-            return .cannotVerify
-        }
+        guard let expectedElement = record.context.targetElement?.element,
+              let element = axOperator.focusedElement() else { return .cannotVerify }
+        guard CFEqual(expectedElement, element) else { return .focusChanged }
 
-        guard let currentValue = axOperator.getString(kAXValueAttribute as CFString, element: element) else {
-            // Focused element confirmed, but its text can't be read at all — the same
-            // ambiguous case `ClipboardManager`'s editable-field heuristic already treats as
-            // "probably a real text field" (custom-drawn views, some Electron apps). This is
-            // the one strategy that can't verify before acting.
-            Self.backspaceSimulator(record.context.insertedText.count, record.context.targetApplication?.processIdentifier)
-            return .undone
-        }
+        guard let currentValue = axOperator.getString(kAXValueAttribute as CFString, element: element),
+              let previousValue = record.context.previousFieldValue,
+              let replacementRange = record.context.replacementRange,
+              isValidAccessibilityRange(replacementRange, in: previousValue),
+              let expectedCurrentValue = accessibilityReplacingText(
+                  in: previousValue,
+                  range: replacementRange,
+                  with: record.context.insertedText
+              ) else { return .cannotVerify }
 
         let valueSettable = axOperator.isSettable(kAXValueAttribute as CFString, element: element)
 
         // Strategy 1: exact restore.
-        if valueSettable,
-           let previousValue = record.context.previousFieldValue,
-           let replacementRange = record.context.replacementRange {
-            let expectedCurrentValue = accessibilityReplacingText(
-                in: previousValue, range: replacementRange, with: record.context.insertedText
+        if currentValue == expectedCurrentValue {
+            guard valueSettable else { return .cannotVerify }
+            return restoreAndVerify(
+                previousValue,
+                cursor: replacementRange.location,
+                element: element
             )
-            if currentValue == expectedCurrentValue {
-                let result = axOperator.set(previousValue as CFTypeRef, for: kAXValueAttribute as CFString, element: element)
-                if result == .success {
-                    axOperator.setCursor(location: replacementRange.location, element: element)
-                    return .undone
-                }
-            }
         }
 
-        // Strategy 2: verified trim — the inserted text still sits immediately before the
-        // live cursor, with nothing else typed after it.
-        if let selectedRange = axOperator.getSelectedRange(element: element),
-           let trimmed = Self.trailingInsertionRemoved(
-               record.context.insertedText, from: currentValue, endingAt: selectedRange.location
-           ) {
-            if valueSettable {
-                let result = axOperator.set(trimmed.newValue as CFTypeRef, for: kAXValueAttribute as CFString, element: element)
-                if result == .success {
-                    axOperator.setCursor(location: trimmed.newCursor, element: element)
-                    return .undone
-                }
-            } else {
-                // Verified the exact tail matches, but this field doesn't accept a direct
-                // value set — fall back to Backspace now with confidence instead of guessing.
-                Self.backspaceSimulator(record.context.insertedText.count, record.context.targetApplication?.processIdentifier)
-                return .undone
-            }
-        }
+        // Strategy 2: trim only the exact original zero-length insertion range.
+        guard replacementRange.length == 0,
+              valueSettable,
+              let selectedRange = axOperator.getSelectedRange(element: element),
+              let trimmed = Self.exactInsertionRemoved(
+                  record.context.insertedText,
+                  from: currentValue,
+                  insertionLocation: replacementRange.location,
+                  selectedRange: selectedRange
+              ) else { return .contentChanged }
 
-        return .contentChanged
+        return restoreAndVerify(trimmed.newValue, cursor: trimmed.newCursor, element: element)
     }
 
-    /// Removes `insertedText` from the end of `currentValue` iff it exactly precedes
-    /// `cursorLocation` — i.e. nothing else was typed after the dictation landed. Returns
-    /// `nil` (no match, do nothing) rather than guessing when the tail doesn't line up.
-    private static func trailingInsertionRemoved(
-        _ insertedText: String, from currentValue: String, endingAt cursorLocation: Int
+    private func restoreAndVerify(
+        _ value: String,
+        cursor: Int,
+        element: AXUIElement
+    ) -> DictationUndoOutcome {
+        guard axOperator.set(
+            value as CFTypeRef,
+            for: kAXValueAttribute as CFString,
+            element: element
+        ) == .success else { return .cannotVerify }
+        _ = axOperator.setCursor(location: cursor, element: element)
+        guard axOperator.getString(kAXValueAttribute as CFString, element: element) == value,
+              axOperator.getSelectedRange(element: element) == NSRange(location: cursor, length: 0) else {
+            return .cannotVerify
+        }
+        return .undone
+    }
+
+    private static func exactInsertionRemoved(
+        _ insertedText: String,
+        from currentValue: String,
+        insertionLocation: Int,
+        selectedRange: NSRange
     ) -> (newValue: String, newCursor: Int)? {
         guard !insertedText.isEmpty else { return nil }
         let currentNSString = currentValue as NSString
         let insertedLength = (insertedText as NSString).length
-        guard cursorLocation >= insertedLength, cursorLocation <= currentNSString.length else { return nil }
-        let candidateRange = NSRange(location: cursorLocation - insertedLength, length: insertedLength)
+        let candidateRange = NSRange(location: insertionLocation, length: insertedLength)
+        guard isValidAccessibilityRange(candidateRange, in: currentValue),
+              selectedRange == NSRange(location: insertionLocation + insertedLength, length: 0) else {
+            return nil
+        }
         guard currentNSString.substring(with: candidateRange) == insertedText else { return nil }
         let newValue = currentNSString.replacingCharacters(in: candidateRange, with: "")
         return (newValue, candidateRange.location)

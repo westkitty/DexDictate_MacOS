@@ -137,6 +137,8 @@ public final class TranscriptionEngine: ObservableObject {
 
     private weak var permissionManager: PermissionManager?
     private var currentSessionId = UUID()
+    // Not `private`: delivery completions are coordinated by TranscriptionEngine+DictationUndo.swift.
+    var pendingDeliveryID: UUID?
     
     /// Optional callback invoked on the main actor after each dictation event that
     /// warrants visible toast feedback. Wire this in the UI layer to drive `ToastState`.
@@ -529,6 +531,7 @@ public final class TranscriptionEngine: ObservableObject {
             Safety.log("startListening() BLOCKED — state is \(state), must be .ready")
             return
         }
+        beginDeliveryCycle()
 
         // Request microphone permission if needed (deferred from onboarding)
         permissionManager?.requestMicrophoneIfNeeded()
@@ -1018,6 +1021,7 @@ public final class TranscriptionEngine: ObservableObject {
             return
         }
         guard applyLifecycle(.transcriptionStarted, context: "transcribeAudioFile") else { return }
+        beginDeliveryCycle()
         pendingImportedFileName = url.lastPathComponent
         importedFileResult = nil
         pendingDictationDomain = .general
@@ -1167,33 +1171,32 @@ public final class TranscriptionEngine: ObservableObject {
                     "TranscriptionEngine — paste aborted: focused element changed during transcription. Copying to clipboard.",
                     category: .output
                 )
-                ClipboardManager.copy(finalText)
-                resultFeedback = .copiedOnlySensitiveContext(modified: preparedResult.wasModified, reason: "Focus changed during transcription.")
-                onToast?(.clipboardFallback(reason: "Focus changed during transcription."))
+                let reason = "Focus changed during transcription."
+                let delivery: OutputDelivery = ClipboardManager.copy(finalText)
+                    ? .blocked(reason: reason + " Text was copied to the clipboard.")
+                    : .failed(reason: reason + " Copying to the clipboard also failed.")
+                applyDeliveryDecision(
+                    OutputDeliveryDecision(delivery: delivery),
+                    modified: preparedResult.wasModified
+                )
                 return
             }
         }
 
+        let deliveryID = UUID()
+        pendingDeliveryID = deliveryID
         let deliveryDecision = outputCoordinator.deliver(
             text: finalText,
             autoPaste: AppSettings.shared.autoPaste,
             protectSensitiveContexts: AppSettings.shared.copyOnlyInSensitiveFields,
             insertionMode: resolvedInsertionMode(for: pendingOutputTargetApplication),
-            targetApplication: pendingOutputTargetApplication
+            targetApplication: pendingOutputTargetApplication,
+            completion: { [weak self] completedDecision in
+                guard let self, self.pendingDeliveryID == deliveryID else { return }
+                self.applyDeliveryDecision(completedDecision, modified: preparedResult.wasModified)
+            }
         )
-
-        switch deliveryDecision.delivery {
-        case .savedOnly:
-            resultFeedback = .savedToHistory(modified: preparedResult.wasModified)
-            onToast?(.outputSavedOnly)
-        case .pastedToActiveApp:
-            resultFeedback = .pastedToActiveApp(modified: preparedResult.wasModified)
-            onToast?(.outputInserted)
-            recordDictationUndoIfNeeded(deliveryDecision.undoContext)
-        case .copiedOnly(let reason):
-            resultFeedback = .copiedOnlySensitiveContext(modified: preparedResult.wasModified, reason: reason)
-            onToast?(.clipboardFallback(reason: reason))
-        }
+        applyDeliveryDecision(deliveryDecision, modified: preparedResult.wasModified)
     }
 
     private func finalizeImportedFileTranscription(_ text: String, fileName: String) {
@@ -1342,6 +1345,7 @@ public final class TranscriptionEngine: ObservableObject {
         guard applyLifecycle(.transcriptionStarted, context: "retryLastUtteranceInAccuracyMode") else {
             return
         }
+        beginDeliveryCycle()
 
         activityPhase = .retryingAccuracy
         statusText = NSLocalizedString("Retrying last utterance...", comment: "Status: retrying last utterance")
