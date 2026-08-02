@@ -22,13 +22,39 @@ enum DictationUndoOutcome: Equatable {
     /// The insertion was reversed.
     case undone
     /// Focus moved to a different app/field since the insertion; refused to touch it blindly.
+    /// Transient — the record is retained so the user can return and retry.
     case focusChanged
     /// The focused field's content no longer matches what this insertion produced (the user
-    /// likely edited it since); refused to touch it blindly.
+    /// likely edited it since); refused to touch it blindly. Permanent — retrying could only
+    /// ever destroy text the user wrote.
     case contentChanged
-    /// Accessibility could not confirm anything about the current focused element; refused
-    /// to guess.
+    /// Accessibility could not confirm anything about the target element; refused to guess.
+    /// Transient — retained unless the element is proven destroyed.
     case cannotVerify
+    /// The saved target element is definitively gone. Permanent.
+    case targetUnavailable
+
+    /// Whether this outcome permanently invalidates the saved record. Refusals that are only
+    /// *temporarily* unverifiable must not destroy an otherwise valid undo — that is what made
+    /// the control disappear for good after one harmless failed attempt.
+    var consumesRecord: Bool {
+        switch self {
+        case .undone, .contentChanged, .targetUnavailable:
+            return true
+        case .nothingToUndo, .focusChanged, .cannotVerify:
+            return false
+        }
+    }
+
+    /// The permanent reason to publish once this outcome has consumed the record.
+    var unavailableReason: DictationUndoUnavailableReason? {
+        switch self {
+        case .undone: return .consumedBySuccessfulUndo
+        case .contentChanged: return .invalidatedByContentChange
+        case .targetUnavailable: return .targetNoLongerExists
+        case .nothingToUndo, .focusChanged, .cannotVerify: return nil
+        }
+    }
 }
 
 /// Thread-safe, single-claim view of whether the authoritative undo manager currently has
@@ -55,11 +81,14 @@ final class DictationUndoEligibilitySnapshot: @unchecked Sendable {
 
 protocol DictationUndoPerforming: AnyObject {
     var canUndoLastDictation: Bool { get }
+    /// The single authoritative description of undo state. `TranscriptionEngine` publishes
+    /// exactly this, so the manager, the published value, and the UI cannot drift apart.
+    var availability: DictationUndoAvailability { get }
     var eligibilitySnapshot: DictationUndoEligibilitySnapshot { get }
     func record(_ record: DictationUndoRecord)
-    func clear()
+    func clear(reason: DictationUndoUnavailableReason)
     @discardableResult
-    func undoLastDictation() -> DictationUndoOutcome
+    func undoLastDictation(invocation: DictationUndoInvocation) -> DictationUndoOutcome
 }
 
 /// Reverses the single most recent successful dictation insertion — without touching the
@@ -88,38 +117,98 @@ final class DictationUndoManager: DictationUndoPerforming {
 
     var canUndoLastDictation: Bool { pendingRecord != nil }
 
+    /// Derived from `pendingRecord` plus the reason the last record went away, so this and
+    /// `canUndoLastDictation` are two views of one state rather than two states.
+    private(set) var availability: DictationUndoAvailability = .unavailable(.noDictationYet)
+
     func record(_ record: DictationUndoRecord) {
         pendingRecord = record
         eligibilitySnapshot.setEligible(true)
+        availability = .available
     }
 
-    func clear() {
+    func clear(reason: DictationUndoUnavailableReason) {
         eligibilitySnapshot.setEligible(false)
         pendingRecord = nil
+        availability = .unavailable(reason)
+    }
+
+    /// Re-arms a record that a *transient* refusal could not verify. Every safety gate still
+    /// runs on the next attempt, so retention can never turn into a blind mutation.
+    private func retain() {
+        eligibilitySnapshot.setEligible(true)
+        availability = .available
     }
 
     @discardableResult
-    func undoLastDictation() -> DictationUndoOutcome {
+    func undoLastDictation(invocation: DictationUndoInvocation) -> DictationUndoOutcome {
         guard let record = pendingRecord else { return .nothingToUndo }
-        // One-shot: consumed whether or not the attempt below actually succeeds, so a failed
-        // undo can't be silently retried against now-stale state.
+        // Claim the record for the duration of this attempt so a second event can't run the
+        // same undo concurrently, then let the outcome decide whether it is truly consumed.
         eligibilitySnapshot.setEligible(false)
         pendingRecord = nil
 
-        if let focusSnapshot = record.focusSnapshot {
-            guard let currentFocus = focusProvider() else { return .cannotVerify }
-            guard FocusedElementIdentityMatcher.isSameContext(
-                focusSnapshot,
-                currentFocus,
-                targetBundleID: record.context.targetApplication?.bundleIdentifier
-            ) else {
-                return .focusChanged
-            }
+        var outcome = attemptUndo(record, invocation: invocation)
+
+        // A refusal we could not verify is only worth discarding when the system gives
+        // definitive evidence the saved field is gone.
+        if outcome == .cannotVerify,
+           let expectedElement = record.context.targetElement?.element,
+           !axOperator.isElementAlive(expectedElement) {
+            outcome = .targetUnavailable
         }
 
-        guard let expectedElement = record.context.targetElement?.element,
-              let element = axOperator.focusedElement() else { return .cannotVerify }
-        guard CFEqual(expectedElement, element) else { return .focusChanged }
+        if outcome.consumesRecord {
+            availability = .unavailable(outcome.unavailableReason ?? .consumedBySuccessfulUndo)
+        } else {
+            pendingRecord = record
+            retain()
+        }
+        return outcome
+    }
+
+    /// The saved element is the only thing either invocation is ever allowed to mutate.
+    /// Which element currently holds *global* focus is evidence, never a target.
+    private func verifyTarget(
+        _ record: DictationUndoRecord,
+        invocation: DictationUndoInvocation
+    ) -> DictationUndoOutcome? {
+        guard let expectedElement = record.context.targetElement?.element else { return .cannotVerify }
+
+        switch invocation {
+        case .globalShortcut:
+            // The user is still in the target app, so global focus must corroborate the
+            // saved element — this is what stops a mistimed chord hitting a different field.
+            if let focusSnapshot = record.focusSnapshot {
+                guard let currentFocus = focusProvider() else { return .cannotVerify }
+                guard FocusedElementIdentityMatcher.isSameContext(
+                    focusSnapshot,
+                    currentFocus,
+                    targetBundleID: record.context.targetApplication?.bundleIdentifier
+                ) else {
+                    return .focusChanged
+                }
+            }
+            guard let element = axOperator.focusedElement() else { return .cannotVerify }
+            guard CFEqual(expectedElement, element) else { return .focusChanged }
+            return nil
+
+        case .popoverButton:
+            // Clicking the menu-bar popover moves focus to DexDictate itself, so requiring
+            // the saved field to still be globally focused would refuse every button press.
+            // Instead: prove the saved element still exists, and rely on the exact value,
+            // range, settability, and readback checks below. Never consult `focusedElement()`.
+            guard axOperator.isElementAlive(expectedElement) else { return .targetUnavailable }
+            return nil
+        }
+    }
+
+    private func attemptUndo(
+        _ record: DictationUndoRecord,
+        invocation: DictationUndoInvocation
+    ) -> DictationUndoOutcome {
+        if let refusal = verifyTarget(record, invocation: invocation) { return refusal }
+        guard let element = record.context.targetElement?.element else { return .cannotVerify }
 
         guard let currentValue = axOperator.getString(kAXValueAttribute as CFString, element: element),
               let previousValue = record.context.previousFieldValue,

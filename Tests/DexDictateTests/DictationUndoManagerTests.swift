@@ -39,7 +39,7 @@ final class DictationUndoManagerTests: XCTestCase {
     func testNothingToUndoWhenNoRecordExists() {
         let manager = DictationUndoManager(axOperator: MockAccessibilityOperator())
         XCTAssertFalse(manager.canUndoLastDictation)
-        XCTAssertEqual(manager.undoLastDictation(), .nothingToUndo)
+        XCTAssertEqual(manager.undoLastDictation(invocation: .globalShortcut), .nothingToUndo)
     }
 
     // MARK: - Exact restore
@@ -69,7 +69,7 @@ final class DictationUndoManagerTests: XCTestCase {
         )
 
         XCTAssertTrue(manager.canUndoLastDictation)
-        XCTAssertEqual(manager.undoLastDictation(), .undone)
+        XCTAssertEqual(manager.undoLastDictation(invocation: .globalShortcut), .undone)
         XCTAssertEqual(ax.lastSetValue, "First sentence.")
         XCTAssertEqual(ax.setCursorLocations.last, 15)
         XCTAssertFalse(manager.canUndoLastDictation, "Record should be consumed after undo")
@@ -100,7 +100,7 @@ final class DictationUndoManagerTests: XCTestCase {
             )
         )
 
-        XCTAssertEqual(manager.undoLastDictation(), .undone)
+        XCTAssertEqual(manager.undoLastDictation(invocation: .globalShortcut), .undone)
         XCTAssertEqual(ax.lastSetValue, "hello!")
         XCTAssertEqual(ax.setCursorLocations.last, 5)
     }
@@ -130,7 +130,7 @@ final class DictationUndoManagerTests: XCTestCase {
             )
         )
 
-        XCTAssertEqual(manager.undoLastDictation(), .contentChanged)
+        XCTAssertEqual(manager.undoLastDictation(invocation: .globalShortcut), .contentChanged)
         XCTAssertTrue(ax.setCallLog.isEmpty, "Should not mutate the field when content no longer matches")
     }
 
@@ -161,7 +161,7 @@ final class DictationUndoManagerTests: XCTestCase {
             )
         )
 
-        XCTAssertEqual(manager.undoLastDictation(), .focusChanged)
+        XCTAssertEqual(manager.undoLastDictation(invocation: .globalShortcut), .focusChanged)
         XCTAssertTrue(ax.setCallLog.isEmpty)
     }
 
@@ -186,7 +186,7 @@ final class DictationUndoManagerTests: XCTestCase {
             )
         )
 
-        XCTAssertEqual(manager.undoLastDictation(), .cannotVerify)
+        XCTAssertEqual(manager.undoLastDictation(invocation: .globalShortcut), .cannotVerify)
     }
 
     // MARK: - Unreadable field
@@ -212,7 +212,7 @@ final class DictationUndoManagerTests: XCTestCase {
             )
         )
 
-        XCTAssertEqual(manager.undoLastDictation(), .cannotVerify)
+        XCTAssertEqual(manager.undoLastDictation(invocation: .globalShortcut), .cannotVerify)
         XCTAssertTrue(ax.setCallLog.isEmpty)
     }
 }
@@ -237,7 +237,7 @@ extension DictationUndoManagerTests {
             )
         )
 
-        XCTAssertEqual(manager.undoLastDictation(), .cannotVerify)
+        XCTAssertEqual(manager.undoLastDictation(invocation: .globalShortcut), .cannotVerify)
         XCTAssertTrue(ax.setCallLog.isEmpty)
     }
 
@@ -262,7 +262,7 @@ extension DictationUndoManagerTests {
             )
         )
 
-        XCTAssertEqual(manager.undoLastDictation(), .contentChanged)
+        XCTAssertEqual(manager.undoLastDictation(invocation: .globalShortcut), .contentChanged)
         XCTAssertTrue(ax.setCallLog.isEmpty)
     }
 
@@ -285,7 +285,7 @@ extension DictationUndoManagerTests {
             )
         )
 
-        XCTAssertEqual(manager.undoLastDictation(), .focusChanged)
+        XCTAssertEqual(manager.undoLastDictation(invocation: .globalShortcut), .focusChanged)
         XCTAssertTrue(ax.setCallLog.isEmpty)
     }
 
@@ -312,7 +312,7 @@ extension DictationUndoManagerTests {
             )
         )
 
-        XCTAssertEqual(manager.undoLastDictation(), .cannotVerify)
+        XCTAssertEqual(manager.undoLastDictation(invocation: .globalShortcut), .cannotVerify)
         XCTAssertEqual(ax.setCallLog, [kAXValueAttribute as String])
     }
 
@@ -354,8 +354,8 @@ extension DictationUndoManagerTests {
             )
         )
 
-        XCTAssertEqual(manager.undoLastDictation(), .undone)
+        XCTAssertEqual(manager.undoLastDictation(invocation: .globalShortcut), .undone)
         XCTAssertEqual(ax.lastSetValue, "", "Only the most recent insertion should be reversible")
-        XCTAssertEqual(manager.undoLastDictation(), .nothingToUndo)
+        XCTAssertEqual(manager.undoLastDictation(invocation: .globalShortcut), .nothingToUndo)
     }
 }

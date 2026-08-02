@@ -28,6 +28,27 @@ public enum OutputDelivery: Equatable {
     case requestedButUnverified
 }
 
+public extension OutputDelivery {
+    /// Why this delivery left nothing exact to reverse. Shown on the disabled undo control,
+    /// so "no button appeared" becomes a stated fact rather than a silent absence.
+    var undoIneligibilityDetail: String {
+        switch self {
+        case .pastedToActiveApp:
+            return "the insertion was confirmed."
+        case .savedOnly:
+            return "auto-paste is off, so it was only saved to history."
+        case .copiedOnly(let reason):
+            return "it was copied to the clipboard instead of inserted (\(reason))."
+        case .requestedButUnverified:
+            return "it was delivered by clipboard paste, which macOS can't confirm, so there is no exact insertion to reverse."
+        case .blocked(let reason):
+            return "delivery was blocked (\(reason))."
+        case .failed(let reason):
+            return "delivery failed (\(reason))."
+        }
+    }
+}
+
 public struct OutputDeliveryDecision: Equatable {
     public let delivery: OutputDelivery
     /// Populated only when `delivery == .pastedToActiveApp`; carries what's needed to
@@ -108,6 +129,16 @@ public protocol AccessibilityElementOperating {
     func set(_ value: CFTypeRef, for attribute: CFString, element: AXUIElement) -> AXError
     @discardableResult
     func setCursor(location: Int, element: AXUIElement) -> AXError
+    /// Distinguishes a destroyed/replaced element from a transient read failure, so undo can
+    /// retain a still-valid record instead of discarding it on the first hiccup.
+    func isElementAlive(_ element: AXUIElement) -> Bool
+}
+
+public extension AccessibilityElementOperating {
+    /// Conservative default: assume the element is alive. Retaining a record is safe because
+    /// every mutation is still gated on exact identity, content, range, and readback checks;
+    /// discarding one on weak evidence is what silently loses the feature.
+    func isElementAlive(_ element: AXUIElement) -> Bool { true }
 }
 
 /// Production implementation that calls the real macOS Accessibility APIs.
@@ -153,6 +184,14 @@ public struct SystemAccessibilityElementOperator: AccessibilityElementOperating 
 
     public func set(_ value: CFTypeRef, for attribute: CFString, element: AXUIElement) -> AXError {
         AXUIElementSetAttributeValue(element, attribute, value)
+    }
+
+    /// `kAXErrorInvalidUIElement` is the system's definitive "this element is gone" answer.
+    /// Any other failure (timeout, not-implemented, permission) is treated as transient.
+    public func isElementAlive(_ element: AXUIElement) -> Bool {
+        var value: CFTypeRef?
+        let result = AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &value)
+        return result != .invalidUIElement
     }
 
     @discardableResult

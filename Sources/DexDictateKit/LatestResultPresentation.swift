@@ -5,24 +5,37 @@ import Foundation
 /// and so the slim popover and the classic popover cannot drift apart: both render this one
 /// model via `UndoLastDictationButton`.
 public struct UndoControlModel: Equatable {
-    /// Mirrors `TranscriptionEngine.canUndoLastDictation`. The control renders nothing when
-    /// this is false — undo is one-shot, so an unavailable control must disappear rather
-    /// than sit disabled and invite a click that cannot work.
-    public let isVisible: Bool
+    /// Always true once a latest result exists. A control that vanishes when undo happens to
+    /// be unavailable is indistinguishable from a feature that was never built — which is
+    /// exactly how this shipped and how it was reported. The control now stays put and
+    /// explains itself instead.
+    public let isVisible = true
+    public let isEnabled: Bool
+    /// `nil` when enabled.
+    public let unavailableReason: DictationUndoUnavailableReason?
 
-    public init(canUndoLastDictation: Bool) {
-        isVisible = canUndoLastDictation
+    public init(availability: DictationUndoAvailability) {
+        isEnabled = availability.canUndo
+        unavailableReason = availability.unavailableReason
     }
 
     public var title: String { "Undo Last Dictation" }
 
     public var accessibilityLabel: String {
-        "Remove the most recently inserted dictation from the active app"
+        isEnabled
+        ? "Remove the most recently inserted dictation from the active app"
+        : "Undo Last Dictation, unavailable"
     }
 
+    /// Enabled: what the action does. Disabled: the actual reason it can't run right now.
     public var helpText: String {
-        "Removes the last dictation from the target app without touching its clipboard or undo history."
+        guard let unavailableReason else {
+            return "Removes the last dictation from the target app without touching its clipboard or undo history."
+        }
+        return unavailableReason.message
     }
+
+    public var accessibilityHint: String { helpText }
 }
 
 /// Per-item view state for the latest-result card. A new transcription must start from the

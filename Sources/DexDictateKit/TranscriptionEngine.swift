@@ -126,11 +126,16 @@ public final class TranscriptionEngine: ObservableObject {
     // Not `private`: read/written from the TranscriptionEngine+DictationUndo.swift extension.
     let dictationUndoManager: DictationUndoPerforming = DictationUndoManager()
 
-    /// Published mirror of `dictationUndoManager.canUndoLastDictation`, so SwiftUI actually
-    /// re-renders when undo is armed or cleared. The manager stays authoritative — this is
-    /// only ever written by `syncUndoAvailability()` in TranscriptionEngine+DictationUndo.swift
-    /// (hence `internal(set)`: read-only to the app target, writable inside the kit).
-    @Published public internal(set) var canUndoLastDictation: Bool = false
+    /// Published mirror of `dictationUndoManager.availability`, so SwiftUI actually re-renders
+    /// when undo is armed, cleared, retained, or invalidated — and so the disabled control can
+    /// state *why*. The manager stays authoritative; this is only ever written by
+    /// `syncUndoAvailability()` in TranscriptionEngine+DictationUndo.swift (hence
+    /// `internal(set)`: read-only to the app target, writable inside the kit).
+    @Published public internal(set) var undoAvailability: DictationUndoAvailability = .unavailable(.noDictationYet)
+
+    /// Convenience view of the same published value — deliberately computed, so there is no
+    /// second Boolean that could disagree with `undoAvailability`.
+    public var canUndoLastDictation: Bool { undoAvailability.canUndo }
 
     /// When the last undo attempt was serviced. A second ⌃⌥⌘Z press that arrives while the
     /// first is still in flight finds no eligibility and would otherwise report "nothing to
@@ -335,7 +340,7 @@ public final class TranscriptionEngine: ObservableObject {
         automaticRetryOriginalText = nil
         whisperService.setInitialPrompt(nil)
         // Stopping the system invalidates the focus/AX context a pending undo depends on.
-        disarmUndo()
+        disarmUndo(reason: .engineStopped)
     }
 
     public func rebuildAudioAfterCoreAudioReset() async -> Result<String, Error> {

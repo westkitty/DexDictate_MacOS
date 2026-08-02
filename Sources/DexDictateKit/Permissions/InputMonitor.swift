@@ -97,7 +97,7 @@ final class InputMonitor {
                     claimEligibility: monitor.undoEligibilitySnapshot.claimIfEligible,
                     requestUndo: {
                         MainActorDispatch.async { [weak monitor] in
-                            monitor?.engine?.undoLastDictation()
+                            monitor?.engine?.undoLastDictation(invocation: .globalShortcut)
                         }
                     },
                     notifyUnavailable: monitor.scheduleUndoUnavailableNotice

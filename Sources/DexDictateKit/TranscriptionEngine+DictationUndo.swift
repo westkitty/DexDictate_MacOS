@@ -14,9 +14,9 @@ extension TranscriptionEngine {
     /// the undo record goes through `armUndo`/`disarmUndo`/`undoLastDictation()`, all of
     /// which end here, so the published value cannot drift from the manager.
     func syncUndoAvailability() {
-        let available = dictationUndoManager.canUndoLastDictation
-        if canUndoLastDictation != available {
-            canUndoLastDictation = available
+        let authoritative = dictationUndoManager.availability
+        if undoAvailability != authoritative {
+            undoAvailability = authoritative
         }
     }
 
@@ -29,8 +29,8 @@ extension TranscriptionEngine {
 
     /// The only production path that clears undo. Safe to call when nothing is armed.
     /// Not `private`: `stopSystem()` in TranscriptionEngine.swift invalidates undo too.
-    func disarmUndo() {
-        dictationUndoManager.clear()
+    func disarmUndo(reason: DictationUndoUnavailableReason) {
+        dictationUndoManager.clear(reason: reason)
         syncUndoAvailability()
     }
 
@@ -38,7 +38,7 @@ extension TranscriptionEngine {
     /// later delivery cycle begins, including cycles that are later cancelled or fail.
     func beginDeliveryCycle() {
         pendingDeliveryID = nil
-        disarmUndo()
+        disarmUndo(reason: .supersededByNewerDictation)
     }
 
     /// Applies a delivery result that arrived asynchronously. A callback from a superseded
@@ -82,7 +82,10 @@ extension TranscriptionEngine {
     }
 
     private func recordDictationUndoIfNeeded(_ decision: OutputDeliveryDecision) {
-        disarmUndo()
+        // The reason is what the disabled control will show, so it must name the *actual*
+        // delivery outcome. "The undo button never appeared" was previously indistinguishable
+        // from "this delivery was never reversible in the first place".
+        disarmUndo(reason: .deliveryNotReversible(decision.delivery.undoIneligibilityDetail))
         guard decision.delivery == .pastedToActiveApp,
               let undoContext = decision.undoContext,
               undoContext.previousFieldValue != nil,
@@ -101,36 +104,55 @@ extension TranscriptionEngine {
     /// Reverses the most recently pasted dictation directly in the target app — without
     /// touching its clipboard or its own undo stack. See `DictationUndoManager` for the
     /// verification strategies this goes through before it will actually delete anything.
-    public func undoLastDictation() {
-        // `DictationUndoManager` consumes the record one-shot, whatever the outcome, so the
-        // published mirror must be refreshed on every branch below.
+    public func undoLastDictation(invocation: DictationUndoInvocation = .popoverButton) {
+        // Outcomes that are only *temporarily* unverifiable retain the record, so the mirror
+        // must be refreshed from the manager on every branch below rather than assumed false.
         defer { syncUndoAvailability() }
         lastUndoAttemptAt = Date()
-        switch dictationUndoManager.undoLastDictation() {
-        case .undone:
+
+        let outcome = dictationUndoManager.undoLastDictation(invocation: invocation)
+        Safety.log(
+            "Undo attempt — source=\(invocation) outcome=\(outcome) retained=\(!outcome.consumesRecord)",
+            category: .output
+        )
+
+        guard outcome != .undone else {
             statusText = NSLocalizedString("Dictation undone", comment: "")
             resultFeedback = .dictationUndone
             onToast?(.dictationUndone)
+            return
+        }
+
+        let reason = Self.undoFailureReason(for: outcome, invocation: invocation)
+        statusText = outcome == .nothingToUndo
+            ? NSLocalizedString("Nothing to undo", comment: "")
+            : NSLocalizedString("Couldn't undo", comment: "")
+        resultFeedback = .dictationUndoUnavailable(reason: reason)
+        onToast?(.dictationUndoUnavailable(reason: reason))
+    }
+
+    /// Precise, actionable text per outcome. A refusal that *retains* the record says so, and
+    /// says what would let it succeed — previously every failure collapsed into the single
+    /// unqualified title "Couldn't undo".
+    static func undoFailureReason(
+        for outcome: DictationUndoOutcome,
+        invocation: DictationUndoInvocation
+    ) -> String {
+        switch outcome {
+        case .undone:
+            return "The last dictation was removed."
         case .nothingToUndo:
-            statusText = NSLocalizedString("Nothing to undo", comment: "")
-            let reason = "No recent dictation to undo."
-            resultFeedback = .dictationUndoUnavailable(reason: reason)
-            onToast?(.dictationUndoUnavailable(reason: reason))
+            return "No reversible dictation is available to undo."
         case .focusChanged:
-            statusText = NSLocalizedString("Couldn't undo", comment: "")
-            let reason = "The focused field changed since that dictation was inserted."
-            resultFeedback = .dictationUndoUnavailable(reason: reason)
-            onToast?(.dictationUndoUnavailable(reason: reason))
+            return invocation == .globalShortcut
+                ? "That field isn't focused right now, so nothing was touched. Click back into it and press ⌃⌥⌘Z again — undo is still available."
+                : "The saved field couldn't be confirmed, so nothing was touched. Undo is still available."
         case .contentChanged:
-            statusText = NSLocalizedString("Couldn't undo", comment: "")
-            let reason = "That field's content changed since the dictation was inserted."
-            resultFeedback = .dictationUndoUnavailable(reason: reason)
-            onToast?(.dictationUndoUnavailable(reason: reason))
+            return "That field's text changed after the dictation, so undo was withdrawn rather than risk deleting your own edits."
         case .cannotVerify:
-            statusText = NSLocalizedString("Couldn't undo", comment: "")
-            let reason = "Couldn't confirm the target field via Accessibility."
-            resultFeedback = .dictationUndoUnavailable(reason: reason)
-            onToast?(.dictationUndoUnavailable(reason: reason))
+            return "Accessibility couldn't confirm the field's contents, so nothing was touched. Undo is still available — try again in a moment."
+        case .targetUnavailable:
+            return "The field that received the dictation no longer exists, so it can't be undone."
         }
     }
 

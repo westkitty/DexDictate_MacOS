@@ -53,14 +53,32 @@ final class UndoAvailabilityPublicationTests: XCTestCase {
         }
     }
 
-    func testUndoAttemptLeavesAvailabilityFalse() {
+    /// Availability after an undo attempt is decided by the *outcome*, not by the attempt.
+    /// This previously asserted "always false", which is exactly the behaviour that let one
+    /// harmless unverifiable attempt delete the feature until the next dictation.
+    func testTransientlyRefusedUndoAttemptKeepsAvailabilityTrue() {
         let engine = armedEngine()
 
-        // No real AX target exists in the test process, so this resolves to a refusal —
-        // which must still consume the one-shot record and republish availability.
-        engine.undoLastDictation()
+        // No real AX target exists in the test process, so this resolves to a transient
+        // refusal — the record must survive and stay offered.
+        engine.undoLastDictation(invocation: .globalShortcut)
+
+        XCTAssertTrue(
+            engine.canUndoLastDictation,
+            "A refusal that could not verify anything must not destroy a valid undo record"
+        )
+        XCTAssertTrue(engine.undoAvailability.canUndo)
+    }
+
+    func testPermanentlyInvalidatedUndoPublishesAvailabilityFalse() {
+        let engine = armedEngine()
+
+        // A genuine content change is the invalidating case, and it must clear availability
+        // with a reason the disabled control can state.
+        engine.disarmUndo(reason: .invalidatedByContentChange)
 
         XCTAssertFalse(engine.canUndoLastDictation)
+        XCTAssertEqual(engine.undoAvailability.unavailableReason, .invalidatedByContentChange)
     }
 
     func testStoppingTheSystemPublishesAvailabilityFalse() {
@@ -102,16 +120,61 @@ final class UndoAvailabilityPublicationTests: XCTestCase {
     /// model. The SwiftUI hierarchy itself is not unit-testable here (the test target does
     /// not depend on the app executable target), so the rendered pixels remain a manual
     /// check — but the visibility rule and its copy are pinned.
-    func testUndoControlModelIsVisibleOnlyWhenUndoIsAvailable() {
-        XCTAssertTrue(UndoControlModel(canUndoLastDictation: true).isVisible)
-        XCTAssertFalse(UndoControlModel(canUndoLastDictation: false).isVisible)
+    /// The control is a permanent fixture of the latest-result card: always present, enabled
+    /// only when a reversible record exists. Its previous disappear-when-unavailable behavior
+    /// is what made the feature look absent.
+    func testUndoControlIsAlwaysVisibleAndEnabledOnlyWhenAvailable() {
+        let enabled = UndoControlModel(availability: .available)
+        let disabled = UndoControlModel(availability: .unavailable(.noDictationYet))
+
+        XCTAssertTrue(enabled.isVisible)
+        XCTAssertTrue(disabled.isVisible, "The control must never vanish merely because undo is unavailable")
+        XCTAssertTrue(enabled.isEnabled)
+        XCTAssertFalse(disabled.isEnabled)
+    }
+
+    func testDisabledControlStatesTheRealReason() {
+        let reasons: [DictationUndoUnavailableReason] = [
+            .noDictationYet,
+            .deliveryNotReversible("it was delivered by clipboard paste."),
+            .consumedBySuccessfulUndo,
+            .invalidatedByContentChange,
+            .targetNoLongerExists,
+            .supersededByNewerDictation,
+            .engineStopped
+        ]
+
+        for reason in reasons {
+            let model = UndoControlModel(availability: .unavailable(reason))
+            XCTAssertFalse(model.isEnabled)
+            XCTAssertEqual(model.helpText, reason.message)
+            XCTAssertEqual(model.accessibilityHint, reason.message)
+            XCTAssertFalse(model.helpText.isEmpty)
+        }
     }
 
     func testUndoControlModelCopyIsActionOrientedAndFactual() {
-        let model = UndoControlModel(canUndoLastDictation: true)
+        let model = UndoControlModel(availability: .available)
         XCTAssertEqual(model.title, "Undo Last Dictation")
+        XCTAssertNil(model.unavailableReason)
         XCTAssertFalse(model.accessibilityLabel.isEmpty)
         XCTAssertFalse(model.helpText.isEmpty)
+    }
+
+    /// The disabled reason must name the actual delivery outcome, so "no undo button" is
+    /// replaced by a stated cause the user can act on.
+    func testNonReversibleDeliveryPublishesItsOwnReason() {
+        let engine = TranscriptionEngine()
+
+        engine.applyDeliveryDecision(
+            OutputDeliveryDecision(delivery: .requestedButUnverified),
+            modified: false
+        )
+
+        guard case .deliveryNotReversible(let detail) = engine.undoAvailability.unavailableReason else {
+            return XCTFail("Expected deliveryNotReversible, got \(String(describing: engine.undoAvailability.unavailableReason))")
+        }
+        XCTAssertTrue(detail.contains("clipboard paste"), "Reason should name the real delivery path: \(detail)")
     }
 
     // MARK: - Late callback protection
