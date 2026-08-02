@@ -9,7 +9,7 @@
 - [x] Commit governance and branch audit.
 - [x] Integrate reversible dictation undo.
 - [x] Curate and integrate speech/UI recovery artifacts.
-- [ ] Integrate nifty history and spoken punctuation.
+- [x] Integrate nifty history and spoken punctuation.
 - [ ] Integrate the UX prototype.
 - [ ] Integrate the Remotion project.
 - [ ] Integrate v1.5 ancestry.
@@ -18,11 +18,11 @@
 
 ## Active Slice
 
-Integrate the superseded nifty history, then port and test its still-missing spoken-punctuation behavior.
+Integrate the standalone UX prototype while keeping it outside the production Swift package.
 
 ## Completed Todos
 
-Preservation tags, isolated worktree, baseline test reconciliation, governance/audit commit, reversible dictation undo merge, and curated UI recovery archive.
+Preservation tags, isolated worktree, baseline test reconciliation, governance/audit commit, reversible dictation undo merge, curated UI recovery archive, nifty ancestry, and spoken punctuation.
 
 ## Evidence Refs
 
@@ -33,6 +33,8 @@ Preservation tags, isolated worktree, baseline test reconciliation, governance/a
 - undo verification: 8 undo-manager, 29 output-coordinator, 2 feedback, and 12 Accessibility insertion tests; 0 failures
 - UI recovery merge commit: `2618129`; only four archive paths differ from its first parent
 - speech branch tip `69c6533c` is reachable; `.resurrection` is unchanged in the committed tree
+- nifty ancestry merge: `42f82082`; original tip `977b625b` is reachable and the first-parent tree is unchanged
+- spoken punctuation commit: `167d4b6`; 13 `CommandProcessorTests` passed with 0 failures
 
 ## Blockers
 
@@ -40,7 +42,7 @@ None.
 
 ## ResumeStateHint
 
-Resume in `/Users/andrew/.config/aegis/worktrees/DexDictate_MacOS.nosync/integrate-legacy-work`, read the parent plan and this checkpoint, keep Project Sentinel's unstaged `.resurrection` churn excluded, then record nifty ancestry with an `ours` merge and port spoken punctuation onto the current command processor.
+Resume in `/Users/andrew/.config/aegis/worktrees/DexDictate_MacOS.nosync/integrate-legacy-work`, read the parent plan and this checkpoint, keep Project Sentinel's unstaged `.resurrection` churn excluded, then record the audio/import branch ancestry and extract `dexdictate-ux` beneath `prototypes/`.
 
 ## DriftCheckDraft
 

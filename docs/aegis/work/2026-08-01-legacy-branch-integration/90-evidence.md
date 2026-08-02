@@ -34,6 +34,16 @@ Seven annotated archive tags were pushed. Their peeled targets match the origina
 - The committed `.resurrection` tree is identical to the merge commit's first parent
 - Project Sentinel's concurrent unstaged `.resurrection` rewrites remain excluded
 
+## Nifty History and Spoken Punctuation
+
+- Ancestry merge commit: `42f82082`
+- Original nifty tip `977b625b` is an ancestor of the integration branch
+- The ancestry merge's first-parent tree is unchanged
+- Spoken punctuation commit: `167d4b6`
+- Current custom-command precedence and trailing-punctuation command matching are retained
+- `DexDictateTests.CommandProcessorTests`: 13 passed, 0 failures
+- Full/onset silence trimming remains disabled because the current experiment flag documents clipping risk; the older implementation remains available through history and its archive tag
+
 ## Pending Evidence
 
 Each merge diff, focused tests, artifact builds, combined Swift verification, packaged app, CI, remote parity, ancestry checks, and final branch inventory.
