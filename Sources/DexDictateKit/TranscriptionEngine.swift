@@ -131,6 +131,13 @@ public final class TranscriptionEngine: ObservableObject {
     /// only ever written by `syncUndoAvailability()` in TranscriptionEngine+DictationUndo.swift
     /// (hence `internal(set)`: read-only to the app target, writable inside the kit).
     @Published public internal(set) var canUndoLastDictation: Bool = false
+
+    /// When the last undo attempt was serviced. A second ⌃⌥⌘Z press that arrives while the
+    /// first is still in flight finds no eligibility and would otherwise report "nothing to
+    /// undo" *after* the successful undo, clobbering its confirmation — see
+    /// `reportUndoUnavailableForShortcut(now:)`.
+    /// Not `private`: written from the TranscriptionEngine+DictationUndo.swift extension.
+    var lastUndoAttemptAt: Date?
     
     /// Global input monitor.
     private var inputMonitor: InputMonitor?

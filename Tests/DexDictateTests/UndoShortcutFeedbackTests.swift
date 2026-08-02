@@ -1,3 +1,4 @@
+import ApplicationServices
 import CoreGraphics
 import XCTest
 @testable import DexDictateKit
@@ -157,6 +158,72 @@ final class UndoShortcutFeedbackTests: XCTestCase {
         }
         XCTAssertEqual(reason, "No recent reversible dictation to undo.")
         XCTAssertFalse(engine.canUndoLastDictation)
+    }
+
+    /// A second physical chord press loses the eligibility claim and reaches the main actor
+    /// *after* the first press's undo has already run. Reporting "nothing to undo" then would
+    /// wipe out the confirmation the user just earned.
+    @MainActor
+    func testNoticeIsSuppressedImmediatelyAfterAnUndoAttempt() {
+        let engine = TranscriptionEngine()
+        let undoAt = Date(timeIntervalSince1970: 5_000)
+        engine.lastUndoAttemptAt = undoAt
+        engine.resultFeedback = .dictationUndone
+
+        engine.reportUndoUnavailableForShortcut(now: undoAt.addingTimeInterval(0.2))
+
+        XCTAssertEqual(
+            engine.resultFeedback,
+            .dictationUndone,
+            "The unavailable notice must not overwrite a just-completed undo"
+        )
+    }
+
+    @MainActor
+    func testNoticeResumesOnceTheSuppressionWindowHasPassed() {
+        let engine = TranscriptionEngine()
+        let undoAt = Date(timeIntervalSince1970: 5_000)
+        engine.lastUndoAttemptAt = undoAt
+        engine.resultFeedback = .dictationUndone
+
+        engine.reportUndoUnavailableForShortcut(now: undoAt.addingTimeInterval(2.0))
+
+        guard case .dictationUndoUnavailable = engine.resultFeedback else {
+            return XCTFail("Expected the notice to resume, got \(engine.resultFeedback)")
+        }
+    }
+
+    /// The notice is informational only — it must never touch the authoritative undo record.
+    @MainActor
+    func testNoticeDoesNotConsumeAnArmedUndoRecord() {
+        let engine = TranscriptionEngine()
+        engine.pendingFocusSnapshot = FocusedElementSnapshot(
+            role: "AXTextField",
+            processIdentifier: 4242,
+            bundleIdentifier: "com.example.editor"
+        )
+        engine.applyDeliveryDecision(
+            OutputDeliveryDecision(
+                delivery: .pastedToActiveApp,
+                undoContext: DictationUndoContext(
+                    insertedText: " world",
+                    previousFieldValue: "hello",
+                    replacementRange: NSRange(location: 5, length: 0),
+                    targetApplication: OutputTargetApplication(
+                        bundleIdentifier: "com.example.editor",
+                        processIdentifier: 4242
+                    ),
+                    targetElement: AXUIElementCreateSystemWide()
+                )
+            ),
+            modified: false
+        )
+        XCTAssertTrue(engine.canUndoLastDictation)
+
+        engine.reportUndoUnavailableForShortcut()
+
+        XCTAssertTrue(engine.canUndoLastDictation, "Notice must not consume the armed record")
+        XCTAssertEqual(engine.resultFeedback, .pastedToActiveApp(modified: false))
     }
 
     // MARK: - Helpers

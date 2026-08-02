@@ -86,6 +86,23 @@ public enum TriggerShortcutConflictChecker {
         (held & required) == required
     }
 
+    /// True when a Z-key trigger with `triggerModifiers` can never fire, because
+    /// `UndoShortcutEventPolicy` handles the chord first. Both directions shadow, because
+    /// both the undo policy and the trigger matcher use subset semantics:
+    ///
+    /// - `triggerModifiers ⊆ ⌃⌥⌘` — pressing the full undo chord also satisfies the trigger,
+    ///   and undo is evaluated first (e.g. a ⌘Z trigger loses to ⌃⌥⌘Z).
+    /// - `triggerModifiers ⊇ ⌃⌥⌘` — pressing the trigger always satisfies the undo mask, so
+    ///   undo consumes every press (e.g. a ⇧⌃⌥⌘Z trigger never fires at all).
+    ///
+    /// The superset direction used to be treated as safe, which let a trigger like ⇧⌃⌥⌘Z
+    /// save cleanly and then silently never work.
+    static func shadowsUndoChord(triggerModifiers: UInt64) -> Bool {
+        let undoMask = InputMonitor.undoDictationModifierMask
+        return modifiersMatch(required: triggerModifiers, held: undoMask)
+            || modifiersMatch(required: undoMask, held: triggerModifiers)
+    }
+
     /// Returns a conflict for the given shortcut, or `nil` if it appears safe to use as a trigger.
     public static func conflict(for shortcut: AppSettings.UserShortcut) -> TriggerShortcutConflict? {
         // Mouse-button triggers do not collide with the keyboard system shortcuts below.
@@ -94,7 +111,7 @@ public enum TriggerShortcutConflictChecker {
         let normalized = shortcut.modifiers & standardModifierMask
 
         if Int64(keyCode) == InputMonitor.undoDictationKeyCode,
-           modifiersMatch(required: shortcut.modifiers, held: InputMonitor.undoDictationModifierMask) {
+           shadowsUndoChord(triggerModifiers: shortcut.modifiers) {
             return TriggerShortcutConflict(
                 severity: .shadowsUndoLastDictation,
                 message: "This trigger would be shadowed by Undo Last Dictation (⌃⌥⌘Z). Choose a different trigger."

@@ -52,6 +52,35 @@ final class TriggerShortcutApplicationTests: XCTestCase {
         XCTAssertEqual(settings.userShortcut, .defaultMiddleMouse)
     }
 
+    /// The superset direction: a trigger requiring ⇧ on top of ⌃⌥⌘ is consumed by the undo
+    /// policy on every press, so the production path must refuse it too.
+    func testModifierSupersetThatWouldShadowUndoIsAlsoRejected() {
+        let outcome = settings.applyTriggerShortcut(
+            undoChordShortcut(modifiers: undoMask | CGEventFlags.maskShift.rawValue)
+        )
+
+        XCTAssertFalse(outcome.didApply)
+        XCTAssertEqual(outcome.conflict?.severity, .shadowsUndoLastDictation)
+        XCTAssertEqual(settings.userShortcut, .defaultMiddleMouse)
+    }
+
+    /// Restoring defaults is an internal path and must not be gated by user-entry validation.
+    func testRestoreDefaultsStillInstallsTheFactoryTrigger() {
+        settings.applyTriggerShortcut(
+            AppSettings.UserShortcut(
+                keyCode: 0x11,
+                mouseButton: nil,
+                modifiers: CGEventFlags.maskControl.rawValue,
+                displayString: "Ctrl+T"
+            )
+        )
+        XCTAssertNotEqual(settings.userShortcut, .defaultMiddleMouse)
+
+        settings.userShortcut = .defaultMiddleMouse
+
+        XCTAssertEqual(settings.userShortcut, .defaultMiddleMouse)
+    }
+
     func testValidKeyboardShortcutIsApplied() {
         let candidate = AppSettings.UserShortcut(
             keyCode: 0x11, // T

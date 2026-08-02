@@ -75,11 +75,52 @@ final class TriggerShortcutConflictCheckerTests: XCTestCase {
         }
     }
 
-    func testUndoChordDoesNotShadowTriggerRequiringAdditionalModifier() {
+    /// A trigger requiring *more* modifiers than the undo chord is still shadowed:
+    /// `UndoShortcutEventPolicy` matches whenever the held flags contain ⌃⌥⌘, so pressing
+    /// ⇧⌃⌥⌘Z is handled as undo and the trigger never fires. This previously asserted `nil`,
+    /// which let such a trigger save cleanly and then silently never work.
+    func testUndoChordShadowsTriggerRequiringAdditionalModifier() {
         let conflict = TriggerShortcutConflictChecker.conflict(
             for: keyShortcut(0x06, control | option | cmd | shift)
         )
 
-        XCTAssertNil(conflict)
+        XCTAssertEqual(conflict?.severity, .shadowsUndoLastDictation)
+    }
+
+    /// The checker's shadowing predicate must agree with the event policy that actually
+    /// consumes the chord, in both directions, for every modifier combination on the Z key.
+    func testShadowPredicateAgreesWithEventPolicyForEveryModifierCombination() {
+        let flags = [control, option, cmd, shift]
+
+        for mask in 0..<(1 << flags.count) {
+            var modifiers: UInt64 = 0
+            for (index, flag) in flags.enumerated() where mask & (1 << index) != 0 {
+                modifiers |= flag
+            }
+
+            // What the live tap does when the user physically presses this trigger.
+            let policyConsumesTheTrigger = UndoShortcutEventPolicy.handle(
+                input: UndoShortcutEventInput(
+                    type: .keyDown,
+                    keyCode: InputMonitor.undoDictationKeyCode,
+                    modifiers: modifiers,
+                    isAutorepeat: false
+                ),
+                claimEligibility: { false },
+                requestUndo: {},
+                notifyUnavailable: {}
+            ) != .notMatched
+
+            let flagged = TriggerShortcutConflictChecker
+                .conflict(for: keyShortcut(0x06, modifiers))?
+                .severity == .shadowsUndoLastDictation
+
+            if policyConsumesTheTrigger {
+                XCTAssertTrue(
+                    flagged,
+                    "Trigger modifiers \(modifiers) are consumed by the undo policy but were not flagged"
+                )
+            }
+        }
     }
 }

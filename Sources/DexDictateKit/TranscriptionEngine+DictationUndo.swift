@@ -1,5 +1,10 @@
 import Foundation
 
+/// How long after an undo attempt the "nothing reversible to undo" notice stays suppressed.
+/// Matches `UndoUnavailableNoticeRateLimiter`'s default interval so a burst of chord presses
+/// resolves to exactly one truthful message.
+private let undoUnavailableNoticeSuppressionWindow: TimeInterval = 1.5
+
 /// "Undo Last Dictation" glue for `TranscriptionEngine`, split into its own file so this
 /// feature's code doesn't grow `TranscriptionEngine.swift`'s already-oversized type body.
 /// Reads/writes `dictationUndoManager` and `pendingFocusSnapshot`, both declared internal
@@ -100,6 +105,7 @@ extension TranscriptionEngine {
         // `DictationUndoManager` consumes the record one-shot, whatever the outcome, so the
         // published mirror must be refreshed on every branch below.
         defer { syncUndoAvailability() }
+        lastUndoAttemptAt = Date()
         switch dictationUndoManager.undoLastDictation() {
         case .undone:
             statusText = NSLocalizedString("Dictation undone", comment: "")
@@ -131,10 +137,18 @@ extension TranscriptionEngine {
     /// Feedback for the ⌃⌥⌘Z chord arriving while nothing reversible is armed. Deliberately
     /// does *not* claim an undo failed — nothing was attempted, and no Accessibility mutation
     /// happens on this path. Called from the main actor after the Quartz tap dispatches.
-    public func reportUndoUnavailableForShortcut() {
+    public func reportUndoUnavailableForShortcut(now: Date = Date()) {
         // A real pending record can be armed between the tap's eligibility check and this
         // main-actor hop; don't contradict the visible button in that window.
         guard !dictationUndoManager.canUndoLastDictation else { return }
+        // A second physical press landing while the first undo is still in flight loses the
+        // eligibility claim and reaches here *after* that undo succeeded. Reporting "nothing
+        // to undo" then would overwrite the confirmation the user just earned, making a
+        // working undo look like it did nothing.
+        if let lastUndoAttemptAt,
+           now.timeIntervalSince(lastUndoAttemptAt) < undoUnavailableNoticeSuppressionWindow {
+            return
+        }
         statusText = NSLocalizedString("Nothing to undo", comment: "")
         let reason = "No recent reversible dictation to undo."
         resultFeedback = .dictationUndoUnavailable(reason: reason)
