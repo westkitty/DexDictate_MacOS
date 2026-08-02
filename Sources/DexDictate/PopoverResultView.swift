@@ -114,12 +114,11 @@ struct PopoverResultView: View {
                     .help(engine.resultFeedback.detail)
                 }
 
-                // Own row: "Undo Last Dictation" is a wide label and would crowd the
-                // Retry/Learn Correction controls out of the 320pt popover if it shared
-                // a line with them.
-                UndoLastDictationButton(engine: engine)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
+                // "Undo Last Dictation" is deliberately NOT here. This whole view renders
+                // nothing when `latestHistoryItem` is nil, and even when it does render it
+                // sits inside the popover's scroll view below the hero — so a control mounted
+                // here is invisible exactly when the user goes looking for it. It is now
+                // route-level chrome in `PopoverUndoFooter`, pinned by every popover root.
                 HStack(spacing: 8) {
                     if engine.resultFeedback == .deletedPreviousHistory && engine.canUndoLastHistoryRemoval {
                         Button("Undo removal") { undoLastHistoryRemoval() }

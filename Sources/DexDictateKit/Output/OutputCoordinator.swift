@@ -173,15 +173,20 @@ public struct OutputCoordinator: OutputCoordinating {
     /// returns `text` unchanged whenever that isn't available (no AX element, cursor at the
     /// very start of the field, `text` already starts with whitespace, or the preceding
     /// character isn't a period).
+    ///
+    /// Reads the *committed* value, not the raw one: an empty web composer reports its
+    /// placeholder through `kAXValueAttribute`, and inspecting that string would decide
+    /// spacing from the character before a cursor offset that indexes into decoration.
     private func textWithAutoSpacing(_ text: String) -> String {
         guard let firstScalar = text.unicodeScalars.first,
               !CharacterSet.whitespacesAndNewlines.contains(firstScalar) else {
             return text
         }
-        guard let element = axOperator.focusedElement(),
-              let selectedRange = axOperator.getSelectedRange(element: element),
-              selectedRange.location > 0,
-              let currentValue = axOperator.getString(kAXValueAttribute as CFString, element: element) else {
+        guard let element = axOperator.focusedElement() else { return text }
+        let snapshot = axOperator.editableTextSnapshot(element: element)
+        guard let currentValue = snapshot.committedValue,
+              let selectedRange = snapshot.logicalRange,
+              selectedRange.location > 0 else {
             return text
         }
 
@@ -261,8 +266,24 @@ private extension OutputCoordinator {
             return .failed
         }
 
-        let currentValue = axOperator.getString(kAXValueAttribute as CFString, element: element)
-        let selectedRange = axOperator.getSelectedRange(element: element)
+        // One semantic reading, shared by both strategies. `committedValue`/`logicalRange`
+        // are what the field logically holds — an empty web composer that reports its
+        // placeholder through `kAXValueAttribute` normalises to `""` at `{0, 0}` here, so
+        // neither strategy can splice the dictation into that placeholder.
+        let snapshot = axOperator.editableTextSnapshot(element: element)
+        Safety.log("insertViaAccessibility() — target \(snapshot.diagnosticSummary)", category: .output)
+
+        guard let currentValue = snapshot.committedValue,
+              let selectedRange = snapshot.logicalRange else {
+            // Ambiguous or unreadable: refuse to overwrite a value we cannot vouch for and
+            // let the caller fall through to clipboard paste, which never carries the
+            // placeholder because it only ever holds the dictation itself.
+            Safety.log(
+                "insertViaAccessibility() — editable state ambiguous or unreadable; falling back to clipboard paste",
+                category: .output
+            )
+            return .failed
+        }
 
         if let attempt = attemptValueInsertion(
             text,
@@ -287,17 +308,15 @@ private extension OutputCoordinator {
 
     func attemptValueInsertion(
         _ text: String,
-        currentValue: String?,
-        selectedRange: NSRange?,
+        currentValue: String,
+        selectedRange: NSRange,
         element: AXUIElement
     ) -> AccessibilityInsertionAttempt? {
         guard axOperator.isSettable(kAXValueAttribute as CFString, element: element) else {
             Safety.log("insertViaAccessibility() — strategy 1 skipped: kAXValueAttribute not settable", category: .output)
             return nil
         }
-        guard let currentValue,
-              let selectedRange,
-              let updatedValue = accessibilityReplacingText(in: currentValue, range: selectedRange, with: text) else {
+        guard let updatedValue = accessibilityReplacingText(in: currentValue, range: selectedRange, with: text) else {
             Safety.log("insertViaAccessibility() — strategy 1 skipped: current value or range was unavailable or invalid", category: .output)
             return nil
         }
@@ -322,13 +341,11 @@ private extension OutputCoordinator {
 
     func attemptSelectedTextInsertion(
         _ text: String,
-        currentValue: String?,
-        selectedRange: NSRange?,
+        currentValue: String,
+        selectedRange: NSRange,
         element: AXUIElement
     ) -> AccessibilityInsertionAttempt? {
         guard axOperator.isSettable(kAXSelectedTextAttribute as CFString, element: element),
-              let currentValue,
-              let selectedRange,
               let expectedValue = accessibilityReplacingText(in: currentValue, range: selectedRange, with: text) else {
             Safety.log("insertViaAccessibility() — strategy 2 skipped: attribute not settable or range unavailable/invalid", category: .output)
             return nil
@@ -352,8 +369,13 @@ private extension OutputCoordinator {
         return .confirmed(previousValue: currentValue, replacementRange: selectedRange, element: element)
     }
 
+    /// Verifies against the *committed* readback rather than the raw one. The comparison stays
+    /// exact: if the host hands back the dictation with placeholder text still fused to it, the
+    /// committed value is that fused string, it will not equal `expectedValue`, and the
+    /// insertion is refused confirmation rather than recorded as reversible.
     func mutationMatches(element: AXUIElement, expectedValue: String, expectedCursor: Int) -> Bool {
-        guard axOperator.getString(kAXValueAttribute as CFString, element: element) == expectedValue,
+        let readback = axOperator.editableTextSnapshot(element: element)
+        guard readback.committedValue == expectedValue,
               axOperator.getSelectedRange(element: element) == NSRange(location: expectedCursor, length: 0) else {
             return false
         }

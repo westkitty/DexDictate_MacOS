@@ -181,8 +181,10 @@ struct ControlsView: View {
                             .accessibilityLabel("Restore the most recently removed history entry")
                         }
 
-                        UndoLastDictationButton(engine: engine)
-
+                        // "Undo Last Dictation" is deliberately NOT here: this block only
+                        // renders while `resultFeedback != .idle`, which hid the control
+                        // whenever feedback cleared. It is now route-level chrome in
+                        // `PopoverUndoFooter`, pinned by every popover root.
                         if engine.canRetryLastUtterance {
                             Button("Retry with Higher Quality") {
                                 retryLastUtterance()

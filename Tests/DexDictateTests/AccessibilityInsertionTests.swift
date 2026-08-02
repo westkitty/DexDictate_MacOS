@@ -284,6 +284,10 @@ final class MockAccessibilityOperator: AccessibilityElementOperating {
     var selectedRangeResult: NSRange?
     var setResults: [String: AXError] = [:]
     var appliesSuccessfulMutations = true
+    /// `AXNumberOfCharacters`. `nil` models a target that doesn't publish the attribute.
+    /// When set, it tracks applied mutations the way a real host does — otherwise a field
+    /// that started empty would keep claiming zero committed characters after insertion.
+    var numberOfCharacters: Int?
     private(set) var setCallLog: [String] = []
     private(set) var setCursorLocations: [Int] = []
     private(set) var lastSetValue: String?
@@ -304,25 +308,35 @@ final class MockAccessibilityOperator: AccessibilityElementOperating {
         selectedRangeResult
     }
 
+    func getNumberOfCharacters(element: AXUIElement) -> Int? { numberOfCharacters }
+
     func set(_ value: CFTypeRef, for attribute: CFString, element: AXUIElement) -> AXError {
         setCallLog.append(attribute as String)
         lastSetValue = value as? String
         let result = setResults[attribute as String] ?? .attributeUnsupported
         guard result == .success, appliesSuccessfulMutations else { return result }
         if attribute as String == kAXValueAttribute as String, let value = value as? String {
-            stringMap[attribute as String] = value
+            applyValue(value)
         } else if attribute as String == kAXSelectedTextAttribute as String,
-                  let text = value as? String,
-                  let currentValue = stringMap[kAXValueAttribute as String],
-                  let selectedRangeResult,
-                  let updated = accessibilityReplacingText(
-                      in: currentValue,
-                      range: selectedRangeResult,
-                      with: text
-                  ) {
-            stringMap[kAXValueAttribute as String] = updated
+                  let text = value as? String {
+            // Splice into the *committed* value at the *logical* range, which is what a real
+            // editor does — a host rendering a placeholder inserts into its empty content, it
+            // does not splice into the placeholder string it happens to expose via AXValue.
+            let snapshot = editableTextSnapshot(element: element)
+            if let currentValue = snapshot.committedValue,
+               let range = snapshot.logicalRange,
+               let updated = accessibilityReplacingText(in: currentValue, range: range, with: text) {
+                applyValue(updated)
+            }
         }
         return result
+    }
+
+    private func applyValue(_ value: String) {
+        stringMap[kAXValueAttribute as String] = value
+        if numberOfCharacters != nil {
+            numberOfCharacters = (value as NSString).length
+        }
     }
 
     @discardableResult

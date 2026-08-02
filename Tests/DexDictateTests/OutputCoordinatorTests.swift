@@ -940,8 +940,12 @@ private final class MockAccessibilityElementOperator: AccessibilityElementOperat
         return false
     }
 
+    /// Answers only for `kAXValueAttribute`. Answering `currentValue` for every attribute made
+    /// this fake report its own content as its `AXPlaceholderValue` — i.e. claim to be an empty
+    /// field rendering a placeholder, which is a distinct state the output path now handles.
+    /// A real element only reports a matching placeholder when it genuinely is one.
     func getString(_ attribute: CFString, element: AXUIElement) -> String? {
-        currentValue
+        (attribute as String) == (kAXValueAttribute as String) ? currentValue : nil
     }
 
     func getSelectedRange(element: AXUIElement) -> NSRange? {

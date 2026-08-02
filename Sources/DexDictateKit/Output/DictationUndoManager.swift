@@ -210,7 +210,10 @@ final class DictationUndoManager: DictationUndoPerforming {
         if let refusal = verifyTarget(record, invocation: invocation) { return refusal }
         guard let element = record.context.targetElement?.element else { return .cannotVerify }
 
-        guard let currentValue = axOperator.getString(kAXValueAttribute as CFString, element: element),
+        // Committed, not raw: a web composer that was empty before the dictation will report
+        // its placeholder through `kAXValueAttribute` again the moment undo empties it, and
+        // comparing against that decoration would make every browser undo unverifiable.
+        guard let currentValue = axOperator.editableTextSnapshot(element: element).committedValue,
               let previousValue = record.context.previousFieldValue,
               let replacementRange = record.context.replacementRange,
               isValidAccessibilityRange(replacementRange, in: previousValue),
@@ -257,7 +260,10 @@ final class DictationUndoManager: DictationUndoPerforming {
             element: element
         ) == .success else { return .cannotVerify }
         _ = axOperator.setCursor(location: cursor, element: element)
-        guard axOperator.getString(kAXValueAttribute as CFString, element: element) == value,
+        // Restoring `""` legitimately reads back as the host's placeholder — that is the field
+        // rendering its own empty state, not our text surviving. The committed reading treats
+        // the two as the same thing, which is what makes undo verifiable in web composers.
+        guard axOperator.editableTextSnapshot(element: element).committedValue == value,
               axOperator.getSelectedRange(element: element) == NSRange(location: cursor, length: 0) else {
             return .cannotVerify
         }

@@ -44,67 +44,20 @@ struct PopoverRootView: View {
                     .ignoresSafeArea()
             }
 
-            if isCommandPaletteShown {
-                DexCommandPaletteView(
-                    engine: engine,
-                    settings: settings,
-                    onBack: { isCommandPaletteShown = false },
-                    onOpenFeatureHub: nil,
-                    onOpenGUISwitcher: nil,
-                    onDetachHistory: onDetachHistory,
-                    onOpenHelp: onOpenHelp
-                )
-            } else {
-                VStack(spacing: 0) {
-                    header
-
-                    if settings.showFlavorTicker {
-                        FlavorTickerView(
-                            text: profileManager.currentFlavorLine?.text ?? "",
-                            animateWhenNeeded: settings.animateFlavorTicker
-                        )
+            // The undo footer is a sibling of the screen swap, not a child of either branch,
+            // so entering the command palette cannot take it away — see `PopoverUndoFooter`.
+            VStack(spacing: 0) {
+                Group {
+                    if isCommandPaletteShown {
+                        commandPaletteScreen
+                    } else {
+                        mainScreen
                     }
-
-                    Divider().opacity(0.2).padding(.horizontal, 12)
-
-                    ScrollView {
-                        VStack(spacing: 12) {
-                            if !permissionManager.allPermissionsGranted {
-                                errorBanner
-                            } else {
-                                PopoverHeroView(engine: engine, settings: settings, livePreviewController: livePreviewController, watermarkImage: cachedWatermarkImage)
-                                compactControlsRow
-                                if engine.state == .listening {
-                                    DexTranscriptCard(transcript: liveTranscriptState)
-                                        .padding(.horizontal)
-                                }
-                            }
-
-                            PopoverResultView(
-                                engine: engine,
-                                history: engine.history,
-                                settings: settings,
-                                profileManager: profileManager,
-                                onOpenHistory: onDetachHistory
-                            )
-
-                            Divider().opacity(0.2).padding(.horizontal, 12)
-
-                            PopoverHistoryTeaser(history: engine.history)
-
-                            statusLine
-                        }
-                        .padding(.vertical, 10)
-                    }
-
-                    if engine.state != .stopped {
-                        stopDictationButton
-                    }
-
-                    Divider().opacity(0.2).padding(.horizontal, 12)
-
-                    footer
                 }
+                .frame(maxHeight: .infinity)
+
+                Divider().opacity(0.2).padding(.horizontal, 12)
+                PopoverUndoFooter(engine: engine)
             }
 
             // Invisible ⌘K shortcut for the command palette (Packet 12A adoption).
@@ -116,9 +69,95 @@ struct PopoverRootView: View {
         .frame(width: 320, height: popoverHeight)
         .onAppear {
             cachedWatermarkImage = loadWatermarkImage()
+            logResolvedRoute()
+        }
+        .onChange(of: isCommandPaletteShown) { _, _ in
+            logResolvedRoute()
         }
         .onChange(of: profileManager.currentWatermarkAsset?.url) { _, _ in
             cachedWatermarkImage = loadWatermarkImage()
+        }
+    }
+
+    private var commandPaletteScreen: some View {
+        DexCommandPaletteView(
+            engine: engine,
+            settings: settings,
+            onBack: { isCommandPaletteShown = false },
+            onOpenFeatureHub: nil,
+            onOpenGUISwitcher: nil,
+            onDetachHistory: onDetachHistory,
+            onOpenHelp: onOpenHelp
+        )
+    }
+
+    /// Records which interface actually mounted, which settings selected it, and the undo
+    /// state at that moment. Added because the absent-undo-control defect survived several
+    /// repairs that each assumed the wrong route from an `@AppStorage` default; the log makes
+    /// the live answer readable instead of inferred. Carries no transcript or field content.
+    private func logResolvedRoute() {
+        let diagnostic = PopoverRouteDiagnostic(
+            route: PopoverRoute.resolve(useSlimPopover: settings.useSlimPopover),
+            screen: isCommandPaletteShown ? .commandPalette : .main,
+            useSlimPopover: settings.useSlimPopover,
+            useExperimentalStateFirstUI: settings.useExperimentalStateFirstUI,
+            useExperimentalCommandPalette: settings.useExperimentalCommandPalette,
+            engineIdentity: String(UInt(bitPattern: ObjectIdentifier(engine).hashValue), radix: 16),
+            undoAvailability: engine.undoAvailability
+        )
+        Safety.log(diagnostic.summary, category: .general)
+    }
+
+    private var mainScreen: some View {
+        VStack(spacing: 0) {
+            header
+
+            if settings.showFlavorTicker {
+                FlavorTickerView(
+                    text: profileManager.currentFlavorLine?.text ?? "",
+                    animateWhenNeeded: settings.animateFlavorTicker
+                )
+            }
+
+            Divider().opacity(0.2).padding(.horizontal, 12)
+
+            ScrollView {
+                VStack(spacing: 12) {
+                    if !permissionManager.allPermissionsGranted {
+                        errorBanner
+                    } else {
+                        PopoverHeroView(engine: engine, settings: settings, livePreviewController: livePreviewController, watermarkImage: cachedWatermarkImage)
+                        compactControlsRow
+                        if engine.state == .listening {
+                            DexTranscriptCard(transcript: liveTranscriptState)
+                                .padding(.horizontal)
+                        }
+                    }
+
+                    PopoverResultView(
+                        engine: engine,
+                        history: engine.history,
+                        settings: settings,
+                        profileManager: profileManager,
+                        onOpenHistory: onDetachHistory
+                    )
+
+                    Divider().opacity(0.2).padding(.horizontal, 12)
+
+                    PopoverHistoryTeaser(history: engine.history)
+
+                    statusLine
+                }
+                .padding(.vertical, 10)
+            }
+
+            if engine.state != .stopped {
+                stopDictationButton
+            }
+
+            Divider().opacity(0.2).padding(.horizontal, 12)
+
+            footer
         }
     }
 

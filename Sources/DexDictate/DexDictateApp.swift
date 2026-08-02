@@ -613,6 +613,11 @@ struct AntiGravityMainView: View {
                     }
                 }
 
+                // ── REGION 3: PINNED UNDO ──────────────────────────────────────
+                // Outside the ScrollView and outside the Quick Settings screen swap, so
+                // expanding Quick Settings cannot compose it away — see `PopoverUndoFooter`.
+                Divider().opacity(0.2).padding(.horizontal, 12)
+                PopoverUndoFooter(engine: engine)
             }
         }
         .frame(width: 320, height: popoverHeight)
@@ -642,10 +647,29 @@ struct AntiGravityMainView: View {
         }
         .onAppear {
             cachedWatermarkImage = loadWatermarkImage()
+            logResolvedRoute()
+        }
+        .onChange(of: isQuickSettingsExpanded) { _, _ in
+            logResolvedRoute()
         }
         .onChange(of: profileManager.currentWatermarkAsset?.url) { _, _ in
             cachedWatermarkImage = loadWatermarkImage()
         }
+    }
+
+    /// Same route diagnostic the slim popover emits, so whichever interface the user is on
+    /// says so in the log rather than being inferred. No transcript or field content.
+    private func logResolvedRoute() {
+        let diagnostic = PopoverRouteDiagnostic(
+            route: PopoverRoute.resolve(useSlimPopover: settings.useSlimPopover),
+            screen: isQuickSettingsExpanded ? .quickSettings : .main,
+            useSlimPopover: settings.useSlimPopover,
+            useExperimentalStateFirstUI: settings.useExperimentalStateFirstUI,
+            useExperimentalCommandPalette: settings.useExperimentalCommandPalette,
+            engineIdentity: String(UInt(bitPattern: ObjectIdentifier(engine).hashValue), radix: 16),
+            undoAvailability: engine.undoAvailability
+        )
+        Safety.log(diagnostic.summary, category: .general)
     }
 
     private func loadWatermarkImage() -> NSImage? {

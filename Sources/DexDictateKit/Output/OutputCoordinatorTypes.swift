@@ -132,6 +132,10 @@ public protocol AccessibilityElementOperating {
     /// Distinguishes a destroyed/replaced element from a transient read failure, so undo can
     /// retain a still-valid record instead of discarding it on the first hiccup.
     func isElementAlive(_ element: AXUIElement) -> Bool
+    /// `AXNumberOfCharacters` — the count of *committed* characters, which is what lets a
+    /// placeholder echoed through `kAXValueAttribute` be told apart from real content.
+    /// `nil` when the target doesn't support the attribute.
+    func getNumberOfCharacters(element: AXUIElement) -> Int?
 }
 
 public extension AccessibilityElementOperating {
@@ -139,6 +143,26 @@ public extension AccessibilityElementOperating {
     /// every mutation is still gated on exact identity, content, range, and readback checks;
     /// discarding one on weak evidence is what silently loses the feature.
     func isElementAlive(_ element: AXUIElement) -> Bool { true }
+
+    /// Defaults to "attribute unavailable" so the snapshot falls back to its other evidence
+    /// rather than any conformer being forced to implement it.
+    func getNumberOfCharacters(element: AXUIElement) -> Int? { nil }
+
+    /// The single semantic reading of an editable target. Every caller that is about to
+    /// splice text into a field goes through this rather than reading `kAXValueAttribute`
+    /// directly, so no code path can mistake a placeholder for committed content.
+    func editableTextSnapshot(element: AXUIElement) -> AccessibilityEditableTextSnapshot {
+        AccessibilityEditableTextSnapshot(
+            rawValue: getString(kAXValueAttribute as CFString, element: element),
+            placeholderValue: getString(
+                AccessibilityEditableTextSnapshot.placeholderAttribute as CFString, element: element
+            ),
+            reportedCharacterCount: getNumberOfCharacters(element: element),
+            selectedRange: getSelectedRange(element: element),
+            role: getString(kAXRoleAttribute as CFString, element: element),
+            subrole: getString(kAXSubroleAttribute as CFString, element: element)
+        )
+    }
 }
 
 /// Production implementation that calls the real macOS Accessibility APIs.
@@ -184,6 +208,14 @@ public struct SystemAccessibilityElementOperator: AccessibilityElementOperating 
 
     public func set(_ value: CFTypeRef, for attribute: CFString, element: AXUIElement) -> AXError {
         AXUIElementSetAttributeValue(element, attribute, value)
+    }
+
+    public func getNumberOfCharacters(element: AXUIElement) -> Int? {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            element, kAXNumberOfCharactersAttribute as CFString, &value
+        ) == .success else { return nil }
+        return (value as? NSNumber)?.intValue
     }
 
     /// `kAXErrorInvalidUIElement` is the system's definitive "this element is gone" answer.
