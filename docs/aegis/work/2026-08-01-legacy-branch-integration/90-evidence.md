@@ -72,6 +72,29 @@ Seven annotated archive tags were pushed. Their peeled targets match the origina
 - First-parent tree is unchanged
 - Current `VERSION` remains 1.8.0
 
+## Combined Verification
+
+- Full `swift test`: 507 tests, 3 skipped, 0 failures
+- `swift build`: passed
+- `swiftlint` strict gate and baseline self-test: passed
+- Signed production package build: passed
+- Build/install safety regression suite after custom-target fix: 21 passed, 0 failed
+- Post-fix custom-target package build: passed; canonical installations preserved
+- `/Applications/DexDictate.app`: restored through the standard installer, version 1.8.0, valid deep signature, expected running executable
+- Installed-app release validation: 0 failures, 3 bounded warnings (Gatekeeper assessment plus absent release archives/checksums)
+- Committed diff check: clean
+- Secret/private-key and private-file-name scans: no matches
+- Screenshot archive integrity: 64 bounded entries, 8.9 MB compressed
+- All original branch tips: ancestors of integration `HEAD`
+
+## Verification-Discovered Defect
+
+- Initial custom-target package verification compiled and signed successfully but exposed an existing installer assumption: a nonstandard `INSTALL_DIR` was treated as the user-install alternative, so `/Applications/DexDictate.app` was removed and the canonical-count check failed
+- Immediate recovery: reran the standard system installer successfully; exactly one canonical app was restored and launched
+- Fix commit: `80677ea`
+- New behavior: custom targets do not stop, clean, or count canonical system/user installations
+- Regression proof: custom target plus both canonical bundles remain intact; full 21-scenario install-safety suite passes
+
 ## Pending Evidence
 
 Each merge diff, focused tests, artifact builds, combined Swift verification, packaged app, CI, remote parity, ancestry checks, and final branch inventory.

@@ -40,6 +40,10 @@ Preservation tags, isolated worktree, baseline test reconciliation, governance/a
 - Remotion ancestry merge: `c9754082`; isolated project commit: `8994bcc2`
 - Remotion: clean `npm ci`, 0 audit vulnerabilities, and `MainComposition` enumerated at 1920x1080, 30 fps, 1574 frames
 - v1.5 ancestry merge: `f9d03751`; original tip is reachable, first-parent tree unchanged, current `VERSION` remains 1.8.0
+- full Swift suite: 507 tests, 3 skipped, 0 failures; `swift build` passed
+- package verification found and fixed custom-target canonical-app deletion in `80677ea`; install-safety suite is 21/21
+- post-fix custom package build passed; `/Applications/DexDictate.app` restored, validated, signed, version 1.8.0, and running
+- SwiftLint gate passed; installed-app release validation passed with 0 failures and 3 bounded warnings
 
 ## Blockers
 
@@ -47,7 +51,7 @@ None.
 
 ## ResumeStateHint
 
-Resume in `/Users/andrew/.config/aegis/worktrees/DexDictate_MacOS.nosync/integrate-legacy-work`, read the parent plan and this checkpoint, keep Project Sentinel's unstaged `.resurrection` churn excluded, then run the combined verification matrix and record `99-reflection.md` before publication.
+Resume in `/Users/andrew/.config/aegis/worktrees/DexDictate_MacOS.nosync/integrate-legacy-work`, read the parent plan, checkpoint, and `99-reflection.md`, keep Project Sentinel's unstaged `.resurrection` churn excluded, then push the integration branch, create the pull request, and wait for continuous integration before merging.
 
 ## DriftCheckDraft
 
