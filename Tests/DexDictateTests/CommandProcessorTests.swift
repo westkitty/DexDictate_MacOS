@@ -86,4 +86,54 @@ final class CommandProcessorTests: XCTestCase {
         XCTAssertEqual(text, ",")
         XCTAssertEqual(command, .none)
     }
+
+    // MARK: - Spoken punctuation
+
+    func testSpokenPunctuationCommands() {
+        let processor = CommandProcessor()
+        let cases = [
+            ("send it period", "send it."),
+            ("hello comma world", "hello, world"),
+            ("are you there question mark", "are you there?"),
+            ("wow exclamation point", "wow!"),
+            ("done full stop", "done."),
+            ("items colon one semicolon two", "items: one; two"),
+            ("and then ellipsis", "and then..."),
+            ("self dash serve", "self-serve"),
+            ("well hyphen known", "well-known"),
+            ("see open paren below close paren", "see (below)"),
+            ("say open quote hello close quote", "say \"hello\""),
+        ]
+
+        for (input, expected) in cases {
+            let (text, command) = processor.process(input)
+            XCTAssertEqual(text, expected, "input: \(input)")
+            XCTAssertEqual(command, .none, "input: \(input)")
+        }
+    }
+
+    func testNewParagraphCommandInsertsTwoLineBreaks() {
+        let (text, command) = CommandProcessor().process("first new paragraph second")
+
+        XCTAssertEqual(text, "first\n\n second")
+        XCTAssertEqual(command, .newLine)
+    }
+
+    func testCustomCommandStillWinsOverSpokenPunctuation() {
+        let commands = [CustomCommand(keyword: "comma", insertText: "CUSTOM")]
+
+        let (text, command) = CommandProcessor().process("Dex comma", customCommands: commands)
+
+        XCTAssertEqual(text, "CUSTOM")
+        XCTAssertEqual(command, .none)
+    }
+
+    func testSpokenPunctuationDoesNotMatchInsideWords() {
+        let input = "A periodic commafish remains intact"
+
+        let (text, command) = CommandProcessor().process(input)
+
+        XCTAssertEqual(text, input)
+        XCTAssertEqual(command, .none)
+    }
 }
