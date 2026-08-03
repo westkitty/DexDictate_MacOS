@@ -37,6 +37,9 @@ final class PlaceholderComposerOperator: AccessibilityElementOperating {
     private(set) var setCallLog: [String] = []
     private(set) var lastSetValue: String?
     private(set) var lastSetSelectedText: String?
+    /// Caret moves requested by the coordinator. A write that changed nothing must not produce
+    /// any, because moving the caret collapses whatever the user had selected.
+    private(set) var cursorWrites: [Int] = []
 
     init(
         placeholder: String,
@@ -111,8 +114,10 @@ final class PlaceholderComposerOperator: AccessibilityElementOperating {
     @discardableResult
     func setCursor(location: Int, element: AXUIElement) -> AXError {
         // Chromium did not report the caret back where it was put in any of the 11 measured
-        // insertions, so this fake deliberately does not honour the write either.
-        .success
+        // insertions, so this fake deliberately does not honour the write either — but it does
+        // record that the request happened, because the request itself collapses the selection.
+        cursorWrites.append(location)
+        return .success
     }
 }
 

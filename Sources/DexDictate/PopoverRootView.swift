@@ -392,7 +392,7 @@ struct PopoverRootView: View {
             )
             // Undo Last Dictation lives here, beside Auto-paste, rather than in a footer at the
             // bottom of the popover — see `PopoverQuickActionRow`.
-            PopoverQuickActionRow(engine: engine, output: outputDisplayState)
+            PopoverQuickActionRow(engine: engine, settings: settings, output: outputDisplayState)
         }
         .padding(.horizontal)
     }

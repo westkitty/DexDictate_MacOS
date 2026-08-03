@@ -104,6 +104,10 @@ extension OutputCoordinator {
         }
 
         let expectedCursor = accessibilityCharacterCount(text)
+        guard didFieldChange(element: element, from: preAttemptRawValue) else {
+            Safety.log("insertViaAccessibility() — empty-field write outcome=noOp (selection left intact)", category: .output)
+            return .noOp
+        }
         _ = axOperator.setCursor(location: expectedCursor, element: element)
         let verdict = mutationVerdict(
             element: element,
@@ -147,6 +151,18 @@ extension OutputCoordinator {
         }
 
         let expectedCursor = selectedRange.location + accessibilityCharacterCount(text)
+        // The cursor is only moved once the write is known to have landed.
+        //
+        // Chromium accepts this write, returns `.success`, and changes nothing. Moving the
+        // caret anyway *collapsed the user's selection*, so the clipboard fallback's Cmd-V
+        // then inserted at a caret instead of replacing what they had selected — measured in
+        // production as `outcome=noOp` immediately followed by `unexplainedChange` on every
+        // selection paste. Leaving the selection untouched lets the fallback replace it
+        // natively, which is both the correct edit and the shape verification can confirm.
+        guard didFieldChange(element: element, from: preAttemptRawValue) else {
+            Safety.log("insertViaAccessibility() — selected-text write outcome=noOp (selection left intact)", category: .output)
+            return .noOp
+        }
         _ = axOperator.setCursor(location: expectedCursor, element: element)
         let verdict = mutationVerdict(
             element: element,
@@ -223,6 +239,18 @@ extension OutputCoordinator {
             cursorMatched: reportedRange.map { $0 == NSRange(location: expectedCursor, length: 0) },
             unchanged: unchanged
         )
+    }
+
+    /// Whether the setter actually altered the field. `false` means the host reported success
+    /// and did nothing, so no follow-up mutation (including a cursor move) may be performed.
+    func didFieldChange(element: AXUIElement, from preAttemptRawValue: String?) -> Bool {
+        guard let preAttemptRawValue,
+              let now = axOperator.editableTextSnapshot(element: element).rawValue else {
+            // Unreadable on either side: treat as changed so the normal verdict path decides,
+            // rather than silently claiming a no-op we cannot actually prove.
+            return true
+        }
+        return now != preAttemptRawValue
     }
 
     /// Accessibility `CFRange`/`NSRange` offsets follow NSString UTF-16 coordinates.

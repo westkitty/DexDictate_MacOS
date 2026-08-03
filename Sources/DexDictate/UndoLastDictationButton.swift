@@ -70,13 +70,19 @@ private struct UndoControlButtonStyle: ButtonStyle {
 /// undo button keeps layout priority so a long chip row compresses before the button does.
 struct PopoverQuickActionRow: View {
     @ObservedObject var engine: TranscriptionEngine
+    @ObservedObject var settings: AppSettings
     let output: OutputDisplayState
 
     var body: some View {
         let model = UndoControlModel(availability: engine.undoAvailability)
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 8) {
-                DexOutputChips(output: output)
+                // The Auto-paste chip is the control, not just a readout: it writes straight
+                // to the authoritative `AppSettings` value that `deliver()` reads, so a toggle
+                // takes effect on the very next dictation with nothing else to keep in sync.
+                DexOutputChips(output: output, onToggleAutoPaste: {
+                    MainActorAction.run { settings.autoPaste.toggle() }
+                })
                 UndoLastDictationButton(engine: engine)
                     .layoutPriority(1)
             }

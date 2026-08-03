@@ -88,14 +88,13 @@ struct DexPermissionChips: View {
 
 struct DexOutputChips: View {
     let output: OutputDisplayState
+    /// When supplied, the Auto-paste chip becomes a real control that flips the setting.
+    /// `nil` keeps the chip purely informational for any surface that only reports state.
+    var onToggleAutoPaste: (() -> Void)?
 
     var body: some View {
         HStack(spacing: 6) {
-            DexStatusChip(
-                icon: output.autoPaste ? "doc.on.clipboard.fill" : "tray.and.arrow.down.fill",
-                label: output.autoPaste ? "Auto-paste" : "Clipboard only",
-                tone: .neutral
-            )
+            autoPasteChip
             if output.safeMode {
                 DexStatusChip(
                     icon: "shield.lefthalf.filled",
@@ -113,6 +112,31 @@ struct DexOutputChips: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var chipLabel: some View {
+        DexStatusChip(
+            icon: output.autoPaste ? "doc.on.clipboard.fill" : "tray.and.arrow.down.fill",
+            label: output.autoPaste ? "Auto-paste" : "Clipboard only",
+            tone: .neutral
+        )
+    }
+
+    @ViewBuilder
+    private var autoPasteChip: some View {
+        if let onToggleAutoPaste {
+            Button(action: onToggleAutoPaste) { chipLabel }
+                .buttonStyle(.plain)
+                .contentShape(Capsule())
+                .accessibilityLabel(output.autoPaste ? "Auto-paste on" : "Auto-paste off")
+                .accessibilityHint("Toggles whether dictation is inserted into the focused app.")
+                .accessibilityAddTraits(output.autoPaste ? [.isButton, .isSelected] : .isButton)
+                .help(output.autoPaste
+                      ? "Auto-paste is on — dictation is inserted into the focused app. Click to turn off."
+                      : "Auto-paste is off — dictation is only saved to history, and your clipboard is left alone. Click to turn on.")
+        } else {
+            chipLabel
+        }
     }
 }
 
