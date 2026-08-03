@@ -134,15 +134,32 @@ This is macOS, not a suggestion.
 
 ### Output and insertion controls
 
-- Auto-paste output into the active app
+- System-wide dictation into whatever app currently holds focus
+- **Auto-paste toggle in the menu-bar dropdown** — click the `Auto-paste` pill to switch it on or off; the change persists and applies to the next dictation
+- **Auto-paste off inserts nothing and leaves your clipboard untouched** — the result is still transcribed and kept in history
+- **Selected text is replaced** — select `red` in `The red fox`, dictate `blue`, get `The blue fox`
+- Direct Accessibility insertion where the target supports it, with clipboard paste as the fallback
 - Clipboard-only fallback for likely secure fields
-- Optional Accessibility API insertion path
 - Per-app insertion overrides by bundle identifier
 - Replace-field mode (Cmd+A then paste) for single-input targets such as address bars and search fields — not for documents or multi-line fields
 - Focused-element identity matching before paste delivery to prevent wrong-target insertion
 - Editable-element validation before paste (role-aware; fails open for ambiguous AX contexts)
-- Save-only behavior mode
+- Original clipboard contents are restored after an auto-paste
 - Launch-at-login support through `SMAppService`
+
+### Undo Last Dictation
+
+- Sits **beside the Auto-paste pill** in the menu-bar dropdown, and is also bound to `⌃⌥⌘Z`
+- Enabled only once DexDictate has confirmed what actually landed — either a verified Accessibility write, or a clipboard paste whose result it re-read on the saved field. This covers TextEdit and supported browser composers
+- Removes only the text that dictation inserted, restoring what was there before — including text that was replaced from a selection
+- **Refuses safely if you edited the text afterwards**, rather than overwriting your edit; the control stays visible and states the reason
+- Always visible, with the reason shown in place when it is unavailable — no hover required
+
+### Browser fields
+
+- **Placeholder protection**: an empty web composer reports its prompt text through the Accessibility API as if it were real content. DexDictate never treats that as editable text, never inserts it, and never writes it back on undo — the field receives only what you dictated
+- Undoing a dictation in an empty composer restores it to empty, letting the app render its own placeholder again
+- DexDictate asks the target application to enable its accessibility tree, which is what makes verified insertion and undo possible in Chromium-based browsers
 
 ### Language and cleanup
 
@@ -182,9 +199,31 @@ This is macOS, not a suggestion.
 1. Launch the app
 2. Trigger dictation via shortcut (default configured in-app)
 3. Speak
-4. Text appears where your cursor is
+4. Text appears where your cursor is — replacing your selection if you had one
 
 That's the entire point.
+
+To keep a result without touching the focused app, turn `Auto-paste` off in the
+menu-bar dropdown: the transcription is still saved to history, and your clipboard
+is left exactly as you had it. To take an insertion back, use `Undo Last Dictation`
+next to the same pill, or press `⌃⌥⌘Z`.
+
+---
+
+## Limitations
+
+- Undo is not offered for every delivery. It is armed only when DexDictate can prove
+  exactly what changed, and it says why when it cannot.
+- A paste landing at the very start or very end of existing text produces the same
+  result as a placeholder that survived alongside it. Those two cannot be told apart,
+  so such deliveries are left unverified and undo stays disabled rather than risk
+  restoring the wrong text.
+- Verified browser undo depends on the browser exposing its accessibility tree.
+  DexDictate requests this, but an app that declines will fall back to an unverified
+  paste with undo unavailable.
+- Replace-field mode is for single-input targets only; it will clear a document or
+  multi-line field.
+- Apple Silicon only. Intel Macs are not supported.
 
 ---
 
