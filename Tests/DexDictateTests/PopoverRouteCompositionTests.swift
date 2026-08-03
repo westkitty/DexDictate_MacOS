@@ -57,6 +57,55 @@ final class PopoverRouteCompositionTests: XCTestCase {
         XCTAssertEqual(PopoverScreen.main.reachableRoutes.count, 2, "Both routes have a main screen")
     }
 
+    // MARK: - Undo placement
+
+    func testSlimRouteMountsUndoBesideAutoPaste() {
+        for screen in PopoverScreen.main.reachableRoutes.contains(.slim) ? [PopoverScreen.main, .commandPalette] : [] {
+            let composition = PopoverChromeComposition(route: .slim, screen: screen)
+            XCTAssertEqual(
+                composition.undoControlPlacement, .besideAutoPaste,
+                "The active slim popover must place undo next to Auto-paste, not in a bottom footer"
+            )
+        }
+    }
+
+    func testSlimRouteNoLongerUsesTheBottomPinnedFooter() {
+        XCTAssertNotEqual(PopoverChromeComposition(route: .slim, screen: .main).undoControlPlacement, .pinnedFooter)
+    }
+
+    func testClassicRouteKeepsItsPinnedFooterPlacement() {
+        XCTAssertEqual(
+            PopoverChromeComposition(route: .classic, screen: .main).undoControlPlacement, .pinnedFooter,
+            "The classic route has no Auto-paste chip row to sit beside"
+        )
+    }
+
+    func testEachRouteDeclaresExactlyOneUndoPlacement() {
+        for composition in PopoverChromeComposition.allReachable {
+            XCTAssertTrue(composition.includesSharedUndoSurface)
+            XCTAssertEqual(
+                composition.undoControlPlacement, composition.route.undoControlPlacement,
+                "A route must not mount undo in two places"
+            )
+        }
+    }
+
+    /// The active slim popover mounts `PopoverQuickActionRow`; the pinned `PopoverUndoFooter`
+    /// must not also appear there, or two undo buttons would be on screen at once.
+    func testActiveSlimPopoverSourceMountsExactlyOneUndoSurface() throws {
+        let sources = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Sources/DexDictate")
+        let slim = try String(contentsOf: sources.appendingPathComponent("PopoverRootView.swift"), encoding: .utf8)
+
+        XCTAssertTrue(slim.contains("PopoverQuickActionRow(engine:"), "Slim route must mount the quick-action row")
+        XCTAssertFalse(slim.contains("PopoverUndoFooter("), "The bottom undo footer must be gone from the slim route")
+
+        let classic = try String(contentsOf: sources.appendingPathComponent("DexDictateApp.swift"), encoding: .utf8)
+        XCTAssertTrue(classic.contains("PopoverUndoFooter("), "The classic route keeps its pinned footer")
+        XCTAssertFalse(classic.contains("PopoverQuickActionRow("), "Only one undo surface per route")
+    }
+
     // MARK: - Presence is independent of undo availability
 
     /// The control is structural; only its enablement varies. Every unavailable reason — the

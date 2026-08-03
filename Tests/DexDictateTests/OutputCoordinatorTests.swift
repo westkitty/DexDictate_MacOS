@@ -2,7 +2,9 @@ import XCTest
 @testable import DexDictateKit
 
 final class OutputCoordinatorTests: XCTestCase {
-    func testSavedOnlyWhenAutoPasteDisabled() {
+    /// Auto-paste off no longer means "do nothing": the transcription is placed on the
+    /// clipboard so the user can paste it themselves, and no Cmd-V is synthesised.
+    func testAutoPasteDisabledCopiesWithoutPasting() {
         let writer = MockOutputWriter()
         let coordinator = OutputCoordinator(
             writer: writer,
@@ -12,9 +14,9 @@ final class OutputCoordinatorTests: XCTestCase {
 
         let decision = coordinator.deliver(text: "hello", autoPaste: false, protectSensitiveContexts: true)
 
-        XCTAssertEqual(decision.delivery, .savedOnly)
-        XCTAssertEqual(writer.copiedTexts, [])
-        XCTAssertEqual(writer.pastedTexts, [])
+        XCTAssertEqual(decision.delivery, .copiedOnly(reason: "Auto-paste is off"))
+        XCTAssertEqual(writer.copiedTexts, ["hello"])
+        XCTAssertEqual(writer.pastedTexts, [], "No paste event may be synthesised with auto-paste off")
     }
 
     func testSensitiveContextFallsBackToCopyOnly() {
@@ -258,7 +260,7 @@ final class OutputCoordinatorTests: XCTestCase {
         XCTAssertEqual(writer.pastedTexts, ["hello"])
     }
 
-    func testAccessibilityModeWithAutoPasteDisabledRemainsSavedOnly() {
+    func testAccessibilityModeWithAutoPasteDisabledCopiesWithoutTouchingTheField() {
         let writer = MockOutputWriter()
         let axOperator = MockAccessibilityElementOperator(
             valueIsSettable: true,
@@ -280,10 +282,11 @@ final class OutputCoordinatorTests: XCTestCase {
             insertionMode: .accessibilityAPI
         )
 
-        XCTAssertEqual(decision.delivery, .savedOnly)
-        XCTAssertTrue(writer.copiedTexts.isEmpty)
+        XCTAssertEqual(decision.delivery, .copiedOnly(reason: "Auto-paste is off"))
+        XCTAssertEqual(writer.copiedTexts, ["hello"])
         XCTAssertTrue(writer.pastedTexts.isEmpty)
         XCTAssertFalse(axOperator.didAttemptSetValue)
+        XCTAssertFalse(axOperator.didAttemptSetSelectedText)
     }
 
     func testSensitiveContextDoesNotForceCopyOnlyWhenProtectionDisabled() {
@@ -393,12 +396,12 @@ final class OutputCoordinatorTests: XCTestCase {
             insertionMode: .replaceFieldWithClipboardPaste
         )
 
-        XCTAssertEqual(saveOnly.delivery, .savedOnly)
+        XCTAssertEqual(saveOnly.delivery, .copiedOnly(reason: "Auto-paste is off"))
         XCTAssertEqual(clipboardOnly.delivery, .copiedOnly(reason: "Per-app clipboard-only mode"))
         XCTAssertEqual(clipboardPaste.delivery, .requestedButUnverified)
         XCTAssertEqual(accessibility.delivery, .pastedToActiveApp)
         XCTAssertEqual(replaceField.delivery, .requestedButUnverified)
-        XCTAssertEqual(writer.copiedTexts, ["two"])
+        XCTAssertEqual(writer.copiedTexts, ["one", "two"])
         XCTAssertEqual(writer.pastedTexts, ["three"])
         XCTAssertEqual(writer.selectAllAndPastedTexts, ["five"])
     }

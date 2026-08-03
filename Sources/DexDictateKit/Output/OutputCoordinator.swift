@@ -44,7 +44,13 @@ public struct OutputCoordinator: OutputCoordinating {
         completion: @escaping (OutputDeliveryDecision) -> Void
     ) -> OutputDeliveryDecision {
         guard autoPaste else {
-            return OutputDeliveryDecision(delivery: .savedOnly)
+            // Auto-paste off means "don't type for me", not "don't give me the text": the
+            // transcription goes to the clipboard and no Cmd-V is synthesised. Note this does
+            // replace the user's clipboard on every dictation, which `.savedOnly` did not.
+            guard writer.copy(text) else {
+                return OutputDeliveryDecision(delivery: .failed(reason: "Could not copy text to the clipboard."))
+            }
+            return OutputDeliveryDecision(delivery: .copiedOnly(reason: "Auto-paste is off"))
         }
 
         if insertionMode == .clipboardOnly {
@@ -126,17 +132,34 @@ public struct OutputCoordinator: OutputCoordinating {
         )
     }
 
-    /// Returns `nil` when direct Accessibility insertion didn't succeed, so the caller falls
-    /// through to clipboard paste — matches the pre-refactor inline fallthrough exactly.
+    /// Returns `nil` when nothing was written, so the caller falls through to clipboard paste.
+    ///
+    /// The `.noOp` case is the one that had to be added: Brave advertises
+    /// `kAXSelectedTextAttribute` as settable, returns `.success`, and leaves the composer
+    /// untouched. Folding that into `.mutatedButUnverified` returned a delivery decision, which
+    /// suppressed the clipboard fallback entirely — so the transcription reached the result card
+    /// and nothing reached the field, while the UI claimed an unverified paste.
+    ///
+    /// This function must never produce `.requestedButUnverified`: no paste event is dispatched
+    /// anywhere on this path, and that classification is reserved for a real Cmd-V.
     private func deliverViaAccessibility(
         _ outputText: String, targetApplication: OutputTargetApplication?
     ) -> OutputDeliveryDecision? {
         let attempt = insertViaAccessibility(outputText)
         switch attempt {
-        case .failed:
+        case .failed, .noOp:
             return nil
         case .mutatedButUnverified:
-            return OutputDeliveryDecision(delivery: .requestedButUnverified)
+            // Something landed and we cannot say what. Pasting now could duplicate it, so the
+            // text goes to the clipboard and the result says so plainly.
+            guard writer.copy(outputText) else {
+                return OutputDeliveryDecision(
+                    delivery: .failed(reason: "The insertion could not be verified and the text could not be copied.")
+                )
+            }
+            return OutputDeliveryDecision(
+                delivery: .copiedOnly(reason: "the insertion could not be verified, so it was not pasted again")
+            )
         case .confirmed(let previousValue, let replacementRange, let element):
             return OutputDeliveryDecision(
                 delivery: .pastedToActiveApp,

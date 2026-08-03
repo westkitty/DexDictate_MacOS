@@ -14,6 +14,28 @@ public enum PopoverRoute: String, Equatable, Sendable, CaseIterable {
     public static func resolve(useSlimPopover: Bool) -> PopoverRoute {
         useSlimPopover ? .slim : .classic
     }
+
+    /// Exactly one undo control is mounted per route, and this says where.
+    public var undoControlPlacement: UndoControlPlacement {
+        switch self {
+        case .slim: return .besideAutoPaste
+        case .classic: return .pinnedFooter
+        }
+    }
+}
+
+/// Where the single Undo Last Dictation control sits within a route.
+///
+/// It began in the latest-result card (invisible without a history item), moved to a footer
+/// pinned at the very bottom (always mounted but reading as detached footer chrome), and now
+/// sits beside the Auto-paste chip in the slim popover — next to the other delivery controls,
+/// which is where it was asked for and where users look for it.
+public enum UndoControlPlacement: String, Equatable, Sendable {
+    /// Slim route: in the quick-action row, immediately right of the output chips.
+    case besideAutoPaste
+    /// Classic route: pinned above the route footer. That route has no Auto-paste chip row to
+    /// sit beside, so the pinned placement is retained there rather than duplicated.
+    case pinnedFooter
 }
 
 /// Full-content screen swaps *within* a route. Each of these replaces the normal result and
@@ -48,11 +70,13 @@ public struct PopoverChromeComposition: Equatable, Sendable {
     public let route: PopoverRoute
     public let screen: PopoverScreen
     public let includesSharedUndoSurface: Bool
+    public let undoControlPlacement: UndoControlPlacement
 
     public init(route: PopoverRoute, screen: PopoverScreen) {
         self.route = route
         self.screen = screen
         self.includesSharedUndoSurface = true
+        self.undoControlPlacement = route.undoControlPlacement
     }
 
     /// Every reachable (route, screen) pairing — the full set a test must hold the undo

@@ -55,9 +55,6 @@ struct PopoverRootView: View {
                     }
                 }
                 .frame(maxHeight: .infinity)
-
-                Divider().opacity(0.2).padding(.horizontal, 12)
-                PopoverUndoFooter(engine: engine)
             }
 
             // Invisible ⌘K shortcut for the command palette (Packet 12A adoption).
@@ -393,7 +390,9 @@ struct PopoverRootView: View {
                 modelCatalog: WhisperModelCatalog.shared,
                 registry: engine.transcriptionProviderRegistry
             )
-            DexOutputChips(output: outputDisplayState)
+            // Undo Last Dictation lives here, beside Auto-paste, rather than in a footer at the
+            // bottom of the popover — see `PopoverQuickActionRow`.
+            PopoverQuickActionRow(engine: engine, output: outputDisplayState)
         }
         .padding(.horizontal)
     }

@@ -8,7 +8,18 @@ import Foundation
 
 extension OutputCoordinator {
     enum AccessibilityInsertionAttempt {
+        /// Nothing was written: no strategy was available, or the setter itself refused. The
+        /// field is untouched, so the caller may safely fall through to clipboard paste.
         case failed
+        /// The setter reported success and the field came back **byte-identical** to what it
+        /// was beforehand — the host accepted the write and did nothing with it. Measured
+        /// against Brave, which advertises `kAXSelectedTextAttribute` as settable, returns
+        /// `.success`, and leaves the composer unchanged. Because nothing landed, this is
+        /// safe to fall through to clipboard paste; treating it as a mutation is precisely
+        /// what suppressed the fallback and delivered no text at all.
+        case noOp
+        /// The field changed, but not into the value we expected. Something landed and we
+        /// cannot say what, so a second delivery attempt could duplicate text. No paste.
         case mutatedButUnverified
         case confirmed(previousValue: String, replacementRange: NSRange, element: AXUIElement)
     }
@@ -85,6 +96,7 @@ extension OutputCoordinator {
             return nil
         }
 
+        let preAttemptRawValue = axOperator.editableTextSnapshot(element: element).rawValue
         let result = axOperator.set(text as CFTypeRef, for: kAXValueAttribute as CFString, element: element)
         guard result == .success else {
             Safety.log("insertViaAccessibility() — empty-field write failed: AXError \(result.rawValue)", category: .output)
@@ -93,9 +105,14 @@ extension OutputCoordinator {
 
         let expectedCursor = accessibilityCharacterCount(text)
         _ = axOperator.setCursor(location: expectedCursor, element: element)
-        let verdict = mutationVerdict(element: element, expectedValue: text, expectedCursor: expectedCursor)
+        let verdict = mutationVerdict(
+            element: element,
+            expectedValue: text,
+            expectedCursor: expectedCursor,
+            preAttemptRawValue: preAttemptRawValue
+        )
         Safety.log("insertViaAccessibility() — empty-field write \(verdict.diagnosticSummary)", category: .output)
-        guard verdict.isConfirmed else { return .mutatedButUnverified }
+        guard verdict.isConfirmed else { return verdict.unconfirmedOutcome }
         // The pre-insertion committed value of a confirmed-empty field is "", at {0, 0} —
         // undo therefore restores emptiness and the host renders its placeholder again.
         return .confirmed(previousValue: "", replacementRange: NSRange(location: 0, length: 0), element: element)
@@ -122,6 +139,7 @@ extension OutputCoordinator {
             return nil
         }
 
+        let preAttemptRawValue = axOperator.editableTextSnapshot(element: element).rawValue
         let result = axOperator.set(text as CFTypeRef, for: kAXSelectedTextAttribute as CFString, element: element)
         guard result == .success else {
             Safety.log("insertViaAccessibility() — selected-text write failed: AXError \(result.rawValue)", category: .output)
@@ -130,9 +148,14 @@ extension OutputCoordinator {
 
         let expectedCursor = selectedRange.location + accessibilityCharacterCount(text)
         _ = axOperator.setCursor(location: expectedCursor, element: element)
-        let verdict = mutationVerdict(element: element, expectedValue: expectedValue, expectedCursor: expectedCursor)
+        let verdict = mutationVerdict(
+            element: element,
+            expectedValue: expectedValue,
+            expectedCursor: expectedCursor,
+            preAttemptRawValue: preAttemptRawValue
+        )
         Safety.log("insertViaAccessibility() — selected-text write \(verdict.diagnosticSummary)", category: .output)
-        guard verdict.isConfirmed else { return .mutatedButUnverified }
+        guard verdict.isConfirmed else { return verdict.unconfirmedOutcome }
         return .confirmed(previousValue: currentValue, replacementRange: selectedRange, element: element)
     }
 
@@ -142,6 +165,16 @@ extension OutputCoordinator {
         let valueMatched: Bool
         /// `nil` when the host exposes no selected range to compare against.
         let cursorMatched: Bool?
+        /// The field came back byte-identical to its pre-attempt raw value. `nil` when the raw
+        /// value could not be read on one side of the write, which is itself indeterminate.
+        let unchanged: Bool?
+
+        /// What an unconfirmed write means for the caller. The distinction is the whole point:
+        /// an untouched field is safe to deliver to by another route, a partially changed one
+        /// is not.
+        var unconfirmedOutcome: AccessibilityInsertionAttempt {
+            unchanged == true ? .noOp : .mutatedButUnverified
+        }
 
         /// Confirmation rests on the **value** matching exactly — that is the assertion undo
         /// depends on, and `DictationUndoManager` re-verifies the full value again at undo
@@ -155,7 +188,11 @@ extension OutputCoordinator {
         var isConfirmed: Bool { valueMatched }
 
         var diagnosticSummary: String {
-            "valueMatched=\(valueMatched) cursorMatched=\(cursorMatched.map(String.init) ?? "unavailable") confirmed=\(isConfirmed)"
+            let outcome = isConfirmed ? "confirmed" : (unchanged == true ? "noOp" : "mutatedButUnverified")
+            return "valueMatched=\(valueMatched)"
+                + " cursorMatched=\(cursorMatched.map(String.init) ?? "unavailable")"
+                + " unchanged=\(unchanged.map(String.init) ?? "unknown")"
+                + " outcome=\(outcome)"
         }
     }
 
@@ -164,12 +201,27 @@ extension OutputCoordinator {
     /// if the host hands back the transcription with placeholder text fused to it, that fused
     /// string is the committed value, it will not equal `expectedValue`, and the insertion is
     /// refused confirmation rather than recorded as reversible.
-    func mutationVerdict(element: AXUIElement, expectedValue: String, expectedCursor: Int) -> MutationVerdict {
+    func mutationVerdict(
+        element: AXUIElement,
+        expectedValue: String,
+        expectedCursor: Int,
+        preAttemptRawValue: String?
+    ) -> MutationVerdict {
         let readback = axOperator.editableTextSnapshot(element: element)
         let reportedRange = axOperator.getSelectedRange(element: element)
+        // Compared on the **raw** value, not the committed one: "did anything at all change in
+        // this field" is a question about the bytes the host reports, and normalising them
+        // first would hide a host that swapped a placeholder for identical-looking content.
+        let unchanged: Bool?
+        if let preAttemptRawValue, let now = readback.rawValue {
+            unchanged = (now == preAttemptRawValue)
+        } else {
+            unchanged = nil
+        }
         return MutationVerdict(
             valueMatched: readback.committedValue == expectedValue,
-            cursorMatched: reportedRange.map { $0 == NSRange(location: expectedCursor, length: 0) }
+            cursorMatched: reportedRange.map { $0 == NSRange(location: expectedCursor, length: 0) },
+            unchanged: unchanged
         )
     }
 

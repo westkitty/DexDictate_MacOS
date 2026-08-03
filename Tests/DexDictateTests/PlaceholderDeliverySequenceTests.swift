@@ -29,6 +29,10 @@ final class PlaceholderComposerOperator: AccessibilityElementOperating {
     var selectedTextIsSettable: Bool
     /// Set false to model a host that exposes `AXNumberOfCharacters` at all.
     var reportsCharacterCount = true
+    /// Models the behaviour measured from Brave: `kAXSelectedTextAttribute` is advertised as
+    /// settable, the setter returns `.success`, and the field is left completely untouched.
+    /// This is what delivered no text at all while the UI claimed an unverified paste.
+    var noOpsSelectedTextWrites = false
 
     private(set) var setCallLog: [String] = []
     private(set) var lastSetValue: String?
@@ -90,6 +94,8 @@ final class PlaceholderComposerOperator: AccessibilityElementOperating {
             guard selectedTextIsSettable else { return .attributeUnsupported }
             setCallLog.append(kAXSelectedTextAttribute as String)
             lastSetSelectedText = string
+            // Reports success, changes nothing.
+            if noOpsSelectedTextWrites { return .success }
             // Spliced into the REAL content. The reported selection is an offset into whatever
             // the host was painting, so it is clamped to what actually exists.
             let current = realContent as NSString
@@ -300,7 +306,14 @@ final class PlaceholderDeliverySequenceTests: XCTestCase {
         let (decision, writer) = deliver("landed once", into: ax)
 
         XCTAssertEqual(ax.realContent, "landed once")
-        XCTAssertEqual(decision.delivery, .requestedButUnverified)
+        // The field changed but not into the reconstructed expectation, so the outcome is
+        // "copied, not pasted again" — never `.requestedButUnverified`, because no paste event
+        // was dispatched anywhere on this path.
+        XCTAssertEqual(
+            decision.delivery,
+            .copiedOnly(reason: "the insertion could not be verified, so it was not pasted again")
+        )
+        XCTAssertEqual(writer.copiedTexts, ["landed once"])
         XCTAssertTrue(
             writer.pastedTexts.isEmpty,
             "A delivery that already mutated the field must not also paste — that is how text gets duplicated"
@@ -324,13 +337,90 @@ final class PlaceholderDeliverySequenceTests: XCTestCase {
         XCTAssertEqual(decision.delivery, .requestedButUnverified)
     }
 
-    func testRequestedButUnverifiedNeverCarriesAnUndoContext() {
+    /// `.requestedButUnverified` means "a Cmd-V was dispatched". The Accessibility path never
+    /// dispatches one, so it must never produce that classification — saying it did is exactly
+    /// what made a delivery that inserted nothing look like a paste.
+    func testAccessibilityPathNeverClaimsAPasteWasRequested() {
+        for ax in [
+            PlaceholderComposerOperator(placeholder: chatGPT),                       // mutates
+            PlaceholderComposerOperator(placeholder: chatGPT, selectedTextIsSettable: false)
+        ] {
+            let (decision, writer) = deliver("unconfirmed", into: ax)
+            if decision.delivery == .requestedButUnverified {
+                // Only legitimate when the clipboard fallback actually ran.
+                XCTAssertEqual(writer.pastedTexts, ["unconfirmed"], "Paste requested implies a dispatched paste")
+            }
+            XCTAssertNil(decision.undoContext)
+        }
+    }
+
+    // MARK: - The measured Brave no-op: setter says success, field unchanged
+
+    func testNoOpSelectedTextWriteFallsThroughToClipboardPaste() {
         let ax = PlaceholderComposerOperator(placeholder: chatGPT)
+        ax.noOpsSelectedTextWrites = true
 
-        let (decision, _) = deliver("unconfirmed", into: ax)
+        let (decision, writer) = deliver("ChatGPT delivery test.", into: ax)
 
+        XCTAssertEqual(ax.setCallLog, [kAXSelectedTextAttribute as String], "The write is attempted once")
+        XCTAssertEqual(ax.realContent, "", "The host ignored the write, as measured")
+        XCTAssertEqual(writer.pastedTexts, ["ChatGPT delivery test."], "Auto-paste fallback must run")
         XCTAssertEqual(decision.delivery, .requestedButUnverified)
-        XCTAssertNil(decision.undoContext)
+        XCTAssertNil(decision.undoContext, "A clipboard paste is not reversible")
+    }
+
+    func testNoOpWriteIntoNonEmptyFieldAlsoFallsThroughAndPreservesContent() {
+        let ax = PlaceholderComposerOperator(
+            placeholder: chatGPT,
+            realContent: "existing user text",
+            reportedSelection: NSRange(location: 18, length: 0)
+        )
+        ax.noOpsSelectedTextWrites = true
+
+        let (decision, writer) = deliver(" appended", into: ax)
+
+        XCTAssertEqual(ax.realContent, "existing user text", "A no-op must not damage real content")
+        XCTAssertEqual(writer.pastedTexts, [" appended"])
+        XCTAssertEqual(decision.delivery, .requestedButUnverified)
+    }
+
+    func testUnsupportedSelectedTextReachesClipboardFallback() {
+        let ax = PlaceholderComposerOperator(
+            placeholder: chatGPT,
+            realContent: "content",
+            valueIsSettable: true,
+            selectedTextIsSettable: false
+        )
+
+        let (decision, writer) = deliver("Gemini delivery test.", into: ax)
+
+        XCTAssertTrue(ax.setCallLog.isEmpty, "No AX write may be attempted when no safe strategy exists")
+        XCTAssertEqual(ax.realContent, "content")
+        XCTAssertEqual(writer.pastedTexts, ["Gemini delivery test."])
+        XCTAssertEqual(decision.delivery, .requestedButUnverified)
+    }
+
+    func testNoOpWriteNeverLetsThePlaceholderBecomeContent() {
+        let ax = PlaceholderComposerOperator(placeholder: gemini)
+        ax.noOpsSelectedTextWrites = true
+
+        let (_, writer) = deliver("Gemini delivery test.", into: ax)
+
+        XCTAssertEqual(ax.realContent, "", "Nothing was written into the field by AX")
+        XCTAssertEqual(writer.pastedTexts, ["Gemini delivery test."])
+        for payload in writer.pastedTexts {
+            XCTAssertFalse(payload.contains(gemini), "The clipboard payload must never carry the placeholder")
+        }
+    }
+
+    func testExactlyOnePasteDispatchOnASafeFallback() {
+        let ax = PlaceholderComposerOperator(placeholder: chatGPT)
+        ax.noOpsSelectedTextWrites = true
+
+        let (_, writer) = deliver("once only", into: ax)
+
+        XCTAssertEqual(writer.pastedTexts.count, 1, "Exactly one paste dispatch")
+        XCTAssertEqual(writer.selectAllAndPastedTexts, [])
     }
 
     // MARK: - 16-18: undo context and reversibility

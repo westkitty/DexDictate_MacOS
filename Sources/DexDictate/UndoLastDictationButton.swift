@@ -60,9 +60,47 @@ private struct UndoControlButtonStyle: ButtonStyle {
     }
 }
 
-/// Route-level chrome carrying the undo control, placed by every popover root immediately
-/// above its footer — outside the scroll container, outside every full-content screen swap,
-/// and outside every result-feedback, history, retry, correction and delivery-outcome branch.
+/// The slim popover's quick-action row: the output chips (Auto-paste / Clipboard only / Safe
+/// Mode) with Undo Last Dictation directly beside them, and the availability reason on the
+/// line underneath.
+///
+/// Undo previously sat in a footer pinned to the very bottom of the popover. That guaranteed it
+/// was mounted, but it read as detached footer chrome far from the controls it belongs with —
+/// so it is now adjacent to Auto-paste, which is where users look for delivery controls. The
+/// undo button keeps layout priority so a long chip row compresses before the button does.
+struct PopoverQuickActionRow: View {
+    @ObservedObject var engine: TranscriptionEngine
+    let output: OutputDisplayState
+
+    var body: some View {
+        let model = UndoControlModel(availability: engine.undoAvailability)
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                DexOutputChips(output: output)
+                UndoLastDictationButton(engine: engine)
+                    .layoutPriority(1)
+            }
+
+            // A sibling of the button, never a child: `.disabled()` dims everything inside the
+            // control, and this line has to stay legible exactly when the control is disabled.
+            Text(model.statusLine)
+                .font(.caption2)
+                .foregroundStyle(.white.opacity(0.75))
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityHidden(true)
+        }
+    }
+}
+
+/// Route-level chrome carrying the undo control, placed immediately above the footer —
+/// outside the scroll container, outside every full-content screen swap, and outside every
+/// result-feedback, history, retry, correction and delivery-outcome branch.
+///
+/// Still used by the classic route, which has no equivalent Auto-paste chip row to sit beside.
+/// The slim route uses `PopoverQuickActionRow` instead; only one of the two is ever mounted in
+/// a given route, so there is never a duplicate undo control on screen.
 ///
 /// This placement is the fix. The control itself was correct and had been correct through
 /// several repairs; it was mounted inside the latest-result card, which renders nothing at all

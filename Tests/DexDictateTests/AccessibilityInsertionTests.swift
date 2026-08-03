@@ -265,10 +265,12 @@ final class AccessibilityInsertionTests: XCTestCase {
         XCTAssertEqual(ax.setCursorLocations.last, 6)
     }
 
-    func testSuccessfulSetterWithContradictoryReadbackIsUnverified() {
+    /// Setter reports success and the field is byte-identical afterwards: the host accepted the
+    /// write and did nothing. Nothing landed, so the clipboard fallback must run — folding this
+    /// into "mutated but unverified" is what delivered no text at all.
+    func testSuccessfulSetterThatChangesNothingFallsThroughToClipboardPaste() {
         let ax = MockAccessibilityOperator()
         ax.hasFocusedElement = true
-        // Non-empty field: written through the selected-text route.
         ax.settableMap = [kAXSelectedTextAttribute as String: true]
         ax.stringMap = [kAXValueAttribute as String: "hello"]
         ax.selectedRangeResult = NSRange(location: 5, length: 0)
@@ -284,9 +286,39 @@ final class AccessibilityInsertionTests: XCTestCase {
             insertionMode: .accessibilityAPI
         )
 
+        XCTAssertEqual(ax.stringMap[kAXValueAttribute as String], "hello", "Field genuinely unchanged")
+        XCTAssertEqual(writer.pastedTexts, [" world"], "A no-op must fall through to the real paste")
         XCTAssertEqual(decision.delivery, .requestedButUnverified)
         XCTAssertNil(decision.undoContext)
+    }
+
+    /// Setter reports success and the field changed into something we did not ask for. Something
+    /// landed and we cannot say what, so pasting again could duplicate it.
+    func testSuccessfulSetterWithUnexpectedResultingValueCopiesInsteadOfPasting() {
+        let ax = MockAccessibilityOperator()
+        ax.hasFocusedElement = true
+        ax.settableMap = [kAXSelectedTextAttribute as String: true]
+        ax.stringMap = [kAXValueAttribute as String: "hello"]
+        ax.selectedRangeResult = NSRange(location: 5, length: 0)
+        ax.setResults = [kAXSelectedTextAttribute as String: .success]
+        ax.overrideValueAfterMutation = "hello something else entirely"
+        let writer = MockOutputWriter()
+
+        let coordinator = OutputCoordinator(writer: writer, axOperator: ax)
+        let decision = coordinator.deliver(
+            text: " world",
+            autoPaste: true,
+            protectSensitiveContexts: false,
+            insertionMode: .accessibilityAPI
+        )
+
+        XCTAssertEqual(
+            decision.delivery,
+            .copiedOnly(reason: "the insertion could not be verified, so it was not pasted again")
+        )
+        XCTAssertEqual(writer.copiedTexts, [" world"])
         XCTAssertTrue(writer.pastedTexts.isEmpty, "Do not duplicate a mutation that may have occurred")
+        XCTAssertNil(decision.undoContext)
     }
 
     func testReturnsFalseAndFallsThroughToClipboardWhenNoFocusedElement() {
@@ -320,6 +352,9 @@ final class MockAccessibilityOperator: AccessibilityElementOperating {
     /// Models a host that does not report the caret back where it was placed — the behaviour
     /// measured from Brave in every one of 11 consecutive real insertions.
     var ignoresCursorWrites = false
+    /// Models a host that changes the field into something other than what was asked for, so
+    /// the write is neither confirmable nor a no-op.
+    var overrideValueAfterMutation: String?
     private(set) var setCallLog: [String] = []
     private(set) var setCursorLocations: [Int] = []
     private(set) var lastSetValue: String?
@@ -365,6 +400,7 @@ final class MockAccessibilityOperator: AccessibilityElementOperating {
     }
 
     private func applyValue(_ value: String) {
+        let value = overrideValueAfterMutation ?? value
         stringMap[kAXValueAttribute as String] = value
         if numberOfCharacters != nil {
             numberOfCharacters = (value as NSString).length

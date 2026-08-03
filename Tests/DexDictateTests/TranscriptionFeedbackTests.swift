@@ -12,9 +12,9 @@ final class TranscriptionFeedbackTests: XCTestCase {
         XCTAssertEqual(TranscriptionFeedback.savedToHistory(modified: true).title, "Saved with changes")
         XCTAssertEqual(
             TranscriptionFeedback.copiedOnlySensitiveContext(modified: false, reason: "Detected likely secure input context (password).").title,
-            "Copied only instead of pasting"
+            "Copied"
         )
-        XCTAssertEqual(TranscriptionFeedback.pastedToActiveApp(modified: false).title, "Pasted into active app")
+        XCTAssertEqual(TranscriptionFeedback.pastedToActiveApp(modified: false).title, "Inserted")
         XCTAssertEqual(TranscriptionFeedback.pasteRequestedUnverified(modified: false).title, "Paste requested")
         XCTAssertEqual(TranscriptionFeedback.deliveryBlocked(modified: false, reason: "x").title, "Paste blocked")
         XCTAssertEqual(TranscriptionFeedback.deliveryFailed(modified: false, reason: "x").title, "Delivery failed")

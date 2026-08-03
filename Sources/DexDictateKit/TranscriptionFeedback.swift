@@ -39,9 +39,12 @@ public enum TranscriptionFeedback: Equatable {
         case .savedToHistory(let modified):
             return modified ? "Saved with changes" : "Saved to history"
         case .copiedOnlySensitiveContext(let modified, _):
-            return modified ? "Copied only for secure field" : "Copied only instead of pasting"
+            // Reached for any copy-without-paste outcome, not only secure fields — the
+            // specific reason travels alongside and is rendered in the detail text.
+            return modified ? "Copied with changes" : "Copied"
         case .pastedToActiveApp(let modified):
-            return modified ? "Pasted with changes" : "Pasted into active app"
+            // A confirmed Accessibility write, which is an insertion — no paste was involved.
+            return modified ? "Inserted with changes" : "Inserted"
         case .pasteRequestedUnverified(let modified):
             return modified ? "Paste requested with changes" : "Paste requested"
         case .deliveryBlocked:
@@ -74,12 +77,14 @@ public enum TranscriptionFeedback: Equatable {
                 ? "The result was kept locally after vocabulary or filter changes."
                 : "The result was kept locally without auto-paste."
         case .copiedOnlySensitiveContext(let modified, let reason):
+            // Must not assert a sensitive field: this also covers auto-paste being off and an
+            // insertion that could not be verified. The reason states which it actually was.
             return modified
-                ? "The result was adjusted locally, copied instead of pasted, and kept out of the focused field. \(reason)"
-                : "The result was copied instead of pasted because the focused field looks sensitive. \(reason)"
+                ? "The result was adjusted locally, then copied instead of pasted — \(reason)."
+                : "The result was copied instead of pasted — \(reason)."
         case .pastedToActiveApp(let modified):
             return modified
-                ? "The result was adjusted locally, then pasted into the active app."
+                ? "The result was adjusted locally, then inserted into the active app."
                 : "The result was pasted into the active app."
         case .pasteRequestedUnverified(let modified):
             return modified
