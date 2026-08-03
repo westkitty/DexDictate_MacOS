@@ -145,6 +145,7 @@ public struct PopoverRouteDiagnostic {
         case .targetNoLongerExists: return "targetNoLongerExists"
         case .supersededByNewerDictation: return "supersededByNewerDictation"
         case .engineStopped: return "engineStopped"
+        case .verificationPending: return "verificationPending"
         }
     }
 }

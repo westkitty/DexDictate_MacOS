@@ -157,6 +157,11 @@ public final class TranscriptionEngine: ObservableObject {
     private var currentSessionId = UUID()
     // Not `private`: delivery completions are coordinated by TranscriptionEngine+DictationUndo.swift.
     var pendingDeliveryID: UUID?
+    /// The focus snapshot belonging to the in-flight delivery. `pendingFocusSnapshot` is
+    /// cleared by `finalizeTranscription`'s `defer`, which runs *before* an asynchronous paste
+    /// verification completes — so a delivery verified after the fact had no snapshot left to
+    /// arm undo with. This one survives until the next delivery cycle begins.
+    var pendingDeliveryFocusSnapshot: FocusedElementSnapshot?
     
     /// Optional callback invoked on the main actor after each dictation event that
     /// warrants visible toast feedback. Wire this in the UI layer to drive `ToastState`.
@@ -1205,6 +1210,7 @@ public final class TranscriptionEngine: ObservableObject {
 
         let deliveryID = UUID()
         pendingDeliveryID = deliveryID
+        pendingDeliveryFocusSnapshot = pendingFocusSnapshot
         let deliveryDecision = outputCoordinator.deliver(
             text: finalText,
             autoPaste: AppSettings.shared.autoPaste,
@@ -1219,7 +1225,11 @@ public final class TranscriptionEngine: ObservableObject {
                 )
             }
         )
-        applyDeliveryDecision(deliveryDecision, modified: preparedResult.wasModified)
+        applyDeliveryDecision(
+            deliveryDecision,
+            modified: preparedResult.wasModified,
+            awaitingVerification: true
+        )
     }
 
     private func finalizeImportedFileTranscription(_ text: String, fileName: String) {

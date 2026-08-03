@@ -82,46 +82,6 @@ final class AccessibilityElementReference: Equatable {
 /// Everything needed to reverse a single successful insertion later. Captured at delivery
 /// time because the target field's pre-insertion value and cursor position can't be
 /// reconstructed after the fact — once anything else happens in that field, they're gone.
-public struct DictationUndoContext: Equatable {
-    /// The exact text this delivery actually inserted (after auto-spacing).
-    public let insertedText: String
-    /// Full field value immediately before insertion, when readable via Accessibility.
-    /// `nil` when the field didn't expose a readable `kAXValueAttribute` at delivery time.
-    public let previousFieldValue: String?
-    /// Range inside `previousFieldValue` that `insertedText` replaced (usually zero-length,
-    /// at the cursor; non-zero when replacing a selection or an entire field).
-    public let replacementRange: NSRange?
-    public let targetApplication: OutputTargetApplication?
-    let targetElement: AccessibilityElementReference?
-
-    public init(
-        insertedText: String,
-        previousFieldValue: String?,
-        replacementRange: NSRange?,
-        targetApplication: OutputTargetApplication?
-    ) {
-        self.insertedText = insertedText
-        self.previousFieldValue = previousFieldValue
-        self.replacementRange = replacementRange
-        self.targetApplication = targetApplication
-        self.targetElement = nil
-    }
-
-    init(
-        insertedText: String,
-        previousFieldValue: String?,
-        replacementRange: NSRange?,
-        targetApplication: OutputTargetApplication?,
-        targetElement: AXUIElement
-    ) {
-        self.insertedText = insertedText
-        self.previousFieldValue = previousFieldValue
-        self.replacementRange = replacementRange
-        self.targetApplication = targetApplication
-        self.targetElement = AccessibilityElementReference(targetElement)
-    }
-}
-
 /// Wraps the raw Accessibility API calls used during text insertion so they can be
 /// replaced with a mock in unit tests without requiring real on-screen UI elements.
 public protocol AccessibilityElementOperating {
@@ -139,6 +99,17 @@ public protocol AccessibilityElementOperating {
     /// placeholder echoed through `kAXValueAttribute` be told apart from real content.
     /// `nil` when the target doesn't support the attribute.
     func getNumberOfCharacters(element: AXUIElement) -> Int?
+    /// Asks an application to switch its Accessibility tree on before we read from it.
+    ///
+    /// Chromium-based apps (and Electron) keep their web-content AX tree off until an
+    /// assistive client asks for it, so `focusedElement()` returns `nil` for a browser
+    /// composer that is plainly focused on screen. Measured: every recent Brave delivery
+    /// logged "no focused AX element" while TextEdit resolved normally. With no element there
+    /// is nothing to snapshot, verify, or restore — which is why browser undo could not exist.
+    ///
+    /// This is a standard AX attribute any application may implement, addressed by pid; it
+    /// carries no knowledge of which browser or app is on the other side.
+    func activateApplicationAccessibility(processIdentifier: pid_t)
 }
 
 public extension AccessibilityElementOperating {
@@ -150,6 +121,9 @@ public extension AccessibilityElementOperating {
     /// Defaults to "attribute unavailable" so the snapshot falls back to its other evidence
     /// rather than any conformer being forced to implement it.
     func getNumberOfCharacters(element: AXUIElement) -> Int? { nil }
+
+    /// Default no-op: a fake operator already decides for itself what it exposes.
+    func activateApplicationAccessibility(processIdentifier: pid_t) {}
 
     /// The single semantic reading of an editable target. Every caller that is about to
     /// splice text into a field goes through this rather than reading `kAXValueAttribute`
@@ -211,6 +185,16 @@ public struct SystemAccessibilityElementOperator: AccessibilityElementOperating 
 
     public func set(_ value: CFTypeRef, for attribute: CFString, element: AXUIElement) -> AXError {
         AXUIElementSetAttributeValue(element, attribute, value)
+    }
+
+    /// Both attributes are the documented opt-in switches for apps that keep their AX tree off
+    /// by default. Neither is guaranteed to exist, so failures are ignored — this is a request,
+    /// not a precondition, and the caller re-reads `focusedElement()` afterwards either way.
+    public func activateApplicationAccessibility(processIdentifier: pid_t) {
+        let application = AXUIElementCreateApplication(processIdentifier)
+        for attribute in ["AXManualAccessibility", "AXEnhancedUserInterface"] {
+            _ = AXUIElementSetAttributeValue(application, attribute as CFString, kCFBooleanTrue)
+        }
     }
 
     public func getNumberOfCharacters(element: AXUIElement) -> Int? {

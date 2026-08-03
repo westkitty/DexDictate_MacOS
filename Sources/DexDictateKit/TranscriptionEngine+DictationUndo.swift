@@ -38,6 +38,7 @@ extension TranscriptionEngine {
     /// later delivery cycle begins, including cycles that are later cancelled or fail.
     func beginDeliveryCycle() {
         pendingDeliveryID = nil
+        pendingDeliveryFocusSnapshot = nil
         disarmUndo(reason: .supersededByNewerDictation)
     }
 
@@ -56,8 +57,16 @@ extension TranscriptionEngine {
     /// Applies one delivery result to feedback and the single-slot undo record. Every result
     /// clears older undo state first; only a confirmed Accessibility write with complete
     /// pre-insertion and focus context replaces it with a reversible record.
-    func applyDeliveryDecision(_ decision: OutputDeliveryDecision, modified: Bool) {
-        recordDictationUndoIfNeeded(decision)
+    /// `awaitingVerification` is set only for the *synchronous* result of a dispatched
+    /// clipboard paste, whose real outcome arrives later from post-paste verification. It makes
+    /// the undo row say "checking…" instead of asserting the delivery was unreversible, which
+    /// would be replaced moments later anyway.
+    func applyDeliveryDecision(
+        _ decision: OutputDeliveryDecision,
+        modified: Bool,
+        awaitingVerification: Bool = false
+    ) {
+        recordDictationUndoIfNeeded(decision, awaitingVerification: awaitingVerification)
 
         switch decision.delivery {
         case .savedOnly:
@@ -81,20 +90,30 @@ extension TranscriptionEngine {
         }
     }
 
-    private func recordDictationUndoIfNeeded(_ decision: OutputDeliveryDecision) {
+    private func recordDictationUndoIfNeeded(
+        _ decision: OutputDeliveryDecision,
+        awaitingVerification: Bool = false
+    ) {
         // The reason is what the disabled control will show, so it must name the *actual*
         // delivery outcome. "The undo button never appeared" was previously indistinguishable
         // from "this delivery was never reversible in the first place".
-        disarmUndo(reason: .deliveryNotReversible(decision.delivery.undoIneligibilityDetail))
+        let pendingPasteVerification = awaitingVerification && decision.delivery == .requestedButUnverified
+        disarmUndo(
+            reason: pendingPasteVerification
+                ? .verificationPending
+                : .deliveryNotReversible(decision.delivery.undoIneligibilityDetail)
+        )
         guard decision.delivery == .pastedToActiveApp,
               let undoContext = decision.undoContext,
               undoContext.previousFieldValue != nil,
               undoContext.replacementRange != nil,
-              undoContext.targetElement != nil,
-              let pendingFocusSnapshot else { return }
+              undoContext.targetElement != nil else { return }
+        // Falls back to the delivery-scoped snapshot: an asynchronously verified paste lands
+        // after `finalizeTranscription` has already cleared `pendingFocusSnapshot`.
+        let focusSnapshot = pendingFocusSnapshot ?? pendingDeliveryFocusSnapshot
         armUndo(
             DictationUndoRecord(
-                focusSnapshot: pendingFocusSnapshot,
+                focusSnapshot: focusSnapshot,
                 context: undoContext,
                 timestamp: Date()
             )

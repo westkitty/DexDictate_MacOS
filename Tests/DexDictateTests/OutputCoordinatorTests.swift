@@ -2,9 +2,9 @@ import XCTest
 @testable import DexDictateKit
 
 final class OutputCoordinatorTests: XCTestCase {
-    /// Auto-paste off no longer means "do nothing": the transcription is placed on the
-    /// clipboard so the user can paste it themselves, and no Cmd-V is synthesised.
-    func testAutoPasteDisabledCopiesWithoutPasting() {
+    /// Auto-paste off touches nothing outside DexDictate — no field write, and crucially no
+    /// pasteboard write, so whatever the user had on their clipboard survives.
+    func testAutoPasteDisabledLeavesFieldAndClipboardUntouched() {
         let writer = MockOutputWriter()
         let coordinator = OutputCoordinator(
             writer: writer,
@@ -14,8 +14,8 @@ final class OutputCoordinatorTests: XCTestCase {
 
         let decision = coordinator.deliver(text: "hello", autoPaste: false, protectSensitiveContexts: true)
 
-        XCTAssertEqual(decision.delivery, .copiedOnly(reason: "Auto-paste is off"))
-        XCTAssertEqual(writer.copiedTexts, ["hello"])
+        XCTAssertEqual(decision.delivery, .savedOnly)
+        XCTAssertEqual(writer.copiedTexts, [], "The clipboard must not be written when auto-paste is off")
         XCTAssertEqual(writer.pastedTexts, [], "No paste event may be synthesised with auto-paste off")
     }
 
@@ -260,7 +260,7 @@ final class OutputCoordinatorTests: XCTestCase {
         XCTAssertEqual(writer.pastedTexts, ["hello"])
     }
 
-    func testAccessibilityModeWithAutoPasteDisabledCopiesWithoutTouchingTheField() {
+    func testAccessibilityModeWithAutoPasteDisabledRemainsSavedOnly() {
         let writer = MockOutputWriter()
         let axOperator = MockAccessibilityElementOperator(
             valueIsSettable: true,
@@ -282,8 +282,8 @@ final class OutputCoordinatorTests: XCTestCase {
             insertionMode: .accessibilityAPI
         )
 
-        XCTAssertEqual(decision.delivery, .copiedOnly(reason: "Auto-paste is off"))
-        XCTAssertEqual(writer.copiedTexts, ["hello"])
+        XCTAssertEqual(decision.delivery, .savedOnly)
+        XCTAssertTrue(writer.copiedTexts.isEmpty, "The clipboard must not be written when auto-paste is off")
         XCTAssertTrue(writer.pastedTexts.isEmpty)
         XCTAssertFalse(axOperator.didAttemptSetValue)
         XCTAssertFalse(axOperator.didAttemptSetSelectedText)
@@ -396,12 +396,12 @@ final class OutputCoordinatorTests: XCTestCase {
             insertionMode: .replaceFieldWithClipboardPaste
         )
 
-        XCTAssertEqual(saveOnly.delivery, .copiedOnly(reason: "Auto-paste is off"))
+        XCTAssertEqual(saveOnly.delivery, .savedOnly)
         XCTAssertEqual(clipboardOnly.delivery, .copiedOnly(reason: "Per-app clipboard-only mode"))
         XCTAssertEqual(clipboardPaste.delivery, .requestedButUnverified)
         XCTAssertEqual(accessibility.delivery, .pastedToActiveApp)
         XCTAssertEqual(replaceField.delivery, .requestedButUnverified)
-        XCTAssertEqual(writer.copiedTexts, ["one", "two"])
+        XCTAssertEqual(writer.copiedTexts, ["two"])
         XCTAssertEqual(writer.pastedTexts, ["three"])
         XCTAssertEqual(writer.selectAllAndPastedTexts, ["five"])
     }

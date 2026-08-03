@@ -28,6 +28,10 @@ public enum DictationUndoUnavailableReason: Equatable, Sendable {
     case targetNoLongerExists
     case supersededByNewerDictation
     case engineStopped
+    /// A paste has been dispatched and DexDictate is still checking whether it landed. Undo
+    /// cannot be offered yet — but this is a transient state, not a refusal, so it reads
+    /// differently from the permanent reasons above.
+    case verificationPending
 
     /// A short form that fits on the always-visible status line under the undo control in a
     /// 320pt popover. `message` stays the full explanation for help text and VoiceOver; this
@@ -48,6 +52,8 @@ public enum DictationUndoUnavailableReason: Equatable, Sendable {
             return "a newer dictation replaced it."
         case .engineStopped:
             return "dictation was stopped."
+        case .verificationPending:
+            return "checking whether the paste reached the field\u{2026}"
         }
     }
 
@@ -67,6 +73,8 @@ public enum DictationUndoUnavailableReason: Equatable, Sendable {
             return "A newer dictation replaced the one that could be undone."
         case .engineStopped:
             return "Dictation was stopped, which discarded the pending undo."
+        case .verificationPending:
+            return "DexDictate is verifying whether the paste reached the field. Undo becomes available if it did."
         }
     }
 }

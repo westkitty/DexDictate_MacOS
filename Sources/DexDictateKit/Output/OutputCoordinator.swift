@@ -44,13 +44,11 @@ public struct OutputCoordinator: OutputCoordinating {
         completion: @escaping (OutputDeliveryDecision) -> Void
     ) -> OutputDeliveryDecision {
         guard autoPaste else {
-            // Auto-paste off means "don't type for me", not "don't give me the text": the
-            // transcription goes to the clipboard and no Cmd-V is synthesised. Note this does
-            // replace the user's clipboard on every dictation, which `.savedOnly` did not.
-            guard writer.copy(text) else {
-                return OutputDeliveryDecision(delivery: .failed(reason: "Could not copy text to the clipboard."))
-            }
-            return OutputDeliveryDecision(delivery: .copiedOnly(reason: "Auto-paste is off"))
+            // Auto-paste off touches nothing outside DexDictate: no Accessibility write, no
+            // pasteboard write, no Cmd-V. An earlier revision copied the transcription here,
+            // which silently replaced whatever the user had on their clipboard on every single
+            // dictation. The result is still saved to history and shown in the popover.
+            return OutputDeliveryDecision(delivery: .savedOnly)
         }
 
         if insertionMode == .clipboardOnly {
@@ -75,6 +73,14 @@ public struct OutputCoordinator: OutputCoordinating {
                 targetApplication: targetApplication,
                 completion: completion
             )
+        }
+
+        // Chromium keeps its web-content AX tree off until an assistive client asks for it, so
+        // a plainly-focused browser composer resolves to no focused element at all. Requesting
+        // activation here is what makes both the direct insertion path and the post-paste
+        // verification below able to see the field.
+        if let targetApplication {
+            axOperator.activateApplicationAccessibility(processIdentifier: targetApplication.processIdentifier)
         }
 
         let outputText = textWithAutoSpacing(text)
@@ -179,10 +185,26 @@ public struct OutputCoordinator: OutputCoordinating {
         targetApplication: OutputTargetApplication?,
         completion: @escaping (OutputDeliveryDecision) -> Void
     ) -> OutputDeliveryDecision {
+        // Captured before dispatch: after the paste there is no way to know what the field
+        // used to hold, and that pre-state is what makes the result checkable.
+        let preDispatch = pastePreDispatchRecord(insertedText: outputText, targetApplication: targetApplication)
+
         guard writer.copyAndPaste(
             outputText,
             targetApplication: targetApplication,
-            completion: { completion(OutputDeliveryDecision(delivery: $0)) }
+            completion: { delivery in
+                // Only a dispatched paste is worth verifying; `.blocked`/`.failed` mean no
+                // Cmd-V reached the app, and those outcomes pass straight through.
+                guard delivery == .requestedButUnverified, let preDispatch else {
+                    completion(OutputDeliveryDecision(delivery: delivery))
+                    return
+                }
+                Safety.log(
+                    "clipboard paste dispatched — verifying insertion; target \(preDispatch.diagnosticSummary)",
+                    category: .output
+                )
+                verifyDispatchedPaste(preDispatch, completion: completion)
+            }
         ) else {
             return OutputDeliveryDecision(delivery: .failed(reason: "Could not copy text for paste."))
         }

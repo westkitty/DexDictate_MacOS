@@ -210,6 +210,17 @@ final class DictationUndoManager: DictationUndoPerforming {
         if let refusal = verifyTarget(record, invocation: invocation) { return refusal }
         guard let element = record.context.targetElement?.element else { return .cannotVerify }
 
+        // A verified delivery recorded exactly what the field held afterwards. If it no longer
+        // reads that way the user has edited it since, and undo must refuse rather than
+        // overwrite their edit — this is the whole content-change safety gate for pastes.
+        if let verifiedPostValue = record.context.verifiedPostDeliveryValue {
+            guard let currentRaw = axOperator.editableTextSnapshot(element: element).rawValue else {
+                return .cannotVerify
+            }
+            guard currentRaw == verifiedPostValue else { return .contentChanged }
+            return restoreVerifiedDelivery(record, element: element)
+        }
+
         // Committed, not raw: a web composer that was empty before the dictation will report
         // its placeholder through `kAXValueAttribute` again the moment undo empties it, and
         // comparing against that decoration would make every browser undo unverifiable.
@@ -247,6 +258,39 @@ final class DictationUndoManager: DictationUndoPerforming {
               ) else { return .contentChanged }
 
         return restoreAndVerify(trimmed.newValue, cursor: trimmed.newCursor, element: element)
+    }
+
+    /// Restores a delivery whose result was observed exactly (currently: a verified clipboard
+    /// paste). The field has already been proved to still hold the verified post-delivery
+    /// value, so the only question left is what to put back.
+    private func restoreVerifiedDelivery(
+        _ record: DictationUndoRecord,
+        element: AXUIElement
+    ) -> DictationUndoOutcome {
+        guard axOperator.isSettable(kAXValueAttribute as CFString, element: element) else {
+            return .cannotVerify
+        }
+
+        switch record.context.restoration {
+        case .knownPreviousValue:
+            guard let previousValue = record.context.previousFieldValue else { return .cannotVerify }
+            let cursor = record.context.replacementRange?.location ?? (previousValue as NSString).length
+            return restoreAndVerify(previousValue, cursor: cursor, element: element)
+
+        case .logicallyEmptyEditor(let presentationValue):
+            // Write emptiness, never the presentation string — it was never editable content.
+            guard axOperator.set("" as CFTypeRef, for: kAXValueAttribute as CFString, element: element) == .success else {
+                return .cannotVerify
+            }
+            _ = axOperator.setCursor(location: 0, element: element)
+            let readback = axOperator.editableTextSnapshot(element: element).rawValue
+            // Accepted **only** for a record already classified as a logically-empty editor:
+            // a truly empty field either reads back empty, or reads back as exactly the same
+            // presentation string it showed before the delivery — which is the host painting
+            // its own placeholder again, not our text surviving.
+            let restored = readback?.isEmpty == true || (presentationValue != nil && readback == presentationValue)
+            return restored ? .undone : .cannotVerify
+        }
     }
 
     private func restoreAndVerify(
