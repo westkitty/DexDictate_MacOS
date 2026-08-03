@@ -27,6 +27,17 @@ public struct UndoControlModel: Equatable {
         : "Undo Last Dictation, unavailable"
     }
 
+    /// The always-rendered line beneath the control. Shipped disabled-only-with-a-tooltip once,
+    /// and the reason was undiscoverable — the control read as inert footer text and the user
+    /// concluded undo did not exist. This line is drawn outside the disabled control so it
+    /// keeps full contrast, and it states the availability reason without any hover.
+    public var statusLine: String {
+        guard let unavailableReason else {
+            return "Ready — removes only the text this dictation inserted."
+        }
+        return "Unavailable — \(unavailableReason.shortMessage)"
+    }
+
     /// Enabled: what the action does. Disabled: the actual reason it can't run right now.
     public var helpText: String {
         guard let unavailableReason else {

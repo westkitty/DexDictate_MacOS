@@ -40,22 +40,49 @@ final class AccessibilityInsertionTests: XCTestCase {
         )
     }
 
-    func testSetValueCalledWhenValueAttributeIsSettable() {
+    /// A non-empty field must be written through `kAXSelectedTextAttribute` even when
+    /// `kAXValueAttribute` is settable. Reconstructing a whole field value from the raw
+    /// `AXValue` is what let an empty web composer's placeholder ride into the setter, so that
+    /// route is gone for anything not provably empty.
+    func testNonEmptyFieldUsesSelectedTextWriteAndNeverReconstructsWholeValue() {
         let ax = MockAccessibilityOperator()
         ax.hasFocusedElement = true
         ax.settableMap = [kAXValueAttribute as String: true,
                           kAXSelectedTextAttribute as String: true]
         ax.stringMap = [kAXValueAttribute as String: "hello"]
         ax.selectedRangeResult = NSRange(location: 5, length: 0)
-        ax.setResults = [kAXValueAttribute as String: .success]
+        ax.setResults = [kAXValueAttribute as String: .success, kAXSelectedTextAttribute as String: .success]
 
         let coordinator = OutputCoordinator(axOperator: ax)
         _ = coordinator.deliver(text: " world", autoPaste: true, protectSensitiveContexts: false, insertionMode: .accessibilityAPI)
 
-        XCTAssertTrue(
+        XCTAssertEqual(ax.setCallLog, [kAXSelectedTextAttribute as String])
+        XCTAssertFalse(
             ax.setCallLog.contains(kAXValueAttribute as String),
-            "Should attempt setValue when kAXValueAttribute is settable"
+            "A non-empty field must never receive a reconstructed whole-value write"
         )
+        XCTAssertEqual(ax.lastSetValue, " world", "Only the transcription may be written")
+        XCTAssertEqual(ax.stringMap[kAXValueAttribute as String], "hello world")
+    }
+
+    /// The one case where a whole-value write is still allowed: the field is provably empty,
+    /// so the value written *is* the transcription and nothing is reconstructed.
+    func testConfirmedEmptyFieldWritesTranscriptionAsWholeValue() {
+        let ax = MockAccessibilityOperator()
+        ax.hasFocusedElement = true
+        ax.settableMap = [kAXValueAttribute as String: true]
+        ax.stringMap = [kAXValueAttribute as String: ""]
+        ax.selectedRangeResult = NSRange(location: 0, length: 0)
+        ax.setResults = [kAXValueAttribute as String: .success]
+
+        let coordinator = OutputCoordinator(axOperator: ax)
+        let decision = coordinator.deliver(text: "hello", autoPaste: true, protectSensitiveContexts: false, insertionMode: .accessibilityAPI)
+
+        XCTAssertEqual(ax.setCallLog, [kAXValueAttribute as String])
+        XCTAssertEqual(ax.lastSetValue, "hello")
+        XCTAssertEqual(decision.delivery, .pastedToActiveApp)
+        XCTAssertEqual(decision.undoContext?.previousFieldValue, "")
+        XCTAssertEqual(decision.undoContext?.replacementRange, NSRange(location: 0, length: 0))
     }
 
     func testFallsBackToSelectedTextWhenValueAttributeNotSettableButSelectedTextIs() {
@@ -95,13 +122,12 @@ final class AccessibilityInsertionTests: XCTestCase {
         let coordinator = OutputCoordinator(writer: writer, axOperator: ax)
         _ = coordinator.deliver(text: "new", autoPaste: true, protectSensitiveContexts: false, insertionMode: .accessibilityAPI)
 
-        // Exactly two set attempts: Strategy 1 (value) and Strategy 2 (selectedText).
-        // No third attempt with the appended value ("existing textnew").
-        XCTAssertEqual(ax.setCallLog.count, 2,
-            "Expected exactly 2 AX set attempts (Strategy 1 + Strategy 2), got \(ax.setCallLog.count)")
-        XCTAssertEqual(ax.setCallLog[0], kAXValueAttribute as String)
-        XCTAssertEqual(ax.setCallLog[1], kAXSelectedTextAttribute as String)
-        // Fell back to clipboard paste — did not append
+        // One set attempt: the selected-text write. The whole-value route is not available to
+        // a non-empty field at all, so there is no attempt with a reconstructed value
+        // ("existing textnew") and none with the appended value either.
+        XCTAssertEqual(ax.setCallLog, [kAXSelectedTextAttribute as String],
+            "A non-empty field gets exactly one AX attempt — the selected-text write")
+        // Fell back to clipboard paste carrying only the transcription — did not append.
         XCTAssertEqual(writer.pastedTexts, ["new"])
     }
 
@@ -186,10 +212,11 @@ final class AccessibilityInsertionTests: XCTestCase {
     func testCursorOffsetNonZeroInitialRange() {
         let ax = MockAccessibilityOperator()
         ax.hasFocusedElement = true
-        ax.settableMap = [kAXValueAttribute as String: true]
+        // Non-empty field: written through the selected-text route.
+        ax.settableMap = [kAXSelectedTextAttribute as String: true]
         ax.stringMap = [kAXValueAttribute as String: "abc"]
         ax.selectedRangeResult = NSRange(location: 3, length: 0)  // cursor at end
-        ax.setResults = [kAXValueAttribute as String: .success]
+        ax.setResults = [kAXSelectedTextAttribute as String: .success]
 
         let coordinator = OutputCoordinator(axOperator: ax)
         // Inserting an emoji at UTF-16 position 3 advances by two code units.
@@ -220,10 +247,11 @@ final class AccessibilityInsertionTests: XCTestCase {
     func testMixedTextInsertionUsesUTF16RangeBeforeAndAfterCursor() {
         let ax = MockAccessibilityOperator()
         ax.hasFocusedElement = true
-        ax.settableMap = [kAXValueAttribute as String: true]
+        // Non-empty field: written through the selected-text route.
+        ax.settableMap = [kAXSelectedTextAttribute as String: true]
         ax.stringMap = [kAXValueAttribute as String: "A😀Z"]
         ax.selectedRangeResult = NSRange(location: 3, length: 0)
-        ax.setResults = [kAXValueAttribute as String: .success]
+        ax.setResults = [kAXSelectedTextAttribute as String: .success]
 
         let coordinator = OutputCoordinator(axOperator: ax)
         _ = coordinator.deliver(
@@ -240,10 +268,11 @@ final class AccessibilityInsertionTests: XCTestCase {
     func testSuccessfulSetterWithContradictoryReadbackIsUnverified() {
         let ax = MockAccessibilityOperator()
         ax.hasFocusedElement = true
-        ax.settableMap = [kAXValueAttribute as String: true]
+        // Non-empty field: written through the selected-text route.
+        ax.settableMap = [kAXSelectedTextAttribute as String: true]
         ax.stringMap = [kAXValueAttribute as String: "hello"]
         ax.selectedRangeResult = NSRange(location: 5, length: 0)
-        ax.setResults = [kAXValueAttribute as String: .success]
+        ax.setResults = [kAXSelectedTextAttribute as String: .success]
         ax.appliesSuccessfulMutations = false
         let writer = MockOutputWriter()
 
@@ -288,6 +317,9 @@ final class MockAccessibilityOperator: AccessibilityElementOperating {
     /// When set, it tracks applied mutations the way a real host does — otherwise a field
     /// that started empty would keep claiming zero committed characters after insertion.
     var numberOfCharacters: Int?
+    /// Models a host that does not report the caret back where it was placed — the behaviour
+    /// measured from Brave in every one of 11 consecutive real insertions.
+    var ignoresCursorWrites = false
     private(set) var setCallLog: [String] = []
     private(set) var setCursorLocations: [Int] = []
     private(set) var lastSetValue: String?
@@ -342,7 +374,7 @@ final class MockAccessibilityOperator: AccessibilityElementOperating {
     @discardableResult
     func setCursor(location: Int, element: AXUIElement) -> AXError {
         setCursorLocations.append(location)
-        if appliesSuccessfulMutations {
+        if appliesSuccessfulMutations && !ignoresCursorWrites {
             selectedRangeResult = NSRange(location: location, length: 0)
         }
         return .success

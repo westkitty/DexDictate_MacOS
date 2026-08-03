@@ -99,12 +99,15 @@ final class PopoverRouteCompositionTests: XCTestCase {
         XCTAssertNil(enabled.unavailableReason)
     }
 
-    func testClipboardOnlyDeliveryLeavesTheControlMountedWithItsReason() {
+    func testUnverifiedDeliveryLeavesTheControlMountedWithItsReason() {
         let detail = OutputDelivery.requestedButUnverified.undoIneligibilityDetail
         let model = UndoControlModel(availability: .unavailable(.deliveryNotReversible(detail)))
         XCTAssertTrue(model.isVisible)
         XCTAssertFalse(model.isEnabled)
-        XCTAssertTrue(model.helpText.contains("clipboard paste"))
+        XCTAssertTrue(model.helpText.contains("could not be confirmed"))
+        // The on-screen line has to carry the reason too — the hover-only tooltip was
+        // undiscoverable and the control read as inert footer text.
+        XCTAssertEqual(model.statusLine, "Unavailable — this result used an unverified paste.")
     }
 
     // MARK: - Route diagnostic

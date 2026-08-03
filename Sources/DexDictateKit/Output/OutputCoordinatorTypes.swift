@@ -40,7 +40,10 @@ public extension OutputDelivery {
         case .copiedOnly(let reason):
             return "it was copied to the clipboard instead of inserted (\(reason))."
         case .requestedButUnverified:
-            return "it was delivered by clipboard paste, which macOS can't confirm, so there is no exact insertion to reverse."
+            // Covers both a synthetic clipboard paste and an Accessibility write whose readback
+            // the host contradicted. Saying "clipboard paste" outright was wrong for the second
+            // case, which is the common one in web composers.
+            return "the delivery could not be confirmed, so there is no exact insertion to reverse."
         case .blocked(let reason):
             return "delivery was blocked (\(reason))."
         case .failed(let reason):

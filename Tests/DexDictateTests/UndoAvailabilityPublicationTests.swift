@@ -174,7 +174,14 @@ final class UndoAvailabilityPublicationTests: XCTestCase {
         guard case .deliveryNotReversible(let detail) = engine.undoAvailability.unavailableReason else {
             return XCTFail("Expected deliveryNotReversible, got \(String(describing: engine.undoAvailability.unavailableReason))")
         }
-        XCTAssertTrue(detail.contains("clipboard paste"), "Reason should name the real delivery path: \(detail)")
+        // Deliberately not "clipboard paste": `.requestedButUnverified` also covers an
+        // Accessibility write whose readback the host contradicted, which is the common case in
+        // web composers — naming clipboard paste outright was wrong for that path.
+        XCTAssertTrue(
+            detail.contains("could not be confirmed"),
+            "Reason should state why the delivery is not reversible: \(detail)"
+        )
+        XCTAssertTrue(detail.contains("no exact insertion to reverse"), "Reason should say what that means: \(detail)")
     }
 
     // MARK: - Late callback protection

@@ -140,10 +140,10 @@ final class AccessibilityPlaceholderNormalizationTests: XCTestCase {
     func testNonEmptyFieldWithRealSelectionStillReplacesThatSelection() {
         let ax = MockAccessibilityOperator()
         ax.hasFocusedElement = true
-        ax.settableMap = [kAXValueAttribute as String: true]
+        ax.settableMap = [kAXSelectedTextAttribute as String: true]
         ax.stringMap = [kAXValueAttribute as String: "keep REPLACE keep"]
         ax.selectedRangeResult = NSRange(location: 5, length: 7)
-        ax.setResults = [kAXValueAttribute as String: .success]
+        ax.setResults = [kAXSelectedTextAttribute as String: .success]
 
         _ = deliver("new", into: ax)
 
@@ -153,10 +153,10 @@ final class AccessibilityPlaceholderNormalizationTests: XCTestCase {
     func testMissingPlaceholderAttributePreservesLegitimateValue() {
         let ax = MockAccessibilityOperator()
         ax.hasFocusedElement = true
-        ax.settableMap = [kAXValueAttribute as String: true]
+        ax.settableMap = [kAXSelectedTextAttribute as String: true]
         ax.stringMap = [kAXValueAttribute as String: "existing text"]
         ax.selectedRangeResult = NSRange(location: 13, length: 0)
-        ax.setResults = [kAXValueAttribute as String: .success]
+        ax.setResults = [kAXSelectedTextAttribute as String: .success]
 
         _ = deliver(" more", into: ax)
 
@@ -247,11 +247,11 @@ final class AccessibilityPlaceholderNormalizationTests: XCTestCase {
     func testEmojiRangesRemainCorrectWhenReplacingASelection() {
         let ax = MockAccessibilityOperator()
         ax.hasFocusedElement = true
-        ax.settableMap = [kAXValueAttribute as String: true]
+        ax.settableMap = [kAXSelectedTextAttribute as String: true]
         // "👍" is two UTF-16 units; the selection below is expressed in those units.
         ax.stringMap = [kAXValueAttribute as String: "👍 OLD 👍"]
         ax.selectedRangeResult = NSRange(location: 3, length: 3)
-        ax.setResults = [kAXValueAttribute as String: .success]
+        ax.setResults = [kAXSelectedTextAttribute as String: .success]
 
         _ = deliver("NEW", into: ax)
 
@@ -272,10 +272,10 @@ final class AccessibilityPlaceholderNormalizationTests: XCTestCase {
         // TextEdit shape, and it must take the untouched path.
         let ax = MockAccessibilityOperator()
         ax.hasFocusedElement = true
-        ax.settableMap = [kAXValueAttribute as String: true]
+        ax.settableMap = [kAXSelectedTextAttribute as String: true]
         ax.stringMap = [kAXValueAttribute as String: "Dear Bob,"]
         ax.selectedRangeResult = NSRange(location: 9, length: 0)
-        ax.setResults = [kAXValueAttribute as String: .success]
+        ax.setResults = [kAXSelectedTextAttribute as String: .success]
 
         let decision = deliver(" thanks for the note.", into: ax)
 

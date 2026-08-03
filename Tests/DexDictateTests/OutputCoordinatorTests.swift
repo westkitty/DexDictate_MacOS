@@ -173,9 +173,9 @@ final class OutputCoordinatorTests: XCTestCase {
         let writer = MockOutputWriter()
         let axOperator = MockAccessibilityElementOperator(
             valueIsSettable: true,
-            selectedTextIsSettable: false,
+            selectedTextIsSettable: true,
             setValueResult: .success,
-            setSelectedTextResult: .failure
+            setSelectedTextResult: .success
         )
         let coordinator = OutputCoordinator(
             writer: writer,
@@ -194,7 +194,11 @@ final class OutputCoordinatorTests: XCTestCase {
         XCTAssertEqual(decision.delivery, .pastedToActiveApp)
         XCTAssertTrue(writer.copiedTexts.isEmpty)
         XCTAssertTrue(writer.pastedTexts.isEmpty)
-        XCTAssertTrue(axOperator.didAttemptSetValue)
+        XCTAssertTrue(axOperator.didAttemptSetSelectedText)
+        XCTAssertFalse(
+            axOperator.didAttemptSetValue,
+            "A non-empty field must never receive a reconstructed whole-value write"
+        )
     }
 
 
@@ -203,9 +207,9 @@ final class OutputCoordinatorTests: XCTestCase {
         let target = OutputTargetApplication(bundleIdentifier: "com.example.chat", processIdentifier: 4242)
         let axOperator = MockAccessibilityElementOperator(
             valueIsSettable: true,
-            selectedTextIsSettable: false,
+            selectedTextIsSettable: true,
             setValueResult: .success,
-            setSelectedTextResult: .failure
+            setSelectedTextResult: .success
         )
         let coordinator = OutputCoordinator(
             writer: writer,
@@ -352,9 +356,9 @@ final class OutputCoordinatorTests: XCTestCase {
             applicationActivator: MockApplicationActivator(),
             axOperator: MockAccessibilityElementOperator(
                 valueIsSettable: true,
-                selectedTextIsSettable: false,
+                selectedTextIsSettable: true,
                 setValueResult: .success,
-                setSelectedTextResult: .failure
+                setSelectedTextResult: .success
                 )
         )
 
@@ -405,9 +409,9 @@ final class OutputCoordinatorTests: XCTestCase {
         let writer = MockOutputWriter()
         let axOperator = MockAccessibilityElementOperator(
             valueIsSettable: true,
-            selectedTextIsSettable: false,
+            selectedTextIsSettable: true,
             setValueResult: .success,
-            setSelectedTextResult: .failure,
+            setSelectedTextResult: .success,
             existingValue: "First sentence.",
             selectedRange: NSRange(location: 15, length: 0)
         )
@@ -433,7 +437,7 @@ final class OutputCoordinatorTests: XCTestCase {
         let writer = MockOutputWriter()
         let axOperator = MockAccessibilityElementOperator(
             valueIsSettable: true,
-            selectedTextIsSettable: false,
+            selectedTextIsSettable: true,
             setValueResult: .success,
             setSelectedTextResult: .failure,
             existingValue: "First sentence. ",
@@ -461,7 +465,7 @@ final class OutputCoordinatorTests: XCTestCase {
         let writer = MockOutputWriter()
         let axOperator = MockAccessibilityElementOperator(
             valueIsSettable: true,
-            selectedTextIsSettable: false,
+            selectedTextIsSettable: true,
             setValueResult: .success,
             setSelectedTextResult: .failure,
             existingValue: "hello",
@@ -489,7 +493,7 @@ final class OutputCoordinatorTests: XCTestCase {
         let writer = MockOutputWriter()
         let axOperator = MockAccessibilityElementOperator(
             valueIsSettable: true,
-            selectedTextIsSettable: false,
+            selectedTextIsSettable: true,
             setValueResult: .success,
             setSelectedTextResult: .failure,
             existingValue: "",
@@ -517,9 +521,9 @@ final class OutputCoordinatorTests: XCTestCase {
         let writer = MockOutputWriter()
         let axOperator = MockAccessibilityElementOperator(
             valueIsSettable: true,
-            selectedTextIsSettable: false,
+            selectedTextIsSettable: true,
             setValueResult: .success,
-            setSelectedTextResult: .failure,
+            setSelectedTextResult: .success,
             existingValue: "First sentence.",
             selectedRange: NSRange(location: 15, length: 0)
         )
@@ -545,9 +549,9 @@ final class OutputCoordinatorTests: XCTestCase {
         let writer = MockOutputWriter()
         let axOperator = MockAccessibilityElementOperator(
             valueIsSettable: true,
-            selectedTextIsSettable: false,
+            selectedTextIsSettable: true,
             setValueResult: .success,
-            setSelectedTextResult: .failure,
+            setSelectedTextResult: .success,
             existingValue: "First sentence.",
             selectedRange: NSRange(location: 15, length: 0)
         )
@@ -566,7 +570,10 @@ final class OutputCoordinatorTests: XCTestCase {
         )
 
         XCTAssertEqual(decision.delivery, .pastedToActiveApp)
-        XCTAssertEqual(axOperator.lastSetValue, "First sentence. Second sentence.")
+        // Only the transcription (with its auto-space) is written; the host splices it in.
+        XCTAssertEqual(axOperator.lastSetSelectedText, " Second sentence.")
+        XCTAssertNil(axOperator.lastSetValue, "No whole-value write may occur on a non-empty field")
+        XCTAssertEqual(axOperator.resultingValue, "First sentence. Second sentence.")
         XCTAssertTrue(writer.pastedTexts.isEmpty)
     }
 
@@ -602,7 +609,7 @@ final class OutputCoordinatorTests: XCTestCase {
         let writer = MockOutputWriter()
         let axOperator = MockAccessibilityElementOperator(
             valueIsSettable: true,
-            selectedTextIsSettable: false,
+            selectedTextIsSettable: true,
             setValueResult: .success,
             setSelectedTextResult: .failure,
             hasFocusedElement: false
@@ -631,9 +638,9 @@ final class OutputCoordinatorTests: XCTestCase {
         let writer = MockOutputWriter()
         let axOperator = MockAccessibilityElementOperator(
             valueIsSettable: true,
-            selectedTextIsSettable: false,
+            selectedTextIsSettable: true,
             setValueResult: .success,
-            setSelectedTextResult: .failure,
+            setSelectedTextResult: .success,
             existingValue: "First sentence.",
             selectedRange: NSRange(location: 15, length: 0)
         )
@@ -695,7 +702,7 @@ final class OutputCoordinatorTests: XCTestCase {
         let writer = MockOutputWriter()
         let axOperator = MockAccessibilityElementOperator(
             valueIsSettable: true,
-            selectedTextIsSettable: false,
+            selectedTextIsSettable: true,
             setValueResult: .success,
             setSelectedTextResult: .failure,
             existingValue: "old content",
@@ -908,8 +915,15 @@ private final class MockAccessibilityElementOperator: AccessibilityElementOperat
     private let hasFocusedElement: Bool
 
     private(set) var didAttemptSetValue = false
+    private(set) var didAttemptSetSelectedText = false
     private(set) var setCursorLocations: [Int] = []
     private(set) var lastSetValue: String?
+    /// What was handed to `kAXSelectedTextAttribute` — under the current insertion policy this
+    /// is the only thing a non-empty field ever receives, and it must be the transcription
+    /// alone (never a value reconstructed from the raw `AXValue`).
+    private(set) var lastSetSelectedText: String?
+    /// The field's content after any applied mutation.
+    var resultingValue: String { currentValue }
 
     init(
         valueIsSettable: Bool,
@@ -963,6 +977,8 @@ private final class MockAccessibilityElementOperator: AccessibilityElementOperat
             return setValueResult
         }
         if key == kAXSelectedTextAttribute as String {
+            didAttemptSetSelectedText = true
+            lastSetSelectedText = value as? String
             if setSelectedTextResult == .success,
                let text = value as? String,
                let updated = accessibilityReplacingText(

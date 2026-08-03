@@ -29,6 +29,28 @@ public enum DictationUndoUnavailableReason: Equatable, Sendable {
     case supersededByNewerDictation
     case engineStopped
 
+    /// A short form that fits on the always-visible status line under the undo control in a
+    /// 320pt popover. `message` stays the full explanation for help text and VoiceOver; this
+    /// exists so the reason can be *read on screen* rather than only discovered by hovering.
+    public var shortMessage: String {
+        switch self {
+        case .noDictationYet:
+            return "nothing has been dictated yet."
+        case .deliveryNotReversible:
+            return "this result used an unverified paste."
+        case .consumedBySuccessfulUndo:
+            return "the last dictation was already undone."
+        case .invalidatedByContentChange:
+            return "that field changed after the dictation."
+        case .targetNoLongerExists:
+            return "the target field no longer exists."
+        case .supersededByNewerDictation:
+            return "a newer dictation replaced it."
+        case .engineStopped:
+            return "dictation was stopped."
+        }
+    }
+
     public var message: String {
         switch self {
         case .noDictationYet:

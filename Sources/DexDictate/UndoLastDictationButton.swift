@@ -21,12 +21,42 @@ struct UndoLastDictationButton: View {
         Button(model.title) {
             MainActorAction.run { engine.undoLastDictation(invocation: invocation) }
         }
-        .buttonStyle(.bordered)
-        .controlSize(.small)
+        .buttonStyle(UndoControlButtonStyle(isAvailable: model.isEnabled))
         .disabled(!model.isEnabled)
         .accessibilityLabel(model.accessibilityLabel)
         .accessibilityHint(model.accessibilityHint)
         .help(model.helpText)
+    }
+}
+
+/// Explicit high-contrast styling for the undo control.
+///
+/// `.bordered` rendered the disabled control as secondary-tinted text on a nearly transparent
+/// fill; against the popover's dark translucent background that came out looking like inert
+/// footer text, and it was reported as the control simply not being there. macOS still dims
+/// disabled content, so the fix is to start from a much stronger base — solid white label on a
+/// visible filled capsule — and let the system's dimming land somewhere still clearly legible,
+/// rather than starting from a secondary colour that dims into the background.
+private struct UndoControlButtonStyle: ButtonStyle {
+    let isAvailable: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(
+                Capsule().fill(
+                    isAvailable
+                    ? Color.accentColor.opacity(configuration.isPressed ? 0.55 : 0.85)
+                    : Color.white.opacity(0.22)
+                )
+            )
+            .overlay(
+                Capsule().stroke(Color.white.opacity(isAvailable ? 0.0 : 0.35), lineWidth: 1)
+            )
+            .contentShape(Capsule())
     }
 }
 
@@ -44,11 +74,26 @@ struct PopoverUndoFooter: View {
     @ObservedObject var engine: TranscriptionEngine
 
     var body: some View {
-        HStack {
-            UndoLastDictationButton(engine: engine)
-            Spacer(minLength: 0)
+        let model = UndoControlModel(availability: engine.undoAvailability)
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                UndoLastDictationButton(engine: engine)
+                Spacer(minLength: 0)
+            }
+
+            // Deliberately a *sibling* of the button rather than part of it: `.disabled()`
+            // dims everything inside the control, and this line has to stay fully legible
+            // exactly when the control is disabled — that is the whole point of it.
+            Text(model.statusLine)
+                .font(.caption2)
+                .foregroundStyle(.white.opacity(0.75))
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityHidden(true)
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 6)
+        .padding(.top, 6)
+        .padding(.bottom, 8)
     }
 }
