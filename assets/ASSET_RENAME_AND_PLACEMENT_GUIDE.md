@@ -7,7 +7,7 @@ This pass cleaned the `assets` library without touching runtime source code.
 - Renamed anonymous exports, timestamp files, and generator-default names into semantic DexDictate asset names.
 - Renamed numbered variant sets into stable `__variant_a`, `__variant_b`, and similar suffixes.
 - Renamed `assets/for randoms` to `assets/random_cycle` so the folder now says what it actually is.
-- Moved exact duplicates into `assets/archive_unused/duplicates/` instead of leaving them in the active pool.
+- Initially moved exact duplicates out of the active pool; after byte-for-byte verification, the nine quarantined copies were removed on 2026-08-19.
 - Left clearly intentional names alone, especially the `dexter_*` onboarding illustration set and the existing icon packs.
 
 ## Naming Rules Used
@@ -136,14 +136,12 @@ Notable random-cycle families:
 
 ## Duplicate Handling
 
-Exact duplicates were moved here:
-
-- `assets/archive_unused/duplicates/`
+The formerly quarantined exact duplicates were removed on 2026-08-19 after verifying each had an identical retained counterpart.
 
 Why:
 
 - Duplicates distort any future random cycle by overweighting identical art.
-- Keeping them nearby but out of the active pool preserves provenance without cluttering the usable set.
+- The canonical retained copies preserve the usable asset set without storing redundant bytes.
 
 ## Recommended Next Wiring
 
@@ -151,8 +149,7 @@ If you want the app behavior to match the new structure exactly:
 
 1. Point the onboarding welcome screen at `DexDictate_onboarding__welcome_giftbox_open_dexter.png`.
 2. Treat `assets/random_cycle/` as the rotation source for the UI-open random cycle.
-3. Ignore `assets/archive_unused/duplicates/` when building any runtime asset pool.
-4. Consider excluding the `smiley_mask_splatter` trio from the default rotation unless you want a deliberately sharper tone.
+3. Consider excluding the `smiley_mask_splatter` trio from the default rotation unless you want a deliberately sharper tone.
 
 ## Short Version
 
