@@ -246,20 +246,35 @@ private func runBlackPath() {
     let projectRoot = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
     let sources = projectRoot.appendingPathComponent("Sources")
     let bannedTokens = ["URLSession", "NSURLConnection", "NWConnection", "Alamofire"]
-    var bannedHits: [String] = []
+    let approvedNetworkingFiles: Set<String> = [
+        "Sources/DexDictateKit/SmartCleanup/SmartCleanupClient.swift",
+        "Sources/DexDictateKit/Benchmarking/WhisperModelCatalog.swift",
+        "Sources/DexDictateKit/Transcription/MoonshineTranscriptionProvider.swift"
+    ]
+    var unexpectedHits: [String] = []
+    var observedTokensByPath: [String: Set<String>] = [:]
 
     if let enumerator = FileManager.default.enumerator(at: sources, includingPropertiesForKeys: nil) {
         for case let fileURL as URL in enumerator {
             guard fileURL.pathExtension == "swift",
                   fileURL.path.contains("/Sources/VerificationRunner/") == false,
                   let content = try? String(contentsOf: fileURL, encoding: .utf8) else { continue }
+            let relativePath = fileURL.path.replacingOccurrences(of: projectRoot.path + "/", with: "")
             for token in bannedTokens where content.contains(token) {
-                bannedHits.append("\(fileURL.lastPathComponent):\(token)")
+                observedTokensByPath[relativePath, default: []].insert(token)
+                if !approvedNetworkingFiles.contains(relativePath) {
+                    unexpectedHits.append("\(relativePath):\(token)")
+                }
             }
         }
     }
 
-    check(path, bannedHits.isEmpty, "no online networking APIs detected in Sources")
+    let missingApprovedFiles = approvedNetworkingFiles.filter { observedTokensByPath[$0] == nil }
+    check(
+        path,
+        unexpectedHits.isEmpty && missingApprovedFiles.isEmpty,
+        "direct networking APIs are confined to approved opt-in/download source surfaces"
+    )
 }
 
 @MainActor

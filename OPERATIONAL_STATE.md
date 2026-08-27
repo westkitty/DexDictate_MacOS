@@ -7,8 +7,8 @@
   "project_name": "DexDictate macOS",
   "project_root": ".",
   "artifact_path": "",
-  "state_revision": 2,
-  "last_updated": "2026-08-27T11:30:00Z",
+  "state_revision": 3,
+  "last_updated": "2026-08-27T11:44:24Z",
   "current_baseline": {
     "identity": "work branch cba14314e443f9ddc33c601a988f3a78233c0c7a / application source equivalent to origin/main 7cb739208ea11af6e20beccd9907affbe4500444",
     "state": "partially-verified",
@@ -235,22 +235,22 @@ The target result is a DexDictate build that preserves the selected microphone t
 {
   "id": "BRK-001",
   "title": "VerificationRunner blanket network assertion is obsolete",
-  "state": "known-broken",
+  "state": "verified/resolved",
   "observed_failure": "VerificationRunner fails its black-path check 'no online networking APIs detected in Sources'.",
-  "artifact_revision": "cba14314e443f9ddc33c601a988f3a78233c0c7a",
-  "evidence": "Phase 0 VerificationRunner: 62 checks, 1 failure. Current source intentionally uses URLSession in bounded optional/explicit surfaces including SmartCleanupClient, Whisper model downloads, and Moonshine model downloads, while the runner scans all Sources for any URLSession token.",
-  "severity": "blocks a clean verification baseline; does not by itself demonstrate a dictation privacy failure",
+  "artifact_revision": "Phase 1 verifier repair on work/dexdictate-audio-hardening",
+  "evidence": "Phase 1 VerificationRunner: 62 checks, 0 failures. The verifier now confines direct networking tokens to the three approved opt-in/download source files and a negative-control probe rejected an unapproved URLSession token. Full XCTest suite remained 707 executed, 0 failures, 11 skips.",
+  "severity": "resolved as a verification-policy defect; does not by itself demonstrate a dictation privacy failure",
   "affected_user_path": "Verification policy only",
-  "workaround": "Use full XCTest/focused regressions as current source baseline while repairing the runner rule.",
+  "workaround": "None required after the Phase 1 verifier repair.",
   "required_repair": "Replace the blanket zero-network-token assertion with a narrow check that direct networking APIs in project Sources are confined to explicitly approved opt-in/download surfaces and absent elsewhere.",
-  "required_validation": "VerificationRunner PASS plus full suite PASS; no application behavior changes.",
-  "status": "active"
+  "required_validation": "Completed: VerificationRunner PASS plus full suite PASS; no application behavior changes.",
+  "status": "resolved"
 }
 -->
 ### BRK-001 — VerificationRunner blanket network assertion is obsolete
-- **State:** `known-broken`
-- **Observed:** 62 checks, 1 failure: `no online networking APIs detected in Sources`.
-- **Interpretation:** Verification-policy defect, not evidence that normal local dictation is online.
+- **State:** `verified/resolved`
+- **Observed:** Phase 1 VerificationRunner passed 62 checks with 0 failures using the approved source-boundary rule.
+- **Interpretation:** The obsolete whole-`Sources` assertion was replaced by an exact repository-relative allowlist with a negative-control guard.
 <!-- /operational-state:entry -->
 
 ## 7. Implemented but Unverified
@@ -293,13 +293,14 @@ The target result is a DexDictate build that preserves the selected microphone t
 {
   "id": "PND-001",
   "title": "Repair VerificationRunner local-network boundary check",
-  "state": "pending",
+  "state": "completed",
   "task": "Replace the obsolete whole-Sources zero-network-token assertion with an explicit allowlist/boundary check that still fails if a direct networking API appears in an unapproved source file.",
-  "reason_pending": "Phase 0 proved this is the only failing baseline check.",
+  "reason_pending": "Completed in Phase 1; the verifier now reports a clean baseline.",
   "dependency": "None",
   "priority": "highest",
   "validation_needed": "VerificationRunner PASS and full XCTest suite remains green",
-  "blocks_completion": true
+  "blocks_completion": false,
+  "completed_evidence": "Phase 1 report: VerificationRunner 62/0 and full XCTest suite 707/0/11."
 }
 -->
 ### PND-001 — Repair VerificationRunner local-network boundary check
@@ -312,7 +313,7 @@ The target result is a DexDictate build that preserves the selected microphone t
   "title": "Prove and repair live transcription on existing AVAudioEngine path",
   "state": "pending",
   "task": "Instrument and prove the real microphone-to-provider-to-liveTranscript-to-UI path before any AUHAL backend work.",
-  "reason_pending": "Verification baseline should be clean before implementation changes begin.",
+  "reason_pending": "Phase 1 verifier baseline is clean; installed live-transcription proof remains outstanding.",
   "dependency": "PND-001",
   "priority": "high",
   "validation_needed": "Recognizable live text visible before trigger release in an installed build",
@@ -379,7 +380,7 @@ The target result is a DexDictate build that preserves the selected microphone t
 | INV-006 | Recognizable live text appears before release | requested | Installed microphone user-path proof | Capture/provider/UI changes |
 | INV-007 | Final path survives live failure/stale callback | partially-verified | Automated regressions pass; installed finalization pending | Provider/finalization changes |
 | INV-008 | Existing dictation behavior remains intact | partially-verified | Full suite 707/0/11; runtime-only behaviors pending | Broad engine/output changes |
-| BRK-001 | VerificationRunner networking check | known-broken | Repair runner rule then rerun | Verification-policy change |
+| BRK-001 | VerificationRunner networking check | verified/resolved | Phase 1 verifier repair: 62/0 plus negative control | Verification-policy change |
 | UNK-002 | Installed live-caption behavior | unknown | Phase 2 installed-app run | Any live-path change |
 
 ## 12. Current Change Scope and Impact Radius
@@ -390,3 +391,4 @@ Current scope is **Phase 1 verifier repair only**. Allowed implementation change
 
 - **Revision 1 — 2026-08-27:** Initialized audio-hardening control state from GitHub baseline evidence.
 - **Revision 2 — 2026-08-27:** Recorded Phase 0 Mac evidence: build PASS; full suite 707 passed / 11 skipped / 0 failed; focused regressions PASS. Classified the sole VerificationRunner failure as a stale blanket network-source assertion because intentional bounded network features now exist. Installed-app/live-microphone/route-churn state remains unverified.
+- **Revision 3 — 2026-08-27:** Phase 1 repaired the verifier's exact approved networking boundary; VerificationRunner passed 62/0, the negative control rejected an unapproved token, and the full suite passed 707/0/11. BRK-001 resolved, PND-001 completed, and Phase 2 installed live-transcription proof remains the next active task.
