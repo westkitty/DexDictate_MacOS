@@ -7,15 +7,15 @@
   "project_name": "DexDictate macOS",
   "project_root": ".",
   "artifact_path": "",
-  "state_revision": 1,
-  "last_updated": "2026-08-27T10:41:00Z",
+  "state_revision": 2,
+  "last_updated": "2026-08-27T11:30:00Z",
   "current_baseline": {
-    "identity": "GitHub main commit 7cb739208ea11af6e20beccd9907affbe4500444",
-    "state": "current-baseline",
-    "last_verified": null
+    "identity": "work branch cba14314e443f9ddc33c601a988f3a78233c0c7a / application source equivalent to origin/main 7cb739208ea11af6e20beccd9907affbe4500444",
+    "state": "partially-verified",
+    "last_verified": "2026-08-27T11:16:47Z"
   },
   "scope_boundaries": [
-    "DexDictate macOS audio capture, route recovery, live transcription, and directly impacted regression paths",
+    "DexDictate macOS audio capture, route recovery, live transcription, verification policy, and directly impacted regression paths",
     "No unrelated cleanup, dependency upgrades, or output-pipeline redesign"
   ],
   "linked_parent_state": null
@@ -24,34 +24,32 @@
 
 ## 1. Project Identity and Scope
 
-DexDictate is a native macOS SwiftPM menu-bar dictation application. This state file governs the bounded audio-hardening campaign: current microphone capture, route recovery, live provisional captions, and the regression surface directly affected by those changes. `docs/DEXDICTATE_BIBLE.md` remains the durable project history and design reference; this file is the current evidence/control plane and must not silently supersede explicit Bible rules.
+DexDictate is a native macOS SwiftPM menu-bar dictation application. This state file governs the bounded audio-hardening campaign: source baseline integrity, current microphone capture, route recovery, live provisional captions, verification policy, and directly affected regressions. `docs/DEXDICTATE_BIBLE.md` remains the durable project history/design reference; this file is the current evidence/control plane.
 
 ## 2. Current Baseline
 
 <!-- operational-state:entry
 {
   "id": "BASE-001",
-  "title": "Current GitHub baseline",
-  "state": "current-baseline",
-  "artifact_revision": "7cb739208ea11af6e20beccd9907affbe4500444",
-  "evidence": "GitHub main observed 2026-08-27; only main branch existed before this work branch and no open PRs were present.",
-  "verification_method": "Repository metadata only; Mac build/runtime proof still required.",
-  "freshness": "current repository observation",
-  "recheck_trigger": "Any movement of origin/main or local Mac checkout before implementation"
+  "title": "Phase 0 Mac source baseline",
+  "state": "partially-verified",
+  "artifact_revision": "cba14314e443f9ddc33c601a988f3a78233c0c7a; application source equivalent to origin/main 7cb739208ea11af6e20beccd9907affbe4500444",
+  "evidence": "Phase 0 report dated 2026-08-27T11:16:47Z from MacBook-Air.local, macOS 26.6.2 arm64, Swift 6.2.4. swift build passed; swift test executed 707 with 0 failures and 11 skips; all listed focused audio/live regressions passed; dependencies matched pins. VerificationRunner ran 62 checks and failed only the blanket networking-source assertion.",
+  "verification_method": "Read-only Mac build/test baseline; installed app, microphone, Bluetooth/Zoom churn, TCC, and user preferences were not changed or tested.",
+  "freshness": "current Phase 0 evidence",
+  "recheck_trigger": "Any application-source, dependency, Swift/macOS toolchain, or baseline branch change"
 }
 -->
-### BASE-001 — Current GitHub baseline
-
-- **State:** `current-baseline`
-- **Artifact revision:** `7cb739208ea11af6e20beccd9907affbe4500444`
-- **Evidence:** GitHub `main` observed on 2026-08-27. Before this campaign branch was created, `main` was the only branch and there were no open PRs.
-- **Verification method:** Repository metadata only. Mac build/runtime proof is still required.
-- **Recheck trigger:** Any movement of `origin/main` or the local Mac checkout before implementation.
+### BASE-001 — Phase 0 Mac source baseline
+- **State:** `partially-verified`
+- **Revision:** `cba14314e443f9ddc33c601a988f3a78233c0c7a` with application source equivalent to `origin/main` `7cb739208ea11af6e20beccd9907affbe4500444`.
+- **Verified:** build PASS; 707 tests passed, 11 skipped, 0 failed; focused audio/live regressions PASS; dependency pins match.
+- **Not verified:** installed-app, microphone, Bluetooth/Zoom churn, TCC, and live-caption user path.
 <!-- /operational-state:entry -->
 
 ## 3. Artifact Contract
 
-The target result is a DexDictate build that preserves the user's selected microphone through hostile macOS route changes, cannot crash or wedge on audio route/tap lifecycle changes, displays recognizable provisional transcription while the user is still speaking when a healthy streaming provider is available, and continues to use the trusted final transcription/output pipeline for committed text.
+The target result is a DexDictate build that preserves the selected microphone through hostile macOS route changes, cannot crash or wedge on audio route/tap lifecycle changes, displays recognizable provisional transcription while the user is still speaking when a healthy streaming provider is available, and continues to use the trusted final transcription/output pipeline for committed text.
 
 ## 4. Active Invariants
 
@@ -63,17 +61,15 @@ The target result is a DexDictate build that preserves the user's selected micro
   "rule": "When an explicitly selected microphone remains available and usable, Bluetooth/output churn or system-default changes must not silently move DexDictate to another input.",
   "scope": "Audio capture and route recovery",
   "authority": "Current hardening contract",
-  "evidence": "Explicit project requirement and existing route-recovery policy",
   "validation_method": "Installed-app route-churn run plus UID-level diagnostics",
-  "last_checked": "not yet on current baseline",
+  "last_checked": "not runtime-tested in Phase 0",
   "status": "active",
   "recheck_trigger": "Any capture, device-selection, route-recovery, sleep/wake, or backend change"
 }
 -->
 ### INV-001 — Preferred microphone fidelity
 - **State:** `requested`
-- **Rule:** When an explicitly selected microphone remains available and usable, Bluetooth/output churn or system-default changes must not silently move DexDictate to another input.
-- **Validation:** Installed-app route-churn run plus UID-level diagnostics.
+- **Rule:** A valid explicitly selected microphone remains authoritative through unrelated output/default-route churn.
 <!-- /operational-state:entry -->
 
 <!-- operational-state:entry
@@ -84,36 +80,35 @@ The target result is a DexDictate build that preserves the user's selected micro
   "rule": "DexDictate may bind its own input route but must not change the user's macOS system-wide input or output defaults.",
   "scope": "Audio device selection",
   "authority": "Current hardening contract",
-  "evidence": "Explicit project requirement",
-  "validation_method": "Compare system defaults before/during/after device-selection and route-churn tests",
-  "last_checked": "not yet on current baseline",
+  "validation_method": "Compare system defaults before/during/after route tests",
+  "last_checked": "not runtime-tested in Phase 0",
   "status": "active",
   "recheck_trigger": "Any device-selection or capture-backend change"
 }
 -->
 ### INV-002 — No system-default mutation
 - **State:** `requested`
-- **Rule:** DexDictate may bind its own input route but must not change the user's macOS system-wide input or output defaults.
+- **Rule:** DexDictate owns its route, not macOS's global route.
 <!-- /operational-state:entry -->
 
 <!-- operational-state:entry
 {
   "id": "INV-003",
   "title": "Route changes cannot crash or wedge capture",
-  "state": "requested",
+  "state": "partially-verified",
   "rule": "Audio route/tap lifecycle changes must not cause SIGABRT, uncaught Objective-C exceptions, a dead capture engine, or a permanently stuck recording/processing state.",
   "scope": "Audio capture lifecycle",
   "authority": "Current hardening contract plus prior InstallTapOnNode crash evidence",
-  "evidence": "Existing Objective-C tap bridge and regression tests exist in the repository",
-  "validation_method": "Targeted tap tests, route-recovery tests, installed-app Bluetooth/Zoom churn, and crash/log sweep",
-  "last_checked": "not yet on current baseline",
+  "evidence": "Phase 0: AudioTapInstallerTests, AudioRecorderTapStateTests, recovery planner/failure tests, device policy tests, and lifecycle tests all passed.",
+  "validation_method": "Focused automated tests plus installed-app Bluetooth/Zoom route churn and crash/log sweep",
+  "last_checked": "2026-08-27 automated tests only",
   "status": "active",
   "recheck_trigger": "Any tap, engine, route recovery, backend, or lifecycle change"
 }
 -->
 ### INV-003 — Route changes cannot crash or wedge capture
-- **State:** `requested`
-- **Rule:** Audio route/tap lifecycle changes must not cause `SIGABRT`, uncaught Objective-C exceptions, a dead capture engine, or a permanently stuck recording/processing state.
+- **State:** `partially-verified`
+- **Evidence:** All Phase 0 focused tap/recovery/lifecycle tests passed; hostile installed-app route churn remains untested.
 <!-- /operational-state:entry -->
 
 <!-- operational-state:entry
@@ -124,36 +119,34 @@ The target result is a DexDictate build that preserves the user's selected micro
   "rule": "Audio captured before a recoverable route event must remain available to the final utterance instead of being silently discarded during recovery.",
   "scope": "Audio accumulation and route recovery",
   "authority": "Current hardening contract",
-  "evidence": "Existing recovery code has preserveBufferedAudio behavior; runtime proof is stale/unavailable",
-  "validation_method": "Deterministic buffer-preservation test plus real mid-utterance route churn",
-  "last_checked": "not yet on current baseline",
+  "validation_method": "Deterministic preservation test plus real mid-utterance route churn",
+  "last_checked": "not user-path-tested in Phase 0",
   "status": "active",
   "recheck_trigger": "Any capture-buffer, teardown, recovery, or backend change"
 }
 -->
 ### INV-004 — Captured speech survives recoverable route churn
 - **State:** `requested`
-- **Rule:** Audio captured before a recoverable route event must remain available to the final utterance instead of being silently discarded during recovery.
 <!-- /operational-state:entry -->
 
 <!-- operational-state:entry
 {
   "id": "INV-005",
   "title": "Live captions are provisional only",
-  "state": "requested",
+  "state": "partially-verified",
   "rule": "Streaming partials may update display state while listening but must never independently paste, enter history, run commands, trigger cleanup, or become authoritative committed output.",
   "scope": "Live transcription and output pipeline",
   "authority": "Current hardening contract and existing provider architecture",
-  "evidence": "Current source separates streaming preview from committed final transcription; runtime recheck required after changes",
+  "evidence": "Phase 0 LivePreviewInvariantTests passed; installed output-path runtime proof remains pending.",
   "validation_method": "Live-preview invariant tests plus installed-app dictation/output checks",
-  "last_checked": "source-inspected 2026-08-27; runtime unverified",
+  "last_checked": "2026-08-27 automated tests only",
   "status": "active",
   "recheck_trigger": "Any TranscriptionEngine, provider, preview, output, history, command, or cleanup change"
 }
 -->
 ### INV-005 — Live captions are provisional only
-- **State:** `requested`
-- **Rule:** Streaming partials may update display state while listening but must never independently paste, enter history, run commands, trigger cleanup, or become authoritative committed output.
+- **State:** `partially-verified`
+- **Evidence:** `LivePreviewInvariantTests` passed in Phase 0; runtime path remains pending.
 <!-- /operational-state:entry -->
 
 <!-- operational-state:entry
@@ -164,65 +157,101 @@ The target result is a DexDictate build that preserves the user's selected micro
   "rule": "With Live Transcription enabled and a healthy streaming provider, recognizable ASR text must become visible while the user is still speaking, before trigger release.",
   "scope": "Installed-app live transcription user path",
   "authority": "Explicit project goal",
-  "evidence": "Current source and provider tests implement the path, but installed-app proof on current baseline is missing",
   "validation_method": "Real microphone installed-app run with session diagnostics and a distinctive spoken sentence",
-  "last_checked": "not yet on current baseline",
+  "last_checked": "not tested in Phase 0 by design",
   "status": "active",
   "recheck_trigger": "Any capture, provider, session, preview, UI, or state-management change"
 }
 -->
 ### INV-006 — Recognizable live text must appear before release
 - **State:** `requested`
-- **Rule:** With Live Transcription enabled and a healthy streaming provider, recognizable ASR text must become visible while the user is still speaking, before trigger release.
 <!-- /operational-state:entry -->
 
 <!-- operational-state:entry
 {
   "id": "INV-007",
   "title": "Final transcription remains authoritative and resilient",
-  "state": "requested",
+  "state": "partially-verified",
   "rule": "Stopping live transcription must hand off to the existing final transcription/output path; late streaming callbacks cannot overwrite final state, and a live-provider failure cannot prevent final dictation from completing.",
   "scope": "Streaming/final handoff",
   "authority": "Current hardening contract",
-  "evidence": "Current source has provider session-generation guards and final-only committed architecture; current installed path not yet proven",
-  "validation_method": "Session-race tests, provider-failure tests, and installed-app finalization check",
-  "last_checked": "source-inspected 2026-08-27; runtime unverified",
+  "evidence": "Phase 0 live preview regression suite passed; installed microphone/finalization race remains unverified.",
+  "validation_method": "Session-race/failure tests plus installed-app finalization check",
+  "last_checked": "2026-08-27 automated tests only",
   "status": "active",
   "recheck_trigger": "Any provider lifecycle, TranscriptionEngine, finalization, or output change"
 }
 -->
 ### INV-007 — Final transcription remains authoritative and resilient
-- **State:** `requested`
-- **Rule:** Stopping live transcription must hand off to the existing final transcription/output path; late streaming callbacks cannot overwrite final state, and a live-provider failure cannot prevent final dictation from completing.
+- **State:** `partially-verified`
 <!-- /operational-state:entry -->
 
 <!-- operational-state:entry
 {
   "id": "INV-008",
   "title": "Existing non-audio dictation behavior is protected",
-  "state": "requested",
+  "state": "partially-verified",
   "rule": "Audio hardening must preserve hold/toggle triggering, permission behavior, vocabulary and commands, history, Auto-paste, selected-text replacement, clipboard restoration, Undo Last Dictation, secure/browser behavior, and Smart Cleanup behavior.",
   "scope": "Regression surface directly adjacent to dictation completion",
   "authority": "Current hardening contract and project history",
-  "evidence": "Existing source/tests/documentation; current full-suite baseline still required",
-  "validation_method": "Current full test suite before and after plus focused installed-app regression checks where runtime behavior is involved",
-  "last_checked": "not yet on current baseline",
+  "evidence": "Phase 0 full suite passed 707 tests with 0 failures; runtime-only user paths remain outside Phase 0.",
+  "validation_method": "Full suite after changes plus affected installed-app checks",
+  "last_checked": "2026-08-27 automated suite",
   "status": "active",
-  "recheck_trigger": "Any TranscriptionEngine, output coordinator, insertion, undo, command, vocabulary, history, or trigger change"
+  "recheck_trigger": "Any TranscriptionEngine, output coordinator, insertion, undo, command, vocabulary, history, trigger, or Smart Cleanup change"
 }
 -->
 ### INV-008 — Existing non-audio dictation behavior is protected
-- **State:** `requested`
-- **Rule:** Audio hardening must preserve hold/toggle triggering, permission behavior, vocabulary and commands, history, Auto-paste, selected-text replacement, clipboard restoration, Undo Last Dictation, secure/browser behavior, and Smart Cleanup behavior.
+- **State:** `partially-verified`
+- **Evidence:** Full Phase 0 suite: 707 passed, 11 skipped, 0 failed.
 <!-- /operational-state:entry -->
 
 ## 5. Verified Working Behavior
 
-No current-baseline user-path behavior is promoted to `verified` yet. Historical tests and source presence remain evidence, not current runtime proof.
+<!-- operational-state:entry
+{
+  "id": "VER-001",
+  "title": "Current source builds and automated suite is green",
+  "state": "verified",
+  "capability": "The Phase 0 source baseline compiles and passes the full XCTest suite on the intended Mac environment.",
+  "scope": "Source build and automated test baseline",
+  "verification_method": "swift build and swift test on MacBook-Air.local",
+  "evidence": "Build PASS; 707 executed tests passed, 0 failed, 11 skipped at 2026-08-27T11:16:47Z.",
+  "artifact_revision": "cba14314e443f9ddc33c601a988f3a78233c0c7a",
+  "last_verified": "2026-08-27T11:16:47Z",
+  "dependencies": "Package pins matched Phase 0 contract",
+  "freshness": "current",
+  "recheck_trigger": "Any source, dependency, Swift toolchain, or macOS baseline change"
+}
+-->
+### VER-001 — Current source builds and automated suite is green
+- **State:** `verified`
+- **Evidence:** `swift build` PASS; `swift test` 707 passed, 11 skipped, 0 failed.
+<!-- /operational-state:entry -->
 
 ## 6. Known Not Working
 
-No current-baseline failure is marked proven until the Mac baseline is run. Prior live-caption and AVAudioEngine tap failures remain relevant historical evidence in the project Bible and bug-fix docs.
+<!-- operational-state:entry
+{
+  "id": "BRK-001",
+  "title": "VerificationRunner blanket network assertion is obsolete",
+  "state": "known-broken",
+  "observed_failure": "VerificationRunner fails its black-path check 'no online networking APIs detected in Sources'.",
+  "artifact_revision": "cba14314e443f9ddc33c601a988f3a78233c0c7a",
+  "evidence": "Phase 0 VerificationRunner: 62 checks, 1 failure. Current source intentionally uses URLSession in bounded optional/explicit surfaces including SmartCleanupClient, Whisper model downloads, and Moonshine model downloads, while the runner scans all Sources for any URLSession token.",
+  "severity": "blocks a clean verification baseline; does not by itself demonstrate a dictation privacy failure",
+  "affected_user_path": "Verification policy only",
+  "workaround": "Use full XCTest/focused regressions as current source baseline while repairing the runner rule.",
+  "required_repair": "Replace the blanket zero-network-token assertion with a narrow check that direct networking APIs in project Sources are confined to explicitly approved opt-in/download surfaces and absent elsewhere.",
+  "required_validation": "VerificationRunner PASS plus full suite PASS; no application behavior changes.",
+  "status": "active"
+}
+-->
+### BRK-001 — VerificationRunner blanket network assertion is obsolete
+- **State:** `known-broken`
+- **Observed:** 62 checks, 1 failure: `no online networking APIs detected in Sources`.
+- **Interpretation:** Verification-policy defect, not evidence that normal local dictation is online.
+<!-- /operational-state:entry -->
 
 ## 7. Implemented but Unverified
 
@@ -232,51 +261,17 @@ No current-baseline failure is marked proven until the Mac baseline is run. Prio
   "title": "Streaming live-caption pipeline exists in source",
   "state": "implemented-unverified",
   "capability": "TranscriptionEngine resolves Nemotron or Apple Speech for live streaming, forwards recorder buffers, and publishes partial text to liveTranscript while keeping committed output separate.",
-  "evidence": "Current source inspection at commit 7cb739208ea11af6e20beccd9907affbe4500444",
+  "evidence": "Current source plus passing LivePreviewInvariantTests",
   "missing_evidence": "Installed current-baseline microphone-to-visible-caption proof",
-  "recheck_trigger": "Phase 0 Mac baseline and Phase 2 live-path run"
+  "recheck_trigger": "Phase 2 live-path run"
 }
 -->
 ### UNV-001 — Streaming live-caption pipeline exists in source
 - **State:** `implemented-unverified`
-- **Capability:** The current source resolves Nemotron or Apple Speech for live streaming, forwards recorder buffers, and publishes partial text to `liveTranscript` while keeping committed output separate.
-- **Missing evidence:** Installed current-baseline microphone-to-visible-caption proof.
-<!-- /operational-state:entry -->
-
-<!-- operational-state:entry
-{
-  "id": "UNV-002",
-  "title": "AVAudioEngine crash guards exist in source",
-  "state": "implemented-unverified",
-  "capability": "The recorder serializes engine work, guards overlapping recovery/start operations, tracks tap state, and routes tap install/remove through an Objective-C exception bridge.",
-  "evidence": "Current AudioRecorderService source plus AudioTapInstallerTests and AudioRecorderTapStateTests present at baseline commit",
-  "missing_evidence": "Current test execution and hostile installed-app route-churn proof",
-  "recheck_trigger": "Phase 0 Mac tests and later route-churn run"
-}
--->
-### UNV-002 — AVAudioEngine crash guards exist in source
-- **State:** `implemented-unverified`
-- **Capability:** The recorder serializes engine work, guards overlapping recovery/start operations, tracks tap state, and routes tap install/remove through an Objective-C exception bridge.
-- **Missing evidence:** Current test execution and hostile installed-app route-churn proof.
+- **Missing evidence:** Installed microphone → visible live-caption proof.
 <!-- /operational-state:entry -->
 
 ## 8. Unknown or Evidence-Stale State
-
-<!-- operational-state:entry
-{
-  "id": "UNK-001",
-  "title": "Current build and test baseline",
-  "state": "unknown",
-  "unknown": "The current HEAD has no GitHub CI run and this ChatGPT environment is not the user's Mac; the actual current build result, test count, skips, and failures are therefore unknown.",
-  "decisive_check": "Run the bounded Phase 0 Mac baseline without editing source or replacing the installed app.",
-  "status": "blocking implementation"
-}
--->
-### UNK-001 — Current build and test baseline
-- **State:** `unknown`
-- **Unknown:** Current build result, test count, skips, and failures.
-- **Decisive check:** Run the bounded Phase 0 Mac baseline without editing source or replacing the installed app.
-<!-- /operational-state:entry -->
 
 <!-- operational-state:entry
 {
@@ -290,8 +285,6 @@ No current-baseline failure is marked proven until the Mac baseline is run. Prio
 -->
 ### UNK-002 — Current installed-app live-caption behavior
 - **State:** `unknown`
-- **Unknown:** Current installed-app microphone-to-visible-caption behavior.
-- **Decisive check:** Phase 2 installed-app microphone run with provider/capture/UI boundary diagnostics.
 <!-- /operational-state:entry -->
 
 ## 9. Pending Work
@@ -299,20 +292,18 @@ No current-baseline failure is marked proven until the Mac baseline is run. Prio
 <!-- operational-state:entry
 {
   "id": "PND-001",
-  "title": "Run Phase 0 Mac baseline",
+  "title": "Repair VerificationRunner local-network boundary check",
   "state": "pending",
-  "task": "Verify exact local repository identity, current remote/local commit relationship, dependency resolution, toolchain, current full test suite, focused audio/live regression tests, and VerificationRunner on the Mac without source edits or installed-app replacement.",
-  "reason_pending": "Requires the user's macOS runtime and audio-capable project checkout.",
-  "dependency": "Clean intended DexDictate checkout",
+  "task": "Replace the obsolete whole-Sources zero-network-token assertion with an explicit allowlist/boundary check that still fails if a direct networking API appears in an unapproved source file.",
+  "reason_pending": "Phase 0 proved this is the only failing baseline check.",
+  "dependency": "None",
   "priority": "highest",
-  "validation_needed": "Evidence report committed back to this branch",
+  "validation_needed": "VerificationRunner PASS and full XCTest suite remains green",
   "blocks_completion": true
 }
 -->
-### PND-001 — Run Phase 0 Mac baseline
+### PND-001 — Repair VerificationRunner local-network boundary check
 - **State:** `pending`
-- **Task:** Verify the exact local checkout, dependency resolution, toolchain, current full suite, focused audio/live regressions, and `VerificationRunner` without source edits or installed-app replacement.
-- **Blocks implementation:** Yes.
 <!-- /operational-state:entry -->
 
 <!-- operational-state:entry
@@ -321,7 +312,7 @@ No current-baseline failure is marked proven until the Mac baseline is run. Prio
   "title": "Prove and repair live transcription on existing AVAudioEngine path",
   "state": "pending",
   "task": "Instrument and prove the real microphone-to-provider-to-liveTranscript-to-UI path before any AUHAL backend work.",
-  "reason_pending": "Phase 0 baseline must establish current failures first.",
+  "reason_pending": "Verification baseline should be clean before implementation changes begin.",
   "dependency": "PND-001",
   "priority": "high",
   "validation_needed": "Recognizable live text visible before trigger release in an installed build",
@@ -330,7 +321,6 @@ No current-baseline failure is marked proven until the Mac baseline is run. Prio
 -->
 ### PND-002 — Prove and repair live transcription on existing AVAudioEngine path
 - **State:** `pending`
-- **Task:** Instrument and prove the real microphone → provider → `liveTranscript` → UI path before any AUHAL work.
 <!-- /operational-state:entry -->
 
 ## 10. Active Decisions, Defaults, and Prohibitions
@@ -347,58 +337,56 @@ No current-baseline failure is marked proven until the Mac baseline is run. Prio
 -->
 ### DEC-001 — Streaming remains provisional
 - **State:** `requested`
-- **Rule:** Nemotron and Apple Speech remain provisional live-caption providers during this campaign; they do not become authoritative committed-output engines.
 <!-- /operational-state:entry -->
 
 <!-- operational-state:entry
 {
   "id": "DEC-002",
-  "title": "Freeze transcription dependencies during diagnosis",
+  "title": "Freeze dependencies during diagnosis",
   "state": "requested",
-  "rule": "Do not upgrade SwiftWhisper, FluidAudio, Moonshine, or unrelated dependencies during the live/audio hardening experiment unless existing pinned dependencies are proven to block the work.",
+  "rule": "Do not upgrade SwiftWhisper, FluidAudio, Moonshine, or unrelated dependencies during the audio/live hardening campaign unless a pinned dependency is proven to block the work.",
   "authority": "Change-isolation requirement",
   "status": "active"
 }
 -->
-### DEC-002 — Freeze transcription dependencies during diagnosis
+### DEC-002 — Freeze dependencies during diagnosis
 - **State:** `requested`
-- **Rule:** Do not upgrade SwiftWhisper, FluidAudio, Moonshine, or unrelated dependencies during this diagnosis/hardening campaign unless the pinned dependency is proven to block the work.
 <!-- /operational-state:entry -->
 
 <!-- operational-state:entry
 {
   "id": "DEC-003",
-  "title": "Do not replace installed app during Phase 0",
+  "title": "Direct network APIs require an explicit approved source boundary",
   "state": "requested",
-  "rule": "Phase 0 may build/test derived artifacts but must not run build.sh --user/--system, overwrite an installed DexDictate.app, reset TCC, kill unrelated apps, change audio routes, or edit tracked source files.",
-  "authority": "Baseline integrity requirement",
-  "evidence": "build.sh explicitly stops/replaces the target installed app and runs model bootstrap",
+  "rule": "Project-source direct networking APIs may exist only in explicit opt-in/post-processing or user-triggered model-download surfaces. Verification must fail if a direct networking API appears elsewhere; the normal microphone/transcription/final-output path must not gain an implicit network dependency.",
+  "authority": "Local-dictation privacy boundary plus current intentional feature architecture",
   "status": "active"
 }
 -->
-### DEC-003 — Do not replace installed app during Phase 0
+### DEC-003 — Direct network APIs require an explicit approved source boundary
 - **State:** `requested`
-- **Rule:** Phase 0 may build/test derived artifacts but must not run `build.sh --user`/`--system`, overwrite an installed app, reset TCC, kill unrelated apps, change audio routes, or edit tracked source files.
+- **Rule:** Networking is not globally forbidden, but it is forbidden from silently spreading into the normal dictation path.
 <!-- /operational-state:entry -->
 
 ## 11. Validation and Evidence Matrix
 
-| ID | Claim | Current state | Required evidence | Recheck trigger |
+| ID | Claim | Current state | Evidence / required proof | Recheck trigger |
 |---|---|---|---|---|
-| BASE-001 | Current GitHub baseline is `7cb7392` | current-baseline | Compare local HEAD and `origin/main` on Mac | Any remote/local movement |
+| BASE-001 | Current source baseline | partially-verified | Mac build + 707/0/11 suite; runtime paths excluded | Source/toolchain change |
 | INV-001 | Preferred mic survives route churn | requested | Installed-app UID-level route-churn proof | Capture/device/recovery changes |
-| INV-003 | Route/tap changes do not crash or wedge | requested | Focused tests + hostile runtime churn | Tap/engine/backend changes |
-| INV-005 | Live partials never become committed output | requested | Invariant tests + output-path runtime check | Provider/engine/output changes |
+| INV-003 | Route/tap lifecycle is safe | partially-verified | Focused tests pass; hostile runtime churn pending | Tap/engine/backend changes |
+| INV-005 | Live partials remain display-only | partially-verified | LivePreviewInvariantTests pass; runtime output check pending | Provider/engine/output changes |
 | INV-006 | Recognizable live text appears before release | requested | Installed microphone user-path proof | Capture/provider/UI changes |
-| INV-007 | Final path survives live-provider failure/stale callback | requested | Race/failure tests + runtime check | Provider/finalization changes |
-| INV-008 | Existing dictation behavior remains intact | requested | Full current suite + affected runtime checks | Broad engine/output changes |
-| UNK-001 | Current build/test state | unknown | Phase 0 Mac report | Any commit/toolchain change |
-| UNK-002 | Current installed live-caption state | unknown | Phase 2 installed-app run | Any live-path change |
+| INV-007 | Final path survives live failure/stale callback | partially-verified | Automated regressions pass; installed finalization pending | Provider/finalization changes |
+| INV-008 | Existing dictation behavior remains intact | partially-verified | Full suite 707/0/11; runtime-only behaviors pending | Broad engine/output changes |
+| BRK-001 | VerificationRunner networking check | known-broken | Repair runner rule then rerun | Verification-policy change |
+| UNK-002 | Installed live-caption behavior | unknown | Phase 2 installed-app run | Any live-path change |
 
 ## 12. Current Change Scope and Impact Radius
 
-Current scope is **Phase 0/1 only**: baseline capture, evidence classification, invariant lock, and preparing the first Mac execution packet. No application source change or installed-app replacement is authorized until the current Mac baseline is captured. The first implementation impact radius will be live transcription session/capture bridging and diagnostics; AUHAL remains deferred until live transcription is proven or repaired on the existing AVAudioEngine path.
+Current scope is **Phase 1 verifier repair only**. Allowed implementation change: `Sources/VerificationRunner/main.swift` and narrowly necessary test/support code only if the existing runner cannot express the boundary safely. Application behavior, audio capture, providers, UI, dependencies, installed app, TCC, preferences, and audio routes remain untouched. After a clean verification baseline, Phase 2 owns live-transcription instrumentation and installed microphone proof on the existing AVAudioEngine path. AUHAL remains deferred.
 
 ## 13. Compact Revision Log
 
-- **Revision 1 — 2026-08-27:** Initialized the audio-hardening operational state from current GitHub evidence and the accepted implementation plan. GitHub baseline is recorded as current but runtime-unverified; live captions and current test/build state remain explicitly unverified/unknown pending the Mac baseline.
+- **Revision 1 — 2026-08-27:** Initialized audio-hardening control state from GitHub baseline evidence.
+- **Revision 2 — 2026-08-27:** Recorded Phase 0 Mac evidence: build PASS; full suite 707 passed / 11 skipped / 0 failed; focused regressions PASS. Classified the sole VerificationRunner failure as a stale blanket network-source assertion because intentional bounded network features now exist. Installed-app/live-microphone/route-churn state remains unverified.
