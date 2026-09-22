@@ -962,7 +962,7 @@ private struct DiagnosticsContent: View {
             // MARK: Existing troubleshooting
 
             helpHeading("Trigger not firing")
-            helpBody("1. Check Permissions — Accessibility and Input Monitoring must both be granted.\n2. Fully quit DexDictate and relaunch.\n3. Confirm your shortcut is set in Settings → Dictation → Trigger Mode and the shortcut recorder field.")
+            helpBody("1. Check Permissions — Accessibility must be granted for the global trigger.\n2. Fully quit DexDictate and relaunch.\n3. Confirm your shortcut is set in Settings → Dictation → Trigger Mode and the shortcut recorder field.")
             helpHeading("Transcription is empty or wrong")
             helpBody("1. Confirm Microphone permission is granted.\n2. Check Input Device in Settings → Audio & Microphone → Input Device.\n3. Enable Safe Mode (clipboard-only) to rule out output issues.\n4. Try the bundled tiny.en model in Settings → Models & Accuracy → Active Dictation Model.")
             helpHeading("Text pasting in wrong place / not pasting")
