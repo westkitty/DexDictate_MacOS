@@ -78,7 +78,7 @@ public class PermissionManager: ObservableObject {
     }
     
     public init() {
-        checkPermissions()
+        checkPermissions(forceCapabilityProbe: true)
         // Immediately re-check when the app comes to the foreground. This reduces the
         // felt permission-grant latency from up to 2 seconds (polling interval) to near-zero
         // in the common case where the user grants a permission in System Settings and
@@ -91,7 +91,7 @@ public class PermissionManager: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.checkPermissions()
+            self?.checkPermissions(forceCapabilityProbe: true)
         }
     }
 
@@ -135,11 +135,11 @@ public class PermissionManager: ObservableObject {
 
     /// Forces an immediate permission re-check, used when the UI opens.
     public func refreshPermissions() {
-        checkPermissions()
+        checkPermissions(forceCapabilityProbe: true)
     }
 
     private func ensureMonitoringTimer() {
-        checkPermissions()
+        checkPermissions(forceCapabilityProbe: true)
         updateMonitoringTimerState()
     }
 
@@ -156,7 +156,7 @@ public class PermissionManager: ObservableObject {
         }
     }
     
-    private func checkPermissions() {
+    private func checkPermissions(forceCapabilityProbe: Bool = false) {
         let oldAccessibility = accessibilityGranted
         
         // 1. Accessibility
@@ -177,10 +177,15 @@ public class PermissionManager: ObservableObject {
         
         updateSummary()
 
-        capabilityReport = capabilityChecker.run(
-            accessibilityGranted: accessibilityGranted,
-            inputMonitoringGranted: inputMonitoringGranted
-        )
+        // The live event-tap probe creates a real active tap. Do not recreate that tap on
+        // every 2-second TCC poll. Probe on explicit refresh/foreground transitions, first
+        // initialization, or when Accessibility itself changes.
+        if forceCapabilityProbe || capabilityReport == nil || oldAccessibility != accessibilityGranted {
+            capabilityReport = capabilityChecker.run(
+                accessibilityGranted: accessibilityGranted,
+                inputMonitoringGranted: inputMonitoringGranted
+            )
+        }
 
         // Auto-recovery logic
         if !oldAccessibility && accessibilityGranted {
@@ -212,7 +217,7 @@ public class PermissionManager: ObservableObject {
             print("🔄 Triggering engine retry...")
             #endif
             engine.retryInputMonitor()
-            self?.checkPermissions()
+            self?.checkPermissions(forceCapabilityProbe: true)
         }
     }
     
