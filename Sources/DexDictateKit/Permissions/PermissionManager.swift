@@ -4,7 +4,7 @@ import AVFoundation
 import AppKit
 import ApplicationServices
 
-/// Polls the three macOS TCC permissions required by DexDictate and drives auto-recovery
+/// Polls the macOS TCC permissions required by DexDictate and drives auto-recovery
 /// when accessibility access is granted while the app is already running.
 ///
 /// Permission states are published so SwiftUI views can react immediately. The manager
@@ -24,7 +24,12 @@ public class PermissionManager: ObservableObject {
     /// Whether the user has authorised microphone access via `AVCaptureDevice`.
     @Published public var microphoneGranted: Bool = false
 
-    /// Whether the app can listen for system events (Input Monitoring permission).
+    /// Legacy compatibility signal for older UI/state code.
+    ///
+    /// DexDictate uses a modifying CGEvent tap (`.defaultTap`), whose controlling TCC
+    /// authorization is Accessibility. A separate Input Monitoring grant is not required.
+    /// Keep this published property temporarily so older views do not break; it mirrors
+    /// Accessibility and must never trigger a separate TCC request.
     @Published public var inputMonitoringGranted: Bool = false
 
     /// `true` when all required permissions are granted; drives the banner in the UI.
@@ -67,7 +72,9 @@ public class PermissionManager: ObservableObject {
     }
 
     public var inputMonitoringSettingsURL: URL? {
-        PermissionSettingsLinker.url(for: .inputMonitoring)
+        // Legacy API compatibility: callers that still ask for this route should land on
+        // the permission that actually governs DexDictate's modifying event tap.
+        PermissionSettingsLinker.url(for: .accessibility)
     }
     
     public init() {
@@ -159,12 +166,14 @@ public class PermissionManager: ObservableObject {
         let micStatus = AVCaptureDevice.authorizationStatus(for: .audio)
         microphoneGranted = (micStatus == .authorized)
         
-        // 3. Input Monitoring (Speech Recognition removed — Whisper is local-only)
-        // CGPreflightListenEventAccess is available on all supported targets (macOS 14+).
-        inputMonitoringGranted = CGPreflightListenEventAccess()
+        // DexDictate's global shortcut monitor uses a modifying CGEvent tap (`.defaultTap`).
+        // Accessibility is the relevant TCC permission for that path. Do not gate startup
+        // on CGPreflightListenEventAccess(): doing so asks users for an unnecessary second
+        // permission and can force repeated quit/reopen cycles on newer macOS releases.
+        inputMonitoringGranted = accessibilityGranted
         
-        // Overall status (Speech Recognition not required — Whisper is local-only)
-        allPermissionsGranted = accessibilityGranted && microphoneGranted && inputMonitoringGranted
+        // Overall status: only the permissions actually required by the product.
+        allPermissionsGranted = accessibilityGranted && microphoneGranted
         
         updateSummary()
 
@@ -191,8 +200,7 @@ public class PermissionManager: ObservableObject {
         var missing: [String] = []
         if !accessibilityGranted { missing.append(NSLocalizedString("Accessibility", comment: "")) }
         if !microphoneGranted { missing.append(NSLocalizedString("Microphone", comment: "")) }
-        if !inputMonitoringGranted { missing.append(NSLocalizedString("Input Monitoring", comment: "")) }
-        
+
         permissionsSummary = NSLocalizedString("Missing: ", comment: "") + missing.joined(separator: ", ")
     }
     
@@ -208,12 +216,13 @@ public class PermissionManager: ObservableObject {
         }
     }
     
-    /// Proactively requests Accessibility and Input Monitoring (NOT Microphone).
+    /// Proactively requests Accessibility (NOT Microphone).
     ///
     /// Microphone is requested separately via `requestMicrophoneIfNeeded()` on first dictation.
+    /// DexDictate intentionally does not request standalone Input Monitoring: its modifying
+    /// event tap is governed by Accessibility.
     public func requestPermissions() {
         requestAccessibilityIfNeeded()
-        requestInputMonitoringIfNeeded()
     }
 
     public func requestAccessibilityIfNeeded() {
@@ -222,10 +231,9 @@ public class PermissionManager: ObservableObject {
         AXIsProcessTrustedWithOptions(options)
     }
 
+    /// Deprecated compatibility shim. The global trigger path is governed by Accessibility.
     public func requestInputMonitoringIfNeeded() {
-        if !inputMonitoringGranted {
-            CGRequestListenEventAccess()
-        }
+        requestAccessibilityIfNeeded()
     }
 
     public func openMicrophoneSettings() {
@@ -236,8 +244,9 @@ public class PermissionManager: ObservableObject {
         PermissionSettingsLinker.open(.accessibility)
     }
 
+    /// Deprecated compatibility shim. Open the permission that actually governs the event tap.
     public func openInputMonitoringSettings() {
-        PermissionSettingsLinker.open(.inputMonitoring)
+        PermissionSettingsLinker.open(.accessibility)
     }
 
     /// Requests microphone permission if not already granted.
