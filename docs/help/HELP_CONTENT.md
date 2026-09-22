@@ -74,7 +74,7 @@ Press your configured trigger to start speaking. DexDictate transcribes what you
 When you first open DexDictate, the onboarding flow walks you through three required steps:
 
 1. **Accessibility permission** — allows DexDictate to detect your trigger key/button
-2. **Input Monitoring permission** — allows DexDictate to listen for your trigger globally
+2. **Accessibility permission** — allows DexDictate to listen for your trigger globally
 3. **Microphone permission** — macOS will ask when you first start dictating
 
 > **Screenshot:** Onboarding permissions page showing three permission steps with status badges
@@ -99,7 +99,7 @@ Tap the version string in the footer five times to re-open the onboarding screen
 
 ### 3. Permissions
 
-DexDictate requires three macOS permissions. All three are standard and can be revoked at any time in System Settings → Privacy & Security.
+DexDictate requires two macOS permissions: Microphone and Accessibility. Both are standard and can be revoked at any time in System Settings → Privacy & Security.
 
 ---
 
@@ -684,7 +684,7 @@ Open the Shortcuts app → search "DexDictate" in the app actions list → add t
 
 **Trigger not firing**
 
-1. Check permissions — both Accessibility and Input Monitoring must be granted (see **Permissions**)
+1. Check permissions — both Accessibility must be granted (see **Permissions**)
 2. Fully quit DexDictate and relaunch it
 3. Confirm your shortcut is configured correctly in Quick Settings → Input
 
