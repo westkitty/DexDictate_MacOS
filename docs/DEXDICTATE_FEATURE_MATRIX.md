@@ -27,7 +27,7 @@ Status definitions:
 
 | Feature | Present | Location | Status | Notes |
 |---|---|---|---|---|
-| First-run onboarding flow | yes | `Sources/DexDictate/OnboardingView.swift` | working | 4 pages: welcome, mic, accessibility, input monitoring |
+| First-run onboarding flow | yes | `Sources/DexDictate/OnboardingView.swift` | working | 4 pages: welcome, permissions, shortcut, completion |
 | Onboarding completion tracking | yes | `AppSettings.hasCompletedOnboarding` | working | @AppStorage persisted |
 | Debug onboarding re-trigger | yes | `FooterView.swift` (hidden control) | working | `AppDelegate.presentOnboardingForDebug()` |
 | Onboarding animation/video | yes | `LaunchIntroController.swift` | working | Optional startup animation |
@@ -40,7 +40,6 @@ Status definitions:
 |---|---|---|---|---|
 | Microphone permission request | yes | `Sources/DexDictateKit/Permissions/PermissionManager.swift` | working | AVCaptureDevice authorization |
 | Accessibility permission check | yes | `PermissionManager.swift` | working | Polling every 2s |
-| Input Monitoring permission check | yes | `PermissionManager.swift` | working | Polling every 2s |
 | Permission polling (2s timer) | yes | `PermissionManager.swift` | working | Not notification-based (by design for reliability) |
 | Permission recovery on grant | yes | `TranscriptionEngine.retryInputMonitor()` | working | Re-creates event tap |
 | Permission banner UI | yes | `Sources/DexDictate/PermissionBannerView.swift` | working | Shows if any permission missing |
