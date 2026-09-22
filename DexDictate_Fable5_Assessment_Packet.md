@@ -65,7 +65,7 @@ Assess DexDictate as a macOS-native local-first dictation product with existing 
 - **Per-App Insertion Rules:** [High Confidence] Fully implemented. Managed via detached window sheet.
 - **Inline & Detached History:** [High Confidence] Implemented. Expandable popover feed and a full-featured detached window.
 - **Custom Vocabulary & Voice Commands:** [High Confidence] Fully implemented. Managed via detached sheets.
-- **Onboarding / Permission Validation:** [High Confidence] Runs on first launch. Polls Microphone and Accessibility, then validates the actual modifying global event tap.
+- **Onboarding / Permission Validation:** [High Confidence] Runs on first launch. Polls Microphone, Accessibility, and Input Monitoring permissions.
 - **Adaptive Tail Delay & Silence Trim:** [High Confidence] Implemented in code and exposed under Speed & Accuracy settings.
 - **Accuracy Retry:** [High Confidence] Implemented. Allows re-running the last audio buffer with balanced/accuracy parameters when Whisper returns poor results.
 - **Core Audio Recovery:** [High Confidence] Automatically handles route shifts.
@@ -130,7 +130,7 @@ The app is functionally rich but suffers from a **discoverability crisis** and *
 - **Remappable hotkeys:** Already implemented (ShortcutRecorder).
 - **Silence detection thresholds:** Already implemented (silenceTimeout slider).
 - **Local/offline model dependency:** Already implemented (tiny.en.bin / imported GGML models).
-- **macOS Permissions:** Already implemented (Accessibility and Microphone). Standalone Input Monitoring is not required by the current modifying event-tap path.
+- **macOS Permissions:** Already implemented (Accessibility, Input Monitoring, Microphone).
 - **OpenAI-compatible / Local Ollama settings:** Missing in runtime (to be added).
 
 > [!WARNING]
@@ -171,7 +171,7 @@ Dexter-related features are non-negotiable core product requirements. Fable's UI
      - `OnboardingPermissionsAnimation.mp4`
      - `OnboardingShortcutAnimation.mp4`
      - `OnboardingCompletionAnimation.mp4`
-   - *User-Facing Purpose:* Introduces the product, requests Accessibility and Microphone, lets users record a trigger hotkey, validates the modifying global event tap, and validates audio input.
+   - *User-Facing Purpose:* Introduces the product, requests systems permissions (Accessibility, Input Monitoring, Microphone), lets users record a trigger hotkey, and validates audio input.
    - *Preservation Requirement:* Must be preserved as a core first-run experience; do not treat it as disposable setup scaffolding.
 
 2. **Existing Imagery & Visual Identity:**
