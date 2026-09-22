@@ -59,6 +59,8 @@ It does not "phone home."
 Use the newest release artifact first. Current latest release: **v1.8.0**  
 Release page: [v1.8.0](https://github.com/westkitty/DexDictate_MacOS/releases/tag/v1.8.0)
 
+> **macOS 27 Golden Gate:** v1.8.0 predates the permission-model correction in current source and may enter a repeated permission/reopen loop. The corrected source requires **Accessibility + Microphone** only for DexDictate's current modifying event-tap architecture. Golden Gate runtime validation is still required before this correction is promoted as a packaged release.
+
 Download one of these Apple Silicon artifacts:
 
 - `DexDictate-1.8.0-macos-arm64.dmg`
