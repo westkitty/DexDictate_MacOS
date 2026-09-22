@@ -50,7 +50,7 @@ struct DexStateHero: View {
 
 // MARK: - Permission Chips
 
-/// One chip per permission: mic, accessibility, input monitoring.
+/// One chip per required permission: microphone and Accessibility.
 struct DexPermissionChips: View {
     let permissions: PermissionDisplayState
     let onFixTap: () -> Void
