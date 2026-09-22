@@ -34,7 +34,7 @@
 ### `help-onboarding-permissions.png`
 
 - **Section:** Getting Started
-- **Shows:** Onboarding page 2 — three-step permission checklist with Accessibility, Input Monitoring, and Microphone status badges
+- **Shows:** Onboarding page 2 — two-permission checklist with Accessibility and Microphone status badges
 - **Capture from:** Tap the version string in the footer five times to reopen onboarding → navigate to the Permissions page
 - **Framing:** Full onboarding window (520×480 pt)
 - **Annotations:** Optionally highlight each badge with a light callout border
