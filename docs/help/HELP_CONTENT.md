@@ -113,10 +113,9 @@ Required to detect your trigger key or button press system-wide, even when DexDi
 
 **Input Monitoring**
 
-Required to read keyboard and mouse button events globally.
+DexDictate does **not** require a separate Input Monitoring grant for its current global-trigger path. The app uses a modifying Core Graphics event tap, and Accessibility is the controlling macOS permission for that behavior.
 
-- Where to grant: System Settings → Privacy & Security → Input Monitoring → DexDictate
-- If missing: Same symptom as missing Accessibility — trigger doesn't fire.
+If an older DexDictate build or stale setup guide told you to enable Input Monitoring, that instruction is superseded by this permission model.
 
 ---
 
