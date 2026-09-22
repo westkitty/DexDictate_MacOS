@@ -4,8 +4,8 @@ import XCTest
 final class OnboardingValidationTests: XCTestCase {
     func testTriggerValidationMessagesRemainDistinct() {
         XCTAssertNotEqual(TriggerValidationState.missingAccessibility.headline,
-                          TriggerValidationState.missingInputMonitoring.headline)
-        XCTAssertNotEqual(TriggerValidationState.missingInputMonitoring.detail,
+                          TriggerValidationState.eventTapUnavailable.headline)
+        XCTAssertNotEqual(TriggerValidationState.missingAccessibility.detail,
                           TriggerValidationState.eventTapUnavailable.detail)
         XCTAssertTrue(TriggerValidationState.ready.isSuccess)
         XCTAssertFalse(TriggerValidationState.eventTapUnavailable.isSuccess)
