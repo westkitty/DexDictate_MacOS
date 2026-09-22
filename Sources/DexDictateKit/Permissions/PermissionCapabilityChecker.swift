@@ -55,22 +55,7 @@ public struct PermissionCapabilityChecker {
             return result == .success || result == .noValue
         },
         checkEventTapPreflight: {
-            let callback: CGEventTapCallBack = { _, _, event, _ in
-                Unmanaged.passUnretained(event)
-            }
-            let mask = (1 << CGEventType.keyDown.rawValue) | (1 << CGEventType.keyUp.rawValue)
-            guard let tap = CGEvent.tapCreate(
-                tap: .cgSessionEventTap,
-                place: .headInsertEventTap,
-                options: .defaultTap,
-                eventsOfInterest: CGEventMask(mask),
-                callback: callback,
-                userInfo: nil
-            ) else {
-                return false
-            }
-            CFMachPortInvalidate(tap)
-            return true
+            TriggerValidationProbe.runCheck().isSuccess
         }
     )
 }
