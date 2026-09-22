@@ -38,7 +38,7 @@ final class PermissionManagerCapabilityTests: XCTestCase {
         )
         XCTAssertNotEqual(
             report.eventTapPreflight,
-.failed(reason: "Modifying CGEvent tap could not be created despite Accessibility trust.")
+            .failed(reason: "Modifying CGEvent tap could not be created despite Accessibility trust.")
         )
     }
 
