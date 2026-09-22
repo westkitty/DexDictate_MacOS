@@ -12,7 +12,7 @@ type SceneProps = {
 const checklist = [
   {label: 'Microphone', state: 'Ready', color: palette.green},
   {label: 'Accessibility', state: 'Needs review', color: palette.furTan},
-  {label: 'Accessibility', state: 'Global trigger', color: palette.blueGlow},
+  {label: 'Input Monitoring', state: 'Guide user', color: palette.blueGlow},
 ];
 
 export const EducationSequence: React.FC<SceneProps> = ({section}) => {
