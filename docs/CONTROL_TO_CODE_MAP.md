@@ -22,18 +22,18 @@ Code:
 - `Sources/DexDictate/OnboardingView.swift`
 - `Sources/DexDictateKit/Permissions/PermissionManager.swift`
 
-### 1.3 Open Input Monitoring Settings
+### 1.3 Permission Settings Compatibility
 
-- Opens the correct System Settings deep link for Input Monitoring.
+- Legacy Input Monitoring settings entry points redirect to Accessibility.
+- DexDictate's modifying global event tap is governed by Accessibility; standalone Input Monitoring is not a required user step.
 
 Code:
-- `Sources/DexDictate/OnboardingView.swift`
 - `Sources/DexDictateKit/Permissions/PermissionManager.swift`
 
 ### 1.4 Trigger Test
 
 - Runs a local event-tap readiness probe.
-- Reports whether Accessibility and Input Monitoring are both sufficient and whether the tap can be created.
+- Requires Accessibility and proves that the actual modifying event tap can be created.
 
 Code:
 - `Sources/DexDictateKit/Permissions/OnboardingValidation.swift`
