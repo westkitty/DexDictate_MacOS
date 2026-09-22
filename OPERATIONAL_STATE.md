@@ -7,11 +7,11 @@
   "project_name": "DexDictate macOS",
   "project_root": ".",
   "artifact_path": null,
-  "state_revision": 3,
+  "state_revision": 4,
   "last_updated": "2026-09-22",
   "current_baseline": {
-    "identity": "main at fix/golden-gate-permission-flow branch creation",
-    "state": "repair-implemented-awaiting-ci",
+    "identity": "fix/golden-gate-permission-flow / PR #7",
+    "state": "audited-awaiting-ci-runtime-codex",
     "last_verified": null
   },
   "scope_boundaries": [
@@ -57,15 +57,20 @@ Produce a bounded source repair that removes the unnecessary standalone Input Mo
 ## 7. Implemented but Unverified
 - **UNV-001:** Golden Gate permission repair implemented on `fix/golden-gate-permission-flow`: standalone Input Monitoring request/gate removed; modifying event-tap behavior preserved under Accessibility; microphone flow preserved.
 - **UNV-002:** Active onboarding, banners, diagnostics, state-first UI, help, entitlements, and regression tests were updated to the two-permission contract.
-- **UNV-003:** Draft PR #7 contains the repair. Source review is complete; latest-head macOS CI is the remaining automated gate.
+- **UNV-003:** Draft PR #7 contains the repair. Source review and two-pass bug sweep are complete; latest-head macOS CI is queued.
+- **UNV-004:** Capability probing is throttled so the real active event-tap check does not run on every 2-second TCC poll.
+- **UNV-005:** README now explicitly warns that packaged v1.8.0 predates the Golden Gate permission correction.
 
 ## 8. Unknown or Evidence-Stale State
 - **UNK-001:** Exact Golden Gate runtime result after repair is unverified until a Golden Gate Mac can run the built app.
 - **UNK-002:** Signing/notarization behavior of a future packaged hotfix is unverified until packaging is executed.
+- **UNK-003:** Codex verification is unrun because the authorized MacBook endpoint hosting the Codex CLI is offline.
+- **UNK-004:** Apple has an open Golden Gate/Sequoia/Tahoe report for system-wide input hangs when Accessibility is revoked while an active `.defaultTap` exists; applicability to DexDictate after this repair remains unverified.
 
 ## 9. Pending Work
-- **PND-002:** Run latest-head repository CI/build/tests through PR #7.
+- **PND-002:** Complete latest-head repository CI/build/tests through PR #7 (run #250 queued).
 - **PND-003:** Run final packaged app on Golden Gate and verify first-launch permission journey.
+- **PND-004:** Run the Mac-hosted Codex verification pass when the authorized MacBook endpoint is online.
 
 ## 10. Active Decisions, Defaults, and Prohibitions
 - **DEC-001:** Do not require or proactively request standalone Input Monitoring for DexDictate's modifying event tap.
@@ -108,3 +113,14 @@ Produce a bounded source repair that removes the unnecessary standalone Input Mo
 - **State deltas:** Propagated the two-permission contract through current project guidance, developer instructions, help assets, experimental UI references, and marketing education content.
 - **New evidence:** Added regression coverage forbidding standalone Input Monitoring request/entitlement; active source surfaces no longer present Input Monitoring as a required grant.
 - **Validation pending:** Latest-head macOS CI and Golden Gate runtime smoke test.
+
+
+### Revision 4 — 2026-09-22
+
+- **Artifact/source identity:** `fix/golden-gate-permission-flow`, draft PR #7.
+- **Bug sweep:** Two passes completed over the permission/runtime diff and scope. Confirmed issues fixed: repeated active event-tap probing on the 2-second timer; append-only `BIBLE.md` history violation; README's missing v1.8.0 Golden Gate caveat; collateral Fable/Remotion copy edits outside the bounded repair.
+- **Scope verification:** No dependency manifests, lockfiles, model assets, transcription, audio-route, output insertion, undo, history, or unrelated runtime implementation remains changed.
+- **Static validation:** Swift 6.2 parser accepted the two highest-risk changed Swift units (`PermissionManager.swift`, `PermissionCapabilityChecker.swift`). This is syntax evidence only, not a macOS typecheck.
+- **External verification:** Apple DTS guidance confirms Accessibility already provides listen/post capability and that the alleged input-monitoring entitlement does not exist.
+- **Automated validation:** GitHub Actions `DexDictate CI` run #250 is queued on the current PR head.
+- **Blocked validation:** Golden Gate installed-app test and Codex CLI verification remain blocked by the offline MacBook endpoint.
