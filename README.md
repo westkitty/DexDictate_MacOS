@@ -108,9 +108,10 @@ On first run, macOS will ask for:
 
 1. Microphone
 2. Accessibility
-3. Input Monitoring
 
 Grant them.
+
+DexDictate's global trigger uses a modifying macOS event tap. Accessibility governs that path; a separate Input Monitoring grant is not required.
 
 If you skip them, it won't work.  
 This is macOS, not a suggestion.
