@@ -164,6 +164,10 @@ final class BuildMetadataConsistencyTests: XCTestCase {
             permissionManager.contains("inputMonitoringGranted = accessibilityGranted"),
             "Legacy UI compatibility state must mirror Accessibility rather than becoming an independent gate."
         )
+        XCTAssertTrue(
+            permissionManager.contains("if forceCapabilityProbe || capabilityReport == nil || oldAccessibility != accessibilityGranted"),
+            "The active event-tap capability probe must not run on every 2-second permission poll."
+        )
     }
 
     private func plistDictionary(atPath path: String) throws -> [String: Any] {
