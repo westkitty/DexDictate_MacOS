@@ -82,7 +82,7 @@ DexDictate is a privacy-first, fully local dictation bridge for macOS that lives
 
 **Command Processor:** A pattern-matching engine that recognizes special voice commands (e.g., "open browser", "new note") and executes associated macros or actions.
 
-**Onboarding Validation:** The first-launch wizard that checks microphone, accessibility, and input-monitoring permissions in a prescribed order and explains each.
+**Onboarding Validation:** The first-launch wizard that checks Accessibility and Microphone, then validates the actual modifying global event tap.
 
 ## §7 — Technology Stack
 
@@ -145,7 +145,6 @@ graph TB
 
     subgraph "System Integration"
         AC["Accessibility"]
-        IM_MONITOR["Input Monitoring"]
         KB_MON["Keyboard Monitoring"]
     end
 
@@ -179,7 +178,6 @@ graph TB
     SPL --> MB_UI
     PM --> ONBRD
     ONBRD --> AC
-    ONBRD --> IM_MONITOR
     ONBRD --> KB_MON
 
     %% Orchestration
@@ -240,7 +238,7 @@ DexDictate_MacOS/
 │   │       ├── AudioDeviceScanner.swift           # Hot-swap polling
 │   │       └── AudioInputSelectionPolicy.swift    # Device selection logic
 │   │   ├── Permissions/
-│   │   │   ├── PermissionManager.swift            # Microphone, accessibility, input-monitoring
+│   │   │   ├── PermissionManager.swift            # Microphone + Accessibility TCC
 │   │   │   ├── InputMonitor.swift                 # Global event tap + keyboard monitoring
 │   │   │   └── OnboardingValidation.swift         # First-launch checks
 │   │   ├── TranscriptionEngine.swift              # Main orchestrator
@@ -543,7 +541,7 @@ xcodebuild -scheme DexDictate test      # UI tests (if any)
 
 4. **Clipboard Atomicity:** ClipboardManager writes to clipboard once per TranscriptionResult. No partial pastes.
 
-5. **Permission Validity:** InputMonitor does not start recording until Microphone, Accessibility, and Input Monitoring permissions are all granted. Onboarding validates in that order.
+5. **Permission Validity:** InputMonitor depends on Accessibility trust for its modifying event tap; audio capture depends on Microphone. Standalone Input Monitoring is not a required gate.
 
 6. **Device Consistency:** AudioDeviceManager maintains the current device reference; if the device is unplugged, it immediately falls back to the built-in microphone or fails with a clear error.
 
@@ -587,7 +585,7 @@ This Bible is strictly additive. It may never delete prior recorded steps or dec
 
 **Whisper Model Size:** The bundled `tiny.en.bin` (80 MB) is committed to the repo. Debug inference is intentionally slow; use Release builds for acceptable latency (< 2 sec per 30-sec clip on Apple Silicon).
 
-**Permission Order Matters:** Onboarding must request permissions in exact order: Microphone → Accessibility → Input Monitoring. macOS remembers denials; users must manually re-enable in System Settings if they skip.
+**Permission Scope Matters:** Onboarding requests only Accessibility and Microphone. Do not add a standalone Input Monitoring request for the modifying event-tap path; validate the real `.defaultTap` capability instead.
 
 **InputMonitor Recovery:** If macOS temporarily disables the system event tap (during sleep/wake, focus shift), InputMonitor will attempt to restart. This is a known macOS quirk; log monitoring is critical for support.
 
@@ -1102,7 +1100,7 @@ Git-ignored. Not committed. Must be fetched before first build.
 - Cert name: `DexDictate Development` (self-signed, RSA 2048, in login keychain)
 - Created via: `scripts/create_signing_cert.sh`
 - Fallback: ad-hoc signing (`-`) if cert is absent
-- Entitlements: `com.apple.security.device.audio-input` + `com.apple.security.device.input-monitoring` only
+- Entitlements: `com.apple.security.device.audio-input` only; Accessibility is granted through TCC and the modifying event tap does not require a standalone Input Monitoring entitlement
 
 **Build targets (4):**
 
