@@ -314,7 +314,6 @@ Hold-to-talk path:
 Current app entitlements in `Sources/DexDictate/DexDictate.entitlements`:
 
 - `com.apple.security.device.audio-input = true`
-- `com.apple.security.device.input-monitoring = true`
 
 No separate accessibility entitlement exists because Accessibility trust is granted by TCC, not entitlement declaration.
 
@@ -362,11 +361,12 @@ Current prompting behavior:
 5. Failure sets engine state to `.error` and schedules retry in 5 seconds
 6. `PermissionManager` detects newly granted accessibility and calls `engine.retryInputMonitor()` after 1 second
 
-### 6.6 Input Monitoring flow
+### 6.6 Global trigger permission flow
 
-1. `PermissionManager` checks preflight access with `CGPreflightListenEventAccess()`
-2. `requestPermissions()` calls `CGRequestListenEventAccess()` when needed
-3. Input tap creation depends on actual trust and runtime environment
+1. `PermissionManager` checks Accessibility trust with `AXIsProcessTrusted()`
+2. `requestPermissions()` prompts Accessibility only when needed
+3. Trigger validation creates the same modifying `.defaultTap` CGEvent tap used by the runtime
+4. A separate Input Monitoring grant is not required for this path
 
 ### 6.7 Microphone flow
 
