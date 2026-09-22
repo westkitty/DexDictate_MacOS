@@ -38,7 +38,7 @@ public class PermissionManager: ObservableObject {
     /// Human-readable summary of missing permissions shown in `PermissionBannerView`.
     @Published public var permissionsSummary: String = NSLocalizedString("Checking permissions...", comment: "")
 
-    /// Live capability probe results, updated after every permission check.
+    /// Live capability probe results, refreshed on explicit checks and Accessibility changes.
     /// Nil until the first check runs. Separate from TCC grant state: a permission
     /// can be granted yet still fail a live capability probe (e.g., after signing changes).
     @Published public var capabilityReport: PermissionCapabilityReport?
