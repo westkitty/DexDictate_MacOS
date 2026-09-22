@@ -55,15 +55,6 @@ struct PermissionBannerView: View {
                         .accessibilityLabel("Open Microphone settings")
                     }
 
-                    if !permissionManager.inputMonitoringGranted {
-                        Button(NSLocalizedString("Open Input Monitoring Settings", comment: "")) {
-                            permissionManager.openInputMonitoringSettings()
-                        }
-                        .font(.caption.weight(.semibold))
-                        .buttonStyle(.borderedProminent)
-                        .controlSize(.small)
-                        .accessibilityLabel("Open Input Monitoring settings")
-                    }
                 }
             }
             .padding(SurfaceTokens.cardPadding)
