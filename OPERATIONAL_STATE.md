@@ -7,11 +7,11 @@
   "project_name": "DexDictate macOS",
   "project_root": ".",
   "artifact_path": null,
-  "state_revision": 2,
+  "state_revision": 3,
   "last_updated": "2026-09-22",
   "current_baseline": {
     "identity": "main at fix/golden-gate-permission-flow branch creation",
-    "state": "repair-implemented-unverified",
+    "state": "repair-implemented-awaiting-ci",
     "last_verified": null
   },
   "scope_boundaries": [
@@ -57,14 +57,14 @@ Produce a bounded source repair that removes the unnecessary standalone Input Mo
 ## 7. Implemented but Unverified
 - **UNV-001:** Golden Gate permission repair implemented on `fix/golden-gate-permission-flow`: standalone Input Monitoring request/gate removed; modifying event-tap behavior preserved under Accessibility; microphone flow preserved.
 - **UNV-002:** Active onboarding, banners, diagnostics, state-first UI, help, entitlements, and regression tests were updated to the two-permission contract.
-- **UNV-003:** Draft PR #7 contains the repair and is mergeable, but no GitHub Actions run has attached yet.
+- **UNV-003:** Draft PR #7 contains the repair. Source review is complete; latest-head macOS CI is the remaining automated gate.
 
 ## 8. Unknown or Evidence-Stale State
 - **UNK-001:** Exact Golden Gate runtime result after repair is unverified until a Golden Gate Mac can run the built app.
 - **UNK-002:** Signing/notarization behavior of a future packaged hotfix is unverified until packaging is executed.
 
 ## 9. Pending Work
-- **PND-002:** Run repository CI/build/tests when GitHub Actions attaches or a Mac runner is available.
+- **PND-002:** Run latest-head repository CI/build/tests through PR #7.
 - **PND-003:** Run final packaged app on Golden Gate and verify first-launch permission journey.
 
 ## 10. Active Decisions, Defaults, and Prohibitions
@@ -98,5 +98,13 @@ Produce a bounded source repair that removes the unnecessary standalone Input Mo
 
 - **Artifact/source identity:** `fix/golden-gate-permission-flow`, draft PR #7.
 - **State deltas:** Removed standalone Input Monitoring from required permission flow and entitlement; retained Accessibility-owned modifying event tap; updated active UI/docs/tests.
-- **New evidence:** PR #7 is mergeable; source diff reviewed; forbidden standalone Input Monitoring calls/entitlement removed from the active permission path.
-- **Validation not performed:** No Swift build/test result and no Golden Gate runtime test because the connected Mac endpoint is offline and no GitHub Actions run has attached yet.
+- **New evidence:** PR #7 source diff reviewed; forbidden standalone Input Monitoring calls/entitlement removed from the active permission path.
+- **Validation not performed:** Latest-head Swift build/test and Golden Gate runtime test remain pending; the connected Mac endpoint is offline.
+
+
+### Revision 3 — 2026-09-22
+
+- **Artifact/source identity:** `fix/golden-gate-permission-flow`, draft PR #7.
+- **State deltas:** Propagated the two-permission contract through current project guidance, developer instructions, help assets, experimental UI references, and marketing education content.
+- **New evidence:** Added regression coverage forbidding standalone Input Monitoring request/entitlement; active source surfaces no longer present Input Monitoring as a required grant.
+- **Validation pending:** Latest-head macOS CI and Golden Gate runtime smoke test.
