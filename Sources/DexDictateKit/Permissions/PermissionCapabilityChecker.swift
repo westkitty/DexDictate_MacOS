@@ -1,5 +1,4 @@
 import ApplicationServices
-import CoreGraphics
 import Foundation
 
 /// Separates TCC permission state from live capability.
