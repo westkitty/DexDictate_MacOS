@@ -87,15 +87,10 @@ struct WelcomePage: View {
 }
 
 struct PermissionsPage: View {
-    @State private var accessibilityRequested = false
     @ObservedObject var settings: AppSettings
     @ObservedObject var permissionManager: PermissionManager
     @StateObject private var microphoneHarness = MicrophoneValidationHarness()
     @State private var triggerValidationState: TriggerValidationState = .idle
-
-    private func syncPermissionSteps() {
-        accessibilityRequested = permissionManager.accessibilityGranted
-    }
 
     var body: some View {
         ScrollView {
@@ -124,7 +119,6 @@ struct PermissionsPage: View {
                 ) {
                     Button(NSLocalizedString("Open Accessibility Settings", comment: "")) {
                         permissionManager.requestAccessibilityIfNeeded()
-                        withAnimation { accessibilityRequested = true }
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(.blue)
@@ -156,12 +150,8 @@ struct PermissionsPage: View {
             .padding(.vertical, 16)
         }
         .onAppear {
-            syncPermissionSteps()
             permissionManager.refreshPermissions()
             permissionManager.startMonitoring()
-        }
-        .onChange(of: permissionManager.accessibilityGranted) { _, _ in
-            syncPermissionSteps()
         }
         .onDisappear {
             permissionManager.stopMonitoring()
