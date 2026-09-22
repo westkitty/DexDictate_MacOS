@@ -87,7 +87,6 @@ struct WelcomePage: View {
 }
 
 struct PermissionsPage: View {
-    // Track whether the user has clicked the grant button (so we can show Input Monitoring steps)
     @State private var accessibilityRequested = false
     @ObservedObject var settings: AppSettings
     @ObservedObject var permissionManager: PermissionManager
@@ -95,7 +94,7 @@ struct PermissionsPage: View {
     @State private var triggerValidationState: TriggerValidationState = .idle
 
     private func syncPermissionSteps() {
-        accessibilityRequested = permissionManager.accessibilityGranted || permissionManager.inputMonitoringGranted
+        accessibilityRequested = permissionManager.accessibilityGranted
     }
 
     var body: some View {
@@ -108,7 +107,7 @@ struct PermissionsPage: View {
                     .font(.title).bold()
                     .frame(maxWidth: .infinity, alignment: .center)
 
-                Text(NSLocalizedString("DexDictate needs 3 permissions. Follow these steps:", comment: ""))
+                Text(NSLocalizedString("DexDictate needs Accessibility and Microphone access. Follow these steps:", comment: ""))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -131,44 +130,9 @@ struct PermissionsPage: View {
                     .tint(.blue)
                 }
 
-                // ── Step 2: Input Monitoring (manual — macOS requires it) ─────
-                if accessibilityRequested {
-                    PermissionStep(
-                        number: 2,
-                        icon: "keyboard.fill",
-                        iconColor: .orange,
-                        title: NSLocalizedString("Input Monitoring", comment: ""),
-                        description: NSLocalizedString(
-                            "macOS requires you to add DexDictate manually:",
-                            comment: "")
-                    ) {
-                        VStack(alignment: .leading, spacing: 8) {
-                            // Numbered sub-steps
-                            ForEach([
-                                NSLocalizedString("1. Open System Settings → Privacy & Security → Input Monitoring", comment: ""),
-                                NSLocalizedString("2. Click the  +  button at the bottom of the list", comment: ""),
-                                NSLocalizedString("3. Navigate to Applications → select DexDictate → click Open", comment: ""),
-                                NSLocalizedString("4. Make sure the toggle next to DexDictate is ON", comment: ""),
-                            ], id: \.self) { step in
-                                Text(step)
-                                    .font(.caption)
-                                    .foregroundStyle(.white.opacity(0.85))
-                            }
-
-                            Button(NSLocalizedString("Open Input Monitoring Settings", comment: "")) {
-                                permissionManager.openInputMonitoringSettings()
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .tint(.orange)
-                            .padding(.top, 4)
-                        }
-                    }
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
-
-                // ── Step 3: Microphone ────────────────────────────────────────
+                // ── Step 2: Microphone ────────────────────────────────────────
                 PermissionStep(
-                    number: accessibilityRequested ? 3 : 2,
+                    number: 2,
                     icon: "mic.fill",
                     iconColor: .red,
                     title: NSLocalizedString("Microphone", comment: ""),
@@ -199,9 +163,6 @@ struct PermissionsPage: View {
         .onChange(of: permissionManager.accessibilityGranted) { _, _ in
             syncPermissionSteps()
         }
-        .onChange(of: permissionManager.inputMonitoringGranted) { _, _ in
-            syncPermissionSteps()
-        }
         .onDisappear {
             permissionManager.stopMonitoring()
         }
@@ -225,12 +186,6 @@ private struct LivePermissionChecklist: View {
                 title: NSLocalizedString("Accessibility", comment: ""),
                 detail: NSLocalizedString("Needed for the event tap trust path and output control.", comment: ""),
                 isGranted: permissionManager.accessibilityGranted
-            )
-
-            PermissionStatusRow(
-                title: NSLocalizedString("Input Monitoring", comment: ""),
-                detail: NSLocalizedString("Needed to receive your global trigger events.", comment: ""),
-                isGranted: permissionManager.inputMonitoringGranted
             )
 
             PermissionStatusRow(
