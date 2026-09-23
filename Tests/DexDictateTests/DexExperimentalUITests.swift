@@ -57,18 +57,15 @@ final class PermissionDisplayStateTests: XCTestCase {
         XCTAssertTrue(s.allGranted)
     }
 
-    func testAllGrantedFalseWhenAnyMissing() {
+    func testAllGrantedRequiresMicrophoneAndAccessibilityOnly() {
         XCTAssertFalse(PermissionDisplayState(micGranted: false, accessibilityGranted: true,  inputMonitoringGranted: true).allGranted)
         XCTAssertFalse(PermissionDisplayState(micGranted: true,  accessibilityGranted: false, inputMonitoringGranted: true).allGranted)
-        XCTAssertFalse(PermissionDisplayState(micGranted: true,  accessibilityGranted: true,  inputMonitoringGranted: false).allGranted)
+        XCTAssertTrue(PermissionDisplayState(micGranted: true, accessibilityGranted: true, inputMonitoringGranted: false).allGranted)
     }
 
-    func testMissingLabelsListsOnlyMissingPermissions() {
+    func testMissingLabelsIgnoreLegacyInputMonitoringFlag() {
         let s = PermissionDisplayState(micGranted: false, accessibilityGranted: true, inputMonitoringGranted: false)
-        XCTAssertEqual(s.missingLabels.count, 2)
-        XCTAssertTrue(s.missingLabels.contains("Microphone"))
-        XCTAssertTrue(s.missingLabels.contains("Input Monitoring"))
-        XCTAssertFalse(s.missingLabels.contains("Accessibility"))
+        XCTAssertEqual(s.missingLabels, ["Microphone"])
     }
 
     func testMissingLabelsEmptyWhenAllGranted() {

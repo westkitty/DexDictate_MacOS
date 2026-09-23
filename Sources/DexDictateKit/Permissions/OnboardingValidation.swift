@@ -7,7 +7,6 @@ public enum TriggerValidationState: Equatable {
     case idle
     case ready
     case missingAccessibility
-    case missingInputMonitoring
     case eventTapUnavailable
 
     public var headline: String {
@@ -18,8 +17,6 @@ public enum TriggerValidationState: Equatable {
             return "Trigger capture is ready"
         case .missingAccessibility:
             return "Accessibility is still missing"
-        case .missingInputMonitoring:
-            return "Input Monitoring is still missing"
         case .eventTapUnavailable:
             return "Event tap could not be created"
         }
@@ -28,13 +25,11 @@ public enum TriggerValidationState: Equatable {
     public var detail: String {
         switch self {
         case .idle:
-            return "Run the trigger check after granting Accessibility and Input Monitoring."
+            return "Run the trigger check after granting Accessibility."
         case .ready:
             return "DexDictate was able to create the same kind of event tap it needs for global trigger capture."
         case .missingAccessibility:
             return "Grant Accessibility first. Without it, the event tap trust path will not initialize."
-        case .missingInputMonitoring:
-            return "Grant Input Monitoring so macOS will deliver the global trigger events DexDictate listens for."
         case .eventTapUnavailable:
             return "Permissions look close, but the event tap still failed. A restart or permission re-check may be needed."
         }
@@ -105,10 +100,6 @@ public enum TriggerValidationProbe {
     public static func runCheck() -> TriggerValidationState {
         guard AXIsProcessTrusted() else {
             return .missingAccessibility
-        }
-
-        guard CGPreflightListenEventAccess() else {
-            return .missingInputMonitoring
         }
 
         let mask = (1 << CGEventType.keyDown.rawValue) | (1 << CGEventType.keyUp.rawValue)

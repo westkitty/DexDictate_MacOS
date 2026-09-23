@@ -208,19 +208,19 @@ Required permissions:
 
 * Accessibility: required for the event tap and Accessibility-based focus/output logic.
 * Microphone: checked through `AVCaptureDevice.authorizationStatus(for: .audio)`.
-* Input Monitoring: checked through `CGPreflightListenEventAccess()`.
+* Global trigger authorization: checked through Accessibility trust and an actual modifying CGEvent tap capability probe.
 
 Source evidence:
 
 * `PermissionManager` publishes Accessibility, microphone, Input Monitoring, all-permissions, summary, and capability reports (`PermissionManager.swift:7-43`).
 * It polls permission state every 2 seconds while monitoring is active and rechecks when the app becomes active (`PermissionManager.swift:73-89`, `PermissionManager.swift:98-149`).
-* Permission checks use `AXIsProcessTrusted()`, `AVCaptureDevice.authorizationStatus(for: .audio)`, and `CGPreflightListenEventAccess()` (`PermissionManager.swift:151-173`).
-* Permission requests use `AXIsProcessTrustedWithOptions(prompt: true)`, `CGRequestListenEventAccess()`, and `AVCaptureDevice.requestAccess(for: .audio)` (`PermissionManager.swift:210-248`).
+* Permission checks use `AXIsProcessTrusted()` and `AVCaptureDevice.authorizationStatus(for: .audio)` (`PermissionManager.swift:151-173`).
+* Permission requests use `AXIsProcessTrustedWithOptions(prompt: true)` and `AVCaptureDevice.requestAccess(for: .audio)` (`PermissionManager.swift:210-248`).
 * `InputMonitor` creates a system-wide Quartz `CGEvent` tap for mouse and keyboard events and auto-retries after five seconds if creation fails (`InputMonitor.swift:3-14`, `InputMonitor.swift:52-63`, `InputMonitor.swift:134-152`).
 
 Entitlements and plist:
 
-* `Sources/DexDictate/DexDictate.entitlements` grants `com.apple.security.device.audio-input` and `com.apple.security.device.input-monitoring` (`DexDictate.entitlements:5-9`).
+* `Sources/DexDictate/DexDictate.entitlements` grants microphone audio-input capability only. Global trigger capture is governed by Accessibility TCC because DexDictate uses a modifying CGEvent tap.
 * `Sources/DexDictate/Info.plist` declares `CFBundleIdentifier` `com.westkitty.dexdictate.macos`, version `1.5.3`, `LSMinimumSystemVersion` `14.0`, `LSUIElement`, `NSMicrophoneUsageDescription`, and `NSAccessibilityUsageDescription` (`Info.plist:5-33`).
 * `templates/Info.plist.template` contains the packaged metadata template and usage descriptions (`Info.plist.template:5-17`).
 
@@ -287,7 +287,7 @@ Persistence:
 * Secure fields: The secure-field heuristic is token-based and depends on Accessibility attributes. Unknown or inaccessible secure fields can be classified as standard (`SecureInputContext.swift:142-197`, `SecureInputContext.swift:222-240`).
 * Audio route recovery: Recovery is sophisticated but fragile by nature: Core Audio listener plus `AVAudioEngineConfigurationChange`, duplicate-event guards, preferred-device retry, fallback to system default, and buffered-audio preservation (`AudioRecorderService.swift:124-178`, `AudioRecorderService.swift:363-417`, `AudioRecorderRecoverySupport.swift:108-245`).
 * Core Audio error `-10868`: Explicitly recognized as a likely device stall. The app can instruct manual `coreaudiod` reset, which is a workaround, not a guaranteed in-app repair (`AudioRecorderRecoverySupport.swift:52-60`, `AudioRecorderRecoverySupport.swift:64-105`).
-* Permissions: Permission state and capability are separate; TCC can report granted while capability probes fail. Input Monitoring and Accessibility are both relevant to trigger behavior (`PermissionManager.swift:36-43`, `PermissionManager.swift:151-173`).
+* Permissions: Permission state and capability are separate; TCC can report granted while capability probes fail. Accessibility is the governing TCC permission for the modifying global-trigger event tap (`PermissionManager.swift:36-43`, `PermissionManager.swift:151-173`).
 * Settings migration: Schema version is only `2`, so future settings changes need explicit migration or compatibility handling (`SettingsMigration.swift:13-36`).
 * Packaging/signing/plist: Build script can fall back to ad-hoc signing for local non-release builds only. Release packaging now requires the named signing identity. No active notarization path was found. Packaged `Info.plist` is generated from a template, while source plist is validated for bundle ID consistency only (`build.sh:122-131`, `build.sh:184-212`, `build.sh:231-265`).
 * Diagnostics: Logs are local and bounded. Raw Whisper text is redacted, but other log messages may still include app/device IDs, file paths, and system state. Sensitive values were not copied into this document (`Safety.swift:99-111`, `WhisperService.swift:368-370`).

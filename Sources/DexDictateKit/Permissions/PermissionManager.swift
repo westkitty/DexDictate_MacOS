@@ -4,7 +4,7 @@ import AVFoundation
 import AppKit
 import ApplicationServices
 
-/// Polls the three macOS TCC permissions required by DexDictate and drives auto-recovery
+/// Polls the macOS TCC permissions required by DexDictate and drives auto-recovery
 /// when accessibility access is granted while the app is already running.
 ///
 /// Permission states are published so SwiftUI views can react immediately. The manager
@@ -24,7 +24,12 @@ public class PermissionManager: ObservableObject {
     /// Whether the user has authorised microphone access via `AVCaptureDevice`.
     @Published public var microphoneGranted: Bool = false
 
-    /// Whether the app can listen for system events (Input Monitoring permission).
+    /// Legacy compatibility signal for older UI/state code.
+    ///
+    /// DexDictate uses a modifying CGEvent tap (`.defaultTap`), whose controlling TCC
+    /// authorization is Accessibility. A separate Input Monitoring grant is not required.
+    /// Keep this published property temporarily so older views do not break; it mirrors
+    /// Accessibility and must never trigger a separate TCC request.
     @Published public var inputMonitoringGranted: Bool = false
 
     /// `true` when all required permissions are granted; drives the banner in the UI.
@@ -33,7 +38,7 @@ public class PermissionManager: ObservableObject {
     /// Human-readable summary of missing permissions shown in `PermissionBannerView`.
     @Published public var permissionsSummary: String = NSLocalizedString("Checking permissions...", comment: "")
 
-    /// Live capability probe results, updated after every permission check.
+    /// Live capability probe results, refreshed on explicit checks and Accessibility changes.
     /// Nil until the first check runs. Separate from TCC grant state: a permission
     /// can be granted yet still fail a live capability probe (e.g., after signing changes).
     @Published public var capabilityReport: PermissionCapabilityReport?
@@ -67,11 +72,13 @@ public class PermissionManager: ObservableObject {
     }
 
     public var inputMonitoringSettingsURL: URL? {
-        PermissionSettingsLinker.url(for: .inputMonitoring)
+        // Legacy API compatibility: callers that still ask for this route should land on
+        // the permission that actually governs DexDictate's modifying event tap.
+        PermissionSettingsLinker.url(for: .accessibility)
     }
     
     public init() {
-        checkPermissions()
+        checkPermissions(forceCapabilityProbe: true)
         // Immediately re-check when the app comes to the foreground. This reduces the
         // felt permission-grant latency from up to 2 seconds (polling interval) to near-zero
         // in the common case where the user grants a permission in System Settings and
@@ -84,7 +91,7 @@ public class PermissionManager: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.checkPermissions()
+            self?.checkPermissions(forceCapabilityProbe: true)
         }
     }
 
@@ -128,11 +135,11 @@ public class PermissionManager: ObservableObject {
 
     /// Forces an immediate permission re-check, used when the UI opens.
     public func refreshPermissions() {
-        checkPermissions()
+        checkPermissions(forceCapabilityProbe: true)
     }
 
     private func ensureMonitoringTimer() {
-        checkPermissions()
+        checkPermissions(forceCapabilityProbe: true)
         updateMonitoringTimerState()
     }
 
@@ -149,7 +156,7 @@ public class PermissionManager: ObservableObject {
         }
     }
     
-    private func checkPermissions() {
+    private func checkPermissions(forceCapabilityProbe: Bool = false) {
         let oldAccessibility = accessibilityGranted
         
         // 1. Accessibility
@@ -159,19 +166,26 @@ public class PermissionManager: ObservableObject {
         let micStatus = AVCaptureDevice.authorizationStatus(for: .audio)
         microphoneGranted = (micStatus == .authorized)
         
-        // 3. Input Monitoring (Speech Recognition removed — Whisper is local-only)
-        // CGPreflightListenEventAccess is available on all supported targets (macOS 14+).
-        inputMonitoringGranted = CGPreflightListenEventAccess()
+        // DexDictate's global shortcut monitor uses a modifying CGEvent tap (`.defaultTap`).
+        // Accessibility is the relevant TCC permission for that path. Do not gate startup
+        // on CGPreflightListenEventAccess(): doing so asks users for an unnecessary second
+        // permission and can force repeated quit/reopen cycles on newer macOS releases.
+        inputMonitoringGranted = accessibilityGranted
         
-        // Overall status (Speech Recognition not required — Whisper is local-only)
-        allPermissionsGranted = accessibilityGranted && microphoneGranted && inputMonitoringGranted
+        // Overall status: only the permissions actually required by the product.
+        allPermissionsGranted = accessibilityGranted && microphoneGranted
         
         updateSummary()
 
-        capabilityReport = capabilityChecker.run(
-            accessibilityGranted: accessibilityGranted,
-            inputMonitoringGranted: inputMonitoringGranted
-        )
+        // The live event-tap probe creates a real active tap. Do not recreate that tap on
+        // every 2-second TCC poll. Probe on explicit refresh/foreground transitions, first
+        // initialization, or when Accessibility itself changes.
+        if forceCapabilityProbe || capabilityReport == nil || oldAccessibility != accessibilityGranted {
+            capabilityReport = capabilityChecker.run(
+                accessibilityGranted: accessibilityGranted,
+                inputMonitoringGranted: inputMonitoringGranted
+            )
+        }
 
         // Auto-recovery logic
         if !oldAccessibility && accessibilityGranted {
@@ -191,8 +205,7 @@ public class PermissionManager: ObservableObject {
         var missing: [String] = []
         if !accessibilityGranted { missing.append(NSLocalizedString("Accessibility", comment: "")) }
         if !microphoneGranted { missing.append(NSLocalizedString("Microphone", comment: "")) }
-        if !inputMonitoringGranted { missing.append(NSLocalizedString("Input Monitoring", comment: "")) }
-        
+
         permissionsSummary = NSLocalizedString("Missing: ", comment: "") + missing.joined(separator: ", ")
     }
     
@@ -204,16 +217,17 @@ public class PermissionManager: ObservableObject {
             print("🔄 Triggering engine retry...")
             #endif
             engine.retryInputMonitor()
-            self?.checkPermissions()
+            self?.checkPermissions(forceCapabilityProbe: true)
         }
     }
     
-    /// Proactively requests Accessibility and Input Monitoring (NOT Microphone).
+    /// Proactively requests Accessibility (NOT Microphone).
     ///
     /// Microphone is requested separately via `requestMicrophoneIfNeeded()` on first dictation.
+    /// DexDictate intentionally does not request standalone Input Monitoring: its modifying
+    /// event tap is governed by Accessibility.
     public func requestPermissions() {
         requestAccessibilityIfNeeded()
-        requestInputMonitoringIfNeeded()
     }
 
     public func requestAccessibilityIfNeeded() {
@@ -222,10 +236,9 @@ public class PermissionManager: ObservableObject {
         AXIsProcessTrustedWithOptions(options)
     }
 
+    /// Deprecated compatibility shim. The global trigger path is governed by Accessibility.
     public func requestInputMonitoringIfNeeded() {
-        if !inputMonitoringGranted {
-            CGRequestListenEventAccess()
-        }
+        requestAccessibilityIfNeeded()
     }
 
     public func openMicrophoneSettings() {
@@ -236,8 +249,9 @@ public class PermissionManager: ObservableObject {
         PermissionSettingsLinker.open(.accessibility)
     }
 
+    /// Deprecated compatibility shim. Open the permission that actually governs the event tap.
     public func openInputMonitoringSettings() {
-        PermissionSettingsLinker.open(.inputMonitoring)
+        PermissionSettingsLinker.open(.accessibility)
     }
 
     /// Requests microphone permission if not already granted.

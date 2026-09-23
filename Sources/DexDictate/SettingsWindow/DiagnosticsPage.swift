@@ -42,12 +42,6 @@ struct DiagnosticsPage: View {
                     fix: "Open Accessibility Settings",
                     action: permissionManager.openAccessibilitySettings
                 )
-                permissionRow(
-                    title: "Input Monitoring",
-                    granted: permissionManager.inputMonitoringGranted,
-                    fix: "Open Input Monitoring Settings",
-                    action: permissionManager.openInputMonitoringSettings
-                )
 
                 Divider()
 

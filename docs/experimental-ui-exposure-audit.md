@@ -105,7 +105,7 @@ Every experimental surface has an escape path to the Feature Hub:
 | Floating HUD toggle | QS → HUD / `showFloatingHUD` | ✅ Settings layer | N/A | ✅ Settings layer | ✅ command | ⚙ via LR header | ✅ QS | complete | |
 | Microphone permission status / recovery | QS + PermissionChips | ✅ DexPermissionChips + tap → System Settings | N/A | ⚙ via header | ⚙ | ⚙ | ✅ QS permissions section | complete | |
 | Accessibility permission status / recovery | QS + PermissionChips | ✅ DexPermissionChips | N/A | ⚙ via header | ⚙ | ⚙ | ✅ QS | complete | |
-| Input Monitoring permission status / recovery | QS + PermissionChips | ✅ DexPermissionChips | N/A | ⚙ via header | ⚙ | ⚙ | ✅ QS | complete | |
+| Global trigger Accessibility status / recovery | QS + PermissionChips | ✅ DexPermissionChips | N/A | ⚙ via header | ⚙ | ⚙ | ✅ QS | complete | Modifying event tap; no standalone Input Monitoring grant. |
 | Profanity filter | QS → Output | ⚙ All Features | ⚙hub | ⚙ via header | ⚙ | ⚙ | ✅ QS | complete | |
 | Vocabulary settings | QS → Vocabulary | ⚙ All Features | ⚙hub | ⚙ via header | ⚙ | ⚙ | ✅ QS | complete | |
 | Custom commands | QS → Commands | ⚙ All Features | ⚙hub | ⚙ via header | ⚙ | ⚙ | ✅ QS | complete | |

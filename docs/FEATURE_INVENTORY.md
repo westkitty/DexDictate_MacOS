@@ -77,19 +77,19 @@ Code:
 - `Sources/DexDictateKit/Permissions/PermissionManager.swift`
 - `Sources/DexDictate/PermissionBannerView.swift`
 
-### 3.2 Input Monitoring Permission
+### 3.2 Global Trigger Authorization
 
 Used for:
-- receiving global input events
-- keyboard and mouse trigger capture
+- receiving and consuming global keyboard and mouse trigger events through a modifying Core Graphics event tap
 
 How to use:
-- Grant it in System Settings when prompted.
-- On onboarding, follow the manual Input Monitoring steps.
+- Grant Accessibility in System Settings when prompted.
+- DexDictate validates the actual modifying event tap; standalone Input Monitoring is not a required grant.
 
 Code:
 - `Sources/DexDictateKit/Permissions/PermissionManager.swift`
 - `Sources/DexDictateKit/Permissions/InputMonitor.swift`
+- `Sources/DexDictateKit/Permissions/OnboardingValidation.swift`
 
 ### 3.3 Microphone Permission
 

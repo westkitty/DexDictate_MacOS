@@ -144,6 +144,32 @@ final class BuildMetadataConsistencyTests: XCTestCase {
         XCTAssertEqual(template["NSAppleEventsUsageDescription"] as? String, expected)
     }
 
+    func testGoldenGatePermissionContractAvoidsStandaloneInputMonitoring() throws {
+        let entitlements = try plistDictionary(atPath: "Sources/DexDictate/DexDictate.entitlements")
+        XCTAssertEqual(entitlements["com.apple.security.device.audio-input"] as? Bool, true)
+        XCTAssertNil(
+            entitlements["com.apple.security.device.input-monitoring"],
+            "DexDictate's modifying event tap is governed by Accessibility; do not re-add a standalone Input Monitoring entitlement."
+        )
+
+        let permissionManager = try String(
+            contentsOfFile: "Sources/DexDictateKit/Permissions/PermissionManager.swift",
+            encoding: .utf8
+        )
+        XCTAssertFalse(
+            permissionManager.contains("CGRequestListenEventAccess("),
+            "DexDictate must not request standalone Input Monitoring; this caused repeated reopen behavior on newer macOS."
+        )
+        XCTAssertTrue(
+            permissionManager.contains("inputMonitoringGranted = accessibilityGranted"),
+            "Legacy UI compatibility state must mirror Accessibility rather than becoming an independent gate."
+        )
+        XCTAssertTrue(
+            permissionManager.contains("if forceCapabilityProbe || capabilityReport == nil || oldAccessibility != accessibilityGranted"),
+            "The active event-tap capability probe must not run on every 2-second permission poll."
+        )
+    }
+
     private func plistDictionary(atPath path: String) throws -> [String: Any] {
         guard let dictionary = NSDictionary(contentsOfFile: path) as? [String: Any] else {
             XCTFail("Unable to load plist dictionary at path: \(path)")

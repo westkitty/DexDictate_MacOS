@@ -18,7 +18,7 @@
 - Settings are centralized in `Settings.shared` (singleton). Avoid new global singletons unless necessary; `PermissionManager.shared` exists specifically to prevent permission-state drift across onboarding and runtime UI.
 
 ## Integration points
-- macOS permissions: Accessibility + Input Monitoring are required for CGEventTap; Microphone is required for dictation.
+- macOS permissions: Accessibility governs DexDictate's modifying CGEventTap; Microphone is required for dictation. Do not add a standalone Input Monitoring requirement unless the event-tap architecture changes to a listen-only path.
 - External frameworks in use: `AVFoundation`, `AppKit`, `AudioToolbox`, `ApplicationServices`, and `SwiftWhisper` via Swift Package Manager (see [Package.swift](Package.swift)).
 
 ## Where to look first
@@ -36,7 +36,7 @@
 ## Example prompts for Copilot/agents
 - "Where is the app entrypoint and how is the menu bar wired?" — returns file links for quick navigation.
 - "List build and test commands for this repo and any pre-build steps." — returns concise commands and required scripts.
-- "Summarize permission-related flows and where Accessibility + Input Monitoring are handled." — points to `PermissionManager` and `InputMonitor`.
+- "Summarize permission-related flows and where Accessibility and Microphone are handled." — points to `PermissionManager`, `InputMonitor`, and the actual modifying-event-tap capability probe.
 - "Create a short checklist to verify a release build locally." — checklist should include model bootstrap, dev cert presence, native arch, and `./build.sh --release`.
 
 ## Suggested agent customizations

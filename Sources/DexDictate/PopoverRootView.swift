@@ -217,7 +217,7 @@ struct PopoverRootView: View {
             } else if !permissionManager.accessibilityGranted {
                 return (permissionManager.permissionsSummary, "Open Accessibility Settings", permissionManager.openAccessibilitySettings)
             } else {
-                return (permissionManager.permissionsSummary, "Open Input Monitoring Settings", permissionManager.openInputMonitoringSettings)
+                return (permissionManager.permissionsSummary, "Open Accessibility Settings", permissionManager.openAccessibilitySettings)
             }
         }()
 

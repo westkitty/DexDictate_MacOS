@@ -2241,3 +2241,30 @@ the updated runbook (particularly Section 4, the complete-access check). No comm
 ```
 
 Work through `docs/experimental-ui-manual-qa-runbook.md` Section 4 with all 5 surfaces.
+
+
+---
+
+## Entry 25 — Golden Gate Permission Model Correction (2026-09-22)
+
+### Superseding permission decision
+
+This entry supersedes earlier operational statements that treated standalone **Input Monitoring** as a required DexDictate permission.
+
+Current governing rule:
+
+- DexDictate's global shortcut path uses a modifying Core Graphics event tap (`.defaultTap`).
+- **Accessibility** grants the post/listen capability needed by that path.
+- **Microphone** remains separately required for audio capture.
+- DexDictate must not require, request, or gate startup on standalone Input Monitoring while this modifying event-tap architecture remains in use.
+- `com.apple.security.device.input-monitoring` is not a valid DexDictate entitlement and must not be added.
+
+### Golden Gate compatibility repair
+
+The compatibility branch `fix/golden-gate-permission-flow` removes the redundant Input Monitoring request/gate, removes the bogus entitlement, updates onboarding and permission UI to the two-permission contract, and validates the actual modifying event tap.
+
+A capability probe must not create a throwaway active event tap on every 2-second permission poll. The real event-tap probe is limited to explicit refresh/foreground checks, first initialization, or Accessibility-state transitions.
+
+### Verification state
+
+Source architecture is corrected and regression tests have been added. Golden Gate runtime verification still requires a real macOS Golden Gate run; no source-level claim may substitute for that runtime proof.

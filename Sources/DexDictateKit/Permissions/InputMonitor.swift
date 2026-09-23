@@ -9,8 +9,9 @@ import Cocoa
 /// event tap fails (e.g. accessibility is not yet authorised), the monitor schedules a 5-second
 /// automatic retry rather than entering an error state permanently.
 ///
-/// - Important: Requires the `com.apple.security.device.input-monitoring` entitlement and
-///   user approval under **System Settings › Privacy & Security › Accessibility**.
+/// - Important: The modifying event tap is governed by user approval under
+///   **System Settings › Privacy & Security › Accessibility**. DexDictate does not require
+///   a separate Input Monitoring grant for this path.
 final class InputMonitor {
     /// HID key code for "Z" — see the "Undo Last Dictation" shortcut check in `start()`.
     static let undoDictationKeyCode: Int64 = 0x06

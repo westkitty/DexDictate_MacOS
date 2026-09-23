@@ -45,6 +45,7 @@ public enum EngineDisplayState: Equatable {
 public struct PermissionDisplayState: Equatable {
     public let micGranted: Bool
     public let accessibilityGranted: Bool
+    /// Legacy compatibility signal. The current global-trigger path is governed by Accessibility.
     public let inputMonitoringGranted: Bool
 
     public init(micGranted: Bool, accessibilityGranted: Bool, inputMonitoringGranted: Bool) {
@@ -54,14 +55,13 @@ public struct PermissionDisplayState: Equatable {
     }
 
     public var allGranted: Bool {
-        micGranted && accessibilityGranted && inputMonitoringGranted
+        micGranted && accessibilityGranted
     }
 
     public var missingLabels: [String] {
         var missing: [String] = []
-        if !micGranted              { missing.append("Microphone") }
-        if !accessibilityGranted    { missing.append("Accessibility") }
-        if !inputMonitoringGranted  { missing.append("Input Monitoring") }
+        if !micGranted { missing.append("Microphone") }
+        if !accessibilityGranted { missing.append("Accessibility") }
         return missing
     }
 }

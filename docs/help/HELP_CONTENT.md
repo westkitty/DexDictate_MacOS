@@ -71,13 +71,12 @@ Press your configured trigger to start speaking. DexDictate transcribes what you
 
 **First launch**
 
-When you first open DexDictate, the onboarding flow walks you through three required steps:
+When you first open DexDictate, the onboarding flow walks you through two required permissions:
 
-1. **Accessibility permission** — allows DexDictate to detect your trigger key/button
-2. **Input Monitoring permission** — allows DexDictate to listen for your trigger globally
-3. **Microphone permission** — macOS will ask when you first start dictating
+1. **Accessibility permission** — allows DexDictate to detect and consume the configured global trigger
+2. **Microphone permission** — macOS will ask when you first start dictating
 
-> **Screenshot:** Onboarding permissions page showing three permission steps with status badges
+> **Screenshot:** Onboarding permissions page showing the required permission steps with status badges
 > → `help-onboarding-permissions.png`
 
 **After onboarding**
@@ -99,7 +98,7 @@ Tap the version string in the footer five times to re-open the onboarding screen
 
 ### 3. Permissions
 
-DexDictate requires three macOS permissions. All three are standard and can be revoked at any time in System Settings → Privacy & Security.
+DexDictate requires two macOS permissions: Microphone and Accessibility. Both are standard and can be revoked at any time in System Settings → Privacy & Security.
 
 ---
 
@@ -114,10 +113,9 @@ Required to detect your trigger key or button press system-wide, even when DexDi
 
 **Input Monitoring**
 
-Required to read keyboard and mouse button events globally.
+DexDictate does **not** require a separate Input Monitoring grant for its current global-trigger path. The app uses a modifying Core Graphics event tap, and Accessibility is the controlling macOS permission for that behavior.
 
-- Where to grant: System Settings → Privacy & Security → Input Monitoring → DexDictate
-- If missing: Same symptom as missing Accessibility — trigger doesn't fire.
+If an older DexDictate build or stale setup guide told you to enable Input Monitoring, that instruction is superseded by this permission model.
 
 ---
 
@@ -684,7 +682,7 @@ Open the Shortcuts app → search "DexDictate" in the app actions list → add t
 
 **Trigger not firing**
 
-1. Check permissions — both Accessibility and Input Monitoring must be granted (see **Permissions**)
+1. Check permissions — Accessibility must be granted (see **Permissions**)
 2. Fully quit DexDictate and relaunch it
 3. Confirm your shortcut is configured correctly in Quick Settings → Input
 

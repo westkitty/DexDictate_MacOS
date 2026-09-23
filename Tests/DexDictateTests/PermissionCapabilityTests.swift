@@ -23,6 +23,7 @@ final class PermissionCapabilityTests: XCTestCase {
         )
         let report = checker.run(accessibilityGranted: false, inputMonitoringGranted: true)
         XCTAssertEqual(report.accessibilityElementRead, .skipped)
+        XCTAssertEqual(report.eventTapPreflight, .skipped)
     }
 
     func testAccessibilityReadFailsWhenGrantedButCheckFails() {
@@ -48,13 +49,13 @@ final class PermissionCapabilityTests: XCTestCase {
         XCTAssertEqual(report.eventTapPreflight, .passed)
     }
 
-    func testEventTapSkippedWhenNotGranted() {
+    func testEventTapUsesAccessibilityRatherThanLegacyInputMonitoringFlag() {
         let checker = PermissionCapabilityChecker(
             checkAXFocusedElementRead: { true },
-            checkEventTapPreflight: { XCTFail("Should not run check when not granted"); return false }
+            checkEventTapPreflight: { true }
         )
         let report = checker.run(accessibilityGranted: true, inputMonitoringGranted: false)
-        XCTAssertEqual(report.eventTapPreflight, .skipped)
+        XCTAssertEqual(report.eventTapPreflight, .passed)
     }
 
     func testEventTapFailsWhenGrantedButCheckFails() {

@@ -90,7 +90,7 @@ DexDictate_MacOS/
 | `SurfaceTokens.swift` | Design tokens (colors, spacing) |
 | `DictationIntents.swift` | AppIntents: StartDictation, StopDictation, ToggleDictation |
 | `AppIcon.icns` | App icon (2.2 MB) |
-| `DexDictate.entitlements` | Entitlements: audio-input, input-monitoring |
+| `DexDictate.entitlements` | Entitlements: audio-input only; global trigger authorization is Accessibility TCC |
 | `Info.plist` | App plist (LSMinimumSystemVersion: 13.0 — see discrepancy note) |
 
 ---
@@ -144,7 +144,7 @@ DexDictate_MacOS/
 
 | File | Purpose |
 |---|---|
-| `PermissionManager.swift` | Poll mic/accessibility/input-monitoring; 2-second timer |
+| `PermissionManager.swift` | Poll Microphone/Accessibility; publish compatibility state; 2-second timer |
 | `InputMonitor.swift` | CGEvent tap for global hotkey capture; exponential-backoff retry |
 | `OnboardingValidation.swift` | Pre-flight permission check before first dictation |
 

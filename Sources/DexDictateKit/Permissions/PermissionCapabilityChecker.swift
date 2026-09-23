@@ -1,15 +1,11 @@
 import ApplicationServices
-import CoreGraphics
 import Foundation
 
 /// Separates TCC permission state from live capability.
 ///
-/// `PermissionManager` polls TCC state (`AXIsProcessTrusted`, `authorizationStatus`, etc.).
-/// This checker performs actual capability probes so the caller can distinguish
-/// "permission granted" from "permission granted AND working."
-///
-/// Checks are injected as closures so they can be replaced in unit tests without
-/// requiring real system UI or event taps.
+/// DexDictate's global trigger uses a modifying CGEvent tap (`.defaultTap`). That path is
+/// governed by Accessibility, not standalone Input Monitoring. The checker therefore validates
+/// both Accessibility element access and actual modifying-event-tap creation under one grant.
 public struct PermissionCapabilityChecker {
     public enum Status: Equatable {
         case passed
@@ -21,7 +17,6 @@ public struct PermissionCapabilityChecker {
         public let accessibilityElementRead: Status
         public let eventTapPreflight: Status
 
-        /// True when every non-skipped check passed.
         public var allPassed: Bool {
             [accessibilityElementRead, eventTapPreflight]
                 .allSatisfy { $0 == .passed || $0 == .skipped }
@@ -31,31 +26,24 @@ public struct PermissionCapabilityChecker {
     var checkAXFocusedElementRead: () -> Bool
     var checkEventTapPreflight: () -> Bool
 
-    /// Runs capability probes based on current permission grants.
-    /// Skips a probe if the corresponding TCC permission is not yet granted.
-    public func run(accessibilityGranted: Bool, inputMonitoringGranted: Bool) -> Report {
-        let axStatus: Status
-        if accessibilityGranted {
-            axStatus = checkAXFocusedElementRead()
-                ? .passed
-                : .failed(reason: "Accessibility API returned an error reading the focused element.")
-        } else {
-            axStatus = .skipped
+    /// The second parameter is retained as a source-compatibility shim for existing call sites.
+    /// It is intentionally ignored; Accessibility governs both production capability probes.
+    public func run(accessibilityGranted: Bool, inputMonitoringGranted _: Bool) -> Report {
+        guard accessibilityGranted else {
+            return Report(accessibilityElementRead: .skipped, eventTapPreflight: .skipped)
         }
 
-        let tapStatus: Status
-        if inputMonitoringGranted {
-            tapStatus = checkEventTapPreflight()
-                ? .passed
-                : .failed(reason: "CGPreflightListenEventAccess() returned false despite permission appearing granted.")
-        } else {
-            tapStatus = .skipped
-        }
+        let axStatus: Status = checkAXFocusedElementRead()
+            ? .passed
+            : .failed(reason: "Accessibility API returned an error reading the focused element.")
+
+        let tapStatus: Status = checkEventTapPreflight()
+            ? .passed
+            : .failed(reason: "Modifying CGEvent tap could not be created despite Accessibility trust.")
 
         return Report(accessibilityElementRead: axStatus, eventTapPreflight: tapStatus)
     }
 
-    /// Production checker using real system calls.
     public static let system = PermissionCapabilityChecker(
         checkAXFocusedElementRead: {
             let systemWide = AXUIElementCreateSystemWide()
@@ -63,14 +51,12 @@ public struct PermissionCapabilityChecker {
             let result = AXUIElementCopyAttributeValue(
                 systemWide, kAXFocusedUIElementAttribute as CFString, &value
             )
-            // .noValue means AX is working but nothing is focused — that's fine.
             return result == .success || result == .noValue
         },
         checkEventTapPreflight: {
-            CGPreflightListenEventAccess()
+            TriggerValidationProbe.runCheck().isSuccess
         }
     )
 }
 
-/// Convenience typealiases for call sites.
 public typealias PermissionCapabilityReport = PermissionCapabilityChecker.Report

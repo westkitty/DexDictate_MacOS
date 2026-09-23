@@ -153,7 +153,7 @@ Work through `docs/09_QA/DICTATION_FLOW_TESTS.md` and `FAILURE_STATE_TESTS.md` w
 - [ ] Secure field: badge shows `copiedOnlySensitiveContext` reason text
 - [ ] Mic permission missing: chip shows "Microphone" in red, tap opens System Settings
 - [ ] Accessibility permission missing: chip shown, fix action visible
-- [ ] Input Monitoring missing: chip shown, fix action visible
+- [ ] Global trigger event tap unavailable despite Accessibility: clear diagnostic shown; do not request standalone Input Monitoring
 - [ ] Model missing/loading: `initializing` or `error` state shown in hero
 - [ ] Reduced Motion: no pulsing animations, transitions use `.opacity` only
 - [ ] Safe Mode: output chips show safe mode indicator
