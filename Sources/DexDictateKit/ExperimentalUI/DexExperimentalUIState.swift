@@ -60,7 +60,7 @@ public struct PermissionDisplayState: Equatable {
 
     public var missingLabels: [String] {
         var missing: [String] = []
-        if !micGranted           { missing.append("Microphone") }
+        if !micGranted { missing.append("Microphone") }
         if !accessibilityGranted { missing.append("Accessibility") }
         return missing
     }

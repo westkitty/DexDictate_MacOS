@@ -73,9 +73,9 @@ final class PermissionSettingsLinkerTests: XCTestCase {
     }
 
     @MainActor
-    func testPermissionManagerInputMonitoringURLMatchesLinker() {
+    func testPermissionManagerInputMonitoringURLRedirectsToAccessibility() {
         let manager = PermissionManager()
         XCTAssertEqual(manager.inputMonitoringSettingsURL,
-                       PermissionSettingsLinker.url(for: .inputMonitoring))
+                       PermissionSettingsLinker.url(for: .accessibility))
     }
 }
