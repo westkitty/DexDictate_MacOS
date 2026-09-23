@@ -7,12 +7,12 @@
   "project_name": "DexDictate macOS",
   "project_root": ".",
   "artifact_path": null,
-  "state_revision": 4,
+  "state_revision": 5,
   "last_updated": "2026-09-22",
   "current_baseline": {
     "identity": "fix/golden-gate-permission-flow / PR #7",
-    "state": "audited-awaiting-ci-runtime-codex",
-    "last_verified": null
+    "state": "source-validated-awaiting-ci-and-golden-gate-runtime",
+    "last_verified": "2026-09-22"
   },
   "scope_boundaries": [
     "Golden Gate compatibility repair for macOS permission and global-trigger startup behavior"
@@ -36,7 +36,7 @@
 - **Baseline state:** current-baseline.
 - **Release evidence:** README identifies v1.8.0 as latest packaged release.
 - **Runtime on Golden Gate:** known-broken from user report: repeated reopen request during permission setup.
-- **Local execution environment:** MacBook-Air.local remote endpoint is offline as of 2026-09-22, so runtime validation is unavailable.
+- **Local execution environment:** MacBook Air on macOS 26.6.2 with Xcode 26.3. This is not a macOS 27 Golden Gate runtime, so Golden Gate validation is unavailable here.
 
 ## 3. Artifact Contract
 Produce a bounded source repair that removes the unnecessary standalone Input Monitoring requirement for DexDictate's modifying `.defaultTap` event tap, preserves required Accessibility and Microphone flows, removes invalid entitlement declarations, and keeps existing dictation/trigger behavior intact.
@@ -49,7 +49,12 @@ Produce a bounded source repair that removes the unnecessary standalone Input Mo
 - **INV-005:** Existing macOS 14+ support must remain intact.
 
 ## 5. Verified Working Behavior
-- None promoted by this compatibility task yet.
+- **VRF-001:** All changed Swift files parse with the installed Swift 6.2.4 toolchain.
+- **VRF-002:** Focused permission, onboarding, metadata, linker, and experimental-UI suites pass: 32 tests, 0 failures.
+- **VRF-003:** `swift build` and `swift build -c release` pass on macOS 26.6.2 / Xcode 26.3.
+- **VRF-004:** Full `swift test` passes: 708 tests executed, 11 skipped, 0 failures.
+- **VRF-005:** Codex CLI 0.147.0 found no actionable correctness defects in the complete branch diff and independently reproduced the full green test result.
+- **VRF-006:** The legacy `inputMonitoringSettingsURL` compatibility API redirects to Accessibility, covered by a behavioral unit test.
 
 ## 6. Known Not Working
 - **BRK-001:** On macOS 27 Golden Gate, the current v1.8 permission flow can enter a repeated reopen loop while configuring permissions.
@@ -57,20 +62,18 @@ Produce a bounded source repair that removes the unnecessary standalone Input Mo
 ## 7. Implemented but Unverified
 - **UNV-001:** Golden Gate permission repair implemented on `fix/golden-gate-permission-flow`: standalone Input Monitoring request/gate removed; modifying event-tap behavior preserved under Accessibility; microphone flow preserved.
 - **UNV-002:** Active onboarding, banners, diagnostics, state-first UI, help, entitlements, and regression tests were updated to the two-permission contract.
-- **UNV-003:** Draft PR #7 contains the repair. Source review and two-pass bug sweep are complete; latest-head macOS CI is queued.
+- **UNV-003:** Draft PR #7 contains the repair. Run 35796159043 failed one branch-introduced stale URL expectation, fixed by `fe9fa069125159d774e14c11fe3eb7bc0264b64d`; latest-head CI must be rerun after push.
 - **UNV-004:** Capability probing is throttled so the real active event-tap check does not run on every 2-second TCC poll.
 - **UNV-005:** README now explicitly warns that packaged v1.8.0 predates the Golden Gate permission correction.
 
 ## 8. Unknown or Evidence-Stale State
 - **UNK-001:** Exact Golden Gate runtime result after repair is unverified until a Golden Gate Mac can run the built app.
 - **UNK-002:** Signing/notarization behavior of a future packaged hotfix is unverified until packaging is executed.
-- **UNK-003:** Codex verification is unrun because the authorized MacBook endpoint hosting the Codex CLI is offline.
 - **UNK-004:** Apple has an open Golden Gate/Sequoia/Tahoe report for system-wide input hangs when Accessibility is revoked while an active `.defaultTap` exists; applicability to DexDictate after this repair remains unverified.
 
 ## 9. Pending Work
-- **PND-002:** Complete latest-head repository CI/build/tests through PR #7 (run #250 queued).
+- **PND-002:** Push the final bounded commits and complete latest-head repository CI through PR #7.
 - **PND-003:** Run final packaged app on Golden Gate and verify first-launch permission journey.
-- **PND-004:** Run the Mac-hosted Codex verification pass when the authorized MacBook endpoint is online.
 
 ## 10. Active Decisions, Defaults, and Prohibitions
 - **DEC-001:** Do not require or proactively request standalone Input Monitoring for DexDictate's modifying event tap.
@@ -81,9 +84,13 @@ Produce a bounded source repair that removes the unnecessary standalone Input Mo
 | ID | Claim or behavior | State | Evidence | Validation method | Artifact/revision | Last checked | Recheck trigger |
 |---|---|---|---|---|---|---|---|
 | BRK-001 | Golden Gate reopen loop exists | known-broken | user-observed runtime | reproduce on Golden Gate | v1.8.0 | 2026-09-22 | repaired build |
-| INV-001 | modifying event tap remains | current-baseline | `InputMonitor.swift` uses `.defaultTap` | source + tests | main | 2026-09-22 | event-tap change |
-| UNK-001 | repaired app works on Golden Gate | unknown | no online Golden Gate runner | manual runtime smoke test | fix/golden-gate-permission-flow | 2026-09-22 | repaired build available |
-| UNV-001 | standalone Input Monitoring removed from required runtime path | implemented-unverified | branch diff / PR #7 | source review + CI pending | fix/golden-gate-permission-flow | 2026-09-22 | permission code change |
+| INV-001 | modifying event tap remains | source-verified | `InputMonitor.swift` and trigger probe use `.defaultTap` | source + focused/full tests | `fe9fa069` | 2026-09-22 | event-tap change |
+| UNK-001 | repaired app works on Golden Gate | NOT TESTED | no Golden Gate machine available | installed-app manual smoke test | `fix/golden-gate-permission-flow` | 2026-09-22 | Golden Gate machine available |
+| UNV-001 | standalone Input Monitoring removed from required runtime path | source-verified | branch diff, entitlement audit, focused/full tests, Codex review | local validation + latest-head CI pending | `fe9fa069` | 2026-09-22 | permission code change |
+| VRF-004 | full test suite | passed | 708 executed, 11 skipped, 0 failures | `swift test` | `fe9fa069` | 2026-09-22 | source change |
+| CI-001 | PR #7 run 35796159043 build/test | branch regression fixed locally | one stale legacy settings-URL expectation failed; corrected in `fe9fa069` | GitHub Actions plus local focused/full rerun | `e939e152` / `fe9fa069` | 2026-09-22 | final push |
+| CI-002 | strict SwiftLint | pre-existing base debt | Golden Gate: 166 violations; exact base `7cb7392`: 172; repository gate self-test passes | pinned SwiftLint 0.65.0 branch/base comparison | `fe9fa069` | 2026-09-22 | lint policy/baseline repair |
+| VER-001 | VerificationRunner | pre-existing policy failure | 61/62 pass; unchanged runner reports stale online-networking policy; Golden Gate adds no networking source | isolated `swift run VerificationRunner` + diff audit | `fe9fa069` | 2026-09-22 | verifier policy repair lands on main |
 
 ## 12. Current Change Scope and Impact Radius
 - **Allowed to change:** permission manager/checker, onboarding validation/UI, permission banners/diagnostics, entitlement declaration, tests, current docs/state.
@@ -124,3 +131,15 @@ Produce a bounded source repair that removes the unnecessary standalone Input Mo
 - **External verification:** Apple DTS guidance confirms Accessibility already provides listen/post capability and that the alleged input-monitoring entitlement does not exist.
 - **Automated validation:** GitHub Actions `DexDictate CI` run #250 is queued on the current PR head.
 - **Blocked validation:** Golden Gate installed-app test and Codex CLI verification remain blocked by the offline MacBook endpoint.
+
+
+### Revision 5 — 2026-09-22
+
+- **Validated source head:** `fe9fa069125159d774e14c11fe3eb7bc0264b64d` on `fix/golden-gate-permission-flow`; the final operational-state commit follows this validated repair commit.
+- **Confirmed branch defect fixed:** PR run 35796159043 exposed a stale test that expected the legacy Input Monitoring settings URL. The compatibility API intentionally redirects to Accessibility; the test now asserts that contract. A changed-line SwiftLint fingerprint was also normalized.
+- **Build/test evidence:** changed-file parse passed; focused suites passed 32/32; debug and release builds passed; full suite passed 708 executed, 11 skipped, 0 failures.
+- **CI classification:** the prior build/test failure was introduced by this branch and is fixed locally. Strict SwiftLint remains a pre-existing base failure: Golden Gate reports 166 violations versus 172 on exact base `7cb739208ea11af6e20beccd9907affbe4500444`; the repository's SwiftLint gate self-test passes.
+- **VerificationRunner classification:** 61/62 checks pass. The unchanged runner's online-networking policy is stale on the exact base and outside Golden Gate scope; no Golden Gate source diff adds networking APIs.
+- **Adversarial review:** Codex CLI 0.147.0 reported no actionable correctness defects in the changed permission flow and independently reran all 708 tests successfully.
+- **README/release status:** README correctly states that v1.8.0 predates this correction. No packaged replacement was produced.
+- **Golden Gate runtime:** **NOT TESTED**. The available machine runs macOS 26.6.2, not macOS 27 Golden Gate. No runtime compatibility claim is made.
