@@ -11,7 +11,7 @@
   "last_updated": "2026-09-22",
   "current_baseline": {
     "identity": "fix/golden-gate-permission-flow / PR #7",
-    "state": "source-validated-awaiting-ci-and-golden-gate-runtime",
+    "state": "source-and-build-validated-awaiting-golden-gate-runtime-with-pre-existing-lint-debt",
     "last_verified": "2026-09-22"
   },
   "scope_boundaries": [
@@ -62,7 +62,7 @@ Produce a bounded source repair that removes the unnecessary standalone Input Mo
 ## 7. Implemented but Unverified
 - **UNV-001:** Golden Gate permission repair implemented on `fix/golden-gate-permission-flow`: standalone Input Monitoring request/gate removed; modifying event-tap behavior preserved under Accessibility; microphone flow preserved.
 - **UNV-002:** Active onboarding, banners, diagnostics, state-first UI, help, entitlements, and regression tests were updated to the two-permission contract.
-- **UNV-003:** Draft PR #7 contains the repair. Run 35796159043 failed one branch-introduced stale URL expectation, fixed by `fe9fa069125159d774e14c11fe3eb7bc0264b64d`; latest-head CI must be rerun after push.
+- **UNV-003:** Draft PR #7 contains the repair. Exact-head run 35801408725 passed the complete `build-and-test` job; its lint job remains failed on the pre-existing repository-wide baseline debt.
 - **UNV-004:** Capability probing is throttled so the real active event-tap check does not run on every 2-second TCC poll.
 - **UNV-005:** README now explicitly warns that packaged v1.8.0 predates the Golden Gate permission correction.
 
@@ -72,7 +72,7 @@ Produce a bounded source repair that removes the unnecessary standalone Input Mo
 - **UNK-004:** Apple has an open Golden Gate/Sequoia/Tahoe report for system-wide input hangs when Accessibility is revoked while an active `.defaultTap` exists; applicability to DexDictate after this repair remains unverified.
 
 ## 9. Pending Work
-- **PND-002:** Push the final bounded commits and complete latest-head repository CI through PR #7.
+- **PND-002:** Repair the repository-wide SwiftLint baseline separately on `main`; it is pre-existing debt and not part of this Golden Gate compatibility diff.
 - **PND-003:** Run final packaged app on Golden Gate and verify first-launch permission journey.
 
 ## 10. Active Decisions, Defaults, and Prohibitions
@@ -88,7 +88,7 @@ Produce a bounded source repair that removes the unnecessary standalone Input Mo
 | UNK-001 | repaired app works on Golden Gate | NOT TESTED | no Golden Gate machine available | installed-app manual smoke test | `fix/golden-gate-permission-flow` | 2026-09-22 | Golden Gate machine available |
 | UNV-001 | standalone Input Monitoring removed from required runtime path | source-verified | branch diff, entitlement audit, focused/full tests, Codex review | local validation + latest-head CI pending | `fe9fa069` | 2026-09-22 | permission code change |
 | VRF-004 | full test suite | passed | 708 executed, 11 skipped, 0 failures | `swift test` | `fe9fa069` | 2026-09-22 | source change |
-| CI-001 | PR #7 run 35796159043 build/test | branch regression fixed locally | one stale legacy settings-URL expectation failed; corrected in `fe9fa069` | GitHub Actions plus local focused/full rerun | `e939e152` / `fe9fa069` | 2026-09-22 | final push |
+| CI-001 | PR #7 run 35801408725 build/test | passed | checkout, model cache/fetch, package resolution, debug build, release build, and full tests all passed | GitHub Actions | `f7fb4778` | 2026-09-22 | source change |
 | CI-002 | strict SwiftLint | pre-existing base debt | Golden Gate: 166 violations; exact base `7cb7392`: 172; repository gate self-test passes | pinned SwiftLint 0.65.0 branch/base comparison | `fe9fa069` | 2026-09-22 | lint policy/baseline repair |
 | VER-001 | VerificationRunner | pre-existing policy failure | 61/62 pass; unchanged runner reports stale online-networking policy; Golden Gate adds no networking source | isolated `swift run VerificationRunner` + diff audit | `fe9fa069` | 2026-09-22 | verifier policy repair lands on main |
 
@@ -143,3 +143,4 @@ Produce a bounded source repair that removes the unnecessary standalone Input Mo
 - **Adversarial review:** Codex CLI 0.147.0 reported no actionable correctness defects in the changed permission flow and independently reran all 708 tests successfully.
 - **README/release status:** README correctly states that v1.8.0 predates this correction. No packaged replacement was produced.
 - **Golden Gate runtime:** **NOT TESTED**. The available machine runs macOS 26.6.2, not macOS 27 Golden Gate. No runtime compatibility claim is made.
+- **Exact-head CI:** PR run 35801408725 passed `build-and-test` at `f7fb4778a48cd33ef04d8593bfaccb3c601797c1`; lint remained failed on the separately classified pre-existing baseline debt.
