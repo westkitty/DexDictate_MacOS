@@ -7,11 +7,11 @@
   "project_name": "DexDictate macOS",
   "project_root": ".",
   "artifact_path": null,
-  "state_revision": 5,
+  "state_revision": 6,
   "last_updated": "2026-09-22",
   "current_baseline": {
     "identity": "fix/golden-gate-permission-flow / PR #7",
-    "state": "source-and-build-validated-awaiting-golden-gate-runtime-with-pre-existing-lint-debt",
+    "state": "source-build-test-codex-validated-awaiting-golden-gate-runtime-with-pre-existing-lint-debt",
     "last_verified": "2026-09-22"
   },
   "scope_boundaries": [
@@ -62,7 +62,7 @@ Produce a bounded source repair that removes the unnecessary standalone Input Mo
 ## 7. Implemented but Unverified
 - **UNV-001:** Golden Gate permission repair implemented on `fix/golden-gate-permission-flow`: standalone Input Monitoring request/gate removed; modifying event-tap behavior preserved under Accessibility; microphone flow preserved.
 - **UNV-002:** Active onboarding, banners, diagnostics, state-first UI, help, entitlements, and regression tests were updated to the two-permission contract.
-- **UNV-003:** Draft PR #7 contains the repair. Exact-head run 35801408725 passed the complete `build-and-test` job; its lint job remains failed on the pre-existing repository-wide baseline debt.
+- **UNV-003:** Draft PR #7 contains the repair. Exact-head run 35802308621 passed the complete `build-and-test` job at `ab4b758c9735a3838ed50f6e45fa914d0d0c7374`; its lint job remains failed solely on the separately classified pre-existing repository-wide baseline debt.
 - **UNV-004:** Capability probing is throttled so the real active event-tap check does not run on every 2-second TCC poll.
 - **UNV-005:** README now explicitly warns that packaged v1.8.0 predates the Golden Gate permission correction.
 
@@ -86,9 +86,9 @@ Produce a bounded source repair that removes the unnecessary standalone Input Mo
 | BRK-001 | Golden Gate reopen loop exists | known-broken | user-observed runtime | reproduce on Golden Gate | v1.8.0 | 2026-09-22 | repaired build |
 | INV-001 | modifying event tap remains | source-verified | `InputMonitor.swift` and trigger probe use `.defaultTap` | source + focused/full tests | `fe9fa069` | 2026-09-22 | event-tap change |
 | UNK-001 | repaired app works on Golden Gate | NOT TESTED | no Golden Gate machine available | installed-app manual smoke test | `fix/golden-gate-permission-flow` | 2026-09-22 | Golden Gate machine available |
-| UNV-001 | standalone Input Monitoring removed from required runtime path | source-verified | branch diff, entitlement audit, focused/full tests, Codex review | local validation + latest-head CI pending | `fe9fa069` | 2026-09-22 | permission code change |
+| UNV-001 | standalone Input Monitoring removed from required runtime path | source-verified | branch diff, entitlement audit, focused/full tests, Codex review | local validation + exact-head CI passed | `ab4b758c` | 2026-09-22 | permission code change |
 | VRF-004 | full test suite | passed | 708 executed, 11 skipped, 0 failures | `swift test` | `fe9fa069` | 2026-09-22 | source change |
-| CI-001 | PR #7 run 35801408725 build/test | passed | checkout, model cache/fetch, package resolution, debug build, release build, and full tests all passed | GitHub Actions | `f7fb4778` | 2026-09-22 | source change |
+| CI-001 | PR #7 run 35802308621 build/test | passed | checkout, model cache/fetch, package resolution, debug build, release build, full tests, and coverage all passed | GitHub Actions | `ab4b758c` | 2026-09-22 | source change |
 | CI-002 | strict SwiftLint | pre-existing base debt | Golden Gate: 166 violations; exact base `7cb7392`: 172; repository gate self-test passes | pinned SwiftLint 0.65.0 branch/base comparison | `fe9fa069` | 2026-09-22 | lint policy/baseline repair |
 | VER-001 | VerificationRunner | pre-existing policy failure | 61/62 pass; unchanged runner reports stale online-networking policy; Golden Gate adds no networking source | isolated `swift run VerificationRunner` + diff audit | `fe9fa069` | 2026-09-22 | verifier policy repair lands on main |
 
@@ -144,3 +144,12 @@ Produce a bounded source repair that removes the unnecessary standalone Input Mo
 - **README/release status:** README correctly states that v1.8.0 predates this correction. No packaged replacement was produced.
 - **Golden Gate runtime:** **NOT TESTED**. The available machine runs macOS 26.6.2, not macOS 27 Golden Gate. No runtime compatibility claim is made.
 - **Exact-head CI:** PR run 35801408725 passed `build-and-test` at `f7fb4778a48cd33ef04d8593bfaccb3c601797c1`; lint remained failed on the separately classified pre-existing baseline debt.
+
+
+### Revision 6 — 2026-09-22
+
+- **Validated implementation head:** `ab4b758c9735a3838ed50f6e45fa914d0d0c7374` on `fix/golden-gate-permission-flow`; this operational-state closure commit follows that validated implementation head.
+- **Exact-head CI:** GitHub Actions run `35802308621` completed. `build-and-test` passed checkout, package resolution, debug build, release build, full tests with coverage, and cleanup. The separate lint job failed only on the previously classified repository-wide SwiftLint baseline debt.
+- **Codex verification:** Codex CLI 0.147.0 reported no actionable correctness defects in the Golden Gate permission-flow diff and independently reproduced the green test result.
+- **Release status:** Source/build/test verification is complete for the available macOS 26.6.2 environment. No Golden Gate runtime, packaging, signing, notarization, merge, or release claim is made.
+- **Remaining decisive gate:** install and run the corrected packaged app on an actual macOS 27 Golden Gate machine through first-launch permissions, dictation, quit, and relaunch.
